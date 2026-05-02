@@ -160,3 +160,10 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Added an opt-in `postgres` build-tag integration test for the real PostgreSQL store.
 - The default `go test ./...` remains external-service free.
 - The test applies the project migration and verifies opaque create/share/read lifecycle against PostgreSQL.
+
+
+## Patch 027 - admin-protected web console shell
+
+- Protected `/web/` with the existing mTLS admin guard instead of leaving the console shell public.
+- Kept the Web UI metadata-only: no ciphertext reads, envelopes, plaintext or key material are exposed through the shell.
+- Added regression coverage for missing certificate, non-admin and admin access.

@@ -116,3 +116,10 @@ Create, share, new-version and pending grant request payloads may include `expir
 ## Opaque payload encoding
 
 `ciphertext` and `envelope` are cryptographic blobs owned by clients, but the JSON transport format is base64. Custodia validates only base64 syntax and duplicate recipients; it does not decrypt, unwrap, parse algorithms, inspect DEKs or infer key material from the decoded bytes.
+
+
+## Web console
+
+`GET /web/`
+
+The current web console shell is protected by the same mTLS admin guard as admin APIs until the dedicated username/password + MFA/passkey web authentication flow is implemented. It is metadata-only and must not expose plaintext, ciphertext reads, envelopes or client-side key material.

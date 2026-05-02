@@ -47,7 +47,7 @@ func New(options Options) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", server.handleHealth)
 	mux.HandleFunc("GET /ready", server.handleReady)
-	mux.HandleFunc("GET /web/", server.handleWeb)
+	mux.Handle("GET /web/", server.auth(server.adminOnly(http.HandlerFunc(server.handleWeb))))
 	mux.Handle("GET /v1/clients", server.auth(server.adminOnly(http.HandlerFunc(server.handleListClients))))
 	mux.Handle("POST /v1/clients", server.auth(server.adminOnly(http.HandlerFunc(server.handleCreateClient))))
 	mux.Handle("POST /v1/clients/revoke", server.auth(server.adminOnly(http.HandlerFunc(server.handleRevokeClient))))

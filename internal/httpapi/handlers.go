@@ -39,7 +39,7 @@ func (s *Server) handleWeb(w http.ResponseWriter, _ *http.Request) {
 <head><meta charset="utf-8"><title>Custodia</title></head>
 <body>
 <h1>Custodia metadata console</h1>
-<p>Phase 1 web surface is metadata-only. The vault never decrypts or manages client-side encryption keys.</p>
+<p>Phase 1 web surface is metadata-only and requires an authenticated admin subject. The vault never decrypts or manages client-side encryption keys.</p>
 </body>
 </html>`))
 }

@@ -677,3 +677,39 @@ func TestVerifyAuditEventsRejectsInvalidLimit(t *testing.T) {
 		t.Fatalf("expected 400, got %d: %s", res.Code, res.Body.String())
 	}
 }
+
+func TestWebConsoleRequiresAdminClient(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "operator", MTLSSubject: "operator"}); err != nil {
+		t.Fatalf("create operator: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := httptest.NewRequest(http.MethodGet, "/web/", nil)
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusUnauthorized {
+		t.Fatalf("expected missing certificate to be rejected, got %d: %s", res.Code, res.Body.String())
+	}
+
+	req = mtlsRequest(http.MethodGet, "/web/", "", "operator")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusForbidden {
+		t.Fatalf("expected non-admin to be rejected, got %d: %s", res.Code, res.Body.String())
+	}
+
+	req = mtlsRequest(http.MethodGet, "/web/", "", "admin")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected admin web console, got %d: %s", res.Code, res.Body.String())
+	}
+	if !strings.Contains(res.Body.String(), "metadata-only") || strings.Contains(res.Body.String(), "decrypt") && !strings.Contains(res.Body.String(), "never decrypts") {
+		t.Fatalf("web console must remain metadata-only: %s", res.Body.String())
+	}
+}
