@@ -193,6 +193,28 @@ func TestAPIAdminAccessRequestsFilterByTargetClientID(t *testing.T) {
 	}
 }
 
+func TestAPIAuditExportAppliesMetadataFilters(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	_ = memoryStore.AppendAudit(ctx, model.AuditEvent{EventID: "1", ActorClientID: "admin", Action: "secret.read", ResourceType: "secret", ResourceID: "secret_a", Outcome: "success"})
+	_ = memoryStore.AppendAudit(ctx, model.AuditEvent{EventID: "2", ActorClientID: "admin", Action: "client.list", ResourceType: "client", ResourceID: "client_a", Outcome: "success"})
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/audit-events/export?resource_type=secret", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	body := res.Body.String()
+	if !strings.Contains(body, "secret.read") || strings.Contains(body, "client.list") {
+		t.Fatalf("expected filtered JSONL export, got %s", body)
+	}
+}
+
 func TestAPIAuditListRejectsInvalidActionFilter(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()

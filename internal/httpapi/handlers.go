@@ -184,46 +184,11 @@ func (s *Server) handleListAuditEvents(w http.ResponseWriter, r *http.Request) {
 		writeMappedError(w, err)
 		return
 	}
-	if outcome := strings.TrimSpace(r.URL.Query().Get("outcome")); outcome != "" {
-		if outcome != "success" && outcome != "failure" && outcome != "degraded" {
-			s.auditFailure(r, "audit.list", "audit_event", "", map[string]string{"reason": "invalid_outcome_filter"})
-			writeError(w, http.StatusBadRequest, "invalid_outcome_filter")
-			return
-		}
-		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.Outcome == outcome })
+	filtered, ok := s.filterAuditEventsForRequest(w, r, "audit.list", events)
+	if !ok {
+		return
 	}
-	if action := strings.TrimSpace(r.URL.Query().Get("action")); action != "" {
-		if !model.ValidAuditAction(action) {
-			s.auditFailure(r, "audit.list", "audit_event", "", map[string]string{"reason": "invalid_action_filter"})
-			writeError(w, http.StatusBadRequest, "invalid_action_filter")
-			return
-		}
-		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.Action == action })
-	}
-	if actorClientID := strings.TrimSpace(r.URL.Query().Get("actor_client_id")); actorClientID != "" {
-		if !model.ValidClientID(actorClientID) {
-			s.auditFailure(r, "audit.list", "audit_event", "", map[string]string{"reason": "invalid_actor_client_id_filter"})
-			writeError(w, http.StatusBadRequest, "invalid_actor_client_id_filter")
-			return
-		}
-		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.ActorClientID == actorClientID })
-	}
-	if resourceType := strings.TrimSpace(r.URL.Query().Get("resource_type")); resourceType != "" {
-		if !model.ValidAuditResourceType(resourceType) {
-			s.auditFailure(r, "audit.list", "audit_event", "", map[string]string{"reason": "invalid_resource_type_filter"})
-			writeError(w, http.StatusBadRequest, "invalid_resource_type_filter")
-			return
-		}
-		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.ResourceType == resourceType })
-	}
-	if resourceID := strings.TrimSpace(r.URL.Query().Get("resource_id")); resourceID != "" {
-		if !model.ValidAuditResourceID(resourceID) {
-			s.auditFailure(r, "audit.list", "audit_event", "", map[string]string{"reason": "invalid_resource_id_filter"})
-			writeError(w, http.StatusBadRequest, "invalid_resource_id_filter")
-			return
-		}
-		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.ResourceID == resourceID })
-	}
+	events = filtered
 	s.audit(r, "audit.list", "audit_event", "", "success", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"audit_events": events})
 }
@@ -245,6 +210,11 @@ func (s *Server) handleExportAuditEvents(w http.ResponseWriter, r *http.Request)
 		writeMappedError(w, err)
 		return
 	}
+	filtered, ok := s.filterAuditEventsForRequest(w, r, "audit.export", events)
+	if !ok {
+		return
+	}
+	events = filtered
 	w.Header().Set("Content-Type", "application/x-ndjson; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="custodia-audit.jsonl"`)
 	encoder := json.NewEncoder(w)
@@ -604,6 +574,50 @@ func (s *Server) optionalLimit(w http.ResponseWriter, r *http.Request, action, r
 		return 0, false
 	}
 	return parsed, true
+}
+
+func (s *Server) filterAuditEventsForRequest(w http.ResponseWriter, r *http.Request, action string, events []model.AuditEvent) ([]model.AuditEvent, bool) {
+	if outcome := strings.TrimSpace(r.URL.Query().Get("outcome")); outcome != "" {
+		if outcome != "success" && outcome != "failure" && outcome != "degraded" {
+			s.auditFailure(r, action, "audit_event", "", map[string]string{"reason": "invalid_outcome_filter"})
+			writeError(w, http.StatusBadRequest, "invalid_outcome_filter")
+			return nil, false
+		}
+		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.Outcome == outcome })
+	}
+	if auditAction := strings.TrimSpace(r.URL.Query().Get("action")); auditAction != "" {
+		if !model.ValidAuditAction(auditAction) {
+			s.auditFailure(r, action, "audit_event", "", map[string]string{"reason": "invalid_action_filter"})
+			writeError(w, http.StatusBadRequest, "invalid_action_filter")
+			return nil, false
+		}
+		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.Action == auditAction })
+	}
+	if actorClientID := strings.TrimSpace(r.URL.Query().Get("actor_client_id")); actorClientID != "" {
+		if !model.ValidClientID(actorClientID) {
+			s.auditFailure(r, action, "audit_event", "", map[string]string{"reason": "invalid_actor_client_id_filter"})
+			writeError(w, http.StatusBadRequest, "invalid_actor_client_id_filter")
+			return nil, false
+		}
+		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.ActorClientID == actorClientID })
+	}
+	if resourceType := strings.TrimSpace(r.URL.Query().Get("resource_type")); resourceType != "" {
+		if !model.ValidAuditResourceType(resourceType) {
+			s.auditFailure(r, action, "audit_event", "", map[string]string{"reason": "invalid_resource_type_filter"})
+			writeError(w, http.StatusBadRequest, "invalid_resource_type_filter")
+			return nil, false
+		}
+		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.ResourceType == resourceType })
+	}
+	if resourceID := strings.TrimSpace(r.URL.Query().Get("resource_id")); resourceID != "" {
+		if !model.ValidAuditResourceID(resourceID) {
+			s.auditFailure(r, action, "audit_event", "", map[string]string{"reason": "invalid_resource_id_filter"})
+			writeError(w, http.StatusBadRequest, "invalid_resource_id_filter")
+			return nil, false
+		}
+		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.ResourceID == resourceID })
+	}
+	return events, true
 }
 
 func filterAuditEvents(events []model.AuditEvent, keep func(model.AuditEvent) bool) []model.AuditEvent {
