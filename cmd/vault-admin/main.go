@@ -45,7 +45,7 @@ func main() {
 	case "client whoami":
 		err = requestJSON(&cfg, http.MethodGet, "/v1/me", nil, os.Stdout)
 	case "client list":
-		err = requestJSON(&cfg, http.MethodGet, "/v1/clients", nil, os.Stdout)
+		err = runClientList(&cfg, args[2:])
 	case "client get":
 		err = runClientGet(&cfg, args[2:])
 	case "client create":
@@ -78,6 +78,24 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func runClientList(cfg *cliConfig, args []string) error {
+	cmd := flag.NewFlagSet("client list", flag.ExitOnError)
+	limit := cmd.Int("limit", 0, "optional maximum clients to return, up to 500")
+	_ = cmd.Parse(args)
+	query := url.Values{}
+	if *limit != 0 {
+		if *limit < 0 || *limit > 500 {
+			return fmt.Errorf("--limit must be between 1 and 500 when set")
+		}
+		query.Set("limit", strconv.Itoa(*limit))
+	}
+	path := "/v1/clients"
+	if encoded := query.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
+	return requestJSON(cfg, http.MethodGet, path, nil, os.Stdout)
 }
 
 func runClientGet(cfg *cliConfig, args []string) error {

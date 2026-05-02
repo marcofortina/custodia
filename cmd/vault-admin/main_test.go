@@ -18,3 +18,10 @@ func TestAddQueryFilterTrimsValues(t *testing.T) {
 		t.Fatalf("unexpected query value: %q", got)
 	}
 }
+
+func TestRunClientListRejectsInvalidLimit(t *testing.T) {
+	err := runClientList(&cliConfig{}, []string{"--limit", "501"})
+	if err == nil {
+		t.Fatal("expected invalid limit error")
+	}
+}
