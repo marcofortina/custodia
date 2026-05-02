@@ -36,6 +36,15 @@ func TestBootstrapClientsCreatesMissingAndIgnoresExisting(t *testing.T) {
 	}
 }
 
+func TestValidateAdminClientIDsRejectsInvalidIDs(t *testing.T) {
+	if err := validateAdminClientIDs(map[string]bool{"admin": true}); err != nil {
+		t.Fatalf("expected valid admin id: %v", err)
+	}
+	if err := validateAdminClientIDs(map[string]bool{"admin bad": true}); err == nil {
+		t.Fatal("expected invalid admin id error")
+	}
+}
+
 func TestBootstrapClientsRejectsInvalidMappings(t *testing.T) {
 	err := bootstrapClients(context.Background(), store.NewMemoryStore(), map[string]string{"client bad": "client_bad"})
 	if err == nil {

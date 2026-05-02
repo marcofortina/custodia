@@ -33,6 +33,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("rate limiter init failed: %v", err)
 	}
+	if err := validateAdminClientIDs(cfg.AdminClientIDs); err != nil {
+		log.Fatalf("admin client configuration failed: %v", err)
+	}
 
 	handler := httpapi.New(httpapi.Options{
 		Store:                 vaultStore,
@@ -132,6 +135,15 @@ func buildStore(ctx context.Context, cfg config.Config) (store.Store, func(), er
 	default:
 		return nil, func() {}, errors.New("unsupported store backend")
 	}
+}
+
+func validateAdminClientIDs(adminClientIDs map[string]bool) error {
+	for clientID, enabled := range adminClientIDs {
+		if enabled && !model.ValidClientID(clientID) {
+			return errors.New("invalid admin client id")
+		}
+	}
+	return nil
 }
 
 func bootstrapClients(ctx context.Context, vaultStore store.Store, clients map[string]string) error {
