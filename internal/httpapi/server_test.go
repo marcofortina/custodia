@@ -643,6 +643,33 @@ func TestAdminCanListAuditEvents(t *testing.T) {
 	assertLastAudit(t, memoryStore, "audit.list", "success", "")
 }
 
+func TestAdminCanFilterAuditEventsByOutcome(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	memoryStore.AppendAudit(ctx, model.AuditEvent{Action: "secret.read", ResourceType: "secret", Outcome: "success"})
+	memoryStore.AppendAudit(ctx, model.AuditEvent{Action: "secret.read", ResourceType: "secret", Outcome: "failure"})
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/audit-events?limit=10&outcome=failure", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var payload struct {
+		AuditEvents []model.AuditEvent `json:"audit_events"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode audit list: %v", err)
+	}
+	if len(payload.AuditEvents) != 1 || payload.AuditEvents[0].Outcome != "failure" {
+		t.Fatalf("unexpected filtered audit events: %+v", payload.AuditEvents)
+	}
+}
+
 func TestAdminAuditListRejectsInvalidLimit(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()

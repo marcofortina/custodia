@@ -158,6 +158,14 @@ func (s *Server) handleListAuditEvents(w http.ResponseWriter, r *http.Request) {
 		writeMappedError(w, err)
 		return
 	}
+	if outcome := strings.TrimSpace(r.URL.Query().Get("outcome")); outcome != "" {
+		if outcome != "success" && outcome != "failure" && outcome != "degraded" {
+			s.auditFailure(r, "audit.list", "audit_event", "", map[string]string{"reason": "invalid_outcome_filter"})
+			writeError(w, http.StatusBadRequest, "invalid_outcome_filter")
+			return
+		}
+		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.Outcome == outcome })
+	}
 	s.audit(r, "audit.list", "audit_event", "", "success", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"audit_events": events})
 }
@@ -403,6 +411,16 @@ func (s *Server) handleCreateSecretVersion(w http.ResponseWriter, r *http.Reques
 	}
 	s.audit(r, "secret.version_create", "secret", secretID, "success", nil)
 	writeJSON(w, http.StatusCreated, ref)
+}
+
+func filterAuditEvents(events []model.AuditEvent, keep func(model.AuditEvent) bool) []model.AuditEvent {
+	filtered := events[:0]
+	for _, event := range events {
+		if keep(event) {
+			filtered = append(filtered, event)
+		}
+	}
+	return filtered
 }
 
 func validAccessRequestStatus(value string) bool {
