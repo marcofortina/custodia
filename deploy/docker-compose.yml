@@ -27,6 +27,7 @@ services:
         GO_BUILD_TAGS: "${CUSTODIA_GO_BUILD_TAGS:-}"
     environment:
       CUSTODIA_API_ADDR: ":8443"
+      CUSTODIA_HEALTH_ADDR: ":8080"
       CUSTODIA_STORE_BACKEND: memory
       CUSTODIA_RATE_LIMIT_BACKEND: valkey
       CUSTODIA_VALKEY_URL: redis://valkey:6379/0
@@ -37,6 +38,12 @@ services:
       - valkey
     ports:
       - "8443:8443"
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/live"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
 volumes:
   postgres-data:
