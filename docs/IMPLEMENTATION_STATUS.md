@@ -12,7 +12,7 @@
 - Base64 transport validation for ciphertext/envelope blobs and duplicate recipient rejection.
 - Configurable recipient-envelope cap with default 100 and HTTP 413 rejection on create/new-version overflow.
 - Hash-chained audit events for successful and failed auth/API operations, with admin-only listing API/CLI.
-- PostgreSQL schema contract and in-memory executable store.
+- PostgreSQL schema contract, in-memory executable store and optional `pgx` PostgreSQL store behind the `postgres` build tag.
 - Valkey-compatible rate limiting with `/ready` health checks.
 - Minimal admin CLI for API-backed client metadata create/list/revoke and access revoke operations.
 - Minimal Go/Python clients, with Go helpers for secret metadata and access grant workflows.
@@ -24,7 +24,7 @@ The repository contains an executable standard-library baseline and deployable b
 
 - real CA/signing service backed by TPM/HSM;
 - CRL distribution/refresh automation and OCSP stapling;
-- real CockroachDB/PostgreSQL store wiring, then CockroachDB multi-region or PostgreSQL Patroni topology;
+- production PostgreSQL/CockroachDB topology, migrations automation and PostgreSQL integration tests against a live database;
 - Valkey cluster with mTLS;
 - load balancer TLS pass-through configuration;
 - web UI MFA/passkey implementation beyond the metadata-only placeholder;
@@ -91,3 +91,11 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Added Go client helpers for pending grant request, activation and access revoke.
 - Escaped dynamic URL path segments in the Go client to avoid malformed paths when ids contain reserved characters.
 - Added client-side tests for documented access workflow routes.
+
+
+## Patch 017 - optional PostgreSQL store
+
+- Added a real PostgreSQL implementation behind the explicit `postgres` build tag.
+- Kept the default build dependency-free so `go test ./...` continues to work offline.
+- Implemented client lifecycle, secret CRUD/list, sharing, pending grant activation, strong-revocation versioning and audit hash chaining against PostgreSQL.
+- Stored ciphertext/envelopes as opaque `BYTEA` decoded from API base64 transport strings, without interpreting cryptographic content.
