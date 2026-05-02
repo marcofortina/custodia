@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"custodia/internal/model"
@@ -112,6 +113,9 @@ func (c *Client) RevokeClient(req model.RevokeClientRequest) error {
 }
 
 func (c *Client) ListAuditEvents(filters AuditEventFilters) ([]model.AuditEvent, error) {
+	if err := validateAuditEventFilters(filters); err != nil {
+		return nil, err
+	}
 	query := url.Values{}
 	if filters.Limit > 0 {
 		query.Set("limit", fmt.Sprintf("%d", filters.Limit))
@@ -133,7 +137,7 @@ func (c *Client) ListAuditEvents(filters AuditEventFilters) ([]model.AuditEvent,
 }
 
 func (c *Client) ExportAuditEvents(filters AuditEventFilters) ([]byte, error) {
-	if err := validateOptionalLimit(filters.Limit); err != nil {
+	if err := validateAuditEventFilters(filters); err != nil {
 		return nil, err
 	}
 	query := url.Values{}
@@ -351,6 +355,32 @@ func addQueryFilter(query url.Values, key string, value string) {
 	if value != "" {
 		query.Set(key, value)
 	}
+}
+
+func validateAuditEventFilters(filters AuditEventFilters) error {
+	if err := validateOptionalLimit(filters.Limit); err != nil {
+		return err
+	}
+	if filters.Outcome != "" {
+		switch strings.TrimSpace(filters.Outcome) {
+		case "success", "failure", "degraded":
+		default:
+			return fmt.Errorf("outcome must be success, failure or degraded when set")
+		}
+	}
+	if filters.Action != "" && !model.ValidAuditAction(filters.Action) {
+		return fmt.Errorf("action filter is invalid")
+	}
+	if filters.ActorClientID != "" && !model.ValidClientID(filters.ActorClientID) {
+		return fmt.Errorf("actor client id filter is invalid")
+	}
+	if filters.ResourceType != "" && !model.ValidAuditResourceType(filters.ResourceType) {
+		return fmt.Errorf("resource type filter is invalid")
+	}
+	if filters.ResourceID != "" && !model.ValidAuditResourceID(filters.ResourceID) {
+		return fmt.Errorf("resource id filter is invalid")
+	}
+	return nil
 }
 
 func validateOptionalLimit(limit int) error {

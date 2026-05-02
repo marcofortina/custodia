@@ -330,3 +330,22 @@ func TestClientExportAuditEventsUsesFilters(t *testing.T) {
 		t.Fatalf("unexpected export payload: %q", string(payload))
 	}
 }
+
+func TestClientAuditFiltersRejectInvalidValues(t *testing.T) {
+	custodiaClient := &Client{}
+	if _, err := custodiaClient.ListAuditEvents(AuditEventFilters{Outcome: "maybe"}); err == nil {
+		t.Fatal("expected invalid outcome error")
+	}
+	if _, err := custodiaClient.ListAuditEvents(AuditEventFilters{Action: "bad action"}); err == nil {
+		t.Fatal("expected invalid action error")
+	}
+	if _, err := custodiaClient.ExportAuditEvents(AuditEventFilters{ActorClientID: "client bad"}); err == nil {
+		t.Fatal("expected invalid actor client id error")
+	}
+	if _, err := custodiaClient.ExportAuditEvents(AuditEventFilters{ResourceType: "bad type"}); err == nil {
+		t.Fatal("expected invalid resource type error")
+	}
+	if _, err := custodiaClient.ExportAuditEvents(AuditEventFilters{ResourceID: "bad\nresource"}); err == nil {
+		t.Fatal("expected invalid resource id error")
+	}
+}
