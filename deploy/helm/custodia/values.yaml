@@ -44,6 +44,13 @@ mtls:
   clientCAKey: ca.crt
   clientCRLKey: ""
 
+
+topologySpreadConstraints:
+  enabled: true
+  maxSkew: 1
+  topologyKey: topology.kubernetes.io/zone
+  whenUnsatisfiable: ScheduleAnyway
+
 resources:
   requests:
     cpu: 100m
