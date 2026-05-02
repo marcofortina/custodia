@@ -137,6 +137,9 @@ func runClientRevoke(cfg *cliConfig, args []string) error {
 	if req.ClientID == "" {
 		return fmt.Errorf("--client-id is required")
 	}
+	if !model.ValidRevocationReason(req.Reason) {
+		return fmt.Errorf("--reason contains control characters or exceeds %d bytes", model.MaxRevocationReasonLength)
+	}
 	return requestJSON(cfg, http.MethodPost, "/v1/clients/revoke", req, os.Stdout)
 }
 

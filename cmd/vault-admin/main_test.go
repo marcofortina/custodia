@@ -26,6 +26,13 @@ func TestRunClientListRejectsInvalidLimit(t *testing.T) {
 	}
 }
 
+func TestRunClientRevokeRejectsInvalidReason(t *testing.T) {
+	err := runClientRevoke(&cliConfig{}, []string{"--client-id", "client_bob", "--reason", "bad\nreason"})
+	if err == nil {
+		t.Fatal("expected invalid reason error")
+	}
+}
+
 func TestRunAuditExportRejectsInvalidLimit(t *testing.T) {
 	err := runAuditExport(&cliConfig{}, []string{"--limit", "0"})
 	if err == nil {
