@@ -25,6 +25,11 @@ func writeError(w http.ResponseWriter, status int, code string) {
 	writeJSON(w, status, errorResponse{Error: code})
 }
 
+func writeRateLimited(w http.ResponseWriter, code string) {
+	w.Header().Set("Retry-After", "1")
+	writeError(w, http.StatusTooManyRequests, code)
+}
+
 func writeMappedError(w http.ResponseWriter, err error) {
 	status, code := mapStoreError(err)
 	writeError(w, status, code)

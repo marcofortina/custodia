@@ -19,7 +19,7 @@ func (s *Server) auth(next http.Handler) http.Handler {
 			}
 			if !allowed {
 				s.auditFailure(r, "auth.rate_limit", "client", "", map[string]string{"reason": "ip_rate_limited"})
-				writeError(w, http.StatusTooManyRequests, "ip_rate_limited")
+				writeRateLimited(w, "ip_rate_limited")
 				return
 			}
 		}
@@ -46,7 +46,7 @@ func (s *Server) auth(next http.Handler) http.Handler {
 			}
 			if !allowed {
 				s.auditFailure(r, "auth.rate_limit", "client", client.ClientID, map[string]string{"reason": "client_rate_limited"})
-				writeError(w, http.StatusTooManyRequests, "client_rate_limited")
+				writeRateLimited(w, "client_rate_limited")
 				return
 			}
 			allowed, err = s.limiter.Allow(r.Context(), "global", s.globalRateLimit)
@@ -57,7 +57,7 @@ func (s *Server) auth(next http.Handler) http.Handler {
 			}
 			if !allowed {
 				s.auditFailure(r, "auth.rate_limit", "client", client.ClientID, map[string]string{"reason": "global_rate_limited"})
-				writeError(w, http.StatusTooManyRequests, "global_rate_limited")
+				writeRateLimited(w, "global_rate_limited")
 				return
 			}
 		}

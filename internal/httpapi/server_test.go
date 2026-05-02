@@ -1569,3 +1569,24 @@ func TestAPISecretAccessListSupportsLimit(t *testing.T) {
 		t.Fatalf("expected one access row after limit, got %+v", payload.Access)
 	}
 }
+
+func TestAPIRateLimitResponsesIncludeRetryAfter(t *testing.T) {
+	memoryStore := store.NewMemoryStore()
+	handler := New(Options{Store: memoryStore, Limiter: denyLimiter{}, AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100, IPRateLimit: 100})
+	req := httptest.NewRequest(http.MethodGet, "/v1/me", nil)
+	req.RemoteAddr = "192.0.2.10:12345"
+	res := httptest.NewRecorder()
+
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected 429, got %d: %s", res.Code, res.Body.String())
+	}
+	if got := res.Header().Get("Retry-After"); got != "1" {
+		t.Fatalf("expected Retry-After=1, got %q", got)
+	}
+}
+
+type denyLimiter struct{}
+
+func (denyLimiter) Allow(context.Context, string, int) (bool, error) { return false, nil }
