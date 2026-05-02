@@ -1,4 +1,8 @@
 GO ?= go
+VERSION ?= dev
+COMMIT ?= unknown
+DATE ?= unknown
+LDFLAGS := -X custodia/internal/build.Version=$(VERSION) -X custodia/internal/build.Commit=$(COMMIT) -X custodia/internal/build.Date=$(DATE)
 
 .PHONY: test
 test:
@@ -24,13 +28,13 @@ run-dev:
 
 .PHONY: build
 build:
-	$(GO) build ./cmd/custodia-server
-	$(GO) build ./cmd/vault-admin
+	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-server
+	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/vault-admin
 
 .PHONY: build-postgres
 build-postgres:
-	$(GO) build -tags postgres ./cmd/custodia-server
-	$(GO) build -tags postgres ./cmd/vault-admin
+	$(GO) build -tags postgres -ldflags "$(LDFLAGS)" ./cmd/custodia-server
+	$(GO) build -tags postgres -ldflags "$(LDFLAGS)" ./cmd/vault-admin
 
 .PHONY: test-postgres
 test-postgres:
