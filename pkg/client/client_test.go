@@ -71,11 +71,17 @@ func TestClientMetadataMethodsUseDocumentedAPIPaths(t *testing.T) {
 		requests = append(requests, r.Method+" "+r.URL.EscapedPath())
 		switch r.URL.EscapedPath() {
 		case "/v1/secrets/secret%2Fid/versions":
+			if r.URL.Query().Get("limit") != "5" {
+				t.Fatalf("unexpected versions limit: %q", r.URL.RawQuery)
+			}
 			if r.Method != http.MethodGet {
 				t.Fatalf("unexpected versions method: %s", r.Method)
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{"versions": []model.SecretVersionMetadata{{SecretID: "secret/id", VersionID: "version"}}})
 		case "/v1/secrets/secret%2Fid/access":
+			if r.URL.Query().Get("limit") != "7" {
+				t.Fatalf("unexpected access limit: %q", r.URL.RawQuery)
+			}
 			if r.Method != http.MethodGet {
 				t.Fatalf("unexpected access method: %s", r.Method)
 			}
@@ -92,11 +98,11 @@ func TestClientMetadataMethodsUseDocumentedAPIPaths(t *testing.T) {
 	defer server.Close()
 
 	custodiaClient := &Client{baseURL: server.URL, http: server.Client()}
-	versions, err := custodiaClient.ListSecretVersions("secret/id")
+	versions, err := custodiaClient.ListSecretVersionsWithLimit("secret/id", 5)
 	if err != nil || len(versions) != 1 || versions[0].VersionID != "version" {
 		t.Fatalf("unexpected versions response: %+v err=%v", versions, err)
 	}
-	access, err := custodiaClient.ListSecretAccess("secret/id")
+	access, err := custodiaClient.ListSecretAccessWithLimit("secret/id", 7)
 	if err != nil || len(access) != 1 || access[0].ClientID != "client/bob" {
 		t.Fatalf("unexpected access response: %+v err=%v", access, err)
 	}

@@ -134,18 +134,38 @@ func (c *Client) GetSecret(secretID string) (model.SecretReadResponse, error) {
 }
 
 func (c *Client) ListSecretVersions(secretID string) ([]model.SecretVersionMetadata, error) {
+	return c.ListSecretVersionsWithLimit(secretID, 0)
+}
+
+func (c *Client) ListSecretVersionsWithLimit(secretID string, limit int) ([]model.SecretVersionMetadata, error) {
+	path := "/v1/secrets/" + pathEscape(secretID) + "/versions"
+	if limit > 0 {
+		query := url.Values{}
+		query.Set("limit", fmt.Sprintf("%d", limit))
+		path += "?" + query.Encode()
+	}
 	var response struct {
 		Versions []model.SecretVersionMetadata `json:"versions"`
 	}
-	err := c.doJSON(http.MethodGet, "/v1/secrets/"+pathEscape(secretID)+"/versions", nil, &response)
+	err := c.doJSON(http.MethodGet, path, nil, &response)
 	return response.Versions, err
 }
 
 func (c *Client) ListSecretAccess(secretID string) ([]model.SecretAccessMetadata, error) {
+	return c.ListSecretAccessWithLimit(secretID, 0)
+}
+
+func (c *Client) ListSecretAccessWithLimit(secretID string, limit int) ([]model.SecretAccessMetadata, error) {
+	path := "/v1/secrets/" + pathEscape(secretID) + "/access"
+	if limit > 0 {
+		query := url.Values{}
+		query.Set("limit", fmt.Sprintf("%d", limit))
+		path += "?" + query.Encode()
+	}
 	var response struct {
 		Access []model.SecretAccessMetadata `json:"access"`
 	}
-	err := c.doJSON(http.MethodGet, "/v1/secrets/"+pathEscape(secretID)+"/access", nil, &response)
+	err := c.doJSON(http.MethodGet, path, nil, &response)
 	return response.Access, err
 }
 
