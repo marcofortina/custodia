@@ -259,6 +259,34 @@ func (s *PostgresStore) GetSecret(ctx context.Context, actorClientID, secretID s
 	return response, nil
 }
 
+func (s *PostgresStore) ListSecretAccess(ctx context.Context, actorClientID, secretID string) ([]model.SecretAccessMetadata, error) {
+	_, versionID, err := visibleVersion(ctx, s.pool, actorClientID, secretID, "", model.PermissionShare)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT secret_id::text, version_id::text, client_id, permissions, granted_at, expires_at
+		FROM secret_access
+		WHERE secret_id = $1::uuid
+		  AND version_id = $2::uuid
+		  AND revoked_at IS NULL
+		  AND (expires_at IS NULL OR expires_at > NOW())
+		ORDER BY client_id`, secretID, versionID)
+	if err != nil {
+		return nil, mapPostgresError(err)
+	}
+	defer rows.Close()
+	accesses := make([]model.SecretAccessMetadata, 0)
+	for rows.Next() {
+		var access model.SecretAccessMetadata
+		if err := rows.Scan(&access.SecretID, &access.VersionID, &access.ClientID, &access.Permissions, &access.GrantedAt, &access.ExpiresAt); err != nil {
+			return nil, mapPostgresError(err)
+		}
+		accesses = append(accesses, access)
+	}
+	return accesses, mapPostgresError(rows.Err())
+}
+
 func (s *PostgresStore) DeleteSecret(ctx context.Context, actorClientID, secretID string) error {
 	if _, _, err := visibleVersion(ctx, s.pool, actorClientID, secretID, "", model.PermissionWrite); err != nil {
 		return err

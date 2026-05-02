@@ -50,6 +50,8 @@ func main() {
 		err = runAuditList(&cfg, args[2:])
 	case "audit verify":
 		err = runAuditVerify(&cfg, args[2:])
+	case "access list":
+		err = runAccessList(&cfg, args[2:])
 	case "access grant-request":
 		err = runAccessGrantRequest(&cfg, args[2:])
 	case "access activate":
@@ -108,6 +110,16 @@ func runAuditVerify(cfg *cliConfig, args []string) error {
 		return fmt.Errorf("--limit must be between 1 and 500")
 	}
 	return requestJSON(cfg, http.MethodGet, fmt.Sprintf("/v1/audit-events/verify?limit=%d", *limit), nil, os.Stdout)
+}
+
+func runAccessList(cfg *cliConfig, args []string) error {
+	cmd := flag.NewFlagSet("access list", flag.ExitOnError)
+	secretID := cmd.String("secret-id", "", "secret id")
+	_ = cmd.Parse(args)
+	if *secretID == "" {
+		return fmt.Errorf("--secret-id is required")
+	}
+	return requestJSON(cfg, http.MethodGet, "/v1/secrets/"+pathEscape(*secretID)+"/access", nil, os.Stdout)
 }
 
 func runAccessGrantRequest(cfg *cliConfig, args []string) error {
@@ -258,6 +270,7 @@ func usage() {
   vault-admin [global flags] client revoke --client-id ID [--reason REASON]
   vault-admin [global flags] audit list [--limit N]
   vault-admin [global flags] audit verify [--limit N]
+  vault-admin [global flags] access list --secret-id ID
   vault-admin [global flags] access grant-request --secret-id ID --client-id ID --permissions read[,write,share]
   vault-admin [global flags] access activate --secret-id ID --client-id ID --envelope-file FILE
   vault-admin [global flags] access revoke --secret-id ID --client-id ID

@@ -27,6 +27,9 @@ func (s *PostgresStore) GetActiveClientBySubject(context.Context, string) (model
 func (s *PostgresStore) ListClients(context.Context) ([]model.Client, error) {
 	return nil, ErrPostgresStoreNotWired
 }
+func (s *PostgresStore) ListSecretAccess(context.Context, string, string) ([]model.SecretAccessMetadata, error) {
+	return nil, ErrPostgresStoreNotWired
+}
 func (s *PostgresStore) RevokeClient(context.Context, string) error { return ErrPostgresStoreNotWired }
 func (s *PostgresStore) CreateSecret(context.Context, string, model.CreateSecretRequest) (model.SecretVersionRef, error) {
 	return model.SecretVersionRef{}, ErrPostgresStoreNotWired

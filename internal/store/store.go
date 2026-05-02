@@ -15,6 +15,7 @@ type Store interface {
 	CreateSecret(ctx context.Context, actorClientID string, req model.CreateSecretRequest) (model.SecretVersionRef, error)
 	ListSecrets(ctx context.Context, actorClientID string) ([]model.SecretMetadata, error)
 	GetSecret(ctx context.Context, actorClientID, secretID string) (model.SecretReadResponse, error)
+	ListSecretAccess(ctx context.Context, actorClientID, secretID string) ([]model.SecretAccessMetadata, error)
 	DeleteSecret(ctx context.Context, actorClientID, secretID string) error
 	ShareSecret(ctx context.Context, actorClientID, secretID string, req model.ShareSecretRequest) error
 	RequestAccessGrant(ctx context.Context, actorClientID, secretID string, req model.AccessGrantRequest) (model.AccessGrantRef, error)

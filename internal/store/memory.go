@@ -247,6 +247,30 @@ func (s *MemoryStore) GetSecret(_ context.Context, actorClientID, secretID strin
 	}, nil
 }
 
+func (s *MemoryStore) ListSecretAccess(_ context.Context, actorClientID, secretID string) ([]model.SecretAccessMetadata, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	secret, version, _, err := s.visibleSecretLocked(actorClientID, secretID, model.PermissionShare)
+	if err != nil {
+		return nil, err
+	}
+	accesses := make([]model.SecretAccessMetadata, 0, len(version.Access))
+	for _, access := range version.Access {
+		if !activeAccess(access) {
+			continue
+		}
+		accesses = append(accesses, model.SecretAccessMetadata{
+			SecretID:    secret.SecretID,
+			VersionID:   version.VersionID,
+			ClientID:    access.ClientID,
+			Permissions: access.Permissions,
+			GrantedAt:   access.GrantedAt,
+			ExpiresAt:   cloneTimePtr(access.ExpiresAt),
+		})
+	}
+	return accesses, nil
+}
+
 func (s *MemoryStore) DeleteSecret(_ context.Context, actorClientID, secretID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

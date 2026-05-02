@@ -741,3 +741,47 @@ func TestWebConsoleRequiresAdminClient(t *testing.T) {
 		t.Fatalf("web console must remain metadata-only: %s", res.Body.String())
 	}
 }
+
+func TestAPIListsSecretAccessMetadataOnlyForShareClient(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, clientID := range []string{"client_alice", "client_bob"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %s: %v", clientID, err)
+		}
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	createBody := `{"name":"shared","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"},{"client_id":"client_bob","envelope":"ZW52ZWxvcGUtZm9yLWJvYg=="}],"permissions":7}`
+	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected create 201, got %d: %s", res.Code, res.Body.String())
+	}
+	var created model.SecretVersionRef
+	if err := json.NewDecoder(res.Body).Decode(&created); err != nil {
+		t.Fatalf("decode created: %v", err)
+	}
+
+	req = mtlsRequest(http.MethodGet, "/v1/secrets/"+created.SecretID+"/access", "", "client_alice")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected access list 200, got %d: %s", res.Code, res.Body.String())
+	}
+	body := res.Body.String()
+	if strings.Contains(body, "ZW52ZWxvcGUt") || strings.Contains(body, "ciphertext") {
+		t.Fatalf("access listing leaked opaque secret material: %s", body)
+	}
+	var payload struct {
+		Access []model.SecretAccessMetadata `json:"access"`
+	}
+	if err := json.Unmarshal([]byte(body), &payload); err != nil {
+		t.Fatalf("decode access list: %v", err)
+	}
+	if len(payload.Access) != 2 {
+		t.Fatalf("expected two access metadata rows, got %+v", payload.Access)
+	}
+	assertLastAudit(t, memoryStore, "secret.access_list", "success", "")
+}

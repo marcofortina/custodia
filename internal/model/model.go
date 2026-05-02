@@ -106,6 +106,16 @@ type SecretMetadata struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+// SecretAccessMetadata exposes authorization metadata only. It deliberately omits envelopes.
+type SecretAccessMetadata struct {
+	SecretID    string     `json:"secret_id"`
+	VersionID   string     `json:"version_id"`
+	ClientID    string     `json:"client_id"`
+	Permissions int        `json:"permissions"`
+	GrantedAt   time.Time  `json:"granted_at"`
+	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
+}
+
 type SecretReadResponse struct {
 	SecretID       string          `json:"secret_id"`
 	VersionID      string          `json:"version_id"`
