@@ -1,1 +1,19 @@
 *.patch
+
+# Build outputs
+bin/
+dist/
+
+# Go
+*.test
+coverage.out
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Local configuration
+.env
+.env.local
