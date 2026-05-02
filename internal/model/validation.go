@@ -10,6 +10,7 @@ const (
 	MaxClientIDLength          = 128
 	MaxSecretNameLength        = 255
 	MaxCryptoMetadataBytes     = 16 * 1024
+	MaxOpaqueBlobBytes         = 768 * 1024
 	MaxMTLSSubjectLength       = 512
 	MaxAuditActionLength       = 128
 	MaxAuditResourceTypeLength = 64

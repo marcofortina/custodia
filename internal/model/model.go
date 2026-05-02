@@ -30,11 +30,11 @@ func ValidOpaqueBlob(value string) bool {
 	if value == "" {
 		return false
 	}
-	if _, err := base64.StdEncoding.DecodeString(value); err == nil {
-		return true
+	if decoded, err := base64.StdEncoding.DecodeString(value); err == nil {
+		return len(decoded) > 0 && len(decoded) <= MaxOpaqueBlobBytes
 	}
-	_, err := base64.RawStdEncoding.DecodeString(value)
-	return err == nil
+	decoded, err := base64.RawStdEncoding.DecodeString(value)
+	return err == nil && len(decoded) > 0 && len(decoded) <= MaxOpaqueBlobBytes
 }
 
 type Client struct {

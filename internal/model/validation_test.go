@@ -1,6 +1,9 @@
 package model
 
-import "testing"
+import (
+	"encoding/base64"
+	"testing"
+)
 
 func TestValidClientID(t *testing.T) {
 	for _, value := range []string{"client_alice", "tenant-1.client:prod", "A09"} {
@@ -112,5 +115,21 @@ func TestValidAuditResourceID(t *testing.T) {
 		if ValidAuditResourceID(value) {
 			t.Fatalf("expected audit resource id %q to be invalid", value)
 		}
+	}
+}
+
+func TestValidOpaqueBlobBoundsDecodedPayloads(t *testing.T) {
+	if !ValidOpaqueBlob("YQ==") {
+		t.Fatal("expected non-empty base64 blob to be valid")
+	}
+	if ValidOpaqueBlob("") || ValidOpaqueBlob("!!!!") {
+		t.Fatal("expected empty and malformed base64 blobs to be invalid")
+	}
+	oversized := make([]byte, MaxOpaqueBlobBytes+1)
+	for idx := range oversized {
+		oversized[idx] = 'a'
+	}
+	if ValidOpaqueBlob(base64.StdEncoding.EncodeToString(oversized)) {
+		t.Fatal("expected oversized decoded blob to be invalid")
 	}
 }
