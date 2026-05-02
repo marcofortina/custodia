@@ -64,3 +64,18 @@ func TestPostgresSchemaIncludesMetadataOnlyWebUsers(t *testing.T) {
 		}
 	}
 }
+
+func TestPostgresAuditListingUsesChronologicalOrderForHashVerification(t *testing.T) {
+	t.Parallel()
+
+	storePath := filepath.Join("postgres_pgx.go")
+	storeBytes, err := os.ReadFile(storePath)
+	if err != nil {
+		t.Fatalf("read postgres store: %v", err)
+	}
+	postgresStore := string(storeBytes)
+
+	if !strings.Contains(postgresStore, "ORDER BY occurred_at ASC, event_id ASC") {
+		t.Fatal("postgres audit listing must return chronological events for hash-chain verification")
+	}
+}
