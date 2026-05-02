@@ -44,6 +44,8 @@ func main() {
 		err = requestJSON(&cfg, http.MethodGet, "/v1/status", nil, os.Stdout)
 	case "client list":
 		err = requestJSON(&cfg, http.MethodGet, "/v1/clients", nil, os.Stdout)
+	case "client get":
+		err = runClientGet(&cfg, args[2:])
 	case "client create":
 		err = runClientCreate(&cfg, args[2:])
 	case "client revoke":
@@ -72,6 +74,16 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func runClientGet(cfg *cliConfig, args []string) error {
+	cmd := flag.NewFlagSet("client get", flag.ExitOnError)
+	clientID := cmd.String("client-id", "", "client id to read")
+	_ = cmd.Parse(args)
+	if *clientID == "" {
+		return fmt.Errorf("--client-id is required")
+	}
+	return requestJSON(cfg, http.MethodGet, "/v1/clients/"+pathEscape(*clientID), nil, os.Stdout)
 }
 
 func runClientCreate(cfg *cliConfig, args []string) error {
@@ -293,6 +305,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, `usage:
   vault-admin [global flags] status read
   vault-admin [global flags] client list
+  vault-admin [global flags] client get --client-id ID
   vault-admin [global flags] client create --client-id ID --mtls-subject SUBJECT
   vault-admin [global flags] client revoke --client-id ID [--reason REASON]
   vault-admin [global flags] audit list [--limit N]
