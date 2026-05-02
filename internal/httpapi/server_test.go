@@ -1394,3 +1394,34 @@ func TestAPIAdminClientListSupportsLimit(t *testing.T) {
 		t.Fatalf("expected one client after limit, got %+v", payload.Clients)
 	}
 }
+
+func TestAPISecretListSupportsLimit(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	for _, name := range []string{"secret-a", "secret-b"} {
+		if _, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{Name: name, Ciphertext: "Y2lwaGVydGV4dA==", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}}, Permissions: int(model.PermissionAll)}); err != nil {
+			t.Fatalf("create secret %s: %v", name, err)
+		}
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/secrets?limit=1", "", "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var payload struct {
+		Secrets []model.SecretMetadata `json:"secrets"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode secrets: %v", err)
+	}
+	if len(payload.Secrets) != 1 {
+		t.Fatalf("expected one secret after limit, got %+v", payload.Secrets)
+	}
+}

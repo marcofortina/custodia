@@ -290,11 +290,18 @@ func (s *Server) handleCreateSecret(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListSecrets(w http.ResponseWriter, r *http.Request) {
+	limit, ok := s.optionalLimit(w, r, "secret.list", "secret", "")
+	if !ok {
+		return
+	}
 	secrets, err := s.store.ListSecrets(r.Context(), clientIDFromContext(r))
 	if err != nil {
 		s.auditStoreFailure(r, "secret.list", "secret", "", err)
 		writeMappedError(w, err)
 		return
+	}
+	if limit > 0 && len(secrets) > limit {
+		secrets = secrets[:limit]
 	}
 	s.audit(r, "secret.list", "secret", "", "success", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"secrets": secrets})
