@@ -8,6 +8,42 @@ import (
 	"custodia/internal/model"
 )
 
+func TestMemoryStoreListsSecretsNewestFirst(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	older, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:        "older",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create older secret: %v", err)
+	}
+	younger, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:        "younger",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create younger secret: %v", err)
+	}
+	store.mu.Lock()
+	store.secrets[older.SecretID].CreatedAt = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	store.secrets[younger.SecretID].CreatedAt = time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
+	store.mu.Unlock()
+
+	secrets, err := store.ListSecrets(ctx, "client_alice")
+	if err != nil {
+		t.Fatalf("list secrets: %v", err)
+	}
+	if len(secrets) != 2 || secrets[0].Name != "younger" || secrets[1].Name != "older" {
+		t.Fatalf("expected newest-first secret ordering, got %+v", secrets)
+	}
+}
+
 func TestMemoryStoreListsClientsInStableOrder(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryStore()

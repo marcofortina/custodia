@@ -245,6 +245,12 @@ func (s *MemoryStore) ListSecrets(_ context.Context, actorClientID string) ([]mo
 			AccessExpiresAt:   cloneTimePtr(access.ExpiresAt),
 		})
 	}
+	sort.Slice(secrets, func(i, j int) bool {
+		if secrets[i].CreatedAt.Equal(secrets[j].CreatedAt) {
+			return secrets[i].SecretID < secrets[j].SecretID
+		}
+		return secrets[i].CreatedAt.After(secrets[j].CreatedAt)
+	})
 	return secrets, nil
 }
 
