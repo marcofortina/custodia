@@ -17,6 +17,8 @@ spec:
         app.kubernetes.io/name: {{ include "custodia.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
+      serviceAccountName: {{ include "custodia.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
       securityContext:
 {{ toYaml .Values.podSecurityContext | indent 8 }}
       containers:
