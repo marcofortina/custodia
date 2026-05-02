@@ -30,3 +30,5 @@ Dynamic path segments are URL-escaped. Payloads remain caller-defined JSON with 
 `CustodiaClient.export_audit_events(...)` returns server-generated JSONL text for
 metadata-only audit export workflows. It does not expose plaintext, ciphertext or
 recipient envelopes.
+
+Use `client.version()` to read server build metadata through the authenticated API.
