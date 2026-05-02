@@ -191,6 +191,7 @@ func (s *Server) handleExportAuditEvents(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	w.Header().Set("Content-Type", "application/x-ndjson; charset=utf-8")
+	w.Header().Set("Content-Disposition", `attachment; filename="custodia-audit.jsonl"`)
 	encoder := json.NewEncoder(w)
 	for _, event := range events {
 		if err := encoder.Encode(event); err != nil {
