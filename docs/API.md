@@ -2,6 +2,20 @@
 
 All `/v1/*` routes require mTLS. The authenticated `client_id` is extracted from the client certificate SAN/CN and mapped to an active row in `clients`.
 
+
+## Client metadata create
+
+`POST /v1/clients`
+
+Requires an admin mTLS client. Registers a client id and the certificate SAN/CN subject that will be accepted for that client. This endpoint does not generate or sign certificates; CA/signing remains an external administrative service.
+
+```json
+{
+  "client_id": "client_bob",
+  "mtls_subject": "client_bob"
+}
+```
+
 ## Secret create
 
 `POST /v1/secrets`

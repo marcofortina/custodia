@@ -39,6 +39,8 @@ func main() {
 	switch args[0] + " " + args[1] {
 	case "client list":
 		err = requestJSON(&cfg, http.MethodGet, "/v1/clients", nil, os.Stdout)
+	case "client create":
+		err = runClientCreate(&cfg, args[2:])
 	case "client revoke":
 		err = runClientRevoke(&cfg, args[2:])
 	case "access revoke":
@@ -51,6 +53,18 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func runClientCreate(cfg *cliConfig, args []string) error {
+	cmd := flag.NewFlagSet("client create", flag.ExitOnError)
+	req := model.CreateClientRequest{}
+	cmd.StringVar(&req.ClientID, "client-id", "", "client id to register")
+	cmd.StringVar(&req.MTLSSubject, "mtls-subject", "", "certificate SAN/CN mapped to the client id")
+	_ = cmd.Parse(args)
+	if req.ClientID == "" || req.MTLSSubject == "" {
+		return fmt.Errorf("--client-id and --mtls-subject are required")
+	}
+	return requestJSON(cfg, http.MethodPost, "/v1/clients", req, os.Stdout)
 }
 
 func runClientRevoke(cfg *cliConfig, args []string) error {
@@ -136,6 +150,7 @@ func env(key, fallback string) string {
 func usage() {
 	fmt.Fprintln(os.Stderr, `usage:
   vault-admin [global flags] client list
+  vault-admin [global flags] client create --client-id ID --mtls-subject SUBJECT
   vault-admin [global flags] client revoke --client-id ID [--reason REASON]
   vault-admin [global flags] access revoke --secret-id ID --client-id ID
 

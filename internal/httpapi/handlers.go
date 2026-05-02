@@ -41,6 +41,22 @@ func (s *Server) handleListClients(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"clients": clients})
 }
 
+func (s *Server) handleCreateClient(w http.ResponseWriter, r *http.Request) {
+	var req model.CreateClientRequest
+	if !decodeJSON(w, r, &req) {
+		s.auditFailure(r, "client.create", "client", "", map[string]string{"reason": "invalid_json"})
+		return
+	}
+	client := model.Client{ClientID: req.ClientID, MTLSSubject: req.MTLSSubject}
+	if err := s.store.CreateClient(r.Context(), client); err != nil {
+		s.auditStoreFailure(r, "client.create", "client", req.ClientID, err)
+		writeMappedError(w, err)
+		return
+	}
+	s.audit(r, "client.create", "client", req.ClientID, "success", nil)
+	writeJSON(w, http.StatusCreated, map[string]string{"status": "created", "client_id": req.ClientID})
+}
+
 func (s *Server) handleRevokeClient(w http.ResponseWriter, r *http.Request) {
 	var req model.RevokeClientRequest
 	if !decodeJSON(w, r, &req) {

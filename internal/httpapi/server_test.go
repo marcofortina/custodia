@@ -29,6 +29,50 @@ func TestAPIRejectsRequestsWithoutClientCertificate(t *testing.T) {
 	}
 }
 
+func TestAPIAdminCreatesClientMetadata(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodPost, "/v1/clients", `{"client_id":"client_bob","mtls_subject":"client_bob"}`, "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", res.Code, res.Body.String())
+	}
+	assertLastAudit(t, memoryStore, "client.create", "success", "")
+
+	createBody := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_bob","envelope":"ZW52ZWxvcGUtZm9yLWJvYg=="}],"permissions":7}`
+	req = mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_bob")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected created client to authenticate and create a secret, got %d: %s", res.Code, res.Body.String())
+	}
+}
+
+func TestAPIRejectsClientCreateFromNonAdmin(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodPost, "/v1/clients", `{"client_id":"client_bob","mtls_subject":"client_bob"}`, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d: %s", res.Code, res.Body.String())
+	}
+	assertLastAudit(t, memoryStore, "auth.admin", "failure", "admin_required")
+}
+
 func TestAPICreateAndReadOpaqueSecret(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()
@@ -227,6 +271,9 @@ func assertLastAudit(t *testing.T, memoryStore *store.MemoryStore, action, outco
 	last := events[len(events)-1]
 	if last.Action != action || last.Outcome != outcome {
 		t.Fatalf("expected audit %s/%s, got %+v", action, outcome, last)
+	}
+	if reason == "" {
+		return last
 	}
 	var metadata map[string]string
 	if err := json.Unmarshal(last.Metadata, &metadata); err != nil {

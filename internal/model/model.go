@@ -86,6 +86,11 @@ type SecretReadResponse struct {
 	Permissions    int             `json:"permissions"`
 }
 
+type CreateClientRequest struct {
+	ClientID    string `json:"client_id"`
+	MTLSSubject string `json:"mtls_subject"`
+}
+
 type RevokeClientRequest struct {
 	ClientID string `json:"client_id"`
 	Reason   string `json:"reason,omitempty"`
