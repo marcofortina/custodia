@@ -2,7 +2,7 @@ GO ?= go
 
 .PHONY: test
 test:
-	$(GO) test ./...
+	$(GO) test -p=1 -timeout 60s ./...
 
 .PHONY: fmt
 fmt:
