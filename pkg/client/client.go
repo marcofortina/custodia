@@ -77,6 +77,15 @@ func (c *Client) ListClientsWithLimit(limit int) ([]model.Client, error) {
 }
 
 func (c *Client) ListClientsFiltered(filters ClientListFilters) ([]model.Client, error) {
+	if err := validateOptionalLimit(filters.Limit); err != nil {
+		return nil, err
+	}
+	if err := validateOptionalLimit(filters.Limit); err != nil {
+		return nil, err
+	}
+	if err := validateOptionalLimit(filters.Limit); err != nil {
+		return nil, err
+	}
 	query := url.Values{}
 	if filters.Limit > 0 {
 		query.Set("limit", fmt.Sprintf("%d", filters.Limit))
@@ -159,6 +168,9 @@ func (c *Client) ListSecrets() ([]model.SecretMetadata, error) {
 }
 
 func (c *Client) ListSecretsWithLimit(limit int) ([]model.SecretMetadata, error) {
+	if err := validateOptionalLimit(limit); err != nil {
+		return nil, err
+	}
 	path := "/v1/secrets"
 	if limit > 0 {
 		query := url.Values{}
@@ -182,6 +194,9 @@ func (c *Client) ListSecretVersions(secretID string) ([]model.SecretVersionMetad
 }
 
 func (c *Client) ListSecretVersionsWithLimit(secretID string, limit int) ([]model.SecretVersionMetadata, error) {
+	if err := validateOptionalLimit(limit); err != nil {
+		return nil, err
+	}
 	path := "/v1/secrets/" + pathEscape(secretID) + "/versions"
 	if limit > 0 {
 		query := url.Values{}
@@ -200,6 +215,9 @@ func (c *Client) ListSecretAccess(secretID string) ([]model.SecretAccessMetadata
 }
 
 func (c *Client) ListSecretAccessWithLimit(secretID string, limit int) ([]model.SecretAccessMetadata, error) {
+	if err := validateOptionalLimit(limit); err != nil {
+		return nil, err
+	}
 	path := "/v1/secrets/" + pathEscape(secretID) + "/access"
 	if limit > 0 {
 		query := url.Values{}
@@ -286,4 +304,11 @@ func addQueryFilter(query url.Values, key string, value string) {
 	if value != "" {
 		query.Set(key, value)
 	}
+}
+
+func validateOptionalLimit(limit int) error {
+	if limit < 0 || limit > 500 {
+		return fmt.Errorf("limit must be between 1 and 500 when set")
+	}
+	return nil
 }

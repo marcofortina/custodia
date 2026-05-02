@@ -286,3 +286,25 @@ func TestClientListAuditEventsUsesFilters(t *testing.T) {
 		t.Fatalf("unexpected audit response: %+v err=%v", events, err)
 	}
 }
+
+func TestClientRejectsInvalidListLimits(t *testing.T) {
+	custodiaClient := &Client{baseURL: "http://example.test", http: http.DefaultClient}
+	if _, err := custodiaClient.ListClientsWithLimit(501); err == nil {
+		t.Fatal("expected client list limit error")
+	}
+	if _, err := custodiaClient.ListSecretsWithLimit(-1); err == nil {
+		t.Fatal("expected secret list limit error")
+	}
+	if _, err := custodiaClient.ListSecretVersionsWithLimit("550e8400-e29b-41d4-a716-446655440000", 501); err == nil {
+		t.Fatal("expected version list limit error")
+	}
+	if _, err := custodiaClient.ListSecretAccessWithLimit("550e8400-e29b-41d4-a716-446655440000", 501); err == nil {
+		t.Fatal("expected access list limit error")
+	}
+	if _, err := custodiaClient.ListAuditEvents(AuditEventFilters{Limit: 501}); err == nil {
+		t.Fatal("expected audit list limit error")
+	}
+	if _, err := custodiaClient.ListAccessGrantRequests(AccessGrantRequestFilters{Limit: 501}); err == nil {
+		t.Fatal("expected access request list limit error")
+	}
+}
