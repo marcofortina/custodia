@@ -30,6 +30,7 @@ func TestAPISetsSecurityHeaders(t *testing.T) {
 		"X-Frame-Options":        "DENY",
 		"Referrer-Policy":        "no-referrer",
 		"Cache-Control":          "no-store",
+		"Permissions-Policy":     "camera=(), microphone=(), geolocation=(), payment=()",
 	}
 	for header, value := range expected {
 		if got := res.Header().Get(header); got != value {
