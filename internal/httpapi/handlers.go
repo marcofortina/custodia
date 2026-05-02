@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"custodia/internal/model"
+	"custodia/internal/ratelimit"
 )
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
@@ -16,6 +17,12 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 	if err := s.store.Health(r.Context()); err != nil {
 		writeError(w, http.StatusServiceUnavailable, "store_unavailable")
 		return
+	}
+	if checker, ok := s.limiter.(ratelimit.HealthChecker); ok {
+		if err := checker.Health(r.Context()); err != nil {
+			writeError(w, http.StatusServiceUnavailable, "rate_limiter_unavailable")
+			return
+		}
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }

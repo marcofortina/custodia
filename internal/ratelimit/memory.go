@@ -35,3 +35,5 @@ func (l *MemoryLimiter) Allow(_ context.Context, key string, limit int) (bool, e
 	l.counters[key] = counter
 	return counter.count <= limit, nil
 }
+
+func (l *MemoryLimiter) Health(context.Context) error { return nil }

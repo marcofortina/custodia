@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,6 +16,27 @@ import (
 	"custodia/internal/ratelimit"
 	"custodia/internal/store"
 )
+
+func TestReadyFailsWhenRateLimiterHealthFails(t *testing.T) {
+	memoryStore := store.NewMemoryStore()
+	handler := New(Options{Store: memoryStore, Limiter: failingHealthLimiter{}, AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+	req := httptest.NewRequest(http.MethodGet, "/ready", nil)
+	res := httptest.NewRecorder()
+
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d: %s", res.Code, res.Body.String())
+	}
+	if !strings.Contains(res.Body.String(), "rate_limiter_unavailable") {
+		t.Fatalf("expected rate limiter readiness error, got %s", res.Body.String())
+	}
+}
+
+type failingHealthLimiter struct{}
+
+func (failingHealthLimiter) Allow(context.Context, string, int) (bool, error) { return true, nil }
+func (failingHealthLimiter) Health(context.Context) error                     { return errors.New("down") }
 
 func TestAPIRejectsRequestsWithoutClientCertificate(t *testing.T) {
 	memoryStore := store.NewMemoryStore()

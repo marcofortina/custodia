@@ -15,7 +15,7 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 - PostgreSQL-compatible schema contract; executable PostgreSQL store wiring is still pending.
 - In-memory store for local development and tests.
 - Hash-chained audit event model with admin audit listing API/CLI.
-- Memory and Valkey-compatible rate limiter backends.
+- Memory and Valkey-compatible rate limiter backends with readiness checks.
 - Minimal admin CLI for metadata operations exposed by the API.
 - Minimal Go and Python client libraries that only transport ciphertext and opaque envelopes.
 - Docker, Compose and Helm skeletons.

@@ -45,13 +45,8 @@ func (l *ValkeyLimiter) Allow(ctx context.Context, key string, limit int) (bool,
 	}
 	defer conn.Close()
 	reader := bufio.NewReader(conn)
-	if l.password != "" {
-		if err := writeCommand(conn, "AUTH", l.password); err != nil {
-			return false, err
-		}
-		if _, err := readSimple(reader); err != nil {
-			return false, err
-		}
+	if err := l.authenticate(conn, reader); err != nil {
+		return false, err
 	}
 	if err := writeCommand(conn, "INCR", redisKey); err != nil {
 		return false, err
@@ -66,6 +61,34 @@ func (l *ValkeyLimiter) Allow(ctx context.Context, key string, limit int) (bool,
 		}
 	}
 	return count <= int64(limit), nil
+}
+
+func (l *ValkeyLimiter) Health(ctx context.Context) error {
+	conn, err := l.dial(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	reader := bufio.NewReader(conn)
+	if err := l.authenticate(conn, reader); err != nil {
+		return err
+	}
+	if err := writeCommand(conn, "PING"); err != nil {
+		return err
+	}
+	_, err = readSimple(reader)
+	return err
+}
+
+func (l *ValkeyLimiter) authenticate(conn net.Conn, reader *bufio.Reader) error {
+	if l.password == "" {
+		return nil
+	}
+	if err := writeCommand(conn, "AUTH", l.password); err != nil {
+		return err
+	}
+	_, err := readSimple(reader)
+	return err
 }
 
 func (l *ValkeyLimiter) dial(ctx context.Context) (net.Conn, error) {

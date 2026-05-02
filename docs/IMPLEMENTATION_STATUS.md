@@ -13,7 +13,7 @@
 - Configurable recipient-envelope cap with default 100 and HTTP 413 rejection on create/new-version overflow.
 - Hash-chained audit events for successful and failed auth/API operations, with admin-only listing API/CLI.
 - PostgreSQL schema contract and in-memory executable store.
-- Valkey-compatible rate limiting.
+- Valkey-compatible rate limiting with `/ready` health checks.
 - Minimal admin CLI for API-backed client metadata create/list/revoke and access revoke operations.
 - Minimal Go/Python clients.
 - Docker, Compose and Helm deployment skeletons.
@@ -77,3 +77,10 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Added `GET /v1/secrets` for caller-visible secret metadata.
 - Kept ciphertext/envelope material out of list responses.
 - Added Go client `ListSecrets` helper.
+
+
+## Patch 015 - rate limiter readiness
+
+- Added optional rate-limiter health checks to `/ready`.
+- Added Valkey `PING` readiness support without adding external dependencies.
+- Kept `/health` lightweight and `/ready` dependency-aware.
