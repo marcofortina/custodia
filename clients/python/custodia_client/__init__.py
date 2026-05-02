@@ -68,11 +68,19 @@ class CustodiaClient:
     def get_secret(self, secret_id: str) -> dict[str, Any]:
         return self._request("GET", f"/v1/secrets/{_path_escape(secret_id)}")
 
-    def list_secret_versions(self, secret_id: str) -> dict[str, Any]:
-        return self._request("GET", f"/v1/secrets/{_path_escape(secret_id)}/versions")
+    def list_secret_versions(self, secret_id: str, limit: int | None = None) -> dict[str, Any]:
+        query = _query_params(limit=str(limit) if limit is not None else None)
+        path = f"/v1/secrets/{_path_escape(secret_id)}/versions"
+        if query:
+            path += f"?{query}"
+        return self._request("GET", path)
 
-    def list_secret_access(self, secret_id: str) -> dict[str, Any]:
-        return self._request("GET", f"/v1/secrets/{_path_escape(secret_id)}/access")
+    def list_secret_access(self, secret_id: str, limit: int | None = None) -> dict[str, Any]:
+        query = _query_params(limit=str(limit) if limit is not None else None)
+        path = f"/v1/secrets/{_path_escape(secret_id)}/access"
+        if query:
+            path += f"?{query}"
+        return self._request("GET", path)
 
     def status(self) -> dict[str, Any]:
         return self._request("GET", "/v1/status")
