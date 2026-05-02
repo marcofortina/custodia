@@ -406,6 +406,20 @@ func (s *Server) handleListAccessGrantRequests(w http.ResponseWriter, r *http.Re
 		}
 		requests = filtered
 	}
+	if requestedBy := strings.TrimSpace(r.URL.Query().Get("requested_by_client_id")); requestedBy != "" {
+		if !model.ValidClientID(requestedBy) {
+			s.auditFailure(r, "secret.access_request_list", "secret", secretID, map[string]string{"reason": "invalid_requested_by_filter"})
+			writeError(w, http.StatusBadRequest, "invalid_requested_by_filter")
+			return
+		}
+		filtered := requests[:0]
+		for _, request := range requests {
+			if request.RequestedByClientID == requestedBy {
+				filtered = append(filtered, request)
+			}
+		}
+		requests = filtered
+	}
 	s.audit(r, "secret.access_request_list", "secret", secretID, "success", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"access_requests": requests})
 }
