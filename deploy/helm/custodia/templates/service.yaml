@@ -15,6 +15,11 @@ spec:
     - name: https
       port: {{ .Values.service.port }}
       targetPort: https
+{{- if .Values.health.exposeOnService }}
+    - name: health
+      port: {{ .Values.health.port }}
+      targetPort: health
+{{- end }}
   selector:
     app.kubernetes.io/name: {{ include "custodia.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}

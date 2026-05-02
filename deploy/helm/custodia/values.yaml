@@ -28,6 +28,7 @@ serviceAccount:
 
 health:
   port: 8080
+  exposeOnService: false
 
 config:
   apiAddr: ":8443"
