@@ -101,3 +101,25 @@ func (s *Server) handleWebAudit(w http.ResponseWriter, r *http.Request) {
 	s.audit(r, "web.audit_list", "audit_event", "", "success", nil)
 	writeWebPage(w, "Audit events", body)
 }
+
+func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request) {
+	requests, err := s.store.ListAccessGrantRequests(r.Context(), "")
+	if err != nil {
+		s.auditStoreFailure(r, "web.access_request_list", "secret", "", err)
+		writeMappedError(w, err)
+		return
+	}
+	if len(requests) > 100 {
+		requests = requests[:100]
+	}
+	rows := ""
+	for _, request := range requests {
+		rows += "<tr><td>" + html.EscapeString(request.SecretID) + "</td><td>" + html.EscapeString(request.VersionID) + "</td><td>" + html.EscapeString(request.ClientID) + "</td><td>" + html.EscapeString(request.RequestedByClientID) + "</td><td>" + html.EscapeString(request.Status) + "</td></tr>"
+	}
+	if rows == "" {
+		rows = `<tr><td colspan="5">No access requests found.</td></tr>`
+	}
+	body := "<h1>Access requests</h1><p>Metadata-only pending grant workflow. Envelopes are never rendered here.</p><table><thead><tr><th>Secret</th><th>Version</th><th>Target client</th><th>Requested by</th><th>Status</th></tr></thead><tbody>" + rows + "</tbody></table>"
+	s.audit(r, "web.access_request_list", "secret", "", "success", nil)
+	writeWebPage(w, "Access requests", body)
+}
