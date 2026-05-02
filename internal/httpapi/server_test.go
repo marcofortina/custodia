@@ -1245,6 +1245,9 @@ func TestAdminCanExportAuditEventsAsJSONL(t *testing.T) {
 	if got := res.Header().Get("X-Custodia-Audit-Export-SHA256"); len(got) != 64 {
 		t.Fatalf("expected SHA-256 export header, got %q", got)
 	}
+	if got := res.Header().Get("X-Custodia-Audit-Export-Events"); got == "" {
+		t.Fatalf("expected exported event count header")
+	}
 	lines := strings.Split(strings.TrimSpace(res.Body.String()), "\n")
 	if len(lines) == 0 || !strings.Contains(lines[0], `"action":"audit.list"`) {
 		t.Fatalf("expected exported audit JSONL, got %q", res.Body.String())
