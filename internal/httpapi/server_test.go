@@ -947,6 +947,45 @@ func TestAPIAdminGetsClientMetadata(t *testing.T) {
 	}
 }
 
+func TestAPIAdminListsPendingAccessRequestsWithStatusFilter(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, clientID := range []string{"admin", "client_alice", "client_bob"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %s: %v", clientID, err)
+		}
+	}
+	created, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:        "secret",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	if _, err := memoryStore.RequestAccessGrant(ctx, "admin", created.SecretID, model.AccessGrantRequest{TargetClientID: "client_bob", Permissions: int(model.PermissionRead)}); err != nil {
+		t.Fatalf("request grant: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/access-requests?status=pending", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var payload struct {
+		AccessRequests []model.AccessGrantMetadata `json:"access_requests"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode requests: %v", err)
+	}
+	if len(payload.AccessRequests) != 1 || payload.AccessRequests[0].Status != "pending" {
+		t.Fatalf("unexpected pending requests: %+v", payload.AccessRequests)
+	}
+}
+
 func TestAPIAdminListsPendingAccessRequestsWithoutEnvelopes(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()

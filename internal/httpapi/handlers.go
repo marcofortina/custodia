@@ -336,6 +336,20 @@ func (s *Server) handleListAccessGrantRequests(w http.ResponseWriter, r *http.Re
 		writeMappedError(w, err)
 		return
 	}
+	if status := strings.TrimSpace(r.URL.Query().Get("status")); status != "" {
+		if !validAccessRequestStatus(status) {
+			s.auditFailure(r, "secret.access_request_list", "secret", secretID, map[string]string{"reason": "invalid_status_filter"})
+			writeError(w, http.StatusBadRequest, "invalid_status_filter")
+			return
+		}
+		filtered := requests[:0]
+		for _, request := range requests {
+			if request.Status == status {
+				filtered = append(filtered, request)
+			}
+		}
+		requests = filtered
+	}
 	s.audit(r, "secret.access_request_list", "secret", secretID, "success", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"access_requests": requests})
 }
@@ -389,6 +403,15 @@ func (s *Server) handleCreateSecretVersion(w http.ResponseWriter, r *http.Reques
 	}
 	s.audit(r, "secret.version_create", "secret", secretID, "success", nil)
 	writeJSON(w, http.StatusCreated, ref)
+}
+
+func validAccessRequestStatus(value string) bool {
+	switch value {
+	case "pending", "activated", "revoked", "expired":
+		return true
+	default:
+		return false
+	}
 }
 
 func parseBoolQuery(value string) (bool, bool) {
