@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"custodia/internal/model"
@@ -43,6 +45,10 @@ func main() {
 		err = runClientCreate(&cfg, args[2:])
 	case "client revoke":
 		err = runClientRevoke(&cfg, args[2:])
+	case "access grant-request":
+		err = runAccessGrantRequest(&cfg, args[2:])
+	case "access activate":
+		err = runAccessActivate(&cfg, args[2:])
 	case "access revoke":
 		err = runAccessRevoke(&cfg, args[2:])
 	default:
@@ -79,6 +85,42 @@ func runClientRevoke(cfg *cliConfig, args []string) error {
 	return requestJSON(cfg, http.MethodPost, "/v1/clients/revoke", req, os.Stdout)
 }
 
+func runAccessGrantRequest(cfg *cliConfig, args []string) error {
+	cmd := flag.NewFlagSet("access grant-request", flag.ExitOnError)
+	secretID := cmd.String("secret-id", "", "secret id")
+	clientID := cmd.String("client-id", "", "client id")
+	versionID := cmd.String("version-id", "", "secret version id; defaults to latest active version")
+	permissions := cmd.String("permissions", "", "permission bits or names: read, write, share, all")
+	_ = cmd.Parse(args)
+	if *secretID == "" || *clientID == "" || *permissions == "" {
+		return fmt.Errorf("--secret-id, --client-id and --permissions are required")
+	}
+	bits, err := parsePermissionBits(*permissions)
+	if err != nil {
+		return err
+	}
+	req := model.AccessGrantRequest{VersionID: *versionID, TargetClientID: *clientID, Permissions: bits}
+	return requestJSON(cfg, http.MethodPost, fmt.Sprintf("/v1/secrets/%s/access-requests", *secretID), req, os.Stdout)
+}
+
+func runAccessActivate(cfg *cliConfig, args []string) error {
+	cmd := flag.NewFlagSet("access activate", flag.ExitOnError)
+	secretID := cmd.String("secret-id", "", "secret id")
+	clientID := cmd.String("client-id", "", "client id")
+	envelopeFile := cmd.String("envelope-file", "", "file containing the base64 opaque envelope generated client-side")
+	_ = cmd.Parse(args)
+	if *secretID == "" || *clientID == "" || *envelopeFile == "" {
+		return fmt.Errorf("--secret-id, --client-id and --envelope-file are required")
+	}
+	envelope, err := os.ReadFile(*envelopeFile)
+	if err != nil {
+		return err
+	}
+	req := model.ActivateAccessRequest{Envelope: strings.TrimSpace(string(envelope))}
+	path := fmt.Sprintf("/v1/secrets/%s/access/%s/activate", *secretID, *clientID)
+	return requestJSON(cfg, http.MethodPost, path, req, os.Stdout)
+}
+
 func runAccessRevoke(cfg *cliConfig, args []string) error {
 	cmd := flag.NewFlagSet("access revoke", flag.ExitOnError)
 	secretID := cmd.String("secret-id", "", "secret id")
@@ -89,6 +131,39 @@ func runAccessRevoke(cfg *cliConfig, args []string) error {
 	}
 	path := fmt.Sprintf("/v1/secrets/%s/access/%s", *secretID, *clientID)
 	return requestJSON(cfg, http.MethodDelete, path, nil, os.Stdout)
+}
+
+func parsePermissionBits(value string) (int, error) {
+	if value == "" {
+		return 0, fmt.Errorf("permissions are required")
+	}
+	if bits, err := strconv.Atoi(value); err == nil {
+		if !model.ValidPermissionBits(bits) {
+			return 0, fmt.Errorf("invalid permission bits: %d", bits)
+		}
+		return bits, nil
+	}
+	bits := 0
+	for _, part := range strings.FieldsFunc(value, func(r rune) bool { return r == ',' || r == '+' || r == '|' }) {
+		switch strings.ToLower(strings.TrimSpace(part)) {
+		case "read":
+			bits |= int(model.PermissionRead)
+		case "write":
+			bits |= int(model.PermissionWrite)
+		case "share":
+			bits |= int(model.PermissionShare)
+		case "all":
+			bits |= int(model.PermissionAll)
+		case "":
+			continue
+		default:
+			return 0, fmt.Errorf("unknown permission %q", part)
+		}
+	}
+	if !model.ValidPermissionBits(bits) {
+		return 0, fmt.Errorf("invalid permission bits: %d", bits)
+	}
+	return bits, nil
 }
 
 func requestJSON(cfg *cliConfig, method, path string, payload any, out io.Writer) error {
@@ -152,6 +227,8 @@ func usage() {
   vault-admin [global flags] client list
   vault-admin [global flags] client create --client-id ID --mtls-subject SUBJECT
   vault-admin [global flags] client revoke --client-id ID [--reason REASON]
+  vault-admin [global flags] access grant-request --secret-id ID --client-id ID --permissions read[,write,share]
+  vault-admin [global flags] access activate --secret-id ID --client-id ID --envelope-file FILE
   vault-admin [global flags] access revoke --secret-id ID --client-id ID
 
 global flags:

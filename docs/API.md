@@ -51,6 +51,31 @@ Requires the caller to have `share` on the selected version. The request must in
 
 Requires `write`. Used for strong revocation and client-side cryptographic rotation by uploading new base64-encoded ciphertext and new opaque envelopes. Requests with more than `CUSTODIA_MAX_ENVELOPES_PER_SECRET` recipients are rejected with `413 Payload Too Large`; the default limit is `100`.
 
+## Access grant request
+
+`POST /v1/secrets/{secret_id}/access-requests`
+
+Requires an admin mTLS client. Creates a pending access request for the latest active version, or for `version_id` when supplied. This does not activate access and does not accept an envelope.
+
+```json
+{
+  "target_client_id": "client_bob",
+  "permissions": 4
+}
+```
+
+## Access grant activation
+
+`POST /v1/secrets/{secret_id}/access/{client_id}/activate`
+
+Requires the caller to have `share` on the pending request version. The request uploads only the base64 opaque envelope generated client-side for the target client.
+
+```json
+{
+  "envelope": "ZW52ZWxvcGUtZm9yLWJvYg=="
+}
+```
+
 ## Revocation
 
 `DELETE /v1/secrets/{secret_id}/access/{client_id}`

@@ -228,3 +228,50 @@ func mustCreateClient(t *testing.T, store *MemoryStore, clientID, subject string
 		t.Fatalf("create client %s: %v", clientID, err)
 	}
 }
+
+func TestMemoryStoreGrantRequestRequiresClientSideEnvelopeActivation(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_admin", "client_admin")
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	mustCreateClient(t, store, "client_bob", "client_bob")
+
+	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:       "secret",
+		Ciphertext: "Y2lwaGVydGV4dA==",
+		Envelopes: []model.RecipientEnvelope{
+			{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"},
+		},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+
+	grant, err := store.RequestAccessGrant(ctx, "client_admin", created.SecretID, model.AccessGrantRequest{
+		TargetClientID: "client_bob",
+		Permissions:    int(model.PermissionRead),
+	})
+	if err != nil {
+		t.Fatalf("request grant: %v", err)
+	}
+	if grant.Status != "pending" || grant.VersionID != created.VersionID {
+		t.Fatalf("unexpected grant ref: %+v", grant)
+	}
+	if _, err := store.GetSecret(ctx, "client_bob", created.SecretID); err != ErrForbidden {
+		t.Fatalf("expected bob to be forbidden before activation, got %v", err)
+	}
+	if err := store.ActivateAccessGrant(ctx, "client_bob", created.SecretID, "client_bob", model.ActivateAccessRequest{Envelope: "ZW52ZWxvcGUtZm9yLWJvYg=="}); err != ErrForbidden {
+		t.Fatalf("expected non-sharing target activation to be forbidden, got %v", err)
+	}
+	if err := store.ActivateAccessGrant(ctx, "client_alice", created.SecretID, "client_bob", model.ActivateAccessRequest{Envelope: "ZW52ZWxvcGUtZm9yLWJvYg=="}); err != nil {
+		t.Fatalf("activate grant: %v", err)
+	}
+	read, err := store.GetSecret(ctx, "client_bob", created.SecretID)
+	if err != nil {
+		t.Fatalf("bob read after activation: %v", err)
+	}
+	if read.Envelope != "ZW52ZWxvcGUtZm9yLWJvYg==" || read.Permissions != int(model.PermissionRead) {
+		t.Fatalf("unexpected activated access: %+v", read)
+	}
+}

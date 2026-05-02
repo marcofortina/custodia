@@ -132,6 +132,40 @@ func (s *Server) handleShareSecret(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "shared"})
 }
 
+func (s *Server) handleRequestAccessGrant(w http.ResponseWriter, r *http.Request) {
+	secretID := r.PathValue("secret_id")
+	var req model.AccessGrantRequest
+	if !decodeJSON(w, r, &req) {
+		s.auditFailure(r, "secret.access_request", "secret", secretID, map[string]string{"reason": "invalid_json"})
+		return
+	}
+	ref, err := s.store.RequestAccessGrant(r.Context(), clientIDFromContext(r), secretID, req)
+	if err != nil {
+		s.auditStoreFailure(r, "secret.access_request", "secret", secretID, err)
+		writeMappedError(w, err)
+		return
+	}
+	s.audit(r, "secret.access_request", "secret", secretID, "success", nil)
+	writeJSON(w, http.StatusCreated, ref)
+}
+
+func (s *Server) handleActivateAccessGrant(w http.ResponseWriter, r *http.Request) {
+	secretID := r.PathValue("secret_id")
+	targetClientID := r.PathValue("client_id")
+	var req model.ActivateAccessRequest
+	if !decodeJSON(w, r, &req) {
+		s.auditFailure(r, "secret.access_activate", "secret", secretID, map[string]string{"reason": "invalid_json"})
+		return
+	}
+	if err := s.store.ActivateAccessGrant(r.Context(), clientIDFromContext(r), secretID, targetClientID, req); err != nil {
+		s.auditStoreFailure(r, "secret.access_activate", "secret", secretID, err)
+		writeMappedError(w, err)
+		return
+	}
+	s.audit(r, "secret.access_activate", "secret", secretID, "success", nil)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "activated"})
+}
+
 func (s *Server) handleRevokeAccess(w http.ResponseWriter, r *http.Request) {
 	secretID := r.PathValue("secret_id")
 	targetClientID := r.PathValue("client_id")

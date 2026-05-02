@@ -29,3 +29,10 @@ The repository contains an executable standard-library baseline and deployable b
 - formal verification and WORM/SIEM integration.
 
 These are explicitly operational components in the analysis and cannot be truthfully completed as local source code only.
+
+## Patch 008 - pending grant activation
+
+- Added admin-only pending access grant requests.
+- Added envelope-only access activation by an already authorized client with `share`.
+- Added CLI commands for `access grant-request` and `access activate`.
+- Added PostgreSQL schema contract for `secret_access_requests`.

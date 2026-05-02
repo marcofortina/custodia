@@ -17,6 +17,7 @@ type MemoryStore struct {
 	clients         map[string]model.Client
 	subjectToClient map[string]string
 	secrets         map[string]*memorySecret
+	pendingAccess   map[string]*memoryPendingAccess
 	auditEvents     []model.AuditEvent
 	lastAuditHash   []byte
 }
@@ -49,11 +50,23 @@ type memoryAccess struct {
 	RevokedAt   *time.Time
 }
 
+type memoryPendingAccess struct {
+	SecretID            string
+	VersionID           string
+	ClientID            string
+	RequestedByClientID string
+	Permissions         int
+	RequestedAt         time.Time
+	ActivatedAt         *time.Time
+	RevokedAt           *time.Time
+}
+
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
 		clients:         make(map[string]model.Client),
 		subjectToClient: make(map[string]string),
 		secrets:         make(map[string]*memorySecret),
+		pendingAccess:   make(map[string]*memoryPendingAccess),
 	}
 }
 
@@ -235,6 +248,80 @@ func (s *MemoryStore) ShareSecret(_ context.Context, actorClientID, secretID str
 	return nil
 }
 
+func (s *MemoryStore) RequestAccessGrant(_ context.Context, actorClientID, secretID string, req model.AccessGrantRequest) (model.AccessGrantRef, error) {
+	if strings.TrimSpace(req.TargetClientID) == "" || !model.ValidPermissionBits(req.Permissions) {
+		return model.AccessGrantRef{}, ErrInvalidInput
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	secret, ok := s.secrets[secretID]
+	if !ok || secret.DeletedAt != nil {
+		return model.AccessGrantRef{}, ErrNotFound
+	}
+	version := s.versionLocked(secret, req.VersionID)
+	if version == nil {
+		return model.AccessGrantRef{}, ErrNotFound
+	}
+	if !s.clientActiveLocked(actorClientID) || !s.clientActiveLocked(req.TargetClientID) {
+		return model.AccessGrantRef{}, ErrInvalidInput
+	}
+	if existing, ok := version.Access[req.TargetClientID]; ok && activeAccess(existing) {
+		return model.AccessGrantRef{}, ErrConflict
+	}
+	key := pendingAccessKey(secretID, version.VersionID, req.TargetClientID)
+	if pending, ok := s.pendingAccess[key]; ok && activePendingAccess(pending) {
+		return model.AccessGrantRef{}, ErrConflict
+	}
+	s.pendingAccess[key] = &memoryPendingAccess{
+		SecretID:            secretID,
+		VersionID:           version.VersionID,
+		ClientID:            req.TargetClientID,
+		RequestedByClientID: actorClientID,
+		Permissions:         req.Permissions,
+		RequestedAt:         time.Now().UTC(),
+	}
+	return model.AccessGrantRef{SecretID: secretID, VersionID: version.VersionID, ClientID: req.TargetClientID, Status: "pending"}, nil
+}
+
+func (s *MemoryStore) ActivateAccessGrant(_ context.Context, actorClientID, secretID, targetClientID string, req model.ActivateAccessRequest) error {
+	if strings.TrimSpace(targetClientID) == "" || !model.ValidOpaqueBlob(req.Envelope) {
+		return ErrInvalidInput
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	secret, ok := s.secrets[secretID]
+	if !ok || secret.DeletedAt != nil {
+		return ErrNotFound
+	}
+	pending, err := s.pendingAccessLocked(secretID, targetClientID)
+	if err != nil {
+		return err
+	}
+	version := s.versionLocked(secret, pending.VersionID)
+	if version == nil {
+		return ErrNotFound
+	}
+	actorAccess, ok := version.Access[actorClientID]
+	if !ok || !activeAccess(actorAccess) || !model.HasPermission(actorAccess.Permissions, model.PermissionShare) {
+		return ErrForbidden
+	}
+	if !s.clientActiveLocked(targetClientID) {
+		return ErrInvalidInput
+	}
+	if existing, ok := version.Access[targetClientID]; ok && activeAccess(existing) {
+		return ErrConflict
+	}
+	now := time.Now().UTC()
+	version.Access[targetClientID] = &memoryAccess{
+		ClientID:    targetClientID,
+		Envelope:    req.Envelope,
+		Permissions: pending.Permissions,
+		GrantedAt:   now,
+	}
+	pending.ActivatedAt = &now
+	return nil
+}
+
 func (s *MemoryStore) RevokeAccess(_ context.Context, actorClientID, secretID, targetClientID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -247,6 +334,12 @@ func (s *MemoryStore) RevokeAccess(_ context.Context, actorClientID, secretID, t
 	for _, version := range secret.Versions {
 		if access, ok := version.Access[targetClientID]; ok && activeAccess(access) {
 			access.RevokedAt = &now
+			revoked = true
+		}
+	}
+	for _, pending := range s.pendingAccess {
+		if pending.SecretID == secretID && pending.ClientID == targetClientID && activePendingAccess(pending) {
+			pending.RevokedAt = &now
 			revoked = true
 		}
 	}
@@ -371,6 +464,31 @@ func validateOpaqueSecretPayload(ciphertext string, envelopes []model.RecipientE
 		seen[clientID] = true
 	}
 	return nil
+}
+
+func (s *MemoryStore) pendingAccessLocked(secretID, targetClientID string) (*memoryPendingAccess, error) {
+	var found *memoryPendingAccess
+	for _, pending := range s.pendingAccess {
+		if pending.SecretID != secretID || pending.ClientID != targetClientID || !activePendingAccess(pending) {
+			continue
+		}
+		if found != nil {
+			return nil, ErrConflict
+		}
+		found = pending
+	}
+	if found == nil {
+		return nil, ErrNotFound
+	}
+	return found, nil
+}
+
+func pendingAccessKey(secretID, versionID, clientID string) string {
+	return secretID + "\x00" + versionID + "\x00" + clientID
+}
+
+func activePendingAccess(pending *memoryPendingAccess) bool {
+	return pending != nil && pending.ActivatedAt == nil && pending.RevokedAt == nil
 }
 
 func activeAccess(access *memoryAccess) bool {

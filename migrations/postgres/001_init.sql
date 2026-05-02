@@ -41,6 +41,20 @@ CREATE TABLE IF NOT EXISTS secret_access (
     CHECK (permissions >= 0 AND permissions <= 7)
 );
 
+CREATE TABLE IF NOT EXISTS secret_access_requests (
+    request_id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    secret_id              UUID NOT NULL,
+    version_id             UUID NOT NULL,
+    client_id              TEXT NOT NULL REFERENCES clients(client_id),
+    permissions            INT NOT NULL,
+    requested_by_client_id TEXT NOT NULL REFERENCES clients(client_id),
+    requested_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    activated_at           TIMESTAMPTZ,
+    revoked_at             TIMESTAMPTZ,
+    FOREIGN KEY (secret_id, version_id) REFERENCES secret_versions(secret_id, version_id) ON DELETE CASCADE,
+    CHECK (permissions > 0 AND permissions <= 7)
+);
+
 CREATE TABLE IF NOT EXISTS audit_events (
     event_id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     occurred_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -57,4 +71,5 @@ CREATE TABLE IF NOT EXISTS audit_events (
 CREATE INDEX IF NOT EXISTS idx_clients_active_subject ON clients (mtls_subject) WHERE is_active = TRUE AND revoked_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_secret_versions_latest ON secret_versions (secret_id, created_at DESC) WHERE revoked_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_secret_access_client ON secret_access (client_id, secret_id, version_id) WHERE revoked_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_secret_access_requests_pending ON secret_access_requests (secret_id, version_id, client_id) WHERE activated_at IS NULL AND revoked_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_audit_events_occurred_at ON audit_events (occurred_at DESC);

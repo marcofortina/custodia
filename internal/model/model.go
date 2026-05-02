@@ -72,6 +72,23 @@ type ShareSecretRequest struct {
 	Permissions    int    `json:"permissions"`
 }
 
+type AccessGrantRequest struct {
+	VersionID      string `json:"version_id,omitempty"`
+	TargetClientID string `json:"target_client_id"`
+	Permissions    int    `json:"permissions"`
+}
+
+type ActivateAccessRequest struct {
+	Envelope string `json:"envelope"`
+}
+
+type AccessGrantRef struct {
+	SecretID  string `json:"secret_id"`
+	VersionID string `json:"version_id"`
+	ClientID  string `json:"client_id"`
+	Status    string `json:"status"`
+}
+
 type SecretVersionRef struct {
 	SecretID  string `json:"secret_id"`
 	VersionID string `json:"version_id"`

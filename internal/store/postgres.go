@@ -38,6 +38,12 @@ func (s *PostgresStore) DeleteSecret(context.Context, string, string) error {
 func (s *PostgresStore) ShareSecret(context.Context, string, string, model.ShareSecretRequest) error {
 	return ErrPostgresStoreNotWired
 }
+func (s *PostgresStore) RequestAccessGrant(context.Context, string, string, model.AccessGrantRequest) (model.AccessGrantRef, error) {
+	return model.AccessGrantRef{}, ErrPostgresStoreNotWired
+}
+func (s *PostgresStore) ActivateAccessGrant(context.Context, string, string, string, model.ActivateAccessRequest) error {
+	return ErrPostgresStoreNotWired
+}
 func (s *PostgresStore) RevokeAccess(context.Context, string, string, string) error {
 	return ErrPostgresStoreNotWired
 }

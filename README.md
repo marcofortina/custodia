@@ -8,6 +8,7 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 - Client identity extraction from certificate SAN/CN.
 - REST API for encrypted secret create/read/delete/share/new-version.
 - Admin API/CLI for client metadata create/list/revoke.
+- Pending grant request/activation workflow: admins can request access, but a client with `share` must upload the target envelope.
 - Per-version access grants with `read`, `write`, `share` bitmask.
 - Configurable recipient-envelope cap for create/new-version requests, defaulting to 100.
 - Future revocation semantics: revoked grants stop future reads; already downloaded material is not invalidated.
@@ -68,6 +69,8 @@ The server validates authorization, the configured envelope-count cap and base64
 vault-admin client create --client-id client_bob --mtls-subject client_bob
 vault-admin client list
 vault-admin client revoke --client-id client_bob --reason compromised
+vault-admin access grant-request --secret-id SECRET --client-id client_bob --permissions read
+vault-admin access activate --secret-id SECRET --client-id client_bob --envelope-file bob.envelope
 ```
 
 Client creation registers metadata only. Certificate issuance/signing remains outside the vault server and belongs to the dedicated CA/signing service described by the design.

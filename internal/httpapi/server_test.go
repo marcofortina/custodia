@@ -262,6 +262,68 @@ func TestAPIAuditsForbiddenSecretRead(t *testing.T) {
 	}
 }
 
+func TestAPIGrantRequestRequiresActivationByShareClient(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, clientID := range []string{"admin", "client_alice", "client_bob"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %s: %v", clientID, err)
+		}
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	createBody := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
+	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected create 201, got %d: %s", res.Code, res.Body.String())
+	}
+	var created model.SecretVersionRef
+	if err := json.NewDecoder(res.Body).Decode(&created); err != nil {
+		t.Fatalf("decode created: %v", err)
+	}
+
+	grantBody := `{"target_client_id":"client_bob","permissions":4}`
+	req = mtlsRequest(http.MethodPost, "/v1/secrets/"+created.SecretID+"/access-requests", grantBody, "admin")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected grant request 201, got %d: %s", res.Code, res.Body.String())
+	}
+	assertLastAudit(t, memoryStore, "secret.access_request", "success", "")
+
+	req = mtlsRequest(http.MethodGet, "/v1/secrets/"+created.SecretID, "", "client_bob")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusForbidden {
+		t.Fatalf("expected bob read before activation 403, got %d: %s", res.Code, res.Body.String())
+	}
+
+	activateBody := `{"envelope":"ZW52ZWxvcGUtZm9yLWJvYg=="}`
+	req = mtlsRequest(http.MethodPost, "/v1/secrets/"+created.SecretID+"/access/client_bob/activate", activateBody, "client_alice")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected activate 200, got %d: %s", res.Code, res.Body.String())
+	}
+	assertLastAudit(t, memoryStore, "secret.access_activate", "success", "")
+
+	req = mtlsRequest(http.MethodGet, "/v1/secrets/"+created.SecretID, "", "client_bob")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected bob read after activation 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var read model.SecretReadResponse
+	if err := json.NewDecoder(res.Body).Decode(&read); err != nil {
+		t.Fatalf("decode read: %v", err)
+	}
+	if read.Envelope != "ZW52ZWxvcGUtZm9yLWJvYg==" || read.Permissions != int(model.PermissionRead) {
+		t.Fatalf("unexpected activated access: %+v", read)
+	}
+}
+
 func assertLastAudit(t *testing.T, memoryStore *store.MemoryStore, action, outcome, reason string) model.AuditEvent {
 	t.Helper()
 	events := memoryStore.AuditEvents()
