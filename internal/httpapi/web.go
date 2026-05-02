@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"custodia/internal/audit"
+	"custodia/internal/build"
 
 	"html"
 	"net/http"
@@ -45,12 +46,15 @@ func (s *Server) handleWebStatus(w http.ResponseWriter, r *http.Request) {
 			rateLimiterStatus = "unavailable"
 		}
 	}
+	info := build.Current()
 	body := "<h1>Operational status</h1>" +
 		"<dl>" +
 		"<dt>Status</dt><dd>" + html.EscapeString(statusOutcome(storeStatus, rateLimiterStatus)) + "</dd>" +
 		"<dt>Store</dt><dd>" + html.EscapeString(storeStatus) + " (" + html.EscapeString(s.storeBackend) + ")</dd>" +
 		"<dt>Rate limiter</dt><dd>" + html.EscapeString(rateLimiterStatus) + " (" + html.EscapeString(s.rateLimitBackend) + ")</dd>" +
 		"<dt>Max envelopes per secret</dt><dd>" + html.EscapeString(strconv.Itoa(s.maxEnvelopesPerSecret)) + "</dd>" +
+		"<dt>Build version</dt><dd>" + html.EscapeString(info.Version) + "</dd>" +
+		"<dt>Build commit</dt><dd>" + html.EscapeString(info.Commit) + "</dd>" +
 		"</dl>"
 	s.audit(r, "web.status", "system", "", statusOutcome(storeStatus, rateLimiterStatus), nil)
 	writeWebPage(w, "Operational status", body)
