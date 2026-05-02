@@ -20,6 +20,7 @@ spec:
     spec:
       serviceAccountName: {{ include "custodia.serviceAccountName" . }}
       automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       securityContext:
 {{ toYaml .Values.podSecurityContext | indent 8 }}
 {{- if .Values.topologySpreadConstraints.enabled }}

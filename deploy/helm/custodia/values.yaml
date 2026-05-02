@@ -60,6 +60,8 @@ resources:
     cpu: 500m
     memory: 512Mi
 
+terminationGracePeriodSeconds: 30
+
 podSecurityContext:
   runAsNonRoot: true
   seccompProfile:
