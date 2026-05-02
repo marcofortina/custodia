@@ -60,6 +60,29 @@ class CustodiaClient:
             path += f"?{query}"
         return self._request("GET", path)
 
+
+    def export_audit_events(
+        self,
+        limit: int | None = None,
+        outcome: str | None = None,
+        action: str | None = None,
+        actor_client_id: str | None = None,
+        resource_type: str | None = None,
+        resource_id: str | None = None,
+    ) -> str:
+        query = _query_params(
+            limit=str(limit) if limit is not None else None,
+            outcome=outcome,
+            action=action,
+            actor_client_id=actor_client_id,
+            resource_type=resource_type,
+            resource_id=resource_id,
+        )
+        path = "/v1/audit-events/export"
+        if query:
+            path += f"?{query}"
+        return self._request_text("GET", path)
+
     def list_access_grant_requests(
         self,
         secret_id: str | None = None,
@@ -131,6 +154,18 @@ class CustodiaClient:
 
     def delete_secret(self, secret_id: str) -> dict[str, Any]:
         return self._request("DELETE", f"/v1/secrets/{_path_escape(secret_id)}")
+
+    def _request_text(self, method: str, path: str, **kwargs: Any) -> str:
+        response = requests.request(
+            method,
+            f"{self.server_url}{path}",
+            cert=(self.cert_file, self.key_file),
+            verify=self.ca_file,
+            timeout=self.timeout,
+            **kwargs,
+        )
+        response.raise_for_status()
+        return response.text
 
     def _request(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
         response = requests.request(

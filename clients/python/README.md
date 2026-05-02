@@ -24,3 +24,9 @@ Implemented helpers:
 - `delete_secret(secret_id)`
 
 Dynamic path segments are URL-escaped. Payloads remain caller-defined JSON with base64 ciphertext/envelope strings; the Python client does not perform key discovery or server-side crypto.
+
+## Audit export
+
+`CustodiaClient.export_audit_events(...)` returns server-generated JSONL text for
+metadata-only audit export workflows. It does not expose plaintext, ciphertext or
+recipient envelopes.
