@@ -12,6 +12,7 @@
 - Base64 transport validation for ciphertext/envelope blobs and duplicate recipient rejection.
 - Strict JSON transport guardrails: `application/json` content type, 1 MiB body cap and trailing-payload rejection.
 - Default HTTP security headers for API and metadata-only web responses.
+- Configurable bounded HTTP read/write/idle/shutdown timeouts.
 - Configurable recipient-envelope cap with default 100 and HTTP 413 rejection on create/new-version overflow.
 - Hash-chained audit events for successful and failed auth/API operations, with admin-only listing API/CLI.
 - PostgreSQL schema contract, in-memory executable store and optional `pgx` PostgreSQL store behind the `postgres` build tag.
@@ -127,3 +128,9 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Added Python helpers for metadata-only secret listing, pending grant request, activation and access revocation.
 - URL-escaped dynamic path segments in the Python client.
 - Documented that Python payloads remain opaque/base64 transport values and no key discovery happens through Custodia.
+
+## Patch 022 - bounded HTTP server timeouts
+
+- Added configurable read, write, idle and graceful-shutdown timeouts.
+- Kept safe defaults for invalid or missing environment values.
+- Added config regression tests for timeout parsing and defaults.

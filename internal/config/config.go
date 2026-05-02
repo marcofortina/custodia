@@ -23,6 +23,10 @@ type Config struct {
 	ValkeyURL                string
 	ClientRateLimitPerSecond int
 	GlobalRateLimitPerSecond int
+	HTTPReadTimeoutSeconds   int
+	HTTPWriteTimeoutSeconds  int
+	HTTPIdleTimeoutSeconds   int
+	ShutdownTimeoutSeconds   int
 }
 
 func Load() Config {
@@ -43,6 +47,10 @@ func Load() Config {
 		ValkeyURL:                os.Getenv("CUSTODIA_VALKEY_URL"),
 		ClientRateLimitPerSecond: envInt("CUSTODIA_CLIENT_RATE_LIMIT_PER_SECOND", 100),
 		GlobalRateLimitPerSecond: envInt("CUSTODIA_GLOBAL_RATE_LIMIT_PER_SECOND", 5000),
+		HTTPReadTimeoutSeconds:   envInt("CUSTODIA_HTTP_READ_TIMEOUT_SECONDS", 15),
+		HTTPWriteTimeoutSeconds:  envInt("CUSTODIA_HTTP_WRITE_TIMEOUT_SECONDS", 15),
+		HTTPIdleTimeoutSeconds:   envInt("CUSTODIA_HTTP_IDLE_TIMEOUT_SECONDS", 60),
+		ShutdownTimeoutSeconds:   envInt("CUSTODIA_SHUTDOWN_TIMEOUT_SECONDS", 10),
 	}
 }
 
