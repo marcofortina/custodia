@@ -1306,3 +1306,23 @@ func TestAPIRejectsInvalidSecretIDPath(t *testing.T) {
 		t.Fatalf("expected invalid secret id error, got %s", res.Body.String())
 	}
 }
+
+func TestAPIAdminAccessRequestsRejectsInvalidSecretIDFilter(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+	req := mtlsRequest(http.MethodGet, "/v1/access-requests?secret_id=not-a-uuid", "", "admin")
+	res := httptest.NewRecorder()
+
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", res.Code, res.Body.String())
+	}
+	if !strings.Contains(res.Body.String(), "invalid_secret_id_filter") {
+		t.Fatalf("expected invalid secret id filter error, got %s", res.Body.String())
+	}
+}
