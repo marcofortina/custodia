@@ -114,7 +114,10 @@ func (s *Server) handleListClients(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetClient(w http.ResponseWriter, r *http.Request) {
-	clientID := r.PathValue("client_id")
+	clientID, ok := s.requireClientID(w, r, "client.read")
+	if !ok {
+		return
+	}
 	client, err := s.store.GetClient(r.Context(), clientID)
 	if err != nil {
 		s.auditStoreFailure(r, "client.read", "client", clientID, err)
@@ -465,7 +468,10 @@ func (s *Server) handleActivateAccessGrant(w http.ResponseWriter, r *http.Reques
 	if !ok {
 		return
 	}
-	targetClientID := r.PathValue("client_id")
+	targetClientID, ok := s.requireClientID(w, r, "secret.access_activate")
+	if !ok {
+		return
+	}
 	var req model.ActivateAccessRequest
 	if !decodeJSON(w, r, &req) {
 		s.auditFailure(r, "secret.access_activate", "secret", secretID, map[string]string{"reason": "invalid_json"})
@@ -485,7 +491,10 @@ func (s *Server) handleRevokeAccess(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	targetClientID := r.PathValue("client_id")
+	targetClientID, ok := s.requireClientID(w, r, "secret.access_revoke")
+	if !ok {
+		return
+	}
 	if err := s.store.RevokeAccess(r.Context(), clientIDFromContext(r), secretID, targetClientID); err != nil {
 		s.auditStoreFailure(r, "secret.access_revoke", "secret", secretID, err)
 		writeMappedError(w, err)
@@ -518,6 +527,16 @@ func (s *Server) handleCreateSecretVersion(w http.ResponseWriter, r *http.Reques
 	}
 	s.audit(r, "secret.version_create", "secret", secretID, "success", nil)
 	writeJSON(w, http.StatusCreated, ref)
+}
+
+func (s *Server) requireClientID(w http.ResponseWriter, r *http.Request, action string) (string, bool) {
+	clientID := r.PathValue("client_id")
+	if !model.ValidClientID(clientID) {
+		s.auditFailure(r, action, "client", clientID, map[string]string{"reason": "invalid_client_id"})
+		writeError(w, http.StatusBadRequest, "invalid_client_id")
+		return "", false
+	}
+	return clientID, true
 }
 
 func (s *Server) requireSecretID(w http.ResponseWriter, r *http.Request, action string) (string, bool) {
