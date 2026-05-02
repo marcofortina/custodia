@@ -7,8 +7,9 @@ import (
 )
 
 const (
-	MaxClientIDLength   = 128
-	MaxSecretNameLength = 255
+	MaxClientIDLength      = 128
+	MaxSecretNameLength    = 255
+	MaxCryptoMetadataBytes = 16 * 1024
 )
 
 var clientIDPattern = regexp.MustCompile(`^[A-Za-z0-9._:-]+$`)
@@ -30,4 +31,9 @@ func ValidSecretName(value string) bool {
 		}
 	}
 	return true
+}
+
+// ValidCryptoMetadata keeps opaque client-selected metadata bounded for storage and audit safety.
+func ValidCryptoMetadata(value []byte) bool {
+	return len(value) <= MaxCryptoMetadataBytes
 }

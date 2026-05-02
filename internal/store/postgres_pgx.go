@@ -130,6 +130,9 @@ func (s *PostgresStore) CreateSecret(ctx context.Context, actorClientID string, 
 	if err := validateOpaqueSecretPayload(req.Ciphertext, req.Envelopes); err != nil {
 		return model.SecretVersionRef{}, err
 	}
+	if !model.ValidCryptoMetadata(req.CryptoMetadata) {
+		return model.SecretVersionRef{}, ErrInvalidInput
+	}
 	if !model.ValidPermissionBits(req.Permissions) || !validFutureExpiry(req.ExpiresAt) {
 		return model.SecretVersionRef{}, ErrInvalidInput
 	}
@@ -509,6 +512,9 @@ func (s *PostgresStore) RevokeAccess(ctx context.Context, actorClientID, secretI
 func (s *PostgresStore) CreateSecretVersion(ctx context.Context, actorClientID, secretID string, req model.CreateSecretVersionRequest) (model.SecretVersionRef, error) {
 	if err := validateOpaqueSecretPayload(req.Ciphertext, req.Envelopes); err != nil {
 		return model.SecretVersionRef{}, err
+	}
+	if !model.ValidCryptoMetadata(req.CryptoMetadata) {
+		return model.SecretVersionRef{}, ErrInvalidInput
 	}
 	if !model.ValidPermissionBits(req.Permissions) || !validFutureExpiry(req.ExpiresAt) {
 		return model.SecretVersionRef{}, ErrInvalidInput

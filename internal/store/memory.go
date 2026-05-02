@@ -151,6 +151,9 @@ func (s *MemoryStore) CreateSecret(_ context.Context, actorClientID string, req 
 	if err := validateOpaqueSecretPayload(req.Ciphertext, req.Envelopes); err != nil {
 		return model.SecretVersionRef{}, err
 	}
+	if !model.ValidCryptoMetadata(req.CryptoMetadata) {
+		return model.SecretVersionRef{}, ErrInvalidInput
+	}
 	if !model.ValidPermissionBits(req.Permissions) {
 		return model.SecretVersionRef{}, ErrInvalidInput
 	}
@@ -453,6 +456,9 @@ func (s *MemoryStore) RevokeAccess(_ context.Context, actorClientID, secretID, t
 func (s *MemoryStore) CreateSecretVersion(_ context.Context, actorClientID, secretID string, req model.CreateSecretVersionRequest) (model.SecretVersionRef, error) {
 	if err := validateOpaqueSecretPayload(req.Ciphertext, req.Envelopes); err != nil {
 		return model.SecretVersionRef{}, err
+	}
+	if !model.ValidCryptoMetadata(req.CryptoMetadata) {
+		return model.SecretVersionRef{}, ErrInvalidInput
 	}
 	if !model.ValidPermissionBits(req.Permissions) {
 		return model.SecretVersionRef{}, ErrInvalidInput

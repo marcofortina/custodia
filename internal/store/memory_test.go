@@ -490,3 +490,23 @@ func TestMemoryStoreRejectsInvalidSecretNames(t *testing.T) {
 		}
 	}
 }
+
+func TestMemoryStoreRejectsOversizedCryptoMetadata(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	oversized := make([]byte, model.MaxCryptoMetadataBytes+1)
+	for i := range oversized {
+		oversized[i] = 'x'
+	}
+	_, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:           "secret",
+		Ciphertext:     "Y2lwaGVydGV4dA==",
+		CryptoMetadata: oversized,
+		Envelopes:      []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
+		Permissions:    int(model.PermissionAll),
+	})
+	if err != ErrInvalidInput {
+		t.Fatalf("expected oversized crypto metadata to be rejected, got %v", err)
+	}
+}

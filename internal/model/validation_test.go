@@ -27,3 +27,12 @@ func TestValidSecretName(t *testing.T) {
 		}
 	}
 }
+
+func TestValidCryptoMetadata(t *testing.T) {
+	if !ValidCryptoMetadata(make([]byte, MaxCryptoMetadataBytes)) {
+		t.Fatal("expected max-sized crypto metadata to be valid")
+	}
+	if ValidCryptoMetadata(make([]byte, MaxCryptoMetadataBytes+1)) {
+		t.Fatal("expected oversized crypto metadata to be invalid")
+	}
+}
