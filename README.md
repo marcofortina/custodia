@@ -46,6 +46,7 @@ The default build keeps the project standard-library-only for local tests. To en
 go get github.com/jackc/pgx/v5
 go test -tags postgres ./...
 go build -tags postgres ./cmd/custodia-server
+make build-postgres
 ```
 
 Then configure:
@@ -55,7 +56,7 @@ CUSTODIA_STORE_BACKEND=postgres
 CUSTODIA_DATABASE_URL=postgres://custodia:secret@127.0.0.1:5432/custodia?sslmode=require
 ```
 
-Run `migrations/postgres/001_init.sql` before starting the server. The store persists only opaque ciphertext/envelope bytes and metadata; it does not add any server-side cryptographic key handling.
+Run `migrations/postgres/001_init.sql` before starting the server. Container builds can enable the optional store with `CUSTODIA_GO_BUILD_TAGS=postgres docker compose build custodia` after the `pgx/v5` dependency is present in `go.mod`. The store persists only opaque ciphertext/envelope bytes and metadata; it does not add any server-side cryptographic key handling.
 
 ## API permissions
 

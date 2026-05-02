@@ -20,3 +20,8 @@ run-dev:
 build:
 	$(GO) build ./cmd/custodia-server
 	$(GO) build ./cmd/vault-admin
+
+.PHONY: build-postgres
+build-postgres:
+	$(GO) build -tags postgres ./cmd/custodia-server
+	$(GO) build -tags postgres ./cmd/vault-admin

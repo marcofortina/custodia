@@ -23,6 +23,8 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
+      args:
+        GO_BUILD_TAGS: "${CUSTODIA_GO_BUILD_TAGS:-}"
     environment:
       CUSTODIA_API_ADDR: ":8443"
       CUSTODIA_STORE_BACKEND: memory
