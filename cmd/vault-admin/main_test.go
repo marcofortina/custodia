@@ -46,3 +46,10 @@ func TestRunSecretVersionsRejectsInvalidLimit(t *testing.T) {
 		t.Fatal("expected invalid limit error")
 	}
 }
+
+func TestRunAccessListRejectsInvalidLimit(t *testing.T) {
+	err := runAccessList(&cliConfig{}, []string{"--secret-id", "550e8400-e29b-41d4-a716-446655440000", "--limit", "0"})
+	if err == nil {
+		t.Fatal("expected invalid limit error")
+	}
+}

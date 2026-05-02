@@ -219,11 +219,23 @@ func runSecretVersions(cfg *cliConfig, args []string) error {
 func runAccessList(cfg *cliConfig, args []string) error {
 	cmd := flag.NewFlagSet("access list", flag.ExitOnError)
 	secretID := cmd.String("secret-id", "", "secret id")
+	limit := cmd.Int("limit", 0, "optional maximum access rows to return, up to 500")
 	_ = cmd.Parse(args)
 	if *secretID == "" {
 		return fmt.Errorf("--secret-id is required")
 	}
-	return requestJSON(cfg, http.MethodGet, "/v1/secrets/"+pathEscape(*secretID)+"/access", nil, os.Stdout)
+	query := url.Values{}
+	if *limit != 0 {
+		if *limit < 0 || *limit > 500 {
+			return fmt.Errorf("--limit must be between 1 and 500 when set")
+		}
+		query.Set("limit", strconv.Itoa(*limit))
+	}
+	path := "/v1/secrets/" + pathEscape(*secretID) + "/access"
+	if encoded := query.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
+	return requestJSON(cfg, http.MethodGet, path, nil, os.Stdout)
 }
 
 func runAccessRequests(cfg *cliConfig, args []string) error {
