@@ -67,6 +67,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		MaxEnvelopesPerSecret: s.maxEnvelopesPerSecret,
 		ClientRateLimitPerSec: s.clientRateLimit,
 		GlobalRateLimitPerSec: s.globalRateLimit,
+		IPRateLimitPerSec:     s.ipRateLimit,
 	})
 }
 

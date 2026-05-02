@@ -13,6 +13,7 @@ type Server struct {
 	maxEnvelopesPerSecret int
 	clientRateLimit       int
 	globalRateLimit       int
+	ipRateLimit           int
 }
 
 type Options struct {
@@ -22,6 +23,7 @@ type Options struct {
 	MaxEnvelopesPerSecret int
 	ClientRateLimit       int
 	GlobalRateLimit       int
+	IPRateLimit           int
 }
 
 type contextKey string
@@ -43,6 +45,7 @@ func New(options Options) http.Handler {
 		maxEnvelopesPerSecret: maxEnvelopesPerSecret,
 		clientRateLimit:       options.ClientRateLimit,
 		globalRateLimit:       options.GlobalRateLimit,
+		ipRateLimit:           options.IPRateLimit,
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", server.handleHealth)

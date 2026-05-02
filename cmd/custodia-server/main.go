@@ -41,6 +41,7 @@ func main() {
 		MaxEnvelopesPerSecret: cfg.MaxEnvelopesPerSecret,
 		ClientRateLimit:       cfg.ClientRateLimitPerSecond,
 		GlobalRateLimit:       cfg.GlobalRateLimitPerSecond,
+		IPRateLimit:           cfg.IPRateLimitPerSecond,
 	})
 
 	server := &http.Server{

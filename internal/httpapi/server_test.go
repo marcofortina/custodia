@@ -949,3 +949,18 @@ func TestAPIAdminListsPendingAccessRequestsWithoutEnvelopes(t *testing.T) {
 		t.Fatalf("expected metadata-only pending grant listing, got %s", res.Body.String())
 	}
 }
+
+func TestAPIRateLimitsUnauthenticatedRequestsByRemoteIP(t *testing.T) {
+	memoryStore := store.NewMemoryStore()
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100, IPRateLimit: 1})
+
+	for i, expected := range []int{http.StatusUnauthorized, http.StatusTooManyRequests} {
+		req := httptest.NewRequest(http.MethodPost, "/v1/secrets", strings.NewReader(`{}`))
+		req.RemoteAddr = "192.0.2.10:12345"
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+		if res.Code != expected {
+			t.Fatalf("request %d expected %d, got %d: %s", i+1, expected, res.Code, res.Body.String())
+		}
+	}
+}

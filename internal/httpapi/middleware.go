@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"net"
 	"net/http"
 
 	"custodia/internal/mtls"
@@ -9,6 +10,19 @@ import (
 
 func (s *Server) auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.limiter != nil && s.ipRateLimit > 0 {
+			allowed, err := s.limiter.Allow(r.Context(), "ip:"+remoteIP(r), s.ipRateLimit)
+			if err != nil {
+				s.auditFailure(r, "auth.rate_limit", "client", "", map[string]string{"reason": "rate_limiter_unavailable", "scope": "ip"})
+				writeError(w, http.StatusServiceUnavailable, "rate_limiter_unavailable")
+				return
+			}
+			if !allowed {
+				s.auditFailure(r, "auth.rate_limit", "client", "", map[string]string{"reason": "ip_rate_limited"})
+				writeError(w, http.StatusTooManyRequests, "ip_rate_limited")
+				return
+			}
+		}
 		mtlsSubject, err := mtls.ClientIDFromRequest(r)
 		if err != nil {
 			s.auditFailure(r, "auth.mtls", "client", "", map[string]string{"reason": "missing_client_certificate"})
@@ -66,4 +80,15 @@ func (s *Server) adminOnly(next http.Handler) http.Handler {
 func clientIDFromContext(r *http.Request) string {
 	value, _ := r.Context().Value(clientIDContextKey).(string)
 	return value
+}
+
+func remoteIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err == nil && host != "" {
+		return host
+	}
+	if r.RemoteAddr != "" {
+		return r.RemoteAddr
+	}
+	return "unknown"
 }

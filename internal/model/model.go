@@ -163,6 +163,7 @@ type OperationalStatus struct {
 	MaxEnvelopesPerSecret int    `json:"max_envelopes_per_secret"`
 	ClientRateLimitPerSec int    `json:"client_rate_limit_per_sec"`
 	GlobalRateLimitPerSec int    `json:"global_rate_limit_per_sec"`
+	IPRateLimitPerSec     int    `json:"ip_rate_limit_per_sec"`
 }
 
 type AuditEvent struct {
