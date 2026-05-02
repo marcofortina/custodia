@@ -1,0 +1,22 @@
+package store
+
+import (
+	"context"
+
+	"custodia/internal/model"
+)
+
+type Store interface {
+	Health(ctx context.Context) error
+	CreateClient(ctx context.Context, client model.Client) error
+	GetActiveClientBySubject(ctx context.Context, mtlsSubject string) (model.Client, error)
+	ListClients(ctx context.Context) ([]model.Client, error)
+	RevokeClient(ctx context.Context, clientID string) error
+	CreateSecret(ctx context.Context, actorClientID string, req model.CreateSecretRequest) (model.SecretVersionRef, error)
+	GetSecret(ctx context.Context, actorClientID, secretID string) (model.SecretReadResponse, error)
+	DeleteSecret(ctx context.Context, actorClientID, secretID string) error
+	ShareSecret(ctx context.Context, actorClientID, secretID string, req model.ShareSecretRequest) error
+	RevokeAccess(ctx context.Context, actorClientID, secretID, targetClientID string) error
+	CreateSecretVersion(ctx context.Context, actorClientID, secretID string, req model.CreateSecretVersionRequest) (model.SecretVersionRef, error)
+	AppendAudit(ctx context.Context, event model.AuditEvent) error
+}

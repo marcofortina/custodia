@@ -1,0 +1,38 @@
+replicaCount: 3
+
+image:
+  repository: custodia/custodia-server
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8443
+
+config:
+  apiAddr: ":8443"
+  storeBackend: postgres
+  databaseURLSecretName: custodia-database
+  databaseURLSecretKey: database-url
+  rateLimitBackend: valkey
+  valkeyURLSecretName: custodia-valkey
+  valkeyURLSecretKey: valkey-url
+  adminClientIDs: admin
+  maxEnvelopesPerSecret: 100
+  clientRateLimitPerSecond: 100
+  globalRateLimitPerSecond: 5000
+
+mtls:
+  enabled: true
+  secretName: custodia-mtls
+  certKey: tls.crt
+  keyKey: tls.key
+  clientCAKey: ca.crt
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
