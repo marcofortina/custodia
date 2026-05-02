@@ -17,6 +17,9 @@ imagePullSecrets: []
 service:
   type: ClusterIP
   port: 8443
+  annotations: {}
+
+podAnnotations: {}
 
 serviceAccount:
   create: true

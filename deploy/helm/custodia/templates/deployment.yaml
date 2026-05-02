@@ -16,6 +16,10 @@ spec:
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
+{{- with .Values.podAnnotations }}
+      annotations:
+{{ toYaml . | indent 8 }}
+{{- end }}
       labels:
         app.kubernetes.io/name: {{ include "custodia.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
