@@ -88,3 +88,16 @@ func TestValidAuditAction(t *testing.T) {
 		}
 	}
 }
+
+func TestValidAuditResourceType(t *testing.T) {
+	for _, value := range []string{"secret", "audit_event", "client-type"} {
+		if !ValidAuditResourceType(value) {
+			t.Fatalf("expected audit resource type %q to be valid", value)
+		}
+	}
+	for _, value := range []string{"", "audit event", "secret/type", "secret\ntype"} {
+		if ValidAuditResourceType(value) {
+			t.Fatalf("expected audit resource type %q to be invalid", value)
+		}
+	}
+}
