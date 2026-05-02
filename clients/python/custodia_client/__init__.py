@@ -20,6 +20,7 @@ class CustodiaClient:
         return self._request("GET", "/v1/me")
 
     def list_clients(self, limit: int | None = None, active: bool | None = None) -> dict[str, Any]:
+        _validate_optional_limit(limit)
         query = _query_params(
             limit=str(limit) if limit is not None else None,
             active=str(active).lower() if active is not None else None,
@@ -47,6 +48,7 @@ class CustodiaClient:
         resource_type: str | None = None,
         resource_id: str | None = None,
     ) -> dict[str, Any]:
+        _validate_optional_limit(limit)
         query = _query_params(
             limit=str(limit) if limit is not None else None,
             outcome=outcome,
@@ -70,6 +72,7 @@ class CustodiaClient:
         resource_type: str | None = None,
         resource_id: str | None = None,
     ) -> str:
+        _validate_optional_limit(limit)
         query = _query_params(
             limit=str(limit) if limit is not None else None,
             outcome=outcome,
@@ -91,6 +94,7 @@ class CustodiaClient:
         requested_by_client_id: str | None = None,
         limit: int | None = None,
     ) -> dict[str, Any]:
+        _validate_optional_limit(limit)
         query = _query_params(
             secret_id=secret_id,
             status=status,
@@ -107,6 +111,7 @@ class CustodiaClient:
         return self._request("POST", "/v1/secrets", json=payload)
 
     def list_secrets(self, limit: int | None = None) -> dict[str, Any]:
+        _validate_optional_limit(limit)
         query = _query_params(limit=str(limit) if limit is not None else None)
         path = "/v1/secrets"
         if query:
@@ -117,6 +122,7 @@ class CustodiaClient:
         return self._request("GET", f"/v1/secrets/{_path_escape(secret_id)}")
 
     def list_secret_versions(self, secret_id: str, limit: int | None = None) -> dict[str, Any]:
+        _validate_optional_limit(limit)
         query = _query_params(limit=str(limit) if limit is not None else None)
         path = f"/v1/secrets/{_path_escape(secret_id)}/versions"
         if query:
@@ -124,6 +130,7 @@ class CustodiaClient:
         return self._request("GET", path)
 
     def list_secret_access(self, secret_id: str, limit: int | None = None) -> dict[str, Any]:
+        _validate_optional_limit(limit)
         query = _query_params(limit=str(limit) if limit is not None else None)
         path = f"/v1/secrets/{_path_escape(secret_id)}/access"
         if query:
@@ -188,3 +195,8 @@ def _path_escape(value: str) -> str:
 
 def _query_params(**kwargs: str | None) -> str:
     return urlencode({key: value for key, value in kwargs.items() if value})
+
+
+def _validate_optional_limit(limit: int | None) -> None:
+    if limit is not None and (limit <= 0 or limit > 500):
+        raise ValueError("limit must be between 1 and 500 when set")
