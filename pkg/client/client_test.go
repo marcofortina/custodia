@@ -127,6 +127,9 @@ func TestClientAdminClientMethodsUseDocumentedAPIPaths(t *testing.T) {
 		switch r.URL.EscapedPath() {
 		case "/v1/clients":
 			if r.Method == http.MethodGet {
+				if len(requests) == 1 && r.URL.Query().Get("limit") != "25" {
+					t.Fatalf("unexpected client limit: %q", r.URL.RawQuery)
+				}
 				_ = json.NewEncoder(w).Encode(map[string]any{"clients": []model.Client{{ClientID: "client/alice"}}})
 				return
 			}
@@ -152,7 +155,7 @@ func TestClientAdminClientMethodsUseDocumentedAPIPaths(t *testing.T) {
 	defer server.Close()
 
 	custodiaClient := &Client{baseURL: server.URL, http: server.Client()}
-	clients, err := custodiaClient.ListClients()
+	clients, err := custodiaClient.ListClientsWithLimit(25)
 	if err != nil || len(clients) != 1 || clients[0].ClientID != "client/alice" {
 		t.Fatalf("unexpected clients response: %+v err=%v", clients, err)
 	}

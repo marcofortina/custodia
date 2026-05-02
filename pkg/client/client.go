@@ -55,10 +55,20 @@ func (c *Client) Me() (model.Client, error) {
 }
 
 func (c *Client) ListClients() ([]model.Client, error) {
+	return c.ListClientsWithLimit(0)
+}
+
+func (c *Client) ListClientsWithLimit(limit int) ([]model.Client, error) {
+	path := "/v1/clients"
+	if limit > 0 {
+		query := url.Values{}
+		query.Set("limit", fmt.Sprintf("%d", limit))
+		path += "?" + query.Encode()
+	}
 	var response struct {
 		Clients []model.Client `json:"clients"`
 	}
-	err := c.doJSON(http.MethodGet, "/v1/clients", nil, &response)
+	err := c.doJSON(http.MethodGet, path, nil, &response)
 	return response.Clients, err
 }
 
