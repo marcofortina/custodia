@@ -79,3 +79,23 @@ func TestPostgresAuditListingUsesChronologicalOrderForHashVerification(t *testin
 		t.Fatal("postgres audit listing must return chronological events for hash-chain verification")
 	}
 }
+
+func TestPostgresSchemaRejectsExpiredAccessRows(t *testing.T) {
+	t.Parallel()
+
+	schemaPath := filepath.Join("..", "..", "migrations", "postgres", "001_init.sql")
+	schemaBytes, err := os.ReadFile(schemaPath)
+	if err != nil {
+		t.Fatalf("read postgres schema: %v", err)
+	}
+	schema := string(schemaBytes)
+
+	for _, expected := range []string{
+		"CHECK (expires_at IS NULL OR expires_at > granted_at)",
+		"CHECK (expires_at IS NULL OR expires_at > requested_at)",
+	} {
+		if !strings.Contains(schema, expected) {
+			t.Fatalf("postgres schema missing expiration guardrail %q", expected)
+		}
+	}
+}
