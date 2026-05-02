@@ -36,6 +36,17 @@ func TestBootstrapClientsCreatesMissingAndIgnoresExisting(t *testing.T) {
 	}
 }
 
+func TestBootstrapClientsRejectsInvalidMappings(t *testing.T) {
+	err := bootstrapClients(context.Background(), store.NewMemoryStore(), map[string]string{"client bad": "client_bad"})
+	if err == nil {
+		t.Fatal("expected invalid bootstrap client id error")
+	}
+	err = bootstrapClients(context.Background(), store.NewMemoryStore(), map[string]string{"client_good": "client\nsubject"})
+	if err == nil {
+		t.Fatal("expected invalid bootstrap subject error")
+	}
+}
+
 func TestBuildStoreRejectsUnsupportedBackend(t *testing.T) {
 	_, closeStore, err := buildStore(context.Background(), config.Config{StoreBackend: "sqlite"})
 	if closeStore != nil {

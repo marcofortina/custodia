@@ -136,6 +136,9 @@ func buildStore(ctx context.Context, cfg config.Config) (store.Store, func(), er
 
 func bootstrapClients(ctx context.Context, vaultStore store.Store, clients map[string]string) error {
 	for clientID, subject := range clients {
+		if !model.ValidClientID(clientID) || !model.ValidMTLSSubject(subject) {
+			return errors.New("invalid bootstrap client mapping")
+		}
 		err := vaultStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: subject})
 		if err != nil && !errors.Is(err, store.ErrConflict) {
 			return err
