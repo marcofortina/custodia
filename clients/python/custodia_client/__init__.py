@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 import requests
 
@@ -31,10 +31,24 @@ class CustodiaClient:
     def revoke_client(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("POST", "/v1/clients/revoke", json=payload)
 
-    def list_access_grant_requests(self, secret_id: str | None = None) -> dict[str, Any]:
+    def list_access_grant_requests(
+        self,
+        secret_id: str | None = None,
+        status: str | None = None,
+        client_id: str | None = None,
+        requested_by_client_id: str | None = None,
+        limit: int | None = None,
+    ) -> dict[str, Any]:
+        query = _query_params(
+            secret_id=secret_id,
+            status=status,
+            client_id=client_id,
+            requested_by_client_id=requested_by_client_id,
+            limit=str(limit) if limit is not None else None,
+        )
         path = "/v1/access-requests"
-        if secret_id:
-            path += f"?secret_id={_query_escape(secret_id)}"
+        if query:
+            path += f"?{query}"
         return self._request("GET", path)
 
     def create_secret(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -96,5 +110,5 @@ def _path_escape(value: str) -> str:
     return quote(value, safe="")
 
 
-def _query_escape(value: str) -> str:
-    return quote(value, safe="")
+def _query_params(**kwargs: str | None) -> str:
+    return urlencode({key: value for key, value in kwargs.items() if value})
