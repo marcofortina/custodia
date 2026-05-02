@@ -11,11 +11,13 @@ const (
 	MaxSecretNameLength    = 255
 	MaxCryptoMetadataBytes = 16 * 1024
 	MaxMTLSSubjectLength   = 512
+	MaxAuditActionLength   = 128
 )
 
 var (
-	clientIDPattern = regexp.MustCompile(`^[A-Za-z0-9._:-]+$`)
-	uuidIDPattern   = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
+	clientIDPattern    = regexp.MustCompile(`^[A-Za-z0-9._:-]+$`)
+	auditActionPattern = regexp.MustCompile(`^[A-Za-z0-9._:-]+$`)
+	uuidIDPattern      = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
 )
 
 // ValidClientID validates transport and storage identifiers without assigning any crypto meaning to them.
@@ -69,4 +71,10 @@ func ValidSecretName(value string) bool {
 // ValidCryptoMetadata keeps opaque client-selected metadata bounded for storage and audit safety.
 func ValidCryptoMetadata(value []byte) bool {
 	return len(value) <= MaxCryptoMetadataBytes
+}
+
+// ValidAuditAction validates audit action filters without interpreting business semantics.
+func ValidAuditAction(value string) bool {
+	value = strings.TrimSpace(value)
+	return value != "" && len(value) <= MaxAuditActionLength && auditActionPattern.MatchString(value)
 }

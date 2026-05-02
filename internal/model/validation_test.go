@@ -75,3 +75,16 @@ func TestValidOptionalUUIDID(t *testing.T) {
 		t.Fatal("expected non-uuid optional id to be invalid")
 	}
 }
+
+func TestValidAuditAction(t *testing.T) {
+	for _, value := range []string{"secret.read", "client-revoke", "audit:list"} {
+		if !ValidAuditAction(value) {
+			t.Fatalf("expected audit action %q to be valid", value)
+		}
+	}
+	for _, value := range []string{"", "secret read", "secret/read", "secret\nread"} {
+		if ValidAuditAction(value) {
+			t.Fatalf("expected audit action %q to be invalid", value)
+		}
+	}
+}
