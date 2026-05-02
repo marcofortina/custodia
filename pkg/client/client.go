@@ -111,10 +111,20 @@ func (c *Client) CreateSecret(req model.CreateSecretRequest) (model.SecretVersio
 }
 
 func (c *Client) ListSecrets() ([]model.SecretMetadata, error) {
+	return c.ListSecretsWithLimit(0)
+}
+
+func (c *Client) ListSecretsWithLimit(limit int) ([]model.SecretMetadata, error) {
+	path := "/v1/secrets"
+	if limit > 0 {
+		query := url.Values{}
+		query.Set("limit", fmt.Sprintf("%d", limit))
+		path += "?" + query.Encode()
+	}
 	var response struct {
 		Secrets []model.SecretMetadata `json:"secrets"`
 	}
-	err := c.doJSON(http.MethodGet, "/v1/secrets", nil, &response)
+	err := c.doJSON(http.MethodGet, path, nil, &response)
 	return response.Secrets, err
 }
 

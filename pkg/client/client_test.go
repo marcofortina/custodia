@@ -225,3 +225,19 @@ func TestClientListAccessGrantRequestsUsesDocumentedAPIPath(t *testing.T) {
 		t.Fatalf("unexpected requests response: %+v err=%v", requests, err)
 	}
 }
+
+func TestClientListSecretsWithLimitUsesQuery(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.EscapedPath() != "/v1/secrets" || r.URL.Query().Get("limit") != "10" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.String())
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"secrets": []model.SecretMetadata{{SecretID: "secret"}}})
+	}))
+	defer server.Close()
+
+	custodiaClient := &Client{baseURL: server.URL, http: server.Client()}
+	secrets, err := custodiaClient.ListSecretsWithLimit(10)
+	if err != nil || len(secrets) != 1 || secrets[0].SecretID != "secret" {
+		t.Fatalf("unexpected secrets response: %+v err=%v", secrets, err)
+	}
+}
