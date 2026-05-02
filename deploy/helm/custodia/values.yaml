@@ -62,3 +62,9 @@ containerSecurityContext:
 podDisruptionBudget:
   enabled: true
   minAvailable: 2
+
+networkPolicy:
+  enabled: true
+  ingressNamespaceSelector: {}
+  egress:
+    enabled: false
