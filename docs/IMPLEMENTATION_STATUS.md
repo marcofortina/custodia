@@ -14,7 +14,7 @@
 - Default HTTP security headers for API and metadata-only web responses.
 - Configurable bounded HTTP read/write/idle/shutdown timeouts.
 - Configurable recipient-envelope cap with default 100 and HTTP 413 rejection on create/new-version overflow.
-- Hash-chained audit events for successful and failed auth/API operations, with admin-only listing API/CLI.
+- Hash-chained audit events for successful and failed auth/API operations, with admin-only listing and verification API/CLI.
 - PostgreSQL schema contract, in-memory executable store and optional `pgx` PostgreSQL store behind the `postgres` build tag.
 - Idempotent bootstrap client registration for all configured stores.
 - Valkey-compatible rate limiting with `/ready` health checks.
@@ -134,3 +134,9 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Added configurable read, write, idle and graceful-shutdown timeouts.
 - Kept safe defaults for invalid or missing environment values.
 - Added config regression tests for timeout parsing and defaults.
+
+## Patch 023 - audit chain verification
+
+- Added `GET /v1/audit-events/verify` for admin-only hash-chain verification.
+- Added `vault-admin audit verify`.
+- Added unit/API guardrails for tampered chains and invalid limits.

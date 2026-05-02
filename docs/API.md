@@ -94,6 +94,10 @@ Stops future reads for the target client. Previously downloaded ciphertext and e
 
 Requires an admin mTLS client. Returns recent hash-chained audit events for operational review. `limit` must be between `1` and `500`; the default is `100`.
 
+`GET /v1/audit-events/verify?limit=500`
+
+Requires an admin mTLS client. Recomputes and verifies the recent audit hash-chain without exposing secret ciphertext or envelopes. The response includes `valid`, `verified_events`, `head_hash` and optional failure diagnostics.
+
 ## Permission bitmask
 
 Custodia accepts only explicit permission bitmasks made from the documented bits:

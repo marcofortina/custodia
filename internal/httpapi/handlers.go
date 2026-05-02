@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"custodia/internal/audit"
 	"custodia/internal/model"
 	"custodia/internal/ratelimit"
 )
@@ -103,6 +104,33 @@ func (s *Server) handleListAuditEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	s.audit(r, "audit.list", "audit_event", "", "success", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"audit_events": events})
+}
+
+func (s *Server) handleVerifyAuditEvents(w http.ResponseWriter, r *http.Request) {
+	limit := 500
+	if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
+		parsed, err := strconv.Atoi(rawLimit)
+		if err != nil || parsed <= 0 || parsed > 500 {
+			s.auditFailure(r, "audit.verify", "audit_event", "", map[string]string{"reason": "invalid_limit"})
+			writeError(w, http.StatusBadRequest, "invalid_limit")
+			return
+		}
+		limit = parsed
+	}
+	events, err := s.store.ListAuditEvents(r.Context(), limit)
+	if err != nil {
+		s.auditStoreFailure(r, "audit.verify", "audit_event", "", err)
+		writeMappedError(w, err)
+		return
+	}
+	result := audit.VerifyChain(events)
+	outcome := "success"
+	if !result.Valid {
+		outcome = "failure"
+	}
+	metadata, _ := json.Marshal(map[string]any{"valid": result.Valid, "verified_events": result.VerifiedEvents})
+	s.audit(r, "audit.verify", "audit_event", "", outcome, metadata)
+	writeJSON(w, http.StatusOK, result)
 }
 
 func (s *Server) handleCreateSecret(w http.ResponseWriter, r *http.Request) {
