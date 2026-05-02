@@ -48,6 +48,8 @@ func main() {
 	switch args[0] + " " + args[1] {
 	case "status read":
 		err = requestJSON(&cfg, http.MethodGet, "/v1/status", nil, os.Stdout)
+	case "version server":
+		err = requestJSON(&cfg, http.MethodGet, "/v1/version", nil, os.Stdout)
 	case "client whoami":
 		err = requestJSON(&cfg, http.MethodGet, "/v1/me", nil, os.Stdout)
 	case "client list":
@@ -514,6 +516,7 @@ func env(key, fallback string) string {
 func usage() {
 	fmt.Fprintln(os.Stderr, `usage:
   vault-admin [global flags] status read
+  vault-admin [global flags] version server
   vault-admin [global flags] client whoami
   vault-admin [global flags] client list
   vault-admin [global flags] client get --client-id ID
