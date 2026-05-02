@@ -133,3 +133,19 @@ func TestValidOpaqueBlobBoundsDecodedPayloads(t *testing.T) {
 		t.Fatal("expected oversized decoded blob to be invalid")
 	}
 }
+
+func TestValidRevocationReason(t *testing.T) {
+	if !ValidRevocationReason("") || !ValidRevocationReason("planned rotation") {
+		t.Fatal("expected empty and printable revocation reasons to be valid")
+	}
+	if ValidRevocationReason("bad\nreason") {
+		t.Fatal("expected control characters to be rejected")
+	}
+	oversized := make([]byte, MaxRevocationReasonLength+1)
+	for idx := range oversized {
+		oversized[idx] = 'a'
+	}
+	if ValidRevocationReason(string(oversized)) {
+		t.Fatal("expected oversized revocation reason to be rejected")
+	}
+}

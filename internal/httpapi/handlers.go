@@ -157,6 +157,11 @@ func (s *Server) handleRevokeClient(w http.ResponseWriter, r *http.Request) {
 		s.auditFailure(r, "client.revoke", "client", "", map[string]string{"reason": "invalid_json"})
 		return
 	}
+	if !model.ValidRevocationReason(req.Reason) {
+		s.auditFailure(r, "client.revoke", "client", req.ClientID, map[string]string{"reason": "invalid_revoke_reason"})
+		writeError(w, http.StatusBadRequest, "invalid_revoke_reason")
+		return
+	}
 	if err := s.store.RevokeClient(r.Context(), req.ClientID); err != nil {
 		s.auditStoreFailure(r, "client.revoke", "client", req.ClientID, err)
 		writeMappedError(w, err)

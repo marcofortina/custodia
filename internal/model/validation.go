@@ -15,6 +15,7 @@ const (
 	MaxAuditActionLength       = 128
 	MaxAuditResourceTypeLength = 64
 	MaxAuditResourceIDLength   = 256
+	MaxRevocationReasonLength  = 512
 )
 
 var (
@@ -93,6 +94,20 @@ func ValidAuditResourceType(value string) bool {
 func ValidAuditResourceID(value string) bool {
 	value = strings.TrimSpace(value)
 	if value == "" || len(value) > MaxAuditResourceIDLength {
+		return false
+	}
+	for _, r := range value {
+		if unicode.IsControl(r) {
+			return false
+		}
+	}
+	return true
+}
+
+// ValidRevocationReason keeps operator-supplied revocation metadata bounded and printable.
+func ValidRevocationReason(value string) bool {
+	value = strings.TrimSpace(value)
+	if len(value) > MaxRevocationReasonLength {
 		return false
 	}
 	for _, r := range value {

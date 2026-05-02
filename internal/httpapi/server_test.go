@@ -120,6 +120,25 @@ func TestAPIClientRevokeAuditsReason(t *testing.T) {
 	}
 }
 
+func TestAPIClientRevokeRejectsInvalidReason(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, clientID := range []string{"admin", "client_bob"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %s: %v", clientID, err)
+		}
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodPost, "/v1/clients/revoke", `{"client_id":"client_bob","reason":"bad\nreason"}`, "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", res.Code, res.Body.String())
+	}
+}
+
 func TestAPIAdminAccessRequestsFilterByRequester(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()
