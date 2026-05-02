@@ -217,6 +217,11 @@ func (s *Server) handleListAuditEvents(w http.ResponseWriter, r *http.Request) {
 		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.ResourceType == resourceType })
 	}
 	if resourceID := strings.TrimSpace(r.URL.Query().Get("resource_id")); resourceID != "" {
+		if !model.ValidAuditResourceID(resourceID) {
+			s.auditFailure(r, "audit.list", "audit_event", "", map[string]string{"reason": "invalid_resource_id_filter"})
+			writeError(w, http.StatusBadRequest, "invalid_resource_id_filter")
+			return
+		}
 		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.ResourceID == resourceID })
 	}
 	s.audit(r, "audit.list", "audit_event", "", "success", nil)

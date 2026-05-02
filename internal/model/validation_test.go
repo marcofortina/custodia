@@ -101,3 +101,16 @@ func TestValidAuditResourceType(t *testing.T) {
 		}
 	}
 }
+
+func TestValidAuditResourceID(t *testing.T) {
+	for _, value := range []string{"550e8400-e29b-41d4-a716-446655440000", "client_alice", "secret:prod"} {
+		if !ValidAuditResourceID(value) {
+			t.Fatalf("expected audit resource id %q to be valid", value)
+		}
+	}
+	for _, value := range []string{"", "secret\nid"} {
+		if ValidAuditResourceID(value) {
+			t.Fatalf("expected audit resource id %q to be invalid", value)
+		}
+	}
+}

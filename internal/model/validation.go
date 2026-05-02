@@ -13,6 +13,7 @@ const (
 	MaxMTLSSubjectLength       = 512
 	MaxAuditActionLength       = 128
 	MaxAuditResourceTypeLength = 64
+	MaxAuditResourceIDLength   = 256
 )
 
 var (
@@ -85,4 +86,18 @@ func ValidAuditAction(value string) bool {
 func ValidAuditResourceType(value string) bool {
 	value = strings.TrimSpace(value)
 	return value != "" && len(value) <= MaxAuditResourceTypeLength && auditResourceTypePattern.MatchString(value)
+}
+
+// ValidAuditResourceID keeps audit resource filters bounded and printable.
+func ValidAuditResourceID(value string) bool {
+	value = strings.TrimSpace(value)
+	if value == "" || len(value) > MaxAuditResourceIDLength {
+		return false
+	}
+	for _, r := range value {
+		if unicode.IsControl(r) {
+			return false
+		}
+	}
+	return true
 }
