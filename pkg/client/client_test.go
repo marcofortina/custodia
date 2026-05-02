@@ -267,3 +267,22 @@ func TestClientListClientsFilteredUsesActiveQuery(t *testing.T) {
 		t.Fatalf("unexpected clients response: %+v err=%v", clients, err)
 	}
 }
+
+func TestClientListAuditEventsUsesFilters(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.EscapedPath() != "/v1/audit-events" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
+		}
+		if got := r.URL.Query().Get("actor_client_id"); got != "client/alice" {
+			t.Fatalf("unexpected actor filter: %q", got)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"audit_events": []model.AuditEvent{{Action: "secret.read", ActorClientID: "client/alice"}}})
+	}))
+	defer server.Close()
+
+	custodiaClient := &Client{baseURL: server.URL, http: server.Client()}
+	events, err := custodiaClient.ListAuditEvents(AuditEventFilters{Limit: 25, ActorClientID: "client/alice", Action: "secret.read"})
+	if err != nil || len(events) != 1 || events[0].ActorClientID != "client/alice" {
+		t.Fatalf("unexpected audit response: %+v err=%v", events, err)
+	}
+}

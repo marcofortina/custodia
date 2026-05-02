@@ -30,6 +30,15 @@ type ClientListFilters struct {
 	Active *bool
 }
 
+type AuditEventFilters struct {
+	Limit         int
+	Outcome       string
+	Action        string
+	ActorClientID string
+	ResourceType  string
+	ResourceID    string
+}
+
 type AccessGrantRequestFilters struct {
 	Limit               int
 	SecretID            string
@@ -97,6 +106,27 @@ func (c *Client) CreateClient(req model.CreateClientRequest) error {
 
 func (c *Client) RevokeClient(req model.RevokeClientRequest) error {
 	return c.doJSON(http.MethodPost, "/v1/clients/revoke", req, nil)
+}
+
+func (c *Client) ListAuditEvents(filters AuditEventFilters) ([]model.AuditEvent, error) {
+	query := url.Values{}
+	if filters.Limit > 0 {
+		query.Set("limit", fmt.Sprintf("%d", filters.Limit))
+	}
+	addQueryFilter(query, "outcome", filters.Outcome)
+	addQueryFilter(query, "action", filters.Action)
+	addQueryFilter(query, "actor_client_id", filters.ActorClientID)
+	addQueryFilter(query, "resource_type", filters.ResourceType)
+	addQueryFilter(query, "resource_id", filters.ResourceID)
+	path := "/v1/audit-events"
+	if encoded := query.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
+	var response struct {
+		AuditEvents []model.AuditEvent `json:"audit_events"`
+	}
+	err := c.doJSON(http.MethodGet, path, nil, &response)
+	return response.AuditEvents, err
 }
 
 func (c *Client) ListAccessGrantRequests(filters AccessGrantRequestFilters) ([]model.AccessGrantMetadata, error) {
