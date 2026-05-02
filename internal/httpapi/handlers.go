@@ -349,11 +349,18 @@ func (s *Server) handleListSecretAccess(w http.ResponseWriter, r *http.Request) 
 	if !ok {
 		return
 	}
+	limit, ok := s.optionalLimit(w, r, "secret.access_list", "secret", secretID)
+	if !ok {
+		return
+	}
 	accesses, err := s.store.ListSecretAccess(r.Context(), clientIDFromContext(r), secretID)
 	if err != nil {
 		s.auditStoreFailure(r, "secret.access_list", "secret", secretID, err)
 		writeMappedError(w, err)
 		return
+	}
+	if limit > 0 && len(accesses) > limit {
+		accesses = accesses[:limit]
 	}
 	s.audit(r, "secret.access_list", "secret", secretID, "success", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"access": accesses})
