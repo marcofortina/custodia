@@ -8,6 +8,8 @@ metadata:
 spec:
   replicas: {{ .Values.replicaCount }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  strategy:
+{{ toYaml .Values.deploymentStrategy | indent 4 }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "custodia.name" . }}

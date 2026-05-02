@@ -1,6 +1,12 @@
 replicaCount: 3
 revisionHistoryLimit: 3
 
+deploymentStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 1
+
 image:
   repository: custodia/custodia-server
   tag: "0.1.0"
