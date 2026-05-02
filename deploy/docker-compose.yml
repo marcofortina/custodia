@@ -25,6 +25,9 @@ services:
       dockerfile: deploy/Dockerfile
       args:
         GO_BUILD_TAGS: "${CUSTODIA_GO_BUILD_TAGS:-}"
+        CUSTODIA_VERSION: "${CUSTODIA_VERSION:-dev}"
+        CUSTODIA_COMMIT: "${CUSTODIA_COMMIT:-unknown}"
+        CUSTODIA_DATE: "${CUSTODIA_DATE:-unknown}"
     environment:
       CUSTODIA_API_ADDR: ":8443"
       CUSTODIA_HEALTH_ADDR: ":8080"
