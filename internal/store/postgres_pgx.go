@@ -252,7 +252,7 @@ func (s *PostgresStore) GetSecret(ctx context.Context, actorClientID, secretID s
 	var envelope []byte
 	var metadata []byte
 	err := s.pool.QueryRow(ctx, `
-		SELECT s.secret_id::text, v.version_id::text, v.ciphertext, v.crypto_metadata, a.envelope, a.permissions
+		SELECT s.secret_id::text, v.version_id::text, v.ciphertext, v.crypto_metadata, a.envelope, a.permissions, a.granted_at, a.expires_at
 		FROM secrets s
 		JOIN LATERAL (
 			SELECT * FROM secret_versions
@@ -265,7 +265,7 @@ func (s *PostgresStore) GetSecret(ctx context.Context, actorClientID, secretID s
 		  AND a.revoked_at IS NULL
 		  AND (a.expires_at IS NULL OR a.expires_at > NOW())
 		  AND (a.permissions & $3) = $3`, secretID, actorClientID, int(model.PermissionRead)).
-		Scan(&response.SecretID, &response.VersionID, &ciphertext, &metadata, &envelope, &response.Permissions)
+		Scan(&response.SecretID, &response.VersionID, &ciphertext, &metadata, &envelope, &response.Permissions, &response.GrantedAt, &response.AccessExpiresAt)
 	if err != nil {
 		return model.SecretReadResponse{}, mapPostgresError(err)
 	}

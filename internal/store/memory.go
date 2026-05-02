@@ -253,12 +253,14 @@ func (s *MemoryStore) GetSecret(_ context.Context, actorClientID, secretID strin
 		return model.SecretReadResponse{}, err
 	}
 	return model.SecretReadResponse{
-		SecretID:       secret.SecretID,
-		VersionID:      version.VersionID,
-		Ciphertext:     version.Ciphertext,
-		CryptoMetadata: cloneRaw(version.CryptoMetadata),
-		Envelope:       access.Envelope,
-		Permissions:    access.Permissions,
+		SecretID:        secret.SecretID,
+		VersionID:       version.VersionID,
+		Ciphertext:      version.Ciphertext,
+		CryptoMetadata:  cloneRaw(version.CryptoMetadata),
+		Envelope:        access.Envelope,
+		Permissions:     access.Permissions,
+		GrantedAt:       access.GrantedAt,
+		AccessExpiresAt: cloneTimePtr(access.ExpiresAt),
 	}, nil
 }
 

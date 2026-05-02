@@ -176,7 +176,7 @@ func TestAPICreateAndReadOpaqueSecret(t *testing.T) {
 	if err := json.NewDecoder(res.Body).Decode(&read); err != nil {
 		t.Fatalf("decode read: %v", err)
 	}
-	if read.Ciphertext != "Y2lwaGVydGV4dA==" || read.Envelope != "ZW52ZWxvcGUtZm9yLWFsaWNl" {
+	if read.Ciphertext != "Y2lwaGVydGV4dA==" || read.Envelope != "ZW52ZWxvcGUtZm9yLWFsaWNl" || read.GrantedAt.IsZero() {
 		t.Fatalf("unexpected opaque payload: %+v", read)
 	}
 }

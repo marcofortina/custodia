@@ -140,12 +140,14 @@ type AccessGrantMetadata struct {
 }
 
 type SecretReadResponse struct {
-	SecretID       string          `json:"secret_id"`
-	VersionID      string          `json:"version_id"`
-	Ciphertext     string          `json:"ciphertext"`
-	CryptoMetadata json.RawMessage `json:"crypto_metadata,omitempty"`
-	Envelope       string          `json:"envelope"`
-	Permissions    int             `json:"permissions"`
+	SecretID        string          `json:"secret_id"`
+	VersionID       string          `json:"version_id"`
+	Ciphertext      string          `json:"ciphertext"`
+	CryptoMetadata  json.RawMessage `json:"crypto_metadata,omitempty"`
+	Envelope        string          `json:"envelope"`
+	Permissions     int             `json:"permissions"`
+	GrantedAt       time.Time       `json:"granted_at"`
+	AccessExpiresAt *time.Time      `json:"access_expires_at,omitempty"`
 }
 
 type CreateClientRequest struct {
