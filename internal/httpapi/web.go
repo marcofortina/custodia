@@ -2,6 +2,8 @@ package httpapi
 
 import (
 	"context"
+	"custodia/internal/audit"
+
 	"html"
 	"net/http"
 	"strconv"
@@ -19,7 +21,8 @@ func writeWebPage(w http.ResponseWriter, title string, body string) {
 <a href="/web/status">Status</a> |
 <a href="/web/clients">Clients</a> |
 <a href="/web/access-requests">Access requests</a> |
-<a href="/web/audit">Audit</a>
+<a href="/web/audit">Audit</a> |
+<a href="/web/audit/verify">Verify audit</a>
 </nav>
 <hr>
 ` + body + `
@@ -122,4 +125,25 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 	body := "<h1>Access requests</h1><p>Metadata-only pending grant workflow. Envelopes are never rendered here.</p><table><thead><tr><th>Secret</th><th>Version</th><th>Target client</th><th>Requested by</th><th>Status</th></tr></thead><tbody>" + rows + "</tbody></table>"
 	s.audit(r, "web.access_request_list", "secret", "", "success", nil)
 	writeWebPage(w, "Access requests", body)
+}
+
+func (s *Server) handleWebAuditVerify(w http.ResponseWriter, r *http.Request) {
+	events, err := s.store.ListAuditEvents(r.Context(), 500)
+	if err != nil {
+		s.auditStoreFailure(r, "web.audit_verify", "audit_event", "", err)
+		writeMappedError(w, err)
+		return
+	}
+	result := audit.VerifyChain(events)
+	outcome := "success"
+	if !result.Valid {
+		outcome = "failure"
+	}
+	body := "<h1>Audit chain verification</h1><dl>" +
+		"<dt>Valid</dt><dd>" + html.EscapeString(strconv.FormatBool(result.Valid)) + "</dd>" +
+		"<dt>Verified events</dt><dd>" + html.EscapeString(strconv.Itoa(result.VerifiedEvents)) + "</dd>" +
+		"<dt>Failure index</dt><dd>" + html.EscapeString(strconv.Itoa(result.FailureIndex)) + "</dd>" +
+		"</dl>"
+	s.audit(r, "web.audit_verify", "audit_event", "", outcome, nil)
+	writeWebPage(w, "Audit verification", body)
 }
