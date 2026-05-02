@@ -185,6 +185,14 @@ func (s *Server) handleListAuditEvents(w http.ResponseWriter, r *http.Request) {
 	if action := strings.TrimSpace(r.URL.Query().Get("action")); action != "" {
 		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.Action == action })
 	}
+	if actorClientID := strings.TrimSpace(r.URL.Query().Get("actor_client_id")); actorClientID != "" {
+		if !model.ValidClientID(actorClientID) {
+			s.auditFailure(r, "audit.list", "audit_event", "", map[string]string{"reason": "invalid_actor_client_id_filter"})
+			writeError(w, http.StatusBadRequest, "invalid_actor_client_id_filter")
+			return
+		}
+		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.ActorClientID == actorClientID })
+	}
 	s.audit(r, "audit.list", "audit_event", "", "success", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"audit_events": events})
 }
