@@ -56,6 +56,25 @@ CREATE TABLE IF NOT EXISTS secret_access_requests (
     CHECK (permissions > 0 AND permissions <= 7)
 );
 
+
+CREATE TABLE IF NOT EXISTS web_users (
+    user_id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username      TEXT UNIQUE NOT NULL,
+    password_hash BYTEA NOT NULL,
+    mfa_secret    TEXT,
+    passkey_id    BYTEA,
+    role          TEXT NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    revoked_at    TIMESTAMPTZ,
+    CHECK (role IN ('admin', 'operator', 'auditor'))
+);
+
+CREATE TABLE IF NOT EXISTS web_user_mappings (
+    user_id   UUID NOT NULL REFERENCES web_users(user_id) ON DELETE CASCADE,
+    client_id TEXT NOT NULL REFERENCES clients(client_id),
+    PRIMARY KEY (user_id, client_id)
+);
+
 CREATE TABLE IF NOT EXISTS audit_events (
     event_id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     occurred_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -74,3 +93,4 @@ CREATE INDEX IF NOT EXISTS idx_secret_versions_latest ON secret_versions (secret
 CREATE INDEX IF NOT EXISTS idx_secret_access_client ON secret_access (client_id, secret_id, version_id) WHERE revoked_at IS NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_secret_access_requests_pending ON secret_access_requests (secret_id, version_id, client_id) WHERE activated_at IS NULL AND revoked_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_audit_events_occurred_at ON audit_events (occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_web_users_active_role ON web_users (role) WHERE revoked_at IS NULL;

@@ -140,3 +140,10 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Added `GET /v1/audit-events/verify` for admin-only hash-chain verification.
 - Added `vault-admin audit verify`.
 - Added unit/API guardrails for tampered chains and invalid limits.
+
+
+## Patch 024 - web user metadata schema
+
+- Added PostgreSQL `web_users` and `web_user_mappings` schema for the future metadata-only Web UI.
+- Kept the crypto boundary intact: no server-side encryption keys, public-key directory or secret plaintext fields.
+- Added schema guardrails for role constraints and client mappings.

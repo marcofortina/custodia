@@ -39,3 +39,28 @@ func TestPostgresSchemaStoresPendingGrantExpiration(t *testing.T) {
 		t.Fatal("pending grant requests must preserve optional access expiration")
 	}
 }
+
+func TestPostgresSchemaIncludesMetadataOnlyWebUsers(t *testing.T) {
+	t.Parallel()
+
+	schemaPath := filepath.Join("..", "..", "migrations", "postgres", "001_init.sql")
+	schemaBytes, err := os.ReadFile(schemaPath)
+	if err != nil {
+		t.Fatalf("read postgres schema: %v", err)
+	}
+	schema := string(schemaBytes)
+
+	for _, expected := range []string{
+		"CREATE TABLE IF NOT EXISTS web_users",
+		"password_hash BYTEA NOT NULL",
+		"mfa_secret    TEXT",
+		"passkey_id    BYTEA",
+		"CHECK (role IN ('admin', 'operator', 'auditor'))",
+		"CREATE TABLE IF NOT EXISTS web_user_mappings",
+		"client_id TEXT NOT NULL REFERENCES clients(client_id)",
+	} {
+		if !strings.Contains(schema, expected) {
+			t.Fatalf("postgres schema missing web metadata token %q", expected)
+		}
+	}
+}
