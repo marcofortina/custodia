@@ -115,11 +115,23 @@ func runClientRevoke(cfg *cliConfig, args []string) error {
 func runAuditList(cfg *cliConfig, args []string) error {
 	cmd := flag.NewFlagSet("audit list", flag.ExitOnError)
 	limit := cmd.Int("limit", 100, "maximum audit events to return, up to 500")
+	outcome := cmd.String("outcome", "", "optional outcome filter: success, failure or degraded")
+	action := cmd.String("action", "", "optional audit action filter")
+	actorClientID := cmd.String("actor-client-id", "", "optional actor client id filter")
+	resourceType := cmd.String("resource-type", "", "optional resource type filter")
+	resourceID := cmd.String("resource-id", "", "optional resource id filter")
 	_ = cmd.Parse(args)
 	if *limit <= 0 || *limit > 500 {
 		return fmt.Errorf("--limit must be between 1 and 500")
 	}
-	return requestJSON(cfg, http.MethodGet, fmt.Sprintf("/v1/audit-events?limit=%d", *limit), nil, os.Stdout)
+	query := url.Values{}
+	query.Set("limit", strconv.Itoa(*limit))
+	addQueryFilter(query, "outcome", *outcome)
+	addQueryFilter(query, "action", *action)
+	addQueryFilter(query, "actor_client_id", *actorClientID)
+	addQueryFilter(query, "resource_type", *resourceType)
+	addQueryFilter(query, "resource_id", *resourceID)
+	return requestJSON(cfg, http.MethodGet, "/v1/audit-events?"+query.Encode(), nil, os.Stdout)
 }
 
 func runAuditExport(cfg *cliConfig, args []string) error {
@@ -208,6 +220,12 @@ func runAccessRevoke(cfg *cliConfig, args []string) error {
 	}
 	path := "/v1/secrets/" + pathEscape(*secretID) + "/access/" + pathEscape(*clientID)
 	return requestJSON(cfg, http.MethodDelete, path, nil, os.Stdout)
+}
+
+func addQueryFilter(query url.Values, key string, value string) {
+	if strings.TrimSpace(value) != "" {
+		query.Set(key, strings.TrimSpace(value))
+	}
 }
 
 func pathEscape(value string) string {
@@ -311,7 +329,7 @@ func usage() {
   vault-admin [global flags] client get --client-id ID
   vault-admin [global flags] client create --client-id ID --mtls-subject SUBJECT
   vault-admin [global flags] client revoke --client-id ID [--reason REASON]
-  vault-admin [global flags] audit list [--limit N]
+  vault-admin [global flags] audit list [--limit N] [--outcome STATUS] [--action ACTION]
   vault-admin [global flags] audit export [--limit N]
   vault-admin [global flags] audit verify [--limit N]
   vault-admin [global flags] secret versions --secret-id ID
