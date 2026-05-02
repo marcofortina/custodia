@@ -37,15 +37,10 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleWeb(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write([]byte(`<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><title>Custodia</title></head>
-<body>
-<h1>Custodia metadata console</h1>
-<p>Phase 1 web surface is metadata-only and requires an authenticated admin subject. The vault never decrypts or manages client-side encryption keys.</p>
-</body>
-</html>`))
+	body := "<h1>Custodia metadata console</h1>" +
+		webParagraph("The web console is metadata-only and requires an authenticated admin subject.") +
+		webParagraph("The vault never decrypts secrets and never manages client-side encryption keys.")
+	writeWebPage(w, "Metadata console", body)
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
