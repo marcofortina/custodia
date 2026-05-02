@@ -119,6 +119,43 @@ func TestAPIClientRevokeAuditsReason(t *testing.T) {
 	}
 }
 
+func TestAPIAdminAccessRequestsFilterByTargetClientID(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, clientID := range []string{"admin", "client_alice", "client_bob", "client_charlie"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %s: %v", clientID, err)
+		}
+	}
+	ref, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{Name: "secret", Ciphertext: "Y2lwaGVydGV4dA==", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}}, Permissions: int(model.PermissionAll)})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	if _, err := memoryStore.RequestAccessGrant(ctx, "admin", ref.SecretID, model.AccessGrantRequest{TargetClientID: "client_bob", Permissions: int(model.PermissionRead)}); err != nil {
+		t.Fatalf("request grant bob: %v", err)
+	}
+	if _, err := memoryStore.RequestAccessGrant(ctx, "admin", ref.SecretID, model.AccessGrantRequest{TargetClientID: "client_charlie", Permissions: int(model.PermissionRead)}); err != nil {
+		t.Fatalf("request grant charlie: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/access-requests?client_id=client_bob", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var payload struct {
+		Requests []model.AccessGrantMetadata `json:"access_requests"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode access requests: %v", err)
+	}
+	if len(payload.Requests) != 1 || payload.Requests[0].ClientID != "client_bob" {
+		t.Fatalf("unexpected filtered requests: %+v", payload.Requests)
+	}
+}
+
 func TestAPIAuditListFiltersByResourceID(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()
