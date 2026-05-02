@@ -16,8 +16,9 @@ spec:
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
-{{- with .Values.podAnnotations }}
       annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+{{- with .Values.podAnnotations }}
 {{ toYaml . | indent 8 }}
 {{- end }}
       labels:
