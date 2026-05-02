@@ -99,11 +99,12 @@ type SecretVersionRef struct {
 }
 
 type SecretMetadata struct {
-	SecretID    string    `json:"secret_id"`
-	Name        string    `json:"name"`
-	VersionID   string    `json:"version_id"`
-	Permissions int       `json:"permissions"`
-	CreatedAt   time.Time `json:"created_at"`
+	SecretID          string    `json:"secret_id"`
+	Name              string    `json:"name"`
+	VersionID         string    `json:"version_id"`
+	Permissions       int       `json:"permissions"`
+	CreatedAt         time.Time `json:"created_at"`
+	CreatedByClientID string    `json:"created_by_client_id"`
 }
 
 // SecretVersionMetadata exposes version lifecycle metadata only. It deliberately omits ciphertext and crypto metadata.

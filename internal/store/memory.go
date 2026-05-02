@@ -233,11 +233,12 @@ func (s *MemoryStore) ListSecrets(_ context.Context, actorClientID string) ([]mo
 			continue
 		}
 		secrets = append(secrets, model.SecretMetadata{
-			SecretID:    secret.SecretID,
-			Name:        secret.Name,
-			VersionID:   version.VersionID,
-			Permissions: access.Permissions,
-			CreatedAt:   secret.CreatedAt,
+			SecretID:          secret.SecretID,
+			Name:              secret.Name,
+			VersionID:         version.VersionID,
+			Permissions:       access.Permissions,
+			CreatedAt:         secret.CreatedAt,
+			CreatedByClientID: secret.CreatedByClientID,
 		})
 	}
 	return secrets, nil

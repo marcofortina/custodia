@@ -554,7 +554,7 @@ func TestAPIListsOnlyReadableSecretMetadata(t *testing.T) {
 	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
 		t.Fatalf("decode list: %v", err)
 	}
-	if len(payload.Secrets) != 1 || payload.Secrets[0].Name != "visible" || payload.Secrets[0].VersionID == "" {
+	if len(payload.Secrets) != 1 || payload.Secrets[0].Name != "visible" || payload.Secrets[0].VersionID == "" || payload.Secrets[0].CreatedByClientID != "client_alice" {
 		t.Fatalf("unexpected alice metadata list: %+v", payload.Secrets)
 	}
 	assertLastAudit(t, memoryStore, "secret.list", "success", "")
