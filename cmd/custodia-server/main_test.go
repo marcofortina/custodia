@@ -72,3 +72,13 @@ func TestBuildLimiterRejectsUnsupportedBackend(t *testing.T) {
 		t.Fatal("expected unsupported rate limit backend error")
 	}
 }
+
+func TestResolvedBackendsReflectImplicitPersistentConfig(t *testing.T) {
+	cfg := config.Config{StoreBackend: "memory", DatabaseURL: "postgres://db", RateLimitBackend: "memory", ValkeyURL: "rediss://cache"}
+	if got := resolvedStoreBackend(cfg); got != "postgres" {
+		t.Fatalf("expected postgres backend, got %q", got)
+	}
+	if got := resolvedRateLimitBackend(cfg); got != "valkey" {
+		t.Fatalf("expected valkey backend, got %q", got)
+	}
+}

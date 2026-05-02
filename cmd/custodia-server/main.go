@@ -33,6 +33,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("rate limiter init failed: %v", err)
 	}
+	storeBackend := resolvedStoreBackend(cfg)
+	rateLimitBackend := resolvedRateLimitBackend(cfg)
 	if err := validateAdminClientIDs(cfg.AdminClientIDs); err != nil {
 		log.Fatalf("admin client configuration failed: %v", err)
 	}
@@ -45,8 +47,8 @@ func main() {
 		ClientRateLimit:       cfg.ClientRateLimitPerSecond,
 		GlobalRateLimit:       cfg.GlobalRateLimitPerSecond,
 		IPRateLimit:           cfg.IPRateLimitPerSecond,
-		StoreBackend:          cfg.StoreBackend,
-		RateLimitBackend:      cfg.RateLimitBackend,
+		StoreBackend:          storeBackend,
+		RateLimitBackend:      rateLimitBackend,
 	})
 
 	server := &http.Server{
@@ -109,15 +111,30 @@ func main() {
 	shutdownServer(shutdownCtx, healthServer)
 }
 
-func buildStore(ctx context.Context, cfg config.Config) (store.Store, func(), error) {
+func resolvedStoreBackend(cfg config.Config) string {
 	backend := strings.ToLower(strings.TrimSpace(cfg.StoreBackend))
 	if backend == "" {
 		backend = "memory"
 	}
 	if cfg.DatabaseURL != "" && backend == "memory" {
-		backend = "postgres"
+		return "postgres"
 	}
-	switch backend {
+	return backend
+}
+
+func resolvedRateLimitBackend(cfg config.Config) string {
+	backend := strings.ToLower(strings.TrimSpace(cfg.RateLimitBackend))
+	if backend == "" {
+		backend = "memory"
+	}
+	if cfg.ValkeyURL != "" && backend == "memory" {
+		return "valkey"
+	}
+	return backend
+}
+
+func buildStore(ctx context.Context, cfg config.Config) (store.Store, func(), error) {
+	switch resolvedStoreBackend(cfg) {
 	case "postgres":
 		postgresStore, err := store.NewPostgresStore(ctx, cfg.DatabaseURL)
 		if err != nil {
@@ -162,14 +179,7 @@ func bootstrapClients(ctx context.Context, vaultStore store.Store, clients map[s
 }
 
 func buildLimiter(cfg config.Config) (ratelimit.Limiter, error) {
-	backend := strings.ToLower(strings.TrimSpace(cfg.RateLimitBackend))
-	if backend == "" {
-		backend = "memory"
-	}
-	if cfg.ValkeyURL != "" && backend == "memory" {
-		backend = "valkey"
-	}
-	switch backend {
+	switch resolvedRateLimitBackend(cfg) {
 	case "valkey":
 		return ratelimit.NewValkeyLimiter(cfg.ValkeyURL)
 	case "memory":
