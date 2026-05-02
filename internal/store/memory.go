@@ -315,6 +315,7 @@ func (s *MemoryStore) ListSecretAccess(_ context.Context, actorClientID, secretI
 			ExpiresAt:   cloneTimePtr(access.ExpiresAt),
 		})
 	}
+	sort.Slice(accesses, func(i, j int) bool { return accesses[i].ClientID < accesses[j].ClientID })
 	return accesses, nil
 }
 

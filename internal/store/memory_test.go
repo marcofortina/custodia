@@ -8,6 +8,38 @@ import (
 	"custodia/internal/model"
 )
 
+func TestMemoryStoreListsSecretAccessByClientID(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	mustCreateClient(t, store, "client_bob", "client_bob")
+	mustCreateClient(t, store, "client_charlie", "client_charlie")
+	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:       "secret",
+		Ciphertext: "Y2lwaGVydGV4dA==",
+		Envelopes: []model.RecipientEnvelope{
+			{ClientID: "client_charlie", Envelope: "ZW52ZWxvcGU="},
+			{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="},
+			{ClientID: "client_bob", Envelope: "ZW52ZWxvcGU="},
+		},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	access, err := store.ListSecretAccess(ctx, "client_alice", created.SecretID)
+	if err != nil {
+		t.Fatalf("list access: %v", err)
+	}
+	got := []string{access[0].ClientID, access[1].ClientID, access[2].ClientID}
+	want := []string{"client_alice", "client_bob", "client_charlie"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("expected access sorted by client id %v, got %v", want, got)
+		}
+	}
+}
+
 func TestMemoryStoreListsSecretsNewestFirst(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryStore()
