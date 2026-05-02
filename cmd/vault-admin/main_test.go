@@ -32,3 +32,10 @@ func TestRunAuditExportRejectsInvalidLimit(t *testing.T) {
 		t.Fatal("expected invalid limit error")
 	}
 }
+
+func TestRunClientListRejectsInvalidActiveFilter(t *testing.T) {
+	err := runClientList(&cliConfig{}, []string{"--active", "maybe"})
+	if err == nil {
+		t.Fatal("expected invalid active filter error")
+	}
+}

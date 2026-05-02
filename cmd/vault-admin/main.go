@@ -83,6 +83,7 @@ func main() {
 func runClientList(cfg *cliConfig, args []string) error {
 	cmd := flag.NewFlagSet("client list", flag.ExitOnError)
 	limit := cmd.Int("limit", 0, "optional maximum clients to return, up to 500")
+	active := cmd.String("active", "", "optional active-state filter: true or false")
 	_ = cmd.Parse(args)
 	query := url.Values{}
 	if *limit != 0 {
@@ -90,6 +91,13 @@ func runClientList(cfg *cliConfig, args []string) error {
 			return fmt.Errorf("--limit must be between 1 and 500 when set")
 		}
 		query.Set("limit", strconv.Itoa(*limit))
+	}
+	if trimmed := strings.TrimSpace(*active); trimmed != "" {
+		normalized := strings.ToLower(trimmed)
+		if normalized != "true" && normalized != "false" {
+			return fmt.Errorf("--active must be true or false when set")
+		}
+		query.Set("active", normalized)
 	}
 	path := "/v1/clients"
 	if encoded := query.Encode(); encoded != "" {
