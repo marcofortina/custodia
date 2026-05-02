@@ -291,7 +291,10 @@ func (s *Server) handleListSecrets(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetSecret(w http.ResponseWriter, r *http.Request) {
-	secretID := r.PathValue("secret_id")
+	secretID, ok := s.requireSecretID(w, r, "secret.read")
+	if !ok {
+		return
+	}
 	response, err := s.store.GetSecret(r.Context(), clientIDFromContext(r), secretID)
 	if err != nil {
 		s.auditStoreFailure(r, "secret.read", "secret", secretID, err)
@@ -303,7 +306,10 @@ func (s *Server) handleGetSecret(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListSecretVersions(w http.ResponseWriter, r *http.Request) {
-	secretID := r.PathValue("secret_id")
+	secretID, ok := s.requireSecretID(w, r, "secret.version_list")
+	if !ok {
+		return
+	}
 	versions, err := s.store.ListSecretVersions(r.Context(), clientIDFromContext(r), secretID)
 	if err != nil {
 		s.auditStoreFailure(r, "secret.version_list", "secret", secretID, err)
@@ -315,7 +321,10 @@ func (s *Server) handleListSecretVersions(w http.ResponseWriter, r *http.Request
 }
 
 func (s *Server) handleListSecretAccess(w http.ResponseWriter, r *http.Request) {
-	secretID := r.PathValue("secret_id")
+	secretID, ok := s.requireSecretID(w, r, "secret.access_list")
+	if !ok {
+		return
+	}
 	accesses, err := s.store.ListSecretAccess(r.Context(), clientIDFromContext(r), secretID)
 	if err != nil {
 		s.auditStoreFailure(r, "secret.access_list", "secret", secretID, err)
@@ -327,7 +336,10 @@ func (s *Server) handleListSecretAccess(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *Server) handleDeleteSecret(w http.ResponseWriter, r *http.Request) {
-	secretID := r.PathValue("secret_id")
+	secretID, ok := s.requireSecretID(w, r, "secret.delete")
+	if !ok {
+		return
+	}
 	if err := s.store.DeleteSecret(r.Context(), clientIDFromContext(r), secretID); err != nil {
 		s.auditStoreFailure(r, "secret.delete", "secret", secretID, err)
 		writeMappedError(w, err)
@@ -338,7 +350,10 @@ func (s *Server) handleDeleteSecret(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleShareSecret(w http.ResponseWriter, r *http.Request) {
-	secretID := r.PathValue("secret_id")
+	secretID, ok := s.requireSecretID(w, r, "secret.share")
+	if !ok {
+		return
+	}
 	var req model.ShareSecretRequest
 	if !decodeJSON(w, r, &req) {
 		s.auditFailure(r, "secret.share", "secret", secretID, map[string]string{"reason": "invalid_json"})
@@ -354,7 +369,10 @@ func (s *Server) handleShareSecret(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRequestAccessGrant(w http.ResponseWriter, r *http.Request) {
-	secretID := r.PathValue("secret_id")
+	secretID, ok := s.requireSecretID(w, r, "secret.access_request")
+	if !ok {
+		return
+	}
 	var req model.AccessGrantRequest
 	if !decodeJSON(w, r, &req) {
 		s.auditFailure(r, "secret.access_request", "secret", secretID, map[string]string{"reason": "invalid_json"})
@@ -425,7 +443,10 @@ func (s *Server) handleListAccessGrantRequests(w http.ResponseWriter, r *http.Re
 }
 
 func (s *Server) handleActivateAccessGrant(w http.ResponseWriter, r *http.Request) {
-	secretID := r.PathValue("secret_id")
+	secretID, ok := s.requireSecretID(w, r, "secret.access_activate")
+	if !ok {
+		return
+	}
 	targetClientID := r.PathValue("client_id")
 	var req model.ActivateAccessRequest
 	if !decodeJSON(w, r, &req) {
@@ -442,7 +463,10 @@ func (s *Server) handleActivateAccessGrant(w http.ResponseWriter, r *http.Reques
 }
 
 func (s *Server) handleRevokeAccess(w http.ResponseWriter, r *http.Request) {
-	secretID := r.PathValue("secret_id")
+	secretID, ok := s.requireSecretID(w, r, "secret.access_revoke")
+	if !ok {
+		return
+	}
 	targetClientID := r.PathValue("client_id")
 	if err := s.store.RevokeAccess(r.Context(), clientIDFromContext(r), secretID, targetClientID); err != nil {
 		s.auditStoreFailure(r, "secret.access_revoke", "secret", secretID, err)
@@ -454,7 +478,10 @@ func (s *Server) handleRevokeAccess(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCreateSecretVersion(w http.ResponseWriter, r *http.Request) {
-	secretID := r.PathValue("secret_id")
+	secretID, ok := s.requireSecretID(w, r, "secret.version_create")
+	if !ok {
+		return
+	}
 	var req model.CreateSecretVersionRequest
 	if !decodeJSON(w, r, &req) {
 		s.auditFailure(r, "secret.version_create", "secret", secretID, map[string]string{"reason": "invalid_json"})
@@ -473,6 +500,16 @@ func (s *Server) handleCreateSecretVersion(w http.ResponseWriter, r *http.Reques
 	}
 	s.audit(r, "secret.version_create", "secret", secretID, "success", nil)
 	writeJSON(w, http.StatusCreated, ref)
+}
+
+func (s *Server) requireSecretID(w http.ResponseWriter, r *http.Request, action string) (string, bool) {
+	secretID := r.PathValue("secret_id")
+	if !model.ValidUUIDID(secretID) {
+		s.auditFailure(r, action, "secret", secretID, map[string]string{"reason": "invalid_secret_id"})
+		writeError(w, http.StatusBadRequest, "invalid_secret_id")
+		return "", false
+	}
+	return secretID, true
 }
 
 func filterAuditEvents(events []model.AuditEvent, keep func(model.AuditEvent) bool) []model.AuditEvent {

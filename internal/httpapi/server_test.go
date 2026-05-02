@@ -1286,3 +1286,23 @@ func TestAPIRateLimitsUnauthenticatedRequestsByRemoteIP(t *testing.T) {
 		}
 	}
 }
+
+func TestAPIRejectsInvalidSecretIDPath(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+	req := mtlsRequest(http.MethodGet, "/v1/secrets/not-a-uuid", "", "client_alice")
+	res := httptest.NewRecorder()
+
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", res.Code, res.Body.String())
+	}
+	if !strings.Contains(res.Body.String(), "invalid_secret_id") {
+		t.Fatalf("expected invalid secret id error, got %s", res.Body.String())
+	}
+}

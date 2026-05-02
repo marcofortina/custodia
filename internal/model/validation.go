@@ -13,11 +13,19 @@ const (
 	MaxMTLSSubjectLength   = 512
 )
 
-var clientIDPattern = regexp.MustCompile(`^[A-Za-z0-9._:-]+$`)
+var (
+	clientIDPattern = regexp.MustCompile(`^[A-Za-z0-9._:-]+$`)
+	uuidIDPattern   = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
+)
 
 // ValidClientID validates transport and storage identifiers without assigning any crypto meaning to them.
 func ValidClientID(value string) bool {
 	return value != "" && len(value) <= MaxClientIDLength && clientIDPattern.MatchString(value)
+}
+
+// ValidUUIDID validates server-generated resource identifiers.
+func ValidUUIDID(value string) bool {
+	return uuidIDPattern.MatchString(strings.ToLower(strings.TrimSpace(value)))
 }
 
 // ValidMTLSSubject keeps certificate subject mappings bounded and printable.

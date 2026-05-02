@@ -55,3 +55,14 @@ func TestValidMTLSSubject(t *testing.T) {
 		}
 	}
 }
+
+func TestValidUUIDID(t *testing.T) {
+	if !ValidUUIDID("550e8400-e29b-41d4-a716-446655440000") {
+		t.Fatal("expected generated uuid id to be valid")
+	}
+	for _, value := range []string{"", "not-a-uuid", "550e8400e29b41d4a716446655440000"} {
+		if ValidUUIDID(value) {
+			t.Fatalf("expected %q to be invalid", value)
+		}
+	}
+}
