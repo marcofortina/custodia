@@ -9,3 +9,12 @@
 {{- printf "%s-%s" .Release.Name (include "custodia.name" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
+
+
+{{- define "custodia.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
+{{- default (include "custodia.fullname" .) .Values.serviceAccount.name -}}
+{{- else -}}
+{{- default "default" .Values.serviceAccount.name -}}
+{{- end -}}
+{{- end -}}

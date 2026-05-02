@@ -9,6 +9,11 @@ service:
   type: ClusterIP
   port: 8443
 
+serviceAccount:
+  create: true
+  name: ""
+  automountServiceAccountToken: false
+
 health:
   port: 8080
 
