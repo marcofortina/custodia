@@ -306,6 +306,14 @@ func (s *MemoryStore) AppendAudit(_ context.Context, event model.AuditEvent) err
 	return nil
 }
 
+func (s *MemoryStore) AuditEvents() []model.AuditEvent {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	events := make([]model.AuditEvent, len(s.auditEvents))
+	copy(events, s.auditEvents)
+	return events
+}
+
 func (s *MemoryStore) visibleSecretLocked(actorClientID, secretID string, permission model.Permission) (*memorySecret, *memoryVersion, *memoryAccess, error) {
 	secret, ok := s.secrets[secretID]
 	if !ok || secret.DeletedAt != nil {

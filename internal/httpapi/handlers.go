@@ -34,6 +34,7 @@ func (s *Server) handleWeb(w http.ResponseWriter, _ *http.Request) {
 func (s *Server) handleListClients(w http.ResponseWriter, r *http.Request) {
 	clients, err := s.store.ListClients(r.Context())
 	if err != nil {
+		s.auditStoreFailure(r, "client.list", "client", "", err)
 		writeMappedError(w, err)
 		return
 	}
@@ -43,9 +44,11 @@ func (s *Server) handleListClients(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleRevokeClient(w http.ResponseWriter, r *http.Request) {
 	var req model.RevokeClientRequest
 	if !decodeJSON(w, r, &req) {
+		s.auditFailure(r, "client.revoke", "client", "", map[string]string{"reason": "invalid_json"})
 		return
 	}
 	if err := s.store.RevokeClient(r.Context(), req.ClientID); err != nil {
+		s.auditStoreFailure(r, "client.revoke", "client", req.ClientID, err)
 		writeMappedError(w, err)
 		return
 	}
@@ -56,14 +59,17 @@ func (s *Server) handleRevokeClient(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleCreateSecret(w http.ResponseWriter, r *http.Request) {
 	var req model.CreateSecretRequest
 	if !decodeJSON(w, r, &req) {
+		s.auditFailure(r, "secret.create", "secret", "", map[string]string{"reason": "invalid_json"})
 		return
 	}
 	if len(req.Envelopes) > s.maxEnvelopesPerSecret {
+		s.auditFailure(r, "secret.create", "secret", "", map[string]string{"reason": "too_many_envelopes"})
 		writeError(w, http.StatusRequestEntityTooLarge, "too_many_envelopes")
 		return
 	}
 	ref, err := s.store.CreateSecret(r.Context(), clientIDFromContext(r), req)
 	if err != nil {
+		s.auditStoreFailure(r, "secret.create", "secret", "", err)
 		writeMappedError(w, err)
 		return
 	}
@@ -75,6 +81,7 @@ func (s *Server) handleGetSecret(w http.ResponseWriter, r *http.Request) {
 	secretID := r.PathValue("secret_id")
 	response, err := s.store.GetSecret(r.Context(), clientIDFromContext(r), secretID)
 	if err != nil {
+		s.auditStoreFailure(r, "secret.read", "secret", secretID, err)
 		writeMappedError(w, err)
 		return
 	}
@@ -85,6 +92,7 @@ func (s *Server) handleGetSecret(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleDeleteSecret(w http.ResponseWriter, r *http.Request) {
 	secretID := r.PathValue("secret_id")
 	if err := s.store.DeleteSecret(r.Context(), clientIDFromContext(r), secretID); err != nil {
+		s.auditStoreFailure(r, "secret.delete", "secret", secretID, err)
 		writeMappedError(w, err)
 		return
 	}
@@ -96,9 +104,11 @@ func (s *Server) handleShareSecret(w http.ResponseWriter, r *http.Request) {
 	secretID := r.PathValue("secret_id")
 	var req model.ShareSecretRequest
 	if !decodeJSON(w, r, &req) {
+		s.auditFailure(r, "secret.share", "secret", secretID, map[string]string{"reason": "invalid_json"})
 		return
 	}
 	if err := s.store.ShareSecret(r.Context(), clientIDFromContext(r), secretID, req); err != nil {
+		s.auditStoreFailure(r, "secret.share", "secret", secretID, err)
 		writeMappedError(w, err)
 		return
 	}
@@ -110,6 +120,7 @@ func (s *Server) handleRevokeAccess(w http.ResponseWriter, r *http.Request) {
 	secretID := r.PathValue("secret_id")
 	targetClientID := r.PathValue("client_id")
 	if err := s.store.RevokeAccess(r.Context(), clientIDFromContext(r), secretID, targetClientID); err != nil {
+		s.auditStoreFailure(r, "secret.access_revoke", "secret", secretID, err)
 		writeMappedError(w, err)
 		return
 	}
@@ -121,14 +132,17 @@ func (s *Server) handleCreateSecretVersion(w http.ResponseWriter, r *http.Reques
 	secretID := r.PathValue("secret_id")
 	var req model.CreateSecretVersionRequest
 	if !decodeJSON(w, r, &req) {
+		s.auditFailure(r, "secret.version_create", "secret", secretID, map[string]string{"reason": "invalid_json"})
 		return
 	}
 	if len(req.Envelopes) > s.maxEnvelopesPerSecret {
+		s.auditFailure(r, "secret.version_create", "secret", secretID, map[string]string{"reason": "too_many_envelopes"})
 		writeError(w, http.StatusRequestEntityTooLarge, "too_many_envelopes")
 		return
 	}
 	ref, err := s.store.CreateSecretVersion(r.Context(), clientIDFromContext(r), secretID, req)
 	if err != nil {
+		s.auditStoreFailure(r, "secret.version_create", "secret", secretID, err)
 		writeMappedError(w, err)
 		return
 	}

@@ -7,6 +7,7 @@
 - Opaque ciphertext/envelope storage contract.
 - Secret access grants and future revocation.
 - Strict permission bitmask validation for read/write/share grants.
+- Hash-chained audit events for successful and failed auth/API operations.
 - PostgreSQL schema contract and in-memory executable store.
 - Valkey-compatible rate limiting.
 - Minimal admin CLI for API-backed metadata operations.

@@ -26,18 +26,33 @@ func writeError(w http.ResponseWriter, status int, code string) {
 }
 
 func writeMappedError(w http.ResponseWriter, err error) {
+	status, code := mapStoreError(err)
+	writeError(w, status, code)
+}
+
+func mapStoreError(err error) (int, string) {
 	switch {
 	case errors.Is(err, store.ErrInvalidInput):
-		writeError(w, http.StatusBadRequest, "invalid_input")
+		return http.StatusBadRequest, "invalid_input"
 	case errors.Is(err, store.ErrNotFound):
-		writeError(w, http.StatusNotFound, "not_found")
+		return http.StatusNotFound, "not_found"
 	case errors.Is(err, store.ErrForbidden):
-		writeError(w, http.StatusForbidden, "forbidden")
+		return http.StatusForbidden, "forbidden"
 	case errors.Is(err, store.ErrConflict):
-		writeError(w, http.StatusConflict, "conflict")
+		return http.StatusConflict, "conflict"
 	default:
-		writeError(w, http.StatusInternalServerError, "internal_error")
+		return http.StatusInternalServerError, "internal_error"
 	}
+}
+
+func (s *Server) auditFailure(r *http.Request, action, resourceType, resourceID string, fields map[string]string) {
+	metadata, _ := json.Marshal(fields)
+	s.audit(r, action, resourceType, resourceID, "failure", metadata)
+}
+
+func (s *Server) auditStoreFailure(r *http.Request, action, resourceType, resourceID string, err error) {
+	_, code := mapStoreError(err)
+	s.auditFailure(r, action, resourceType, resourceID, map[string]string{"reason": code})
 }
 
 func (s *Server) audit(r *http.Request, action, resourceType, resourceID, outcome string, metadata json.RawMessage) {

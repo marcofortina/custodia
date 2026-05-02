@@ -81,6 +81,76 @@ func TestAPIRejectsInvalidPermissionBits(t *testing.T) {
 	}
 }
 
+func TestAPIAuditsMissingClientCertificate(t *testing.T) {
+	memoryStore := store.NewMemoryStore()
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+	req := httptest.NewRequest(http.MethodPost, "/v1/secrets", strings.NewReader(`{}`))
+	res := httptest.NewRecorder()
+
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", res.Code)
+	}
+	assertLastAudit(t, memoryStore, "auth.mtls", "failure", "missing_client_certificate")
+}
+
+func TestAPIAuditsForbiddenSecretRead(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create alice: %v", err)
+	}
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_bob", MTLSSubject: "client_bob"}); err != nil {
+		t.Fatalf("create bob: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	createBody := `{"name":"secret","ciphertext":"ciphertext","envelopes":[{"client_id":"client_alice","envelope":"envelope-for-alice"}],"permissions":7}`
+	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected create 201, got %d: %s", res.Code, res.Body.String())
+	}
+	var created model.SecretVersionRef
+	if err := json.NewDecoder(res.Body).Decode(&created); err != nil {
+		t.Fatalf("decode created: %v", err)
+	}
+
+	req = mtlsRequest(http.MethodGet, "/v1/secrets/"+created.SecretID, "", "client_bob")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusForbidden {
+		t.Fatalf("expected read 403, got %d: %s", res.Code, res.Body.String())
+	}
+
+	last := assertLastAudit(t, memoryStore, "secret.read", "failure", "forbidden")
+	if last.ActorClientID != "client_bob" || last.ResourceID != created.SecretID {
+		t.Fatalf("unexpected audit event: %+v", last)
+	}
+}
+
+func assertLastAudit(t *testing.T, memoryStore *store.MemoryStore, action, outcome, reason string) model.AuditEvent {
+	t.Helper()
+	events := memoryStore.AuditEvents()
+	if len(events) == 0 {
+		t.Fatal("expected at least one audit event")
+	}
+	last := events[len(events)-1]
+	if last.Action != action || last.Outcome != outcome {
+		t.Fatalf("expected audit %s/%s, got %+v", action, outcome, last)
+	}
+	var metadata map[string]string
+	if err := json.Unmarshal(last.Metadata, &metadata); err != nil {
+		t.Fatalf("decode audit metadata: %v", err)
+	}
+	if metadata["reason"] != reason {
+		t.Fatalf("expected audit reason %q, got %q", reason, metadata["reason"])
+	}
+	return last
+}
+
 func mtlsRequest(method, target, body, clientID string) *http.Request {
 	req := httptest.NewRequest(method, target, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")

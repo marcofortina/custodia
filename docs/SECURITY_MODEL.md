@@ -21,6 +21,10 @@ The server does not expose a public-key directory and does not mediate trust bet
 
 Server-side revocation prevents future reads. Strong revocation requires a new secret version with new client-side ciphertext and new envelopes for the remaining authorized clients.
 
+## Audit semantics
+
+Successful and failed authentication, authorization and metadata operations are audit-recorded. Failure events include a machine-readable reason in audit metadata and remain hash-chained like successful events.
+
 ## Admin boundary
 
 Admin metadata APIs are restricted to configured admin client IDs. This does not grant decryption capability.
