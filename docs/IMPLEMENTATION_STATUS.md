@@ -18,7 +18,7 @@
 - Idempotent bootstrap client registration for all configured stores.
 - Valkey-compatible rate limiting with `/ready` health checks.
 - Minimal admin CLI for API-backed client metadata create/list/revoke and access revoke operations.
-- Minimal Go/Python clients, with Go helpers for secret metadata and access grant workflows.
+- Minimal Go/Python clients, with Go and Python helpers for secret metadata and access grant workflows.
 - Docker, Compose and Helm deployment skeletons.
 
 ## Not claimed as complete production implementation
@@ -121,3 +121,9 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Applied `CUSTODIA_BOOTSTRAP_CLIENTS` to both in-memory and configured persistent stores.
 - Made bootstrap idempotent by ignoring already-existing client records.
 - Added a server bootstrap regression test.
+
+## Patch 021 - Python client access workflow helpers
+
+- Added Python helpers for metadata-only secret listing, pending grant request, activation and access revocation.
+- URL-escaped dynamic path segments in the Python client.
+- Documented that Python payloads remain opaque/base64 transport values and no key discovery happens through Custodia.
