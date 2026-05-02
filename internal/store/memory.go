@@ -372,6 +372,7 @@ func (s *MemoryStore) CreateSecretVersion(_ context.Context, actorClientID, secr
 	}
 	versionID := id.New()
 	now := time.Now().UTC()
+	s.retireActiveVersionsLocked(secret, now)
 	version := &memoryVersion{
 		VersionID:         versionID,
 		Ciphertext:        req.Ciphertext,
@@ -424,6 +425,24 @@ func (s *MemoryStore) visibleSecretLocked(actorClientID, secretID string, permis
 		return nil, nil, nil, ErrForbidden
 	}
 	return secret, version, access, nil
+}
+
+func (s *MemoryStore) retireActiveVersionsLocked(secret *memorySecret, retiredAt time.Time) {
+	if secret == nil {
+		return
+	}
+	retiredVersionIDs := make(map[string]bool)
+	for _, version := range secret.Versions {
+		if version.RevokedAt == nil {
+			version.RevokedAt = &retiredAt
+			retiredVersionIDs[version.VersionID] = true
+		}
+	}
+	for _, pending := range s.pendingAccess {
+		if pending.SecretID == secret.SecretID && retiredVersionIDs[pending.VersionID] && activePendingAccess(pending) {
+			pending.RevokedAt = &retiredAt
+		}
+	}
 }
 
 func (s *MemoryStore) versionLocked(secret *memorySecret, versionID string) *memoryVersion {

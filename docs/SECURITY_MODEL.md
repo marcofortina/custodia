@@ -19,7 +19,7 @@ The server does not expose a public-key directory and does not mediate trust bet
 
 ## Revocation semantics
 
-Server-side revocation prevents future reads. Strong revocation requires a new secret version with new client-side ciphertext and new envelopes for the remaining authorized clients.
+Server-side revocation prevents future reads. Strong revocation requires a new secret version with new client-side ciphertext and new envelopes for the remaining authorized clients. When a new version is created, older active versions are superseded for future server-side operations and pending grants on superseded versions are cancelled.
 
 ## Audit semantics
 

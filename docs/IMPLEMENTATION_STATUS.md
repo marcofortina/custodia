@@ -6,6 +6,7 @@
 - mTLS identity extraction.
 - Opaque ciphertext/envelope storage contract.
 - Secret access grants and future revocation.
+- Strong-revocation versioning supersedes older active versions and cancels pending grants for superseded versions.
 - Strict permission bitmask validation for read/write/share grants.
 - Base64 transport validation for ciphertext/envelope blobs and duplicate recipient rejection.
 - Configurable recipient-envelope cap with default 100 and HTTP 413 rejection on create/new-version overflow.
@@ -36,3 +37,9 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Added envelope-only access activation by an already authorized client with `share`.
 - Added CLI commands for `access grant-request` and `access activate`.
 - Added PostgreSQL schema contract for `secret_access_requests`.
+
+## Patch 009 - strong revocation version superseding
+
+- New client-side secret versions now retire older active versions for future server-side operations.
+- Pending grants tied to retired versions are cancelled.
+- Added store and API tests for old-version share/activation rejection.

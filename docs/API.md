@@ -49,7 +49,7 @@ Requires the caller to have `share` on the selected version. The request must in
 
 `POST /v1/secrets/{secret_id}/versions`
 
-Requires `write`. Used for strong revocation and client-side cryptographic rotation by uploading new base64-encoded ciphertext and new opaque envelopes. Requests with more than `CUSTODIA_MAX_ENVELOPES_PER_SECRET` recipients are rejected with `413 Payload Too Large`; the default limit is `100`.
+Requires `write`. Used for strong revocation and client-side cryptographic rotation by uploading new base64-encoded ciphertext and new opaque envelopes. Creating a new version supersedes previous active versions and cancels pending access grants for those versions, so future reads and activations use only the latest client-side material. Requests with more than `CUSTODIA_MAX_ENVELOPES_PER_SECRET` recipients are rejected with `413 Payload Too Large`; the default limit is `100`.
 
 ## Access grant request
 

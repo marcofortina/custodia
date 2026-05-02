@@ -222,6 +222,67 @@ func TestMemoryStoreRejectsDuplicateRecipientEnvelopes(t *testing.T) {
 	}
 }
 
+func TestMemoryStoreCreateSecretVersionSupersedesOlderVersionsAndPendingGrants(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_admin", "client_admin")
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	mustCreateClient(t, store, "client_bob", "client_bob")
+
+	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:       "secret",
+		Ciphertext: "Y2lwaGVydGV4dC12MQ==",
+		Envelopes: []model.RecipientEnvelope{
+			{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtYWxpY2UtdjE="},
+		},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	if _, err := store.RequestAccessGrant(ctx, "client_admin", created.SecretID, model.AccessGrantRequest{
+		VersionID:      created.VersionID,
+		TargetClientID: "client_bob",
+		Permissions:    int(model.PermissionRead),
+	}); err != nil {
+		t.Fatalf("request grant: %v", err)
+	}
+
+	rotated, err := store.CreateSecretVersion(ctx, "client_alice", created.SecretID, model.CreateSecretVersionRequest{
+		Ciphertext: "Y2lwaGVydGV4dC12Mg==",
+		Envelopes: []model.RecipientEnvelope{
+			{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtYWxpY2UtdjI="},
+		},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create rotated version: %v", err)
+	}
+	if rotated.VersionID == created.VersionID {
+		t.Fatalf("expected a new version id, got %q", rotated.VersionID)
+	}
+
+	read, err := store.GetSecret(ctx, "client_alice", created.SecretID)
+	if err != nil {
+		t.Fatalf("read rotated secret: %v", err)
+	}
+	if read.VersionID != rotated.VersionID || read.Ciphertext != "Y2lwaGVydGV4dC12Mg==" {
+		t.Fatalf("expected latest rotated version, got %+v", read)
+	}
+
+	if err := store.ShareSecret(ctx, "client_alice", created.SecretID, model.ShareSecretRequest{
+		VersionID:      created.VersionID,
+		TargetClientID: "client_bob",
+		Envelope:       "ZW52ZWxvcGUtYm9iLW9sZA==",
+		Permissions:    int(model.PermissionRead),
+	}); err != ErrNotFound {
+		t.Fatalf("expected superseded version share to be rejected, got %v", err)
+	}
+	if err := store.ActivateAccessGrant(ctx, "client_alice", created.SecretID, "client_bob", model.ActivateAccessRequest{Envelope: "ZW52ZWxvcGUtYm9iLW9sZA=="}); err != ErrNotFound {
+		t.Fatalf("expected superseded pending grant activation to be rejected, got %v", err)
+	}
+}
+
 func mustCreateClient(t *testing.T, store *MemoryStore, clientID, subject string) {
 	t.Helper()
 	if err := store.CreateClient(context.Background(), model.Client{ClientID: clientID, MTLSSubject: subject}); err != nil {

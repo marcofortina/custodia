@@ -324,6 +324,75 @@ func TestAPIGrantRequestRequiresActivationByShareClient(t *testing.T) {
 	}
 }
 
+func TestAPICreateSecretVersionSupersedesOldVersionAccessWorkflow(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, clientID := range []string{"admin", "client_alice", "client_bob"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %s: %v", clientID, err)
+		}
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	createBody := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dC12MQ==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtYWxpY2UtdjE="}],"permissions":7}`
+	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected create 201, got %d: %s", res.Code, res.Body.String())
+	}
+	var created model.SecretVersionRef
+	if err := json.NewDecoder(res.Body).Decode(&created); err != nil {
+		t.Fatalf("decode created: %v", err)
+	}
+
+	grantBody := `{"version_id":"` + created.VersionID + `","target_client_id":"client_bob","permissions":4}`
+	req = mtlsRequest(http.MethodPost, "/v1/secrets/"+created.SecretID+"/access-requests", grantBody, "admin")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected grant request 201, got %d: %s", res.Code, res.Body.String())
+	}
+
+	versionBody := `{"ciphertext":"Y2lwaGVydGV4dC12Mg==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtYWxpY2UtdjI="}],"permissions":7}`
+	req = mtlsRequest(http.MethodPost, "/v1/secrets/"+created.SecretID+"/versions", versionBody, "client_alice")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected version create 201, got %d: %s", res.Code, res.Body.String())
+	}
+	var rotated model.SecretVersionRef
+	if err := json.NewDecoder(res.Body).Decode(&rotated); err != nil {
+		t.Fatalf("decode rotated: %v", err)
+	}
+	if rotated.VersionID == created.VersionID {
+		t.Fatalf("expected rotated version id to differ from %q", created.VersionID)
+	}
+
+	req = mtlsRequest(http.MethodGet, "/v1/secrets/"+created.SecretID, "", "client_alice")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected alice read 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var read model.SecretReadResponse
+	if err := json.NewDecoder(res.Body).Decode(&read); err != nil {
+		t.Fatalf("decode read: %v", err)
+	}
+	if read.VersionID != rotated.VersionID || read.Ciphertext != "Y2lwaGVydGV4dC12Mg==" {
+		t.Fatalf("expected latest rotated version, got %+v", read)
+	}
+
+	activateBody := `{"envelope":"ZW52ZWxvcGUtYm9iLW9sZA=="}`
+	req = mtlsRequest(http.MethodPost, "/v1/secrets/"+created.SecretID+"/access/client_bob/activate", activateBody, "client_alice")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusNotFound {
+		t.Fatalf("expected old pending activation 404, got %d: %s", res.Code, res.Body.String())
+	}
+	assertLastAudit(t, memoryStore, "secret.access_activate", "failure", "not_found")
+}
+
 func assertLastAudit(t *testing.T, memoryStore *store.MemoryStore, action, outcome, reason string) model.AuditEvent {
 	t.Helper()
 	events := memoryStore.AuditEvents()
