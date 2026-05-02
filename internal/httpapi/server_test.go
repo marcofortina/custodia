@@ -1425,3 +1425,36 @@ func TestAPISecretListSupportsLimit(t *testing.T) {
 		t.Fatalf("expected one secret after limit, got %+v", payload.Secrets)
 	}
 }
+
+func TestAPISecretVersionListSupportsLimit(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	ref, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{Name: "secret", Ciphertext: "Y2lwaGVydGV4dA==", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}}, Permissions: int(model.PermissionAll)})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	if _, err := memoryStore.CreateSecretVersion(ctx, "client_alice", ref.SecretID, model.CreateSecretVersionRequest{Ciphertext: "bmV3LWNpcGhlcnRleHQ=", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "bmV3LWVudmVsb3Bl"}}, Permissions: int(model.PermissionAll)}); err != nil {
+		t.Fatalf("create version: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/secrets/"+ref.SecretID+"/versions?limit=1", "", "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var payload struct {
+		Versions []model.SecretVersionMetadata `json:"versions"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode versions: %v", err)
+	}
+	if len(payload.Versions) != 1 {
+		t.Fatalf("expected one version after limit, got %+v", payload.Versions)
+	}
+}

@@ -327,11 +327,18 @@ func (s *Server) handleListSecretVersions(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
+	limit, ok := s.optionalLimit(w, r, "secret.version_list", "secret", secretID)
+	if !ok {
+		return
+	}
 	versions, err := s.store.ListSecretVersions(r.Context(), clientIDFromContext(r), secretID)
 	if err != nil {
 		s.auditStoreFailure(r, "secret.version_list", "secret", secretID, err)
 		writeMappedError(w, err)
 		return
+	}
+	if limit > 0 && len(versions) > limit {
+		versions = versions[:limit]
 	}
 	s.audit(r, "secret.version_list", "secret", secretID, "success", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"versions": versions})
