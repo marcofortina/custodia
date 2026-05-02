@@ -45,6 +45,14 @@ func (c *Client) CreateSecret(req model.CreateSecretRequest) (model.SecretVersio
 	return ref, c.doJSON(http.MethodPost, "/v1/secrets", req, &ref)
 }
 
+func (c *Client) ListSecrets() ([]model.SecretMetadata, error) {
+	var response struct {
+		Secrets []model.SecretMetadata `json:"secrets"`
+	}
+	err := c.doJSON(http.MethodGet, "/v1/secrets", nil, &response)
+	return response.Secrets, err
+}
+
 func (c *Client) GetSecret(secretID string) (model.SecretReadResponse, error) {
 	var response model.SecretReadResponse
 	return response, c.doJSON(http.MethodGet, "/v1/secrets/"+secretID, nil, &response)

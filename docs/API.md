@@ -22,6 +22,12 @@ Requires an admin mTLS client. Registers a client id and the certificate SAN/CN 
 
 Stores a base64-encoded ciphertext and base64-encoded opaque recipient envelopes. The caller must include its own envelope. Requests with more than `CUSTODIA_MAX_ENVELOPES_PER_SECRET` recipients are rejected with `413 Payload Too Large`; the default limit is `100`.
 
+## Secret metadata list
+
+`GET /v1/secrets`
+
+Returns metadata for secrets whose latest active version is readable by the caller. The response does not include ciphertext, envelopes, plaintext or key material.
+
 ## Secret read
 
 `GET /v1/secrets/{secret_id}`

@@ -115,6 +115,17 @@ func (s *Server) handleCreateSecret(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, ref)
 }
 
+func (s *Server) handleListSecrets(w http.ResponseWriter, r *http.Request) {
+	secrets, err := s.store.ListSecrets(r.Context(), clientIDFromContext(r))
+	if err != nil {
+		s.auditStoreFailure(r, "secret.list", "secret", "", err)
+		writeMappedError(w, err)
+		return
+	}
+	s.audit(r, "secret.list", "secret", "", "success", nil)
+	writeJSON(w, http.StatusOK, map[string]any{"secrets": secrets})
+}
+
 func (s *Server) handleGetSecret(w http.ResponseWriter, r *http.Request) {
 	secretID := r.PathValue("secret_id")
 	response, err := s.store.GetSecret(r.Context(), clientIDFromContext(r), secretID)

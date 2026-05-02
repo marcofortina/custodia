@@ -98,6 +98,14 @@ type SecretVersionRef struct {
 	VersionID string `json:"version_id"`
 }
 
+type SecretMetadata struct {
+	SecretID    string    `json:"secret_id"`
+	Name        string    `json:"name"`
+	VersionID   string    `json:"version_id"`
+	Permissions int       `json:"permissions"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type SecretReadResponse struct {
 	SecretID       string          `json:"secret_id"`
 	VersionID      string          `json:"version_id"`

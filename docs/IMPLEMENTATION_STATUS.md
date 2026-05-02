@@ -2,7 +2,7 @@
 
 ## Implemented
 
-- Phase 1 REST vault primitives.
+- Phase 1 REST vault primitives, including metadata-only secret listing.
 - mTLS identity extraction.
 - Optional client CRL loading with trusted-issuer signature verification and fail-closed TLS rejection for revoked serials.
 - Opaque ciphertext/envelope storage contract.
@@ -70,3 +70,10 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Rejected past expirations instead of storing already-expired access.
 - Preserved pending grant expiration through activation.
 - Updated PostgreSQL schema contract for pending access requests.
+
+
+## Patch 014 - metadata-only secret listing
+
+- Added `GET /v1/secrets` for caller-visible secret metadata.
+- Kept ciphertext/envelope material out of list responses.
+- Added Go client `ListSecrets` helper.

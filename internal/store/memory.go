@@ -188,6 +188,36 @@ func (s *MemoryStore) CreateSecret(_ context.Context, actorClientID string, req 
 	return model.SecretVersionRef{SecretID: secretID, VersionID: versionID}, nil
 }
 
+func (s *MemoryStore) ListSecrets(_ context.Context, actorClientID string) ([]model.SecretMetadata, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if !s.clientActiveLocked(actorClientID) {
+		return nil, ErrForbidden
+	}
+	secrets := make([]model.SecretMetadata, 0)
+	for _, secret := range s.secrets {
+		if secret.DeletedAt != nil {
+			continue
+		}
+		version := s.versionLocked(secret, "")
+		if version == nil {
+			continue
+		}
+		access, ok := version.Access[actorClientID]
+		if !ok || !activeAccess(access) || !model.HasPermission(access.Permissions, model.PermissionRead) {
+			continue
+		}
+		secrets = append(secrets, model.SecretMetadata{
+			SecretID:    secret.SecretID,
+			Name:        secret.Name,
+			VersionID:   version.VersionID,
+			Permissions: access.Permissions,
+			CreatedAt:   secret.CreatedAt,
+		})
+	}
+	return secrets, nil
+}
+
 func (s *MemoryStore) GetSecret(_ context.Context, actorClientID, secretID string) (model.SecretReadResponse, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

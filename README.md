@@ -6,7 +6,7 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 
 - Go vault server with TLS 1.3 / mTLS support and optional client CRL rejection.
 - Client identity extraction from certificate SAN/CN.
-- REST API for encrypted secret create/read/delete/share/new-version.
+- REST API for encrypted secret create/read/delete/share/new-version plus metadata-only secret listing.
 - Admin API/CLI for client metadata create/list/revoke.
 - Pending grant request/activation workflow: admins can request access, but a client with `share` must upload the target envelope.
 - Per-version access grants with `read`, `write`, `share` bitmask and optional future `expires_at`.

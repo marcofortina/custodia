@@ -393,6 +393,55 @@ func TestAPICreateSecretVersionSupersedesOldVersionAccessWorkflow(t *testing.T) 
 	assertLastAudit(t, memoryStore, "secret.access_activate", "failure", "not_found")
 }
 
+func TestAPIListsOnlyReadableSecretMetadata(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, clientID := range []string{"client_alice", "client_bob"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %s: %v", clientID, err)
+		}
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	createBody := `{"name":"visible","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
+	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected create 201, got %d: %s", res.Code, res.Body.String())
+	}
+
+	req = mtlsRequest(http.MethodGet, "/v1/secrets", "", "client_alice")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected list 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var payload struct {
+		Secrets []model.SecretMetadata `json:"secrets"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode list: %v", err)
+	}
+	if len(payload.Secrets) != 1 || payload.Secrets[0].Name != "visible" || payload.Secrets[0].VersionID == "" {
+		t.Fatalf("unexpected alice metadata list: %+v", payload.Secrets)
+	}
+	assertLastAudit(t, memoryStore, "secret.list", "success", "")
+
+	req = mtlsRequest(http.MethodGet, "/v1/secrets", "", "client_bob")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected bob list 200, got %d: %s", res.Code, res.Body.String())
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode bob list: %v", err)
+	}
+	if len(payload.Secrets) != 0 {
+		t.Fatalf("expected no bob-visible metadata, got %+v", payload.Secrets)
+	}
+}
+
 func TestAdminCanListAuditEvents(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()

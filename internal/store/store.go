@@ -13,6 +13,7 @@ type Store interface {
 	ListClients(ctx context.Context) ([]model.Client, error)
 	RevokeClient(ctx context.Context, clientID string) error
 	CreateSecret(ctx context.Context, actorClientID string, req model.CreateSecretRequest) (model.SecretVersionRef, error)
+	ListSecrets(ctx context.Context, actorClientID string) ([]model.SecretMetadata, error)
 	GetSecret(ctx context.Context, actorClientID, secretID string) (model.SecretReadResponse, error)
 	DeleteSecret(ctx context.Context, actorClientID, secretID string) error
 	ShareSecret(ctx context.Context, actorClientID, secretID string, req model.ShareSecretRequest) error
