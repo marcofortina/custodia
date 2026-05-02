@@ -15,6 +15,25 @@ class CustodiaClient:
     ca_file: str
     timeout: float = 15.0
 
+
+    def list_clients(self) -> dict[str, Any]:
+        return self._request("GET", "/v1/clients")
+
+    def get_client(self, client_id: str) -> dict[str, Any]:
+        return self._request("GET", f"/v1/clients/{_path_escape(client_id)}")
+
+    def create_client(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._request("POST", "/v1/clients", json=payload)
+
+    def revoke_client(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._request("POST", "/v1/clients/revoke", json=payload)
+
+    def list_access_grant_requests(self, secret_id: str | None = None) -> dict[str, Any]:
+        path = "/v1/access-requests"
+        if secret_id:
+            path += f"?secret_id={_query_escape(secret_id)}"
+        return self._request("GET", path)
+
     def create_secret(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("POST", "/v1/secrets", json=payload)
 
@@ -71,4 +90,8 @@ class CustodiaClient:
 
 
 def _path_escape(value: str) -> str:
+    return quote(value, safe="")
+
+
+def _query_escape(value: str) -> str:
     return quote(value, safe="")

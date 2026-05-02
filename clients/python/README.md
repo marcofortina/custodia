@@ -4,6 +4,11 @@ This client only transports already encrypted ciphertext and opaque envelopes. I
 
 Implemented helpers:
 
+- `list_clients()` admin metadata-only
+- `get_client(client_id)` admin metadata-only
+- `create_client(payload)` admin metadata-only; certificate signing remains external
+- `revoke_client(payload)` admin metadata-only
+- `list_access_grant_requests(secret_id=None)` admin metadata-only, no envelopes
 - `create_secret(payload)`
 - `list_secrets()` metadata-only, no ciphertext or envelopes
 - `get_secret(secret_id)`
