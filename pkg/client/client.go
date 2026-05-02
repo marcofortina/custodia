@@ -41,6 +41,27 @@ func New(cfg Config) (*Client, error) {
 	}, nil
 }
 
+func (c *Client) ListClients() ([]model.Client, error) {
+	var response struct {
+		Clients []model.Client `json:"clients"`
+	}
+	err := c.doJSON(http.MethodGet, "/v1/clients", nil, &response)
+	return response.Clients, err
+}
+
+func (c *Client) GetClient(clientID string) (model.Client, error) {
+	var response model.Client
+	return response, c.doJSON(http.MethodGet, "/v1/clients/"+pathEscape(clientID), nil, &response)
+}
+
+func (c *Client) CreateClient(req model.CreateClientRequest) error {
+	return c.doJSON(http.MethodPost, "/v1/clients", req, nil)
+}
+
+func (c *Client) RevokeClient(req model.RevokeClientRequest) error {
+	return c.doJSON(http.MethodPost, "/v1/clients/revoke", req, nil)
+}
+
 func (c *Client) CreateSecret(req model.CreateSecretRequest) (model.SecretVersionRef, error) {
 	var ref model.SecretVersionRef
 	return ref, c.doJSON(http.MethodPost, "/v1/secrets", req, &ref)

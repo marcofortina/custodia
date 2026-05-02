@@ -119,3 +119,66 @@ func TestClientMetadataMethodsUseDocumentedAPIPaths(t *testing.T) {
 		}
 	}
 }
+
+func TestClientAdminClientMethodsUseDocumentedAPIPaths(t *testing.T) {
+	requests := make([]string, 0, 4)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests = append(requests, r.Method+" "+r.URL.EscapedPath())
+		switch r.URL.EscapedPath() {
+		case "/v1/clients":
+			if r.Method == http.MethodGet {
+				_ = json.NewEncoder(w).Encode(map[string]any{"clients": []model.Client{{ClientID: "client/alice"}}})
+				return
+			}
+			if r.Method == http.MethodPost {
+				_ = json.NewEncoder(w).Encode(map[string]string{"status": "created"})
+				return
+			}
+		case "/v1/clients/client%2Falice":
+			if r.Method != http.MethodGet {
+				t.Fatalf("unexpected get client method: %s", r.Method)
+			}
+			_ = json.NewEncoder(w).Encode(model.Client{ClientID: "client/alice"})
+			return
+		case "/v1/clients/revoke":
+			if r.Method != http.MethodPost {
+				t.Fatalf("unexpected revoke client method: %s", r.Method)
+			}
+			_ = json.NewEncoder(w).Encode(map[string]string{"status": "revoked"})
+			return
+		}
+		t.Fatalf("unexpected path: %s", r.URL.EscapedPath())
+	}))
+	defer server.Close()
+
+	custodiaClient := &Client{baseURL: server.URL, http: server.Client()}
+	clients, err := custodiaClient.ListClients()
+	if err != nil || len(clients) != 1 || clients[0].ClientID != "client/alice" {
+		t.Fatalf("unexpected clients response: %+v err=%v", clients, err)
+	}
+	client, err := custodiaClient.GetClient("client/alice")
+	if err != nil || client.ClientID != "client/alice" {
+		t.Fatalf("unexpected client response: %+v err=%v", client, err)
+	}
+	if err := custodiaClient.CreateClient(model.CreateClientRequest{ClientID: "client/alice", MTLSSubject: "client/alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	if err := custodiaClient.RevokeClient(model.RevokeClientRequest{ClientID: "client/alice", Reason: "rotation"}); err != nil {
+		t.Fatalf("revoke client: %v", err)
+	}
+
+	expected := []string{
+		"GET /v1/clients",
+		"GET /v1/clients/client%2Falice",
+		"POST /v1/clients",
+		"POST /v1/clients/revoke",
+	}
+	if len(requests) != len(expected) {
+		t.Fatalf("expected %d requests, got %d: %+v", len(expected), len(requests), requests)
+	}
+	for idx := range expected {
+		if requests[idx] != expected[idx] {
+			t.Fatalf("request %d: expected %q, got %q", idx, expected[idx], requests[idx])
+		}
+	}
+}
