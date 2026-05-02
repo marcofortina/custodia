@@ -213,7 +213,7 @@ func (s *PostgresStore) ListSecrets(ctx context.Context, actorClientID string) (
 		return nil, ErrForbidden
 	}
 	rows, err := s.pool.Query(ctx, `
-		SELECT s.secret_id::text, s.name, v.version_id::text, a.permissions, s.created_at, s.created_by_client_id
+		SELECT s.secret_id::text, s.name, v.version_id::text, a.permissions, s.created_at, s.created_by_client_id, a.expires_at
 		FROM secrets s
 		JOIN LATERAL (
 			SELECT version_id, secret_id, created_at
@@ -235,7 +235,7 @@ func (s *PostgresStore) ListSecrets(ctx context.Context, actorClientID string) (
 	secrets := make([]model.SecretMetadata, 0)
 	for rows.Next() {
 		var secret model.SecretMetadata
-		if err := rows.Scan(&secret.SecretID, &secret.Name, &secret.VersionID, &secret.Permissions, &secret.CreatedAt, &secret.CreatedByClientID); err != nil {
+		if err := rows.Scan(&secret.SecretID, &secret.Name, &secret.VersionID, &secret.Permissions, &secret.CreatedAt, &secret.CreatedByClientID, &secret.AccessExpiresAt); err != nil {
 			return nil, mapPostgresError(err)
 		}
 		secrets = append(secrets, secret)

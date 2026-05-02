@@ -540,3 +540,32 @@ func TestMemoryStoreDeleteSecretRevokesPendingAccessRequests(t *testing.T) {
 		t.Fatalf("expected pending request to be revoked after secret delete, got %+v", requests)
 	}
 }
+
+func TestMemoryStoreSecretMetadataIncludesAccessExpiration(t *testing.T) {
+	ctx := context.Background()
+	vaultStore := NewMemoryStore()
+	if err := vaultStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	expiresAt := time.Now().UTC().Add(time.Hour)
+	_, err := vaultStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:       "expiring",
+		Ciphertext: "Y2lwaGVydGV4dA==",
+		Envelopes: []model.RecipientEnvelope{{
+			ClientID: "client_alice",
+			Envelope: "ZW52ZWxvcGU=",
+		}},
+		Permissions: int(model.PermissionAll),
+		ExpiresAt:   &expiresAt,
+	})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	secrets, err := vaultStore.ListSecrets(ctx, "client_alice")
+	if err != nil {
+		t.Fatalf("list secrets: %v", err)
+	}
+	if len(secrets) != 1 || secrets[0].AccessExpiresAt == nil || !secrets[0].AccessExpiresAt.Equal(expiresAt) {
+		t.Fatalf("expected access expiration in metadata, got %+v", secrets)
+	}
+}

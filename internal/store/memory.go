@@ -239,6 +239,7 @@ func (s *MemoryStore) ListSecrets(_ context.Context, actorClientID string) ([]mo
 			Permissions:       access.Permissions,
 			CreatedAt:         secret.CreatedAt,
 			CreatedByClientID: secret.CreatedByClientID,
+			AccessExpiresAt:   cloneTimePtr(access.ExpiresAt),
 		})
 	}
 	return secrets, nil
