@@ -191,3 +191,21 @@ These are explicitly operational components in the analysis and cannot be truthf
 ## Patch 195 - audit export integrity README link
 
 - Linked the audit export integrity guide from the project README.
+
+## Patch 197 - admin build version endpoint
+
+- Added admin-only `GET /v1/version`.
+- The endpoint returns build metadata and audits `version.read`.
+
+## Patch 198 - vault-admin server version command
+
+- Added `vault-admin version server` to read build metadata from the authenticated API.
+- Kept the existing local `vault-admin version` command unchanged.
+
+## Patch 199 - Go client version helper
+
+- Added `Client.Version()` to read server build metadata.
+
+## Patch 200 - Python client version helper
+
+- Added `CustodiaClient.version()` and documented it in the Python client README.
