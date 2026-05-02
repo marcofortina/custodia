@@ -56,6 +56,7 @@ type memoryPendingAccess struct {
 	ClientID            string
 	RequestedByClientID string
 	Permissions         int
+	ExpiresAt           *time.Time
 	RequestedAt         time.Time
 	ActivatedAt         *time.Time
 	RevokedAt           *time.Time
@@ -141,6 +142,9 @@ func (s *MemoryStore) CreateSecret(_ context.Context, actorClientID string, req 
 	if !model.ValidPermissionBits(req.Permissions) {
 		return model.SecretVersionRef{}, ErrInvalidInput
 	}
+	if !validFutureExpiry(req.ExpiresAt) {
+		return model.SecretVersionRef{}, ErrInvalidInput
+	}
 	if !containsEnvelopeFor(req.Envelopes, actorClientID) {
 		return model.SecretVersionRef{}, ErrForbidden
 	}
@@ -171,6 +175,7 @@ func (s *MemoryStore) CreateSecret(_ context.Context, actorClientID string, req 
 			Envelope:    envelope.Envelope,
 			Permissions: req.Permissions,
 			GrantedAt:   now,
+			ExpiresAt:   cloneTimePtr(req.ExpiresAt),
 		}
 	}
 	s.secrets[secretID] = &memorySecret{
@@ -219,6 +224,9 @@ func (s *MemoryStore) ShareSecret(_ context.Context, actorClientID, secretID str
 	if !model.ValidPermissionBits(req.Permissions) {
 		return ErrInvalidInput
 	}
+	if !validFutureExpiry(req.ExpiresAt) {
+		return ErrInvalidInput
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	secret, ok := s.secrets[secretID]
@@ -244,12 +252,16 @@ func (s *MemoryStore) ShareSecret(_ context.Context, actorClientID, secretID str
 		Envelope:    req.Envelope,
 		Permissions: req.Permissions,
 		GrantedAt:   time.Now().UTC(),
+		ExpiresAt:   cloneTimePtr(req.ExpiresAt),
 	}
 	return nil
 }
 
 func (s *MemoryStore) RequestAccessGrant(_ context.Context, actorClientID, secretID string, req model.AccessGrantRequest) (model.AccessGrantRef, error) {
 	if strings.TrimSpace(req.TargetClientID) == "" || !model.ValidPermissionBits(req.Permissions) {
+		return model.AccessGrantRef{}, ErrInvalidInput
+	}
+	if !validFutureExpiry(req.ExpiresAt) {
 		return model.AccessGrantRef{}, ErrInvalidInput
 	}
 	s.mu.Lock()
@@ -278,6 +290,7 @@ func (s *MemoryStore) RequestAccessGrant(_ context.Context, actorClientID, secre
 		ClientID:            req.TargetClientID,
 		RequestedByClientID: actorClientID,
 		Permissions:         req.Permissions,
+		ExpiresAt:           cloneTimePtr(req.ExpiresAt),
 		RequestedAt:         time.Now().UTC(),
 	}
 	return model.AccessGrantRef{SecretID: secretID, VersionID: version.VersionID, ClientID: req.TargetClientID, Status: "pending"}, nil
@@ -317,6 +330,7 @@ func (s *MemoryStore) ActivateAccessGrant(_ context.Context, actorClientID, secr
 		Envelope:    req.Envelope,
 		Permissions: pending.Permissions,
 		GrantedAt:   now,
+		ExpiresAt:   cloneTimePtr(pending.ExpiresAt),
 	}
 	pending.ActivatedAt = &now
 	return nil
@@ -356,6 +370,9 @@ func (s *MemoryStore) CreateSecretVersion(_ context.Context, actorClientID, secr
 	if !model.ValidPermissionBits(req.Permissions) {
 		return model.SecretVersionRef{}, ErrInvalidInput
 	}
+	if !validFutureExpiry(req.ExpiresAt) {
+		return model.SecretVersionRef{}, ErrInvalidInput
+	}
 	if !containsEnvelopeFor(req.Envelopes, actorClientID) {
 		return model.SecretVersionRef{}, ErrForbidden
 	}
@@ -387,6 +404,7 @@ func (s *MemoryStore) CreateSecretVersion(_ context.Context, actorClientID, secr
 			Envelope:    envelope.Envelope,
 			Permissions: req.Permissions,
 			GrantedAt:   now,
+			ExpiresAt:   cloneTimePtr(req.ExpiresAt),
 		}
 	}
 	secret.Versions = append(secret.Versions, version)
@@ -535,6 +553,18 @@ func containsEnvelopeFor(envelopes []model.RecipientEnvelope, clientID string) b
 		}
 	}
 	return false
+}
+
+func validFutureExpiry(expiresAt *time.Time) bool {
+	return expiresAt == nil || expiresAt.After(time.Now().UTC())
+}
+
+func cloneTimePtr(value *time.Time) *time.Time {
+	if value == nil {
+		return nil
+	}
+	copyValue := value.UTC()
+	return &copyValue
 }
 
 func cloneRaw(value json.RawMessage) json.RawMessage {

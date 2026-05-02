@@ -9,7 +9,7 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 - REST API for encrypted secret create/read/delete/share/new-version.
 - Admin API/CLI for client metadata create/list/revoke.
 - Pending grant request/activation workflow: admins can request access, but a client with `share` must upload the target envelope.
-- Per-version access grants with `read`, `write`, `share` bitmask.
+- Per-version access grants with `read`, `write`, `share` bitmask and optional future `expires_at`.
 - Configurable recipient-envelope cap for create/new-version requests, defaulting to 100.
 - Future revocation semantics: revoked grants stop future reads; already downloaded material is not invalidated.
 - PostgreSQL-compatible schema contract; executable PostgreSQL store wiring is still pending.

@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"testing"
+	"time"
 
 	"custodia/internal/model"
 )
@@ -334,5 +335,48 @@ func TestMemoryStoreGrantRequestRequiresClientSideEnvelopeActivation(t *testing.
 	}
 	if read.Envelope != "ZW52ZWxvcGUtZm9yLWJvYg==" || read.Permissions != int(model.PermissionRead) {
 		t.Fatalf("unexpected activated access: %+v", read)
+	}
+}
+
+func TestMemoryStoreExpiresAccessGrants(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	mustCreateClient(t, store, "client_bob", "client_bob")
+	future := time.Now().UTC().Add(time.Hour)
+	past := time.Now().UTC().Add(-time.Hour)
+
+	if _, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:        "expired",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"}},
+		Permissions: int(model.PermissionAll),
+		ExpiresAt:   &past,
+	}); err != ErrInvalidInput {
+		t.Fatalf("expected past create expiration to be invalid, got %v", err)
+	}
+
+	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:        "secret",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"}},
+		Permissions: int(model.PermissionAll),
+		ExpiresAt:   &future,
+	})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	if _, err := store.GetSecret(ctx, "client_alice", created.SecretID); err != nil {
+		t.Fatalf("expected non-expired access to read: %v", err)
+	}
+
+	if err := store.ShareSecret(ctx, "client_alice", created.SecretID, model.ShareSecretRequest{
+		VersionID:      created.VersionID,
+		TargetClientID: "client_bob",
+		Envelope:       "ZW52ZWxvcGUtZm9yLWJvYg==",
+		Permissions:    int(model.PermissionRead),
+		ExpiresAt:      &past,
+	}); err != ErrInvalidInput {
+		t.Fatalf("expected past share expiration to be invalid, got %v", err)
 	}
 }

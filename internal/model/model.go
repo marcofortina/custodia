@@ -56,6 +56,7 @@ type CreateSecretRequest struct {
 	CryptoMetadata json.RawMessage     `json:"crypto_metadata,omitempty"`
 	Envelopes      []RecipientEnvelope `json:"envelopes"`
 	Permissions    int                 `json:"permissions"`
+	ExpiresAt      *time.Time          `json:"expires_at,omitempty"`
 }
 
 type CreateSecretVersionRequest struct {
@@ -63,19 +64,22 @@ type CreateSecretVersionRequest struct {
 	CryptoMetadata json.RawMessage     `json:"crypto_metadata,omitempty"`
 	Envelopes      []RecipientEnvelope `json:"envelopes"`
 	Permissions    int                 `json:"permissions"`
+	ExpiresAt      *time.Time          `json:"expires_at,omitempty"`
 }
 
 type ShareSecretRequest struct {
-	VersionID      string `json:"version_id"`
-	TargetClientID string `json:"target_client_id"`
-	Envelope       string `json:"envelope"`
-	Permissions    int    `json:"permissions"`
+	VersionID      string     `json:"version_id"`
+	TargetClientID string     `json:"target_client_id"`
+	Envelope       string     `json:"envelope"`
+	Permissions    int        `json:"permissions"`
+	ExpiresAt      *time.Time `json:"expires_at,omitempty"`
 }
 
 type AccessGrantRequest struct {
-	VersionID      string `json:"version_id,omitempty"`
-	TargetClientID string `json:"target_client_id"`
-	Permissions    int    `json:"permissions"`
+	VersionID      string     `json:"version_id,omitempty"`
+	TargetClientID string     `json:"target_client_id"`
+	Permissions    int        `json:"permissions"`
+	ExpiresAt      *time.Time `json:"expires_at,omitempty"`
 }
 
 type ActivateAccessRequest struct {

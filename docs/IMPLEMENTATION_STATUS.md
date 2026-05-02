@@ -6,7 +6,7 @@
 - mTLS identity extraction.
 - Optional client CRL loading with trusted-issuer signature verification and fail-closed TLS rejection for revoked serials.
 - Opaque ciphertext/envelope storage contract.
-- Secret access grants and future revocation.
+- Secret access grants, optional future expiration and future revocation.
 - Strong-revocation versioning supersedes older active versions and cancels pending grants for superseded versions.
 - Strict permission bitmask validation for read/write/share grants.
 - Base64 transport validation for ciphertext/envelope blobs and duplicate recipient rejection.
@@ -62,3 +62,11 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Added admin-only `GET /v1/audit-events` with bounded `limit`.
 - Added `vault-admin audit list`.
 - Added memory-store list support while preserving immutable hash-chain fields in responses.
+
+
+## Patch 013 - access expiration guardrails
+
+- Added optional `expires_at` support to create/share/new-version/pending grant requests.
+- Rejected past expirations instead of storing already-expired access.
+- Preserved pending grant expiration through activation.
+- Updated PostgreSQL schema contract for pending access requests.

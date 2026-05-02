@@ -98,6 +98,11 @@ Custodia accepts only explicit permission bitmasks made from the documented bits
 
 Valid requests must use a non-zero combination of these bits, for example `4` for read-only or `7` for read/write/share. Unknown bits and `0` are rejected instead of being silently stored.
 
+## Optional access expiration
+
+Create, share, new-version and pending grant request payloads may include `expires_at` as an RFC3339 timestamp. Expirations must be in the future. Expired grants stop future reads; already downloaded ciphertext and envelope remain outside server control.
+
+
 ## Opaque payload encoding
 
 `ciphertext` and `envelope` are cryptographic blobs owned by clients, but the JSON transport format is base64. Custodia validates only base64 syntax and duplicate recipients; it does not decrypt, unwrap, parse algorithms, inspect DEKs or infer key material from the decoded bytes.

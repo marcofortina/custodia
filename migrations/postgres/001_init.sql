@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS secret_access_requests (
     version_id             UUID NOT NULL,
     client_id              TEXT NOT NULL REFERENCES clients(client_id),
     permissions            INT NOT NULL,
+    expires_at             TIMESTAMPTZ,
     requested_by_client_id TEXT NOT NULL REFERENCES clients(client_id),
     requested_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     activated_at           TIMESTAMPTZ,
