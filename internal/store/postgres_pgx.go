@@ -49,13 +49,13 @@ func (s *PostgresStore) Health(ctx context.Context) error {
 }
 
 func (s *PostgresStore) CreateClient(ctx context.Context, client model.Client) error {
-	if !model.ValidClientID(client.ClientID) || strings.TrimSpace(client.MTLSSubject) == "" {
+	if !model.ValidClientID(client.ClientID) || !model.ValidMTLSSubject(client.MTLSSubject) {
 		return ErrInvalidInput
 	}
 	_, err := s.pool.Exec(ctx, `
 		INSERT INTO clients (client_id, mtls_subject, is_active, created_at)
 		VALUES ($1, $2, TRUE, COALESCE(NULLIF($3::timestamptz, '0001-01-01 00:00:00+00'::timestamptz), NOW()))`,
-		client.ClientID, client.MTLSSubject, client.CreatedAt.UTC())
+		client.ClientID, strings.TrimSpace(client.MTLSSubject), client.CreatedAt.UTC())
 	return mapPostgresError(err)
 }
 

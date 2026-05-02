@@ -42,3 +42,16 @@ func TestValidCryptoMetadata(t *testing.T) {
 		t.Fatal("expected oversized crypto metadata to be invalid")
 	}
 }
+
+func TestValidMTLSSubject(t *testing.T) {
+	for _, value := range []string{"client_alice", "spiffe://custodia/client/alice", "CN=client_alice"} {
+		if !ValidMTLSSubject(value) {
+			t.Fatalf("expected %q to be valid", value)
+		}
+	}
+	for _, value := range []string{"", "   ", "client\nsubject"} {
+		if ValidMTLSSubject(value) {
+			t.Fatalf("expected %q to be invalid", value)
+		}
+	}
+}

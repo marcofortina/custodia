@@ -74,7 +74,7 @@ func NewMemoryStore() *MemoryStore {
 func (s *MemoryStore) Health(context.Context) error { return nil }
 
 func (s *MemoryStore) CreateClient(_ context.Context, client model.Client) error {
-	if !model.ValidClientID(client.ClientID) || strings.TrimSpace(client.MTLSSubject) == "" {
+	if !model.ValidClientID(client.ClientID) || !model.ValidMTLSSubject(client.MTLSSubject) {
 		return ErrInvalidInput
 	}
 	s.mu.Lock()
