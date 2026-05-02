@@ -16,6 +16,9 @@ class CustodiaClient:
     timeout: float = 15.0
 
 
+    def me(self) -> dict[str, Any]:
+        return self._request("GET", "/v1/me")
+
     def list_clients(self) -> dict[str, Any]:
         return self._request("GET", "/v1/clients")
 

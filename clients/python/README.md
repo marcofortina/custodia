@@ -4,6 +4,7 @@ This client only transports already encrypted ciphertext and opaque envelopes. I
 
 Implemented helpers:
 
+- `me()` authenticated client metadata
 - `list_clients()` admin metadata-only
 - `get_client(client_id)` admin metadata-only
 - `create_client(payload)` admin metadata-only; certificate signing remains external
