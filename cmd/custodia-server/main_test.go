@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"custodia/internal/config"
 	"custodia/internal/model"
 	"custodia/internal/store"
 )
@@ -32,5 +33,15 @@ func TestBootstrapClientsCreatesMissingAndIgnoresExisting(t *testing.T) {
 	}
 	if _, err := memoryStore.GetActiveClientBySubject(ctx, "client_alice"); err != nil {
 		t.Fatalf("expected bootstrapped client to authenticate: %v", err)
+	}
+}
+
+func TestBuildStoreRejectsUnsupportedBackend(t *testing.T) {
+	_, closeStore, err := buildStore(context.Background(), config.Config{StoreBackend: "sqlite"})
+	if closeStore != nil {
+		closeStore()
+	}
+	if err == nil {
+		t.Fatal("expected unsupported store backend error")
 	}
 }

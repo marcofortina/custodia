@@ -105,7 +105,15 @@ func main() {
 }
 
 func buildStore(ctx context.Context, cfg config.Config) (store.Store, func(), error) {
-	if strings.EqualFold(cfg.StoreBackend, "postgres") || cfg.DatabaseURL != "" {
+	backend := strings.ToLower(strings.TrimSpace(cfg.StoreBackend))
+	if backend == "" {
+		backend = "memory"
+	}
+	if cfg.DatabaseURL != "" && backend == "memory" {
+		backend = "postgres"
+	}
+	switch backend {
+	case "postgres":
 		postgresStore, err := store.NewPostgresStore(ctx, cfg.DatabaseURL)
 		if err != nil {
 			return nil, func() {}, err
@@ -115,12 +123,15 @@ func buildStore(ctx context.Context, cfg config.Config) (store.Store, func(), er
 			return nil, func() {}, err
 		}
 		return postgresStore, postgresStore.Close, nil
+	case "memory":
+		memoryStore := store.NewMemoryStore()
+		if err := bootstrapClients(ctx, memoryStore, cfg.BootstrapClients); err != nil {
+			return nil, func() {}, err
+		}
+		return memoryStore, func() {}, nil
+	default:
+		return nil, func() {}, errors.New("unsupported store backend")
 	}
-	memoryStore := store.NewMemoryStore()
-	if err := bootstrapClients(ctx, memoryStore, cfg.BootstrapClients); err != nil {
-		return nil, func() {}, err
-	}
-	return memoryStore, func() {}, nil
 }
 
 func bootstrapClients(ctx context.Context, vaultStore store.Store, clients map[string]string) error {
