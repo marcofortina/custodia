@@ -75,6 +75,34 @@ func TestAPIRejectsRequestsWithoutClientCertificate(t *testing.T) {
 	}
 }
 
+func TestAPIClientRevokeAuditsReason(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_bob", MTLSSubject: "client_bob"}); err != nil {
+		t.Fatalf("create bob: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodPost, "/v1/clients/revoke", `{"client_id":"client_bob","reason":"compromised certificate"}`, "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	events := memoryStore.AuditEvents()
+	last := events[len(events)-1]
+	if last.Action != "client.revoke" || last.Outcome != "success" {
+		t.Fatalf("unexpected audit event: %+v", last)
+	}
+	if !strings.Contains(string(last.Metadata), "compromised certificate") {
+		t.Fatalf("expected revoke reason in audit metadata, got %s", string(last.Metadata))
+	}
+}
+
 func TestAPIAdminCreatesClientMetadata(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()

@@ -81,7 +81,8 @@ func (s *Server) handleRevokeClient(w http.ResponseWriter, r *http.Request) {
 		writeMappedError(w, err)
 		return
 	}
-	s.audit(r, "client.revoke", "client", req.ClientID, "success", nil)
+	metadata, _ := json.Marshal(map[string]string{"reason": strings.TrimSpace(req.Reason)})
+	s.audit(r, "client.revoke", "client", req.ClientID, "success", metadata)
 	writeJSON(w, http.StatusOK, map[string]string{"status": "revoked"})
 }
 
