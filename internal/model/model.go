@@ -160,16 +160,23 @@ type RevokeClientRequest struct {
 	Reason   string `json:"reason,omitempty"`
 }
 
+type BuildInfo struct {
+	Version string `json:"version"`
+	Commit  string `json:"commit"`
+	Date    string `json:"date"`
+}
+
 type OperationalStatus struct {
-	Status                string `json:"status"`
-	Store                 string `json:"store"`
-	StoreBackend          string `json:"store_backend,omitempty"`
-	RateLimiter           string `json:"rate_limiter"`
-	RateLimitBackend      string `json:"rate_limit_backend,omitempty"`
-	MaxEnvelopesPerSecret int    `json:"max_envelopes_per_secret"`
-	ClientRateLimitPerSec int    `json:"client_rate_limit_per_sec"`
-	GlobalRateLimitPerSec int    `json:"global_rate_limit_per_sec"`
-	IPRateLimitPerSec     int    `json:"ip_rate_limit_per_sec"`
+	Status                string    `json:"status"`
+	Store                 string    `json:"store"`
+	StoreBackend          string    `json:"store_backend,omitempty"`
+	RateLimiter           string    `json:"rate_limiter"`
+	RateLimitBackend      string    `json:"rate_limit_backend,omitempty"`
+	MaxEnvelopesPerSecret int       `json:"max_envelopes_per_secret"`
+	ClientRateLimitPerSec int       `json:"client_rate_limit_per_sec"`
+	GlobalRateLimitPerSec int       `json:"global_rate_limit_per_sec"`
+	IPRateLimitPerSec     int       `json:"ip_rate_limit_per_sec"`
+	Build                 BuildInfo `json:"build"`
 }
 
 type AuditEvent struct {

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"custodia/internal/audit"
+	"custodia/internal/build"
 	"custodia/internal/model"
 	"custodia/internal/ratelimit"
 )
@@ -69,6 +70,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		ClientRateLimitPerSec: s.clientRateLimit,
 		GlobalRateLimitPerSec: s.globalRateLimit,
 		IPRateLimitPerSec:     s.ipRateLimit,
+		Build:                 model.BuildInfo(build.Current()),
 	})
 }
 
