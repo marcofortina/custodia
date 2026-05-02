@@ -53,6 +53,24 @@ func main() {
 		IdleTimeout:       time.Duration(cfg.HTTPIdleTimeoutSeconds) * time.Second,
 	}
 
+	var healthServer *http.Server
+	if cfg.HealthAddr != "" {
+		healthServer = &http.Server{
+			Addr:              cfg.HealthAddr,
+			Handler:           buildHealthHandler(vaultStore, limiter),
+			ReadHeaderTimeout: 2 * time.Second,
+			ReadTimeout:       5 * time.Second,
+			WriteTimeout:      5 * time.Second,
+			IdleTimeout:       10 * time.Second,
+		}
+		go func() {
+			log.Printf("starting health server on %s", cfg.HealthAddr)
+			if err := healthServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				log.Fatalf("health server failed: %v", err)
+			}
+		}()
+	}
+
 	go func() {
 		if cfg.DevInsecureHTTP {
 			log.Printf("starting insecure development HTTP server on %s", cfg.APIAddr)
@@ -83,6 +101,7 @@ func main() {
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		log.Printf("graceful shutdown failed: %v", err)
 	}
+	shutdownServer(shutdownCtx, healthServer)
 }
 
 func buildStore(ctx context.Context, cfg config.Config) (store.Store, func(), error) {
