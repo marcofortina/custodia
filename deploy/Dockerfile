@@ -13,5 +13,5 @@ USER custodia
 WORKDIR /app
 COPY --from=builder /out/custodia-server /usr/local/bin/custodia-server
 COPY --from=builder /out/vault-admin /usr/local/bin/vault-admin
-EXPOSE 8443 9443
+EXPOSE 8443 8080
 ENTRYPOINT ["/usr/local/bin/custodia-server"]
