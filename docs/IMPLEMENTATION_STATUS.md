@@ -4,6 +4,7 @@
 
 - Phase 1 REST vault primitives.
 - mTLS identity extraction.
+- Optional client CRL loading with trusted-issuer signature verification and fail-closed TLS rejection for revoked serials.
 - Opaque ciphertext/envelope storage contract.
 - Secret access grants and future revocation.
 - Strong-revocation versioning supersedes older active versions and cancels pending grants for superseded versions.
@@ -22,7 +23,7 @@
 The repository contains an executable standard-library baseline and deployable building blocks. A real production implementation still needs environment-specific work:
 
 - real CA/signing service backed by TPM/HSM;
-- CRL/OCSP distribution and fail-closed policy;
+- CRL distribution/refresh automation and OCSP stapling;
 - real CockroachDB/PostgreSQL store wiring, then CockroachDB multi-region or PostgreSQL Patroni topology;
 - Valkey cluster with mTLS;
 - load balancer TLS pass-through configuration;
@@ -43,3 +44,9 @@ These are explicitly operational components in the analysis and cannot be truthf
 - New client-side secret versions now retire older active versions for future server-side operations.
 - Pending grants tied to retired versions are cancelled.
 - Added store and API tests for old-version share/activation rejection.
+
+## Patch 010 - client CRL enforcement
+
+- Added optional `CUSTODIA_CLIENT_CRL_FILE` support.
+- CRLs are accepted only when signed by the configured client CA.
+- Revoked client certificate serials are rejected in the TLS verification callback before API authz.

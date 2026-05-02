@@ -8,6 +8,10 @@ import (
 )
 
 func ServerTLSConfig(certFile, keyFile, clientCAFile string) (*tls.Config, error) {
+	return ServerTLSConfigWithClientCRL(certFile, keyFile, clientCAFile, "")
+}
+
+func ServerTLSConfigWithClientCRL(certFile, keyFile, clientCAFile, clientCRLFile string) (*tls.Config, error) {
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		return nil, fmt.Errorf("load server certificate: %w", err)
@@ -20,12 +24,20 @@ func ServerTLSConfig(certFile, keyFile, clientCAFile string) (*tls.Config, error
 	if !clientCAs.AppendCertsFromPEM(caPEM) {
 		return nil, fmt.Errorf("client CA file does not contain a valid PEM certificate")
 	}
-	return &tls.Config{
+	tlsConfig := &tls.Config{
 		MinVersion:   tls.VersionTLS13,
 		Certificates: []tls.Certificate{cert},
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 		ClientCAs:    clientCAs,
-	}, nil
+	}
+	if clientCRLFile != "" {
+		revoked, err := LoadRevokedClientSerials(clientCRLFile, caPEM)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.VerifyPeerCertificate = revokedClientVerifier(revoked)
+	}
+	return tlsConfig, nil
 }
 
 func ClientTLSConfig(certFile, keyFile, caFile string) (*tls.Config, error) {

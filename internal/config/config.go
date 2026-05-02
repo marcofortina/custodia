@@ -14,6 +14,7 @@ type Config struct {
 	TLSCertFile              string
 	TLSKeyFile               string
 	ClientCAFile             string
+	ClientCRLFile            string
 	DevInsecureHTTP          bool
 	BootstrapClients         map[string]string
 	AdminClientIDs           map[string]bool
@@ -33,6 +34,7 @@ func Load() Config {
 		TLSCertFile:              os.Getenv("CUSTODIA_TLS_CERT_FILE"),
 		TLSKeyFile:               os.Getenv("CUSTODIA_TLS_KEY_FILE"),
 		ClientCAFile:             os.Getenv("CUSTODIA_CLIENT_CA_FILE"),
+		ClientCRLFile:            os.Getenv("CUSTODIA_CLIENT_CRL_FILE"),
 		DevInsecureHTTP:          envBool("CUSTODIA_DEV_INSECURE_HTTP", false),
 		BootstrapClients:         envPairs("CUSTODIA_BOOTSTRAP_CLIENTS"),
 		AdminClientIDs:           envSet("CUSTODIA_ADMIN_CLIENT_IDS"),

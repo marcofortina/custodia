@@ -13,13 +13,14 @@ The server does not expose a public-key directory and does not mediate trust bet
 ## Authentication and authorization
 
 - mTLS authenticates the caller.
+- When `CUSTODIA_CLIENT_CRL_FILE` is configured, the TLS layer rejects revoked client certificate serials before request handling. The CRL must be signed by the configured client CA.
 - The `clients` table maps certificate subject to `client_id`.
 - `secret_access` authorizes each `(secret_id, version_id, client_id)` tuple.
 - Permissions use a bitmask: share=1, write=2, read=4.
 
 ## Revocation semantics
 
-Server-side revocation prevents future reads. Strong revocation requires a new secret version with new client-side ciphertext and new envelopes for the remaining authorized clients. When a new version is created, older active versions are superseded for future server-side operations and pending grants on superseded versions are cancelled.
+Server-side client certificate revocation prevents future TLS authentication when the configured CRL contains that certificate serial. Server-side access revocation prevents future reads. Strong revocation requires a new secret version with new client-side ciphertext and new envelopes for the remaining authorized clients. When a new version is created, older active versions are superseded for future server-side operations and pending grants on superseded versions are cancelled.
 
 ## Audit semantics
 

@@ -4,7 +4,7 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 
 ## What is implemented in this bootstrap
 
-- Go vault server with TLS 1.3 / mTLS support.
+- Go vault server with TLS 1.3 / mTLS support and optional client CRL rejection.
 - Client identity extraction from certificate SAN/CN.
 - REST API for encrypted secret create/read/delete/share/new-version.
 - Admin API/CLI for client metadata create/list/revoke.
@@ -36,7 +36,7 @@ make test
 make run-dev
 ```
 
-The development mode uses the in-memory store and insecure HTTP only when `CUSTODIA_DEV_INSECURE_HTTP=true` is set. Production must use `CUSTODIA_TLS_CERT_FILE`, `CUSTODIA_TLS_KEY_FILE` and `CUSTODIA_CLIENT_CA_FILE`.
+The development mode uses the in-memory store and insecure HTTP only when `CUSTODIA_DEV_INSECURE_HTTP=true` is set. Production must use `CUSTODIA_TLS_CERT_FILE`, `CUSTODIA_TLS_KEY_FILE` and `CUSTODIA_CLIENT_CA_FILE`. Set `CUSTODIA_CLIENT_CRL_FILE` to a PEM CRL signed by the configured client CA to fail closed on revoked client certificate serials.
 
 ## API permissions
 

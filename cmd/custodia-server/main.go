@@ -60,7 +60,7 @@ func main() {
 		if cfg.TLSCertFile == "" || cfg.TLSKeyFile == "" || cfg.ClientCAFile == "" {
 			log.Fatalf("mTLS is required unless CUSTODIA_DEV_INSECURE_HTTP=true")
 		}
-		tlsConfig, err := mtls.ServerTLSConfig(cfg.TLSCertFile, cfg.TLSKeyFile, cfg.ClientCAFile)
+		tlsConfig, err := mtls.ServerTLSConfigWithClientCRL(cfg.TLSCertFile, cfg.TLSKeyFile, cfg.ClientCAFile, cfg.ClientCRLFile)
 		if err != nil {
 			log.Fatalf("TLS config failed: %v", err)
 		}
