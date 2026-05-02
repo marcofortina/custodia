@@ -25,3 +25,11 @@ func TestLoadHTTPTimeoutsKeepSafeDefaultsForInvalidValues(t *testing.T) {
 		t.Fatalf("unexpected default timeout config: %+v", cfg)
 	}
 }
+
+func TestLoadReadsOptionalHealthAddress(t *testing.T) {
+	t.Setenv("CUSTODIA_HEALTH_ADDR", ":8080")
+	cfg := Load()
+	if cfg.HealthAddr != ":8080" {
+		t.Fatalf("expected health addr from env, got %q", cfg.HealthAddr)
+	}
+}

@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	APIAddr                  string
+	HealthAddr               string
 	WebAddr                  string
 	StoreBackend             string
 	DatabaseURL              string
@@ -33,6 +34,7 @@ type Config struct {
 func Load() Config {
 	return Config{
 		APIAddr:                  env("CUSTODIA_API_ADDR", ":8443"),
+		HealthAddr:               env("CUSTODIA_HEALTH_ADDR", ""),
 		WebAddr:                  env("CUSTODIA_WEB_ADDR", ":9443"),
 		StoreBackend:             env("CUSTODIA_STORE_BACKEND", "memory"),
 		DatabaseURL:              os.Getenv("CUSTODIA_DATABASE_URL"),

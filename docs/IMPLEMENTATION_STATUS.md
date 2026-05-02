@@ -167,3 +167,5 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Protected `/web/` with the existing mTLS admin guard instead of leaving the console shell public.
 - Kept the Web UI metadata-only: no ciphertext reads, envelopes, plaintext or key material are exposed through the shell.
 - Added regression coverage for missing certificate, non-admin and admin access.
+
+- Optional `CUSTODIA_HEALTH_ADDR` is configured but only used after the dedicated health listener patch.
