@@ -217,6 +217,9 @@ func runSecretVersions(cfg *cliConfig, args []string) error {
 	if *secretID == "" {
 		return fmt.Errorf("--secret-id is required")
 	}
+	if !model.ValidUUIDID(*secretID) {
+		return fmt.Errorf("--secret-id is invalid")
+	}
 	query := url.Values{}
 	if *limit != 0 {
 		if *limit < 0 || *limit > 500 {
@@ -238,6 +241,9 @@ func runAccessList(cfg *cliConfig, args []string) error {
 	_ = cmd.Parse(args)
 	if *secretID == "" {
 		return fmt.Errorf("--secret-id is required")
+	}
+	if !model.ValidUUIDID(*secretID) {
+		return fmt.Errorf("--secret-id is invalid")
 	}
 	query := url.Values{}
 	if *limit != 0 {
@@ -284,6 +290,15 @@ func runAccessGrantRequest(cfg *cliConfig, args []string) error {
 	if *secretID == "" || *clientID == "" || *permissions == "" {
 		return fmt.Errorf("--secret-id, --client-id and --permissions are required")
 	}
+	if !model.ValidUUIDID(*secretID) {
+		return fmt.Errorf("--secret-id is invalid")
+	}
+	if !model.ValidClientID(*clientID) {
+		return fmt.Errorf("--client-id is invalid")
+	}
+	if !model.ValidOptionalUUIDID(*versionID) {
+		return fmt.Errorf("--version-id is invalid")
+	}
 	bits, err := parsePermissionBits(*permissions)
 	if err != nil {
 		return err
@@ -305,6 +320,12 @@ func runAccessActivate(cfg *cliConfig, args []string) error {
 	if *secretID == "" || *clientID == "" || *envelopeFile == "" {
 		return fmt.Errorf("--secret-id, --client-id and --envelope-file are required")
 	}
+	if !model.ValidUUIDID(*secretID) {
+		return fmt.Errorf("--secret-id is invalid")
+	}
+	if !model.ValidClientID(*clientID) {
+		return fmt.Errorf("--client-id is invalid")
+	}
 	envelope, err := os.ReadFile(*envelopeFile)
 	if err != nil {
 		return err
@@ -321,6 +342,12 @@ func runAccessRevoke(cfg *cliConfig, args []string) error {
 	_ = cmd.Parse(args)
 	if *secretID == "" || *clientID == "" {
 		return fmt.Errorf("--secret-id and --client-id are required")
+	}
+	if !model.ValidUUIDID(*secretID) {
+		return fmt.Errorf("--secret-id is invalid")
+	}
+	if !model.ValidClientID(*clientID) {
+		return fmt.Errorf("--client-id is invalid")
 	}
 	path := "/v1/secrets/" + pathEscape(*secretID) + "/access/" + pathEscape(*clientID)
 	return requestJSON(cfg, http.MethodDelete, path, nil, os.Stdout)
