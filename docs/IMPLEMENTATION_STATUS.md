@@ -50,3 +50,8 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Added optional `CUSTODIA_CLIENT_CRL_FILE` support.
 - CRLs are accepted only when signed by the configured client CA.
 - Revoked client certificate serials are rejected in the TLS verification callback before API authz.
+
+## Patch 011 - PostgreSQL permission schema guardrail
+
+- Aligned `secret_access.permissions` with runtime validation by rejecting `0` at the database level too.
+- Added a migration contract test to keep `secret_access` and pending grant permissions non-zero.

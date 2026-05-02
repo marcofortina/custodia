@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS secret_access (
     revoked_at    TIMESTAMPTZ,
     PRIMARY KEY (secret_id, version_id, client_id),
     FOREIGN KEY (secret_id, version_id) REFERENCES secret_versions(secret_id, version_id) ON DELETE CASCADE,
-    CHECK (permissions >= 0 AND permissions <= 7)
+    CHECK (permissions > 0 AND permissions <= 7)
 );
 
 CREATE TABLE IF NOT EXISTS secret_access_requests (
