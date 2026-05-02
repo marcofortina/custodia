@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"custodia/internal/build"
 	"custodia/internal/model"
 	"custodia/internal/mtls"
 )
@@ -33,6 +34,11 @@ func main() {
 	flags.StringVar(&cfg.caFile, "ca", env("CUSTODIA_SERVER_CA_FILE", ""), "server CA certificate")
 	_ = flags.Parse(os.Args[1:])
 	args := flags.Args()
+	if len(args) == 1 && args[0] == "version" {
+		info := build.Current()
+		fmt.Fprintf(os.Stdout, "%s %s %s\n", info.Version, info.Commit, info.Date)
+		return
+	}
 	if len(args) < 2 {
 		usage()
 		os.Exit(2)
