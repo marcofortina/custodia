@@ -53,3 +53,15 @@ func TestRunAccessListRejectsInvalidLimit(t *testing.T) {
 		t.Fatal("expected invalid limit error")
 	}
 }
+
+func TestRunAccessGrantRequestRejectsInvalidExpiresAt(t *testing.T) {
+	err := runAccessGrantRequest(&cliConfig{}, []string{
+		"--secret-id", "550e8400-e29b-41d4-a716-446655440000",
+		"--client-id", "client_bob",
+		"--permissions", "read",
+		"--expires-at", "tomorrow",
+	})
+	if err == nil {
+		t.Fatal("expected invalid expires-at error")
+	}
+}

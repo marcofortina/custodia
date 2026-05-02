@@ -264,6 +264,7 @@ func runAccessGrantRequest(cfg *cliConfig, args []string) error {
 	clientID := cmd.String("client-id", "", "client id")
 	versionID := cmd.String("version-id", "", "secret version id; defaults to latest active version")
 	permissions := cmd.String("permissions", "", "permission bits or names: read, write, share, all")
+	expiresAt := cmd.String("expires-at", "", "optional RFC3339 access expiration timestamp")
 	_ = cmd.Parse(args)
 	if *secretID == "" || *clientID == "" || *permissions == "" {
 		return fmt.Errorf("--secret-id, --client-id and --permissions are required")
@@ -272,7 +273,11 @@ func runAccessGrantRequest(cfg *cliConfig, args []string) error {
 	if err != nil {
 		return err
 	}
-	req := model.AccessGrantRequest{VersionID: *versionID, TargetClientID: *clientID, Permissions: bits}
+	parsedExpiresAt, err := parseOptionalRFC3339(*expiresAt)
+	if err != nil {
+		return err
+	}
+	req := model.AccessGrantRequest{VersionID: *versionID, TargetClientID: *clientID, Permissions: bits, ExpiresAt: parsedExpiresAt}
 	return requestJSON(cfg, http.MethodPost, "/v1/secrets/"+pathEscape(*secretID)+"/access-requests", req, os.Stdout)
 }
 
@@ -310,6 +315,18 @@ func addQueryFilter(query url.Values, key string, value string) {
 	if strings.TrimSpace(value) != "" {
 		query.Set(key, strings.TrimSpace(value))
 	}
+}
+
+func parseOptionalRFC3339(value string) (*time.Time, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil, nil
+	}
+	parsed, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		return nil, fmt.Errorf("timestamp must be RFC3339: %w", err)
+	}
+	return &parsed, nil
 }
 
 func pathEscape(value string) string {
