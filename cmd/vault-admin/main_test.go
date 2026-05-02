@@ -98,6 +98,21 @@ func TestRunAccessListRejectsInvalidLimit(t *testing.T) {
 	}
 }
 
+func TestRunAccessRequestsRejectsInvalidFilters(t *testing.T) {
+	if err := runAccessRequests(&cliConfig{}, []string{"--secret-id", "not-a-uuid"}); err == nil {
+		t.Fatal("expected invalid secret id filter error")
+	}
+	if err := runAccessRequests(&cliConfig{}, []string{"--status", "done"}); err == nil {
+		t.Fatal("expected invalid status filter error")
+	}
+	if err := runAccessRequests(&cliConfig{}, []string{"--client-id", "client bad"}); err == nil {
+		t.Fatal("expected invalid client id filter error")
+	}
+	if err := runAccessRequests(&cliConfig{}, []string{"--requested-by-client-id", "client bad"}); err == nil {
+		t.Fatal("expected invalid requester filter error")
+	}
+}
+
 func TestRunAccessGrantRequestRejectsInvalidExpiresAt(t *testing.T) {
 	err := runAccessGrantRequest(&cliConfig{}, []string{
 		"--secret-id", "550e8400-e29b-41d4-a716-446655440000",

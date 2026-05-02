@@ -117,3 +117,13 @@ func ValidRevocationReason(value string) bool {
 	}
 	return true
 }
+
+// ValidAccessRequestStatus validates metadata-only access grant request status filters.
+func ValidAccessRequestStatus(value string) bool {
+	switch strings.TrimSpace(value) {
+	case "pending", "activated", "revoked", "expired":
+		return true
+	default:
+		return false
+	}
+}

@@ -433,7 +433,7 @@ func (s *Server) handleListAccessGrantRequests(w http.ResponseWriter, r *http.Re
 		return
 	}
 	if status := strings.TrimSpace(r.URL.Query().Get("status")); status != "" {
-		if !validAccessRequestStatus(status) {
+		if !model.ValidAccessRequestStatus(status) {
 			s.auditFailure(r, "secret.access_request_list", "secret", secretID, map[string]string{"reason": "invalid_status_filter"})
 			writeError(w, http.StatusBadRequest, "invalid_status_filter")
 			return
@@ -633,15 +633,6 @@ func filterAuditEvents(events []model.AuditEvent, keep func(model.AuditEvent) bo
 		}
 	}
 	return filtered
-}
-
-func validAccessRequestStatus(value string) bool {
-	switch value {
-	case "pending", "activated", "revoked", "expired":
-		return true
-	default:
-		return false
-	}
 }
 
 func parseBoolQuery(value string) (bool, bool) {

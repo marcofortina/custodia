@@ -270,6 +270,18 @@ func runAccessRequests(cfg *cliConfig, args []string) error {
 	if *limit <= 0 || *limit > 500 {
 		return fmt.Errorf("--limit must be between 1 and 500")
 	}
+	if trimmed := strings.TrimSpace(*secretID); trimmed != "" && !model.ValidUUIDID(trimmed) {
+		return fmt.Errorf("--secret-id is invalid")
+	}
+	if trimmed := strings.TrimSpace(*status); trimmed != "" && !model.ValidAccessRequestStatus(trimmed) {
+		return fmt.Errorf("--status is invalid")
+	}
+	if trimmed := strings.TrimSpace(*clientID); trimmed != "" && !model.ValidClientID(trimmed) {
+		return fmt.Errorf("--client-id is invalid")
+	}
+	if trimmed := strings.TrimSpace(*requestedBy); trimmed != "" && !model.ValidClientID(trimmed) {
+		return fmt.Errorf("--requested-by-client-id is invalid")
+	}
 	query := url.Values{}
 	query.Set("limit", strconv.Itoa(*limit))
 	addQueryFilter(query, "secret_id", *secretID)

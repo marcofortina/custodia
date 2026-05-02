@@ -149,3 +149,14 @@ func TestValidRevocationReason(t *testing.T) {
 		t.Fatal("expected oversized revocation reason to be rejected")
 	}
 }
+
+func TestValidAccessRequestStatus(t *testing.T) {
+	for _, value := range []string{"pending", "activated", "revoked", "expired"} {
+		if !ValidAccessRequestStatus(value) {
+			t.Fatalf("expected status %q to be valid", value)
+		}
+	}
+	if ValidAccessRequestStatus("done") || ValidAccessRequestStatus("") {
+		t.Fatal("expected unknown status values to be invalid")
+	}
+}
