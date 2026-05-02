@@ -31,11 +31,11 @@ func ServerTLSConfigWithClientCRL(certFile, keyFile, clientCAFile, clientCRLFile
 		ClientCAs:    clientCAs,
 	}
 	if clientCRLFile != "" {
-		revoked, err := LoadRevokedClientSerials(clientCRLFile, caPEM)
+		verifier, err := newReloadableCRLVerifier(clientCRLFile, caPEM)
 		if err != nil {
 			return nil, err
 		}
-		tlsConfig.VerifyPeerCertificate = revokedClientVerifier(revoked)
+		tlsConfig.VerifyPeerCertificate = verifier.Verify
 	}
 	return tlsConfig, nil
 }

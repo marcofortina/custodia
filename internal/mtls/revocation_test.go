@@ -122,3 +122,48 @@ func testRevocationList(t *testing.T, caCert *x509.Certificate, caKey *rsa.Priva
 	}
 	return pem.EncodeToMemory(&pem.Block{Type: "X509 CRL", Bytes: der})
 }
+
+func TestReloadableCRLVerifierReloadsChangedRevocationList(t *testing.T) {
+	caCert, caKey := testCertificateAuthority(t)
+	clientCert := testClientCertificate(t, caCert, caKey, big.NewInt(99))
+	crlFile := filepath.Join(t.TempDir(), "clients.crl.pem")
+	if err := os.WriteFile(crlFile, testRevocationListWithoutEntries(t, caCert, caKey), 0o600); err != nil {
+		t.Fatalf("write initial CRL: %v", err)
+	}
+
+	verifier, err := newReloadableCRLVerifier(crlFile, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCert.Raw}))
+	if err != nil {
+		t.Fatalf("create reloadable verifier: %v", err)
+	}
+	if err := verifier.Verify([][]byte{clientCert.Raw}, nil); err != nil {
+		t.Fatalf("expected client certificate to be allowed before CRL update: %v", err)
+	}
+
+	if err := os.WriteFile(crlFile, testRevocationList(t, caCert, caKey, clientCert.SerialNumber), 0o600); err != nil {
+		t.Fatalf("write updated CRL: %v", err)
+	}
+	future := time.Now().Add(time.Second).UTC()
+	if err := os.Chtimes(crlFile, future, future); err != nil {
+		t.Fatalf("touch updated CRL: %v", err)
+	}
+
+	err = verifier.Verify([][]byte{clientCert.Raw}, nil)
+	if !errors.Is(err, ErrRevokedClientCertificate) {
+		t.Fatalf("expected revoked certificate after CRL reload, got %v", err)
+	}
+}
+
+func testRevocationListWithoutEntries(t *testing.T, caCert *x509.Certificate, caKey *rsa.PrivateKey) []byte {
+	t.Helper()
+	now := time.Now().UTC()
+	der, err := x509.CreateRevocationList(rand.Reader, &x509.RevocationList{
+		SignatureAlgorithm: x509.SHA256WithRSA,
+		Number:             big.NewInt(now.UnixNano()),
+		ThisUpdate:         now.Add(-time.Minute),
+		NextUpdate:         now.Add(time.Hour),
+	}, caCert, caKey)
+	if err != nil {
+		t.Fatalf("create CRL: %v", err)
+	}
+	return pem.EncodeToMemory(&pem.Block{Type: "X509 CRL", Bytes: der})
+}

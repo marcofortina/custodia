@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"sync"
+	"time"
 )
 
 var ErrRevokedClientCertificate = errors.New("revoked client certificate")
@@ -79,6 +81,68 @@ func verifyRevocationList(list *x509.RevocationList, issuers []*x509.Certificate
 		}
 	}
 	return fmt.Errorf("client CRL signature is not trusted by the configured client CA")
+}
+
+type reloadableCRLVerifier struct {
+	mu      sync.RWMutex
+	crlFile string
+	caPEM   []byte
+	revoked map[string]struct{}
+	modTime time.Time
+	size    int64
+}
+
+func newReloadableCRLVerifier(crlFile string, caPEM []byte) (*reloadableCRLVerifier, error) {
+	verifier := &reloadableCRLVerifier{crlFile: crlFile, caPEM: append([]byte(nil), caPEM...)}
+	if err := verifier.reloadIfChanged(); err != nil {
+		return nil, err
+	}
+	return verifier, nil
+}
+
+func (v *reloadableCRLVerifier) Verify(rawCerts [][]byte, _ [][]*x509.Certificate) error {
+	if err := v.reloadIfChanged(); err != nil {
+		return err
+	}
+	if len(rawCerts) == 0 {
+		return nil
+	}
+	cert, err := x509.ParseCertificate(rawCerts[0])
+	if err != nil {
+		return fmt.Errorf("parse client certificate: %w", err)
+	}
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+	if _, ok := v.revoked[serialKey(cert.SerialNumber)]; ok {
+		return ErrRevokedClientCertificate
+	}
+	return nil
+}
+
+func (v *reloadableCRLVerifier) reloadIfChanged() error {
+	stat, err := os.Stat(v.crlFile)
+	if err != nil {
+		return fmt.Errorf("stat client CRL: %w", err)
+	}
+	v.mu.RLock()
+	unchanged := !v.modTime.IsZero() && stat.ModTime().Equal(v.modTime) && stat.Size() == v.size
+	v.mu.RUnlock()
+	if unchanged {
+		return nil
+	}
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if !v.modTime.IsZero() && stat.ModTime().Equal(v.modTime) && stat.Size() == v.size {
+		return nil
+	}
+	revoked, err := LoadRevokedClientSerials(v.crlFile, v.caPEM)
+	if err != nil {
+		return err
+	}
+	v.revoked = revoked
+	v.modTime = stat.ModTime()
+	v.size = stat.Size()
+	return nil
 }
 
 func revokedClientVerifier(revoked map[string]struct{}) func([][]byte, [][]*x509.Certificate) error {

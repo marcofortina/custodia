@@ -147,3 +147,9 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Added PostgreSQL `web_users` and `web_user_mappings` schema for the future metadata-only Web UI.
 - Kept the crypto boundary intact: no server-side encryption keys, public-key directory or secret plaintext fields.
 - Added schema guardrails for role constraints and client mappings.
+
+## Patch 025 - reloadable client CRL verifier
+
+- Replaced static CRL snapshots with a reload-on-change verifier for configured client CRLs.
+- Kept fail-closed behavior when the changed CRL is unreadable, invalid or not signed by the trusted client CA.
+- Added regression coverage for revocation updates without process restart.

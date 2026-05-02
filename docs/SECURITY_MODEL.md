@@ -36,6 +36,10 @@ Admin metadata APIs are restricted to configured admin client IDs. This does not
 Custodia emits conservative security headers by default, including `nosniff`, `DENY` framing, `no-referrer`, `no-store` and a restrictive Content Security Policy. The current web surface remains metadata-only and does not expose plaintext or client-side key material.
 
 
+## Client certificate revocation
+
+When `CUSTODIA_CLIENT_CRL_FILE` is configured, the mTLS verifier fails closed on certificates whose serial appears in a trusted client CRL. The verifier reloads the CRL when the file metadata changes, so revocations can be distributed operationally without restarting the API process. CRL signature validation still requires the configured client CA. OCSP stapling remains a production hardening gap.
+
 ## Web user metadata boundary
 
 The PostgreSQL schema includes `web_users` and `web_user_mappings` for the metadata-only admin console described by the design document. These tables store authentication and role metadata only. They do not store plaintext secrets, client encryption keys, public-key directories or decryptable envelopes. Web operators can only be mapped to existing `client_id` subjects; access activation still requires an opaque envelope produced outside the vault by a subject with `share` permission.
