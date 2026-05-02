@@ -60,6 +60,7 @@ func New(options Options) http.Handler {
 	mux.Handle("GET /web/", server.auth(server.adminOnly(http.HandlerFunc(server.handleWeb))))
 	mux.Handle("GET /web/status", server.auth(server.adminOnly(http.HandlerFunc(server.handleWebStatus))))
 	mux.Handle("GET /web/clients", server.auth(server.adminOnly(http.HandlerFunc(server.handleWebClients))))
+	mux.Handle("GET /web/audit", server.auth(server.adminOnly(http.HandlerFunc(server.handleWebAudit))))
 	mux.Handle("GET /v1/me", server.auth(http.HandlerFunc(server.handleMe)))
 	mux.Handle("GET /v1/clients", server.auth(server.adminOnly(http.HandlerFunc(server.handleListClients))))
 	mux.Handle("GET /v1/clients/{client_id}", server.auth(server.adminOnly(http.HandlerFunc(server.handleGetClient))))

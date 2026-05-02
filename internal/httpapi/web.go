@@ -5,6 +5,7 @@ import (
 	"html"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func writeWebPage(w http.ResponseWriter, title string, body string) {
@@ -80,4 +81,23 @@ func (s *Server) handleWebClients(w http.ResponseWriter, r *http.Request) {
 	body := "<h1>Clients</h1><table><thead><tr><th>Client ID</th><th>mTLS subject</th><th>Status</th></tr></thead><tbody>" + rows + "</tbody></table>"
 	s.audit(r, "web.client_list", "client", "", "success", nil)
 	writeWebPage(w, "Clients", body)
+}
+
+func (s *Server) handleWebAudit(w http.ResponseWriter, r *http.Request) {
+	events, err := s.store.ListAuditEvents(r.Context(), 100)
+	if err != nil {
+		s.auditStoreFailure(r, "web.audit_list", "audit_event", "", err)
+		writeMappedError(w, err)
+		return
+	}
+	rows := ""
+	for _, event := range events {
+		rows += "<tr><td>" + html.EscapeString(event.OccurredAt.Format(time.RFC3339)) + "</td><td>" + html.EscapeString(event.Action) + "</td><td>" + html.EscapeString(event.ActorClientID) + "</td><td>" + html.EscapeString(event.Outcome) + "</td></tr>"
+	}
+	if rows == "" {
+		rows = `<tr><td colspan="4">No audit events found.</td></tr>`
+	}
+	body := "<h1>Audit events</h1><p>Latest 100 events. Export remains available as JSONL from the API.</p><table><thead><tr><th>Time</th><th>Action</th><th>Actor</th><th>Outcome</th></tr></thead><tbody>" + rows + "</tbody></table>"
+	s.audit(r, "web.audit_list", "audit_event", "", "success", nil)
+	writeWebPage(w, "Audit events", body)
 }
