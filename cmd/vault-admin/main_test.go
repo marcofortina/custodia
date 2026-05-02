@@ -124,3 +124,21 @@ func TestRunAccessGrantRequestRejectsInvalidExpiresAt(t *testing.T) {
 		t.Fatal("expected invalid expires-at error")
 	}
 }
+
+func TestRunAuditCommandsRejectInvalidFilters(t *testing.T) {
+	if err := runAuditList(&cliConfig{}, []string{"--outcome", "maybe"}); err == nil {
+		t.Fatal("expected invalid audit list outcome error")
+	}
+	if err := runAuditList(&cliConfig{}, []string{"--action", "bad action"}); err == nil {
+		t.Fatal("expected invalid audit list action error")
+	}
+	if err := runAuditExport(&cliConfig{}, []string{"--actor-client-id", "client bad"}); err == nil {
+		t.Fatal("expected invalid audit export actor error")
+	}
+	if err := runAuditExport(&cliConfig{}, []string{"--resource-type", "bad type"}); err == nil {
+		t.Fatal("expected invalid audit export resource type error")
+	}
+	if err := runAuditExport(&cliConfig{}, []string{"--resource-id", "bad\nresource"}); err == nil {
+		t.Fatal("expected invalid audit export resource id error")
+	}
+}

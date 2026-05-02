@@ -167,6 +167,9 @@ func runAuditList(cfg *cliConfig, args []string) error {
 	if *limit <= 0 || *limit > 500 {
 		return fmt.Errorf("--limit must be between 1 and 500")
 	}
+	if err := validateAuditFilterFlags(*outcome, *action, *actorClientID, *resourceType, *resourceID); err != nil {
+		return err
+	}
 	query := url.Values{}
 	query.Set("limit", strconv.Itoa(*limit))
 	addQueryFilter(query, "outcome", *outcome)
@@ -189,6 +192,9 @@ func runAuditExport(cfg *cliConfig, args []string) error {
 	if *limit <= 0 || *limit > 500 {
 		return fmt.Errorf("--limit must be between 1 and 500")
 	}
+	if err := validateAuditFilterFlags(*outcome, *action, *actorClientID, *resourceType, *resourceID); err != nil {
+		return err
+	}
 	query := url.Values{}
 	query.Set("limit", strconv.Itoa(*limit))
 	addQueryFilter(query, "outcome", *outcome)
@@ -197,6 +203,29 @@ func runAuditExport(cfg *cliConfig, args []string) error {
 	addQueryFilter(query, "resource_type", *resourceType)
 	addQueryFilter(query, "resource_id", *resourceID)
 	return requestJSON(cfg, http.MethodGet, "/v1/audit-events/export?"+query.Encode(), nil, os.Stdout)
+}
+
+func validateAuditFilterFlags(outcome, action, actorClientID, resourceType, resourceID string) error {
+	if trimmed := strings.TrimSpace(outcome); trimmed != "" {
+		switch trimmed {
+		case "success", "failure", "degraded":
+		default:
+			return fmt.Errorf("--outcome must be success, failure or degraded when set")
+		}
+	}
+	if trimmed := strings.TrimSpace(action); trimmed != "" && !model.ValidAuditAction(trimmed) {
+		return fmt.Errorf("--action is invalid")
+	}
+	if trimmed := strings.TrimSpace(actorClientID); trimmed != "" && !model.ValidClientID(trimmed) {
+		return fmt.Errorf("--actor-client-id is invalid")
+	}
+	if trimmed := strings.TrimSpace(resourceType); trimmed != "" && !model.ValidAuditResourceType(trimmed) {
+		return fmt.Errorf("--resource-type is invalid")
+	}
+	if trimmed := strings.TrimSpace(resourceID); trimmed != "" && !model.ValidAuditResourceID(trimmed) {
+		return fmt.Errorf("--resource-id is invalid")
+	}
+	return nil
 }
 
 func runAuditVerify(cfg *cliConfig, args []string) error {
