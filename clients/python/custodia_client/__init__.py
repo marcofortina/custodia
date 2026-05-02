@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import quote, urlencode
+import re
 
 import requests
 
@@ -49,6 +50,7 @@ class CustodiaClient:
         resource_id: str | None = None,
     ) -> dict[str, Any]:
         _validate_optional_limit(limit)
+        _validate_audit_filters(outcome, action, actor_client_id, resource_type, resource_id)
         query = _query_params(
             limit=str(limit) if limit is not None else None,
             outcome=outcome,
@@ -73,6 +75,7 @@ class CustodiaClient:
         resource_id: str | None = None,
     ) -> str:
         _validate_optional_limit(limit)
+        _validate_audit_filters(outcome, action, actor_client_id, resource_type, resource_id)
         query = _query_params(
             limit=str(limit) if limit is not None else None,
             outcome=outcome,
@@ -95,6 +98,7 @@ class CustodiaClient:
         limit: int | None = None,
     ) -> dict[str, Any]:
         _validate_optional_limit(limit)
+        _validate_access_request_filters(secret_id, status, client_id, requested_by_client_id)
         query = _query_params(
             secret_id=secret_id,
             status=status,
@@ -195,6 +199,49 @@ def _path_escape(value: str) -> str:
 
 def _query_params(**kwargs: str | None) -> str:
     return urlencode({key: value for key, value in kwargs.items() if value})
+
+_CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
+_AUDIT_TOKEN_RE = re.compile(r"^[A-Za-z0-9._:-]+$")
+_UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
+
+
+def _validate_audit_filters(
+    outcome: str | None,
+    action: str | None,
+    actor_client_id: str | None,
+    resource_type: str | None,
+    resource_id: str | None,
+) -> None:
+    if outcome is not None and outcome not in {"success", "failure", "degraded"}:
+        raise ValueError("outcome must be success, failure or degraded when set")
+    if action is not None and not _bounded_token(action, 128):
+        raise ValueError("action filter is invalid")
+    if actor_client_id is not None and not _CLIENT_ID_RE.fullmatch(actor_client_id):
+        raise ValueError("actor client id filter is invalid")
+    if resource_type is not None and not _bounded_token(resource_type, 64):
+        raise ValueError("resource type filter is invalid")
+    if resource_id is not None and (not resource_id or len(resource_id) > 256 or any(ord(ch) < 32 for ch in resource_id)):
+        raise ValueError("resource id filter is invalid")
+
+
+def _validate_access_request_filters(
+    secret_id: str | None,
+    status: str | None,
+    client_id: str | None,
+    requested_by_client_id: str | None,
+) -> None:
+    if secret_id is not None and not _UUID_RE.fullmatch(secret_id.lower()):
+        raise ValueError("secret id filter is invalid")
+    if status is not None and status not in {"pending", "activated", "revoked", "expired"}:
+        raise ValueError("status filter is invalid")
+    if client_id is not None and not _CLIENT_ID_RE.fullmatch(client_id):
+        raise ValueError("client id filter is invalid")
+    if requested_by_client_id is not None and not _CLIENT_ID_RE.fullmatch(requested_by_client_id):
+        raise ValueError("requested by client id filter is invalid")
+
+
+def _bounded_token(value: str, max_length: int) -> bool:
+    return bool(value) and len(value) <= max_length and bool(_AUDIT_TOKEN_RE.fullmatch(value))
 
 
 def _validate_optional_limit(limit: int | None) -> None:
