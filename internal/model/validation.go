@@ -28,6 +28,11 @@ func ValidUUIDID(value string) bool {
 	return uuidIDPattern.MatchString(strings.ToLower(strings.TrimSpace(value)))
 }
 
+func ValidOptionalUUIDID(value string) bool {
+	value = strings.TrimSpace(value)
+	return value == "" || ValidUUIDID(value)
+}
+
 // ValidMTLSSubject keeps certificate subject mappings bounded and printable.
 func ValidMTLSSubject(value string) bool {
 	value = strings.TrimSpace(value)

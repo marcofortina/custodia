@@ -66,3 +66,12 @@ func TestValidUUIDID(t *testing.T) {
 		}
 	}
 }
+
+func TestValidOptionalUUIDID(t *testing.T) {
+	if !ValidOptionalUUIDID("") || !ValidOptionalUUIDID("550e8400-e29b-41d4-a716-446655440000") {
+		t.Fatal("expected empty and uuid values to be valid optional ids")
+	}
+	if ValidOptionalUUIDID("latest") {
+		t.Fatal("expected non-uuid optional id to be invalid")
+	}
+}

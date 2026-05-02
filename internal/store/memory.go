@@ -335,7 +335,7 @@ func (s *MemoryStore) DeleteSecret(_ context.Context, actorClientID, secretID st
 }
 
 func (s *MemoryStore) ShareSecret(_ context.Context, actorClientID, secretID string, req model.ShareSecretRequest) error {
-	if !model.ValidClientID(req.TargetClientID) || !model.ValidOpaqueBlob(req.Envelope) {
+	if !model.ValidClientID(req.TargetClientID) || !model.ValidOptionalUUIDID(req.VersionID) || !model.ValidOpaqueBlob(req.Envelope) {
 		return ErrInvalidInput
 	}
 	if !model.ValidPermissionBits(req.Permissions) {
@@ -375,7 +375,7 @@ func (s *MemoryStore) ShareSecret(_ context.Context, actorClientID, secretID str
 }
 
 func (s *MemoryStore) RequestAccessGrant(_ context.Context, actorClientID, secretID string, req model.AccessGrantRequest) (model.AccessGrantRef, error) {
-	if !model.ValidClientID(req.TargetClientID) || !model.ValidPermissionBits(req.Permissions) {
+	if !model.ValidClientID(req.TargetClientID) || !model.ValidOptionalUUIDID(req.VersionID) || !model.ValidPermissionBits(req.Permissions) {
 		return model.AccessGrantRef{}, ErrInvalidInput
 	}
 	if !validFutureExpiry(req.ExpiresAt) {
