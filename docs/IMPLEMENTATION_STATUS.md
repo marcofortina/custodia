@@ -153,3 +153,10 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Replaced static CRL snapshots with a reload-on-change verifier for configured client CRLs.
 - Kept fail-closed behavior when the changed CRL is unreadable, invalid or not signed by the trusted client CA.
 - Added regression coverage for revocation updates without process restart.
+
+
+## Patch 026 - PostgreSQL integration test scaffold
+
+- Added an opt-in `postgres` build-tag integration test for the real PostgreSQL store.
+- The default `go test ./...` remains external-service free.
+- The test applies the project migration and verifies opaque create/share/read lifecycle against PostgreSQL.

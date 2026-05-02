@@ -99,3 +99,13 @@ Client creation registers metadata only. Certificate issuance/signing remains ou
 ## HTTP timeout guardrails
 
 The server has bounded HTTP timeouts by default: read/write 15s, idle 60s and graceful shutdown 10s. Override with `CUSTODIA_HTTP_READ_TIMEOUT_SECONDS`, `CUSTODIA_HTTP_WRITE_TIMEOUT_SECONDS`, `CUSTODIA_HTTP_IDLE_TIMEOUT_SECONDS` and `CUSTODIA_SHUTDOWN_TIMEOUT_SECONDS`.
+
+
+### PostgreSQL integration tests
+
+The default test suite does not require external services. To exercise the optional PostgreSQL store, install the `postgres` build-tag dependencies and provide a disposable database URL:
+
+```bash
+go get github.com/jackc/pgx/v5
+TEST_CUSTODIA_POSTGRES_URL=postgres://user:pass@localhost:5432/custodia_test?sslmode=disable go test -tags postgres ./internal/store
+```
