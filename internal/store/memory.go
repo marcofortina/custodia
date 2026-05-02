@@ -396,6 +396,36 @@ func (s *MemoryStore) RequestAccessGrant(_ context.Context, actorClientID, secre
 	return model.AccessGrantRef{SecretID: secretID, VersionID: version.VersionID, ClientID: req.TargetClientID, Status: "pending"}, nil
 }
 
+func (s *MemoryStore) ListAccessGrantRequests(_ context.Context, secretID string) ([]model.AccessGrantMetadata, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	requests := make([]model.AccessGrantMetadata, 0)
+	for _, pending := range s.pendingAccess {
+		if secretID != "" && pending.SecretID != secretID {
+			continue
+		}
+		status := "pending"
+		if pending.ActivatedAt != nil {
+			status = "activated"
+		} else if pending.RevokedAt != nil {
+			status = "revoked"
+		} else if pending.ExpiresAt != nil && !pending.ExpiresAt.After(time.Now().UTC()) {
+			status = "expired"
+		}
+		requests = append(requests, model.AccessGrantMetadata{
+			SecretID:            pending.SecretID,
+			VersionID:           pending.VersionID,
+			ClientID:            pending.ClientID,
+			RequestedByClientID: pending.RequestedByClientID,
+			Permissions:         pending.Permissions,
+			RequestedAt:         pending.RequestedAt,
+			ExpiresAt:           cloneTimePtr(pending.ExpiresAt),
+			Status:              status,
+		})
+	}
+	return requests, nil
+}
+
 func (s *MemoryStore) ActivateAccessGrant(_ context.Context, actorClientID, secretID, targetClientID string, req model.ActivateAccessRequest) error {
 	if !model.ValidClientID(targetClientID) || !model.ValidOpaqueBlob(req.Envelope) {
 		return ErrInvalidInput

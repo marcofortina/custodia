@@ -55,6 +55,9 @@ func (s *PostgresStore) ShareSecret(context.Context, string, string, model.Share
 func (s *PostgresStore) RequestAccessGrant(context.Context, string, string, model.AccessGrantRequest) (model.AccessGrantRef, error) {
 	return model.AccessGrantRef{}, ErrPostgresStoreNotWired
 }
+func (s *PostgresStore) ListAccessGrantRequests(context.Context, string) ([]model.AccessGrantMetadata, error) {
+	return nil, ErrPostgresStoreNotWired
+}
 func (s *PostgresStore) ActivateAccessGrant(context.Context, string, string, string, model.ActivateAccessRequest) error {
 	return ErrPostgresStoreNotWired
 }

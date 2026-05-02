@@ -916,3 +916,36 @@ func TestAPIAdminGetsClientMetadata(t *testing.T) {
 		t.Fatalf("unexpected client metadata: %+v", client)
 	}
 }
+
+func TestAPIAdminListsPendingAccessRequestsWithoutEnvelopes(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, id := range []string{"admin", "client_alice", "client_bob"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: id, MTLSSubject: id}); err != nil {
+			t.Fatalf("create %s: %v", id, err)
+		}
+	}
+	created, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:        "secret",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	if _, err := memoryStore.RequestAccessGrant(ctx, "admin", created.SecretID, model.AccessGrantRequest{TargetClientID: "client_bob", Permissions: int(model.PermissionRead)}); err != nil {
+		t.Fatalf("request access: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/access-requests?secret_id="+created.SecretID, "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	if strings.Contains(res.Body.String(), "envelope") || !strings.Contains(res.Body.String(), "client_bob") {
+		t.Fatalf("expected metadata-only pending grant listing, got %s", res.Body.String())
+	}
+}

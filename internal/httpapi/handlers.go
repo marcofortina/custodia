@@ -311,6 +311,18 @@ func (s *Server) handleRequestAccessGrant(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusCreated, ref)
 }
 
+func (s *Server) handleListAccessGrantRequests(w http.ResponseWriter, r *http.Request) {
+	secretID := strings.TrimSpace(r.URL.Query().Get("secret_id"))
+	requests, err := s.store.ListAccessGrantRequests(r.Context(), secretID)
+	if err != nil {
+		s.auditStoreFailure(r, "secret.access_request_list", "secret", secretID, err)
+		writeMappedError(w, err)
+		return
+	}
+	s.audit(r, "secret.access_request_list", "secret", secretID, "success", nil)
+	writeJSON(w, http.StatusOK, map[string]any{"access_requests": requests})
+}
+
 func (s *Server) handleActivateAccessGrant(w http.ResponseWriter, r *http.Request) {
 	secretID := r.PathValue("secret_id")
 	targetClientID := r.PathValue("client_id")

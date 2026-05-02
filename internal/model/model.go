@@ -125,6 +125,18 @@ type SecretAccessMetadata struct {
 	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
 }
 
+// AccessGrantMetadata exposes pending grant metadata only. It deliberately omits envelopes.
+type AccessGrantMetadata struct {
+	SecretID            string     `json:"secret_id"`
+	VersionID           string     `json:"version_id"`
+	ClientID            string     `json:"client_id"`
+	RequestedByClientID string     `json:"requested_by_client_id"`
+	Permissions         int        `json:"permissions"`
+	RequestedAt         time.Time  `json:"requested_at"`
+	ExpiresAt           *time.Time `json:"expires_at,omitempty"`
+	Status              string     `json:"status"`
+}
+
 type SecretReadResponse struct {
 	SecretID       string          `json:"secret_id"`
 	VersionID      string          `json:"version_id"`

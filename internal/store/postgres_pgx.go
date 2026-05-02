@@ -429,6 +429,38 @@ func (s *PostgresStore) RequestAccessGrant(ctx context.Context, actorClientID, s
 	return model.AccessGrantRef{SecretID: secretID, VersionID: versionID, ClientID: req.TargetClientID, Status: "pending"}, nil
 }
 
+func (s *PostgresStore) ListAccessGrantRequests(ctx context.Context, secretID string) ([]model.AccessGrantMetadata, error) {
+	query := `
+		SELECT secret_id::text, version_id::text, client_id, requested_by_client_id, permissions, requested_at, expires_at,
+		       CASE
+		           WHEN activated_at IS NOT NULL THEN 'activated'
+		           WHEN revoked_at IS NOT NULL THEN 'revoked'
+		           WHEN expires_at IS NOT NULL AND expires_at <= NOW() THEN 'expired'
+		           ELSE 'pending'
+		       END AS status
+		FROM secret_access_requests`
+	args := []any{}
+	if secretID != "" {
+		query += ` WHERE secret_id = $1::uuid`
+		args = append(args, secretID)
+	}
+	query += ` ORDER BY requested_at DESC`
+	rows, err := s.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, mapPostgresError(err)
+	}
+	defer rows.Close()
+	requests := make([]model.AccessGrantMetadata, 0)
+	for rows.Next() {
+		var request model.AccessGrantMetadata
+		if err := rows.Scan(&request.SecretID, &request.VersionID, &request.ClientID, &request.RequestedByClientID, &request.Permissions, &request.RequestedAt, &request.ExpiresAt, &request.Status); err != nil {
+			return nil, mapPostgresError(err)
+		}
+		requests = append(requests, request)
+	}
+	return requests, mapPostgresError(rows.Err())
+}
+
 func (s *PostgresStore) ActivateAccessGrant(ctx context.Context, actorClientID, secretID, targetClientID string, req model.ActivateAccessRequest) error {
 	if !model.ValidClientID(targetClientID) || !model.ValidOpaqueBlob(req.Envelope) {
 		return ErrInvalidInput
