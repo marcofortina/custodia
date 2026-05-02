@@ -40,6 +40,8 @@ func main() {
 
 	var err error
 	switch args[0] + " " + args[1] {
+	case "status read":
+		err = requestJSON(&cfg, http.MethodGet, "/v1/status", nil, os.Stdout)
 	case "client list":
 		err = requestJSON(&cfg, http.MethodGet, "/v1/clients", nil, os.Stdout)
 	case "client create":
@@ -289,6 +291,7 @@ func env(key, fallback string) string {
 
 func usage() {
 	fmt.Fprintln(os.Stderr, `usage:
+  vault-admin [global flags] status read
   vault-admin [global flags] client list
   vault-admin [global flags] client create --client-id ID --mtls-subject SUBJECT
   vault-admin [global flags] client revoke --client-id ID [--reason REASON]

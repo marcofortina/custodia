@@ -44,6 +44,32 @@ func (s *Server) handleWeb(w http.ResponseWriter, _ *http.Request) {
 </html>`))
 }
 
+func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
+	storeStatus := "ok"
+	if err := s.store.Health(r.Context()); err != nil {
+		storeStatus = "unavailable"
+	}
+	rateLimiterStatus := "ok"
+	if checker, ok := s.limiter.(ratelimit.HealthChecker); ok {
+		if err := checker.Health(r.Context()); err != nil {
+			rateLimiterStatus = "unavailable"
+		}
+	}
+	outcome := "success"
+	if storeStatus != "ok" || rateLimiterStatus != "ok" {
+		outcome = "degraded"
+	}
+	s.audit(r, "status.read", "system", "", outcome, nil)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":                    outcome,
+		"store":                     storeStatus,
+		"rate_limiter":              rateLimiterStatus,
+		"max_envelopes_per_secret":  s.maxEnvelopesPerSecret,
+		"client_rate_limit_per_sec": s.clientRateLimit,
+		"global_rate_limit_per_sec": s.globalRateLimit,
+	})
+}
+
 func (s *Server) handleListClients(w http.ResponseWriter, r *http.Request) {
 	clients, err := s.store.ListClients(r.Context())
 	if err != nil {
