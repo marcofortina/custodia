@@ -87,15 +87,27 @@ func buildStore(ctx context.Context, cfg config.Config) (store.Store, func(), er
 		if err != nil {
 			return nil, func() {}, err
 		}
+		if err := bootstrapClients(ctx, postgresStore, cfg.BootstrapClients); err != nil {
+			postgresStore.Close()
+			return nil, func() {}, err
+		}
 		return postgresStore, postgresStore.Close, nil
 	}
 	memoryStore := store.NewMemoryStore()
-	for clientID, subject := range cfg.BootstrapClients {
-		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: subject}); err != nil {
-			return nil, func() {}, err
-		}
+	if err := bootstrapClients(ctx, memoryStore, cfg.BootstrapClients); err != nil {
+		return nil, func() {}, err
 	}
 	return memoryStore, func() {}, nil
+}
+
+func bootstrapClients(ctx context.Context, vaultStore store.Store, clients map[string]string) error {
+	for clientID, subject := range clients {
+		err := vaultStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: subject})
+		if err != nil && !errors.Is(err, store.ErrConflict) {
+			return err
+		}
+	}
+	return nil
 }
 
 func buildLimiter(cfg config.Config) (ratelimit.Limiter, error) {

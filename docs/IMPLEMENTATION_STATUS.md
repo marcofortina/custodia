@@ -15,6 +15,7 @@
 - Configurable recipient-envelope cap with default 100 and HTTP 413 rejection on create/new-version overflow.
 - Hash-chained audit events for successful and failed auth/API operations, with admin-only listing API/CLI.
 - PostgreSQL schema contract, in-memory executable store and optional `pgx` PostgreSQL store behind the `postgres` build tag.
+- Idempotent bootstrap client registration for all configured stores.
 - Valkey-compatible rate limiting with `/ready` health checks.
 - Minimal admin CLI for API-backed client metadata create/list/revoke and access revoke operations.
 - Minimal Go/Python clients, with Go helpers for secret metadata and access grant workflows.
@@ -114,3 +115,9 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Added `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` and `Cache-Control: no-store`.
 - Added a restrictive default Content Security Policy for API and placeholder web responses.
 - Added a regression test so security headers stay present on lightweight health responses.
+
+## Patch 020 - persistent-store bootstrap clients
+
+- Applied `CUSTODIA_BOOTSTRAP_CLIENTS` to both in-memory and configured persistent stores.
+- Made bootstrap idempotent by ignoring already-existing client records.
+- Added a server bootstrap regression test.
