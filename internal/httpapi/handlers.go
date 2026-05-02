@@ -18,6 +18,10 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+func (s *Server) handleLive(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]string{"status": "live"})
+}
+
 func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 	if err := s.store.Health(r.Context()); err != nil {
 		writeError(w, http.StatusServiceUnavailable, "store_unavailable")

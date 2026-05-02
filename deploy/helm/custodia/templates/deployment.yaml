@@ -52,7 +52,7 @@ spec:
           livenessProbe:
             httpGet:
               scheme: HTTPS
-              path: /health
+              path: /live
               port: https
           volumeMounts:
             - name: mtls

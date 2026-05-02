@@ -41,6 +41,22 @@ func TestAPISetsSecurityHeaders(t *testing.T) {
 	}
 }
 
+func TestAPILiveEndpointIsDependencyFree(t *testing.T) {
+	memoryStore := store.NewMemoryStore()
+	handler := New(Options{Store: memoryStore, Limiter: failingHealthLimiter{}, AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := httptest.NewRequest(http.MethodGet, "/live", nil)
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	if !strings.Contains(res.Body.String(), "live") {
+		t.Fatalf("expected live status, got %s", res.Body.String())
+	}
+}
+
 func TestReadyFailsWhenRateLimiterHealthFails(t *testing.T) {
 	memoryStore := store.NewMemoryStore()
 	handler := New(Options{Store: memoryStore, Limiter: failingHealthLimiter{}, AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
