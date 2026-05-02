@@ -690,9 +690,13 @@ func (s *PostgresStore) ListAuditEvents(ctx context.Context, limit int) ([]model
 	}
 	rows, err := s.pool.Query(ctx, `
 		SELECT event_id::text, occurred_at, COALESCE(actor_client_id, ''), action, resource_type, COALESCE(resource_id, ''), outcome, metadata, previous_hash, event_hash
-		FROM audit_events
-		ORDER BY occurred_at ASC, event_id ASC
-		LIMIT $1`, limit)
+		FROM (
+			SELECT *
+			FROM audit_events
+			ORDER BY occurred_at DESC, event_id DESC
+			LIMIT $1
+		) latest_events
+		ORDER BY occurred_at ASC, event_id ASC`, limit)
 	if err != nil {
 		return nil, mapPostgresError(err)
 	}

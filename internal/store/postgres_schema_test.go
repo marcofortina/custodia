@@ -75,8 +75,14 @@ func TestPostgresAuditListingUsesChronologicalOrderForHashVerification(t *testin
 	}
 	postgresStore := string(storeBytes)
 
-	if !strings.Contains(postgresStore, "ORDER BY occurred_at ASC, event_id ASC") {
-		t.Fatal("postgres audit listing must return chronological events for hash-chain verification")
+	for _, expected := range []string{
+		"ORDER BY occurred_at DESC, event_id DESC",
+		"LIMIT $1",
+		"ORDER BY occurred_at ASC, event_id ASC",
+	} {
+		if !strings.Contains(postgresStore, expected) {
+			t.Fatalf("postgres audit listing must select latest events and return them chronologically; missing %q", expected)
+		}
 	}
 }
 
