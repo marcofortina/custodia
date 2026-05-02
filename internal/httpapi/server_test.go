@@ -1654,6 +1654,22 @@ func TestWebConsoleRequiresAdminMTLS(t *testing.T) {
 	}
 }
 
+func TestWebAuditVerifyRejectsInvalidLimit(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/web/audit/verify?limit=999", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", res.Code, res.Body.String())
+	}
+}
+
 func TestWebAuditRejectsInvalidOutcomeFilter(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()

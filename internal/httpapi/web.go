@@ -155,7 +155,11 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *Server) handleWebAuditVerify(w http.ResponseWriter, r *http.Request) {
-	events, err := s.store.ListAuditEvents(r.Context(), 500)
+	limit, ok := s.webOptionalLimit(w, r, "web.audit_verify", "audit_event", "", 500)
+	if !ok {
+		return
+	}
+	events, err := s.store.ListAuditEvents(r.Context(), limit)
 	if err != nil {
 		s.auditStoreFailure(r, "web.audit_verify", "audit_event", "", err)
 		writeMappedError(w, err)
