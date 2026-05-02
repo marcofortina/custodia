@@ -88,6 +88,10 @@ func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListClients(w http.ResponseWriter, r *http.Request) {
+	limit, ok := s.optionalLimit(w, r, "client.list", "client", "")
+	if !ok {
+		return
+	}
 	clients, err := s.store.ListClients(r.Context())
 	if err != nil {
 		s.auditStoreFailure(r, "client.list", "client", "", err)
@@ -108,6 +112,9 @@ func (s *Server) handleListClients(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		clients = filtered
+	}
+	if limit > 0 && len(clients) > limit {
+		clients = clients[:limit]
 	}
 	s.audit(r, "client.list", "client", "", "success", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"clients": clients})
@@ -547,6 +554,20 @@ func (s *Server) requireSecretID(w http.ResponseWriter, r *http.Request, action 
 		return "", false
 	}
 	return secretID, true
+}
+
+func (s *Server) optionalLimit(w http.ResponseWriter, r *http.Request, action, resourceType, resourceID string) (int, bool) {
+	rawLimit := strings.TrimSpace(r.URL.Query().Get("limit"))
+	if rawLimit == "" {
+		return 0, true
+	}
+	parsed, err := strconv.Atoi(rawLimit)
+	if err != nil || parsed <= 0 || parsed > 500 {
+		s.auditFailure(r, action, resourceType, resourceID, map[string]string{"reason": "invalid_limit"})
+		writeError(w, http.StatusBadRequest, "invalid_limit")
+		return 0, false
+	}
+	return parsed, true
 }
 
 func filterAuditEvents(events []model.AuditEvent, keep func(model.AuditEvent) bool) []model.AuditEvent {

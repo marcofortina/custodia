@@ -1366,3 +1366,31 @@ func TestAPIRejectsInvalidClientIDPathSegments(t *testing.T) {
 		t.Fatalf("expected invalid client id error, got %s", res.Body.String())
 	}
 }
+
+func TestAPIAdminClientListSupportsLimit(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, clientID := range []string{"admin", "client_a", "client_b"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %s: %v", clientID, err)
+		}
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/clients?limit=1", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var payload struct {
+		Clients []model.Client `json:"clients"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode clients: %v", err)
+	}
+	if len(payload.Clients) != 1 {
+		t.Fatalf("expected one client after limit, got %+v", payload.Clients)
+	}
+}
