@@ -389,6 +389,16 @@ func (s *Server) handleRequestAccessGrant(w http.ResponseWriter, r *http.Request
 }
 
 func (s *Server) handleListAccessGrantRequests(w http.ResponseWriter, r *http.Request) {
+	limit := 100
+	if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
+		parsed, err := strconv.Atoi(rawLimit)
+		if err != nil || parsed <= 0 || parsed > 500 {
+			s.auditFailure(r, "secret.access_request_list", "secret", "", map[string]string{"reason": "invalid_limit"})
+			writeError(w, http.StatusBadRequest, "invalid_limit")
+			return
+		}
+		limit = parsed
+	}
 	secretID := strings.TrimSpace(r.URL.Query().Get("secret_id"))
 	if secretID != "" && !model.ValidUUIDID(secretID) {
 		s.auditFailure(r, "secret.access_request_list", "secret", secretID, map[string]string{"reason": "invalid_secret_id_filter"})
@@ -442,6 +452,9 @@ func (s *Server) handleListAccessGrantRequests(w http.ResponseWriter, r *http.Re
 			}
 		}
 		requests = filtered
+	}
+	if len(requests) > limit {
+		requests = requests[:limit]
 	}
 	s.audit(r, "secret.access_request_list", "secret", secretID, "success", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"access_requests": requests})
