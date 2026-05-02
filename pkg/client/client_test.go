@@ -268,6 +268,22 @@ func TestClientListClientsFilteredUsesActiveQuery(t *testing.T) {
 	}
 }
 
+func TestClientVersionReadsBuildInfo(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.EscapedPath() != "/v1/version" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
+		}
+		_ = json.NewEncoder(w).Encode(model.BuildInfo{Version: "1.2.3", Commit: "abc"})
+	}))
+	defer server.Close()
+
+	custodiaClient := &Client{baseURL: server.URL, http: server.Client()}
+	version, err := custodiaClient.Version()
+	if err != nil || version.Version != "1.2.3" || version.Commit != "abc" {
+		t.Fatalf("unexpected version response: %+v err=%v", version, err)
+	}
+}
+
 func TestClientListAuditEventsUsesFilters(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet || r.URL.EscapedPath() != "/v1/audit-events" {
