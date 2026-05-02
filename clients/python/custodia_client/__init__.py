@@ -58,8 +58,12 @@ class CustodiaClient:
     def create_secret(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("POST", "/v1/secrets", json=payload)
 
-    def list_secrets(self) -> dict[str, Any]:
-        return self._request("GET", "/v1/secrets")
+    def list_secrets(self, limit: int | None = None) -> dict[str, Any]:
+        query = _query_params(limit=str(limit) if limit is not None else None)
+        path = "/v1/secrets"
+        if query:
+            path += f"?{query}"
+        return self._request("GET", path)
 
     def get_secret(self, secret_id: str) -> dict[str, Any]:
         return self._request("GET", f"/v1/secrets/{_path_escape(secret_id)}")
