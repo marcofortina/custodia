@@ -449,6 +449,15 @@ func (s *MemoryStore) ListAccessGrantRequests(_ context.Context, secretID string
 			Status:              status,
 		})
 	}
+	sort.Slice(requests, func(i, j int) bool {
+		if requests[i].RequestedAt.Equal(requests[j].RequestedAt) {
+			if requests[i].SecretID == requests[j].SecretID {
+				return requests[i].ClientID < requests[j].ClientID
+			}
+			return requests[i].SecretID < requests[j].SecretID
+		}
+		return requests[i].RequestedAt.After(requests[j].RequestedAt)
+	})
 	return requests, nil
 }
 

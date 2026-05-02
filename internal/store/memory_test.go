@@ -8,6 +8,42 @@ import (
 	"custodia/internal/model"
 )
 
+func TestMemoryStoreListsAccessRequestsNewestFirst(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "admin", "admin")
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	mustCreateClient(t, store, "client_bob", "client_bob")
+	mustCreateClient(t, store, "client_charlie", "client_charlie")
+	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:        "secret",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	if _, err := store.RequestAccessGrant(ctx, "admin", created.SecretID, model.AccessGrantRequest{TargetClientID: "client_bob", Permissions: int(model.PermissionRead)}); err != nil {
+		t.Fatalf("request bob access: %v", err)
+	}
+	if _, err := store.RequestAccessGrant(ctx, "admin", created.SecretID, model.AccessGrantRequest{TargetClientID: "client_charlie", Permissions: int(model.PermissionRead)}); err != nil {
+		t.Fatalf("request charlie access: %v", err)
+	}
+	store.mu.Lock()
+	store.pendingAccess[pendingAccessKey(created.SecretID, created.VersionID, "client_bob")].RequestedAt = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	store.pendingAccess[pendingAccessKey(created.SecretID, created.VersionID, "client_charlie")].RequestedAt = time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC)
+	store.mu.Unlock()
+
+	requests, err := store.ListAccessGrantRequests(ctx, "")
+	if err != nil {
+		t.Fatalf("list access requests: %v", err)
+	}
+	if len(requests) != 2 || requests[0].ClientID != "client_charlie" || requests[1].ClientID != "client_bob" {
+		t.Fatalf("expected newest-first access requests, got %+v", requests)
+	}
+}
+
 func TestMemoryStoreListsSecretAccessByClientID(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryStore()
