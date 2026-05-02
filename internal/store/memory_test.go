@@ -8,6 +8,26 @@ import (
 	"custodia/internal/model"
 )
 
+func TestMemoryStoreListsClientsInStableOrder(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_c", "client_c")
+	mustCreateClient(t, store, "client_a", "client_a")
+	mustCreateClient(t, store, "client_b", "client_b")
+
+	clients, err := store.ListClients(ctx)
+	if err != nil {
+		t.Fatalf("list clients: %v", err)
+	}
+	got := []string{clients[0].ClientID, clients[1].ClientID, clients[2].ClientID}
+	want := []string{"client_a", "client_b", "client_c"}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("expected stable client ordering %v, got %v", want, got)
+		}
+	}
+}
+
 func TestMemoryStoreSecretLifecycleKeepsEnvelopePerClient(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryStore()

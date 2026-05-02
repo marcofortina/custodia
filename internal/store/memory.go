@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -115,6 +116,7 @@ func (s *MemoryStore) ListClients(context.Context) ([]model.Client, error) {
 	for _, client := range s.clients {
 		clients = append(clients, client)
 	}
+	sort.Slice(clients, func(i, j int) bool { return clients[i].ClientID < clients[j].ClientID })
 	return clients, nil
 }
 
