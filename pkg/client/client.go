@@ -138,6 +138,30 @@ func (c *Client) ListAuditEvents(filters AuditEventFilters) ([]model.AuditEvent,
 	return response.AuditEvents, err
 }
 
+func (c *Client) ExportAuditEvents(filters AuditEventFilters) ([]byte, error) {
+	if err := validateOptionalLimit(filters.Limit); err != nil {
+		return nil, err
+	}
+	query := url.Values{}
+	if filters.Limit > 0 {
+		query.Set("limit", fmt.Sprintf("%d", filters.Limit))
+	}
+	addQueryFilter(query, "outcome", filters.Outcome)
+	addQueryFilter(query, "action", filters.Action)
+	addQueryFilter(query, "actor_client_id", filters.ActorClientID)
+	addQueryFilter(query, "resource_type", filters.ResourceType)
+	addQueryFilter(query, "resource_id", filters.ResourceID)
+	path := "/v1/audit-events/export"
+	if encoded := query.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
+	var response bytes.Buffer
+	if err := c.doRaw(http.MethodGet, path, nil, &response); err != nil {
+		return nil, err
+	}
+	return response.Bytes(), nil
+}
+
 func (c *Client) ListAccessGrantRequests(filters AccessGrantRequestFilters) ([]model.AccessGrantMetadata, error) {
 	query := url.Values{}
 	if filters.Limit > 0 {
@@ -262,6 +286,35 @@ func (c *Client) CreateSecretVersion(secretID string, req model.CreateSecretVers
 
 func (c *Client) DeleteSecret(secretID string) error {
 	return c.doJSON(http.MethodDelete, "/v1/secrets/"+pathEscape(secretID), nil, nil)
+}
+
+func (c *Client) doRaw(method, path string, payload any, out io.Writer) error {
+	var body io.Reader
+	if payload != nil {
+		encoded, err := json.Marshal(payload)
+		if err != nil {
+			return err
+		}
+		body = bytes.NewReader(encoded)
+	}
+	req, err := http.NewRequest(method, c.baseURL+path, body)
+	if err != nil {
+		return err
+	}
+	if payload != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	res, err := c.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode < 200 || res.StatusCode > 299 {
+		responseBody, _ := io.ReadAll(res.Body)
+		return fmt.Errorf("custodia request failed: %s: %s", res.Status, string(responseBody))
+	}
+	_, err = io.Copy(out, res.Body)
+	return err
 }
 
 func (c *Client) doJSON(method, path string, payload any, target any) error {

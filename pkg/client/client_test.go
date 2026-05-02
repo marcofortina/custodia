@@ -308,3 +308,25 @@ func TestClientRejectsInvalidListLimits(t *testing.T) {
 		t.Fatal("expected access request list limit error")
 	}
 }
+
+func TestClientExportAuditEventsUsesFilters(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.EscapedPath() != "/v1/audit-events/export" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
+		}
+		if got := r.URL.Query().Get("outcome"); got != "failure" {
+			t.Fatalf("unexpected outcome filter: %q", got)
+		}
+		_, _ = w.Write([]byte("{}\n"))
+	}))
+	defer server.Close()
+
+	custodiaClient := &Client{baseURL: server.URL, http: server.Client()}
+	payload, err := custodiaClient.ExportAuditEvents(AuditEventFilters{Limit: 10, Outcome: "failure"})
+	if err != nil {
+		t.Fatalf("export audit: %v", err)
+	}
+	if string(payload) != "{}\n" {
+		t.Fatalf("unexpected export payload: %q", string(payload))
+	}
+}
