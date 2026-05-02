@@ -110,3 +110,12 @@ The default test suite does not require external services. To exercise the optio
 go get github.com/jackc/pgx/v5
 TEST_CUSTODIA_POSTGRES_URL=postgres://user:pass@localhost:5432/custodia_test?sslmode=disable go test -tags postgres ./internal/store
 ```
+
+
+### Optional PostgreSQL integration check
+
+The default test target is dependency-free. To verify the optional PostgreSQL store, provide a live test database and run:
+
+```bash
+TEST_CUSTODIA_POSTGRES_URL=postgres://user:pass@localhost:5432/custodia_test?sslmode=disable make test-postgres
+```

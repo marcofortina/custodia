@@ -31,3 +31,8 @@ build:
 build-postgres:
 	$(GO) build -tags postgres ./cmd/custodia-server
 	$(GO) build -tags postgres ./cmd/vault-admin
+
+.PHONY: test-postgres
+test-postgres:
+	@if [ -z "$(TEST_CUSTODIA_POSTGRES_URL)" ]; then 		echo "TEST_CUSTODIA_POSTGRES_URL is required" >&2; 		exit 2; 	fi
+	$(GO) test -tags postgres ./internal/store
