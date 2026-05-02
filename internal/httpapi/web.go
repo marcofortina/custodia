@@ -115,6 +115,11 @@ func (s *Server) handleWebAudit(w http.ResponseWriter, r *http.Request) {
 		writeMappedError(w, err)
 		return
 	}
+	filtered, ok := s.filterAuditEventsForRequest(w, r, "web.audit_list", events)
+	if !ok {
+		return
+	}
+	events = filtered
 	rows := ""
 	for _, event := range events {
 		rows += "<tr><td>" + html.EscapeString(event.OccurredAt.Format(time.RFC3339)) + "</td><td>" + html.EscapeString(event.Action) + "</td><td>" + html.EscapeString(event.ActorClientID) + "</td><td>" + html.EscapeString(event.Outcome) + "</td></tr>"
