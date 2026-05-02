@@ -37,6 +37,7 @@ mtls:
   certKey: tls.crt
   keyKey: tls.key
   clientCAKey: ca.crt
+  clientCRLKey: ""
 
 resources:
   requests:

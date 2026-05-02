@@ -46,6 +46,10 @@ spec:
               value: /etc/custodia/tls/{{ .Values.mtls.keyKey }}
             - name: CUSTODIA_CLIENT_CA_FILE
               value: /etc/custodia/tls/{{ .Values.mtls.clientCAKey }}
+{{- if .Values.mtls.clientCRLKey }}
+            - name: CUSTODIA_CLIENT_CRL_FILE
+              value: /etc/custodia/tls/{{ .Values.mtls.clientCRLKey }}
+{{- end }}
           readinessProbe:
             httpGet:
               scheme: HTTP
