@@ -58,3 +58,26 @@ func statusOutcome(storeStatus, rateLimiterStatus string) string {
 	}
 	return "success"
 }
+
+func (s *Server) handleWebClients(w http.ResponseWriter, r *http.Request) {
+	clients, err := s.store.ListClients(r.Context())
+	if err != nil {
+		s.auditStoreFailure(r, "web.client_list", "client", "", err)
+		writeMappedError(w, err)
+		return
+	}
+	rows := ""
+	for _, client := range clients {
+		state := "active"
+		if !client.IsActive {
+			state = "revoked"
+		}
+		rows += "<tr><td>" + html.EscapeString(client.ClientID) + "</td><td>" + html.EscapeString(client.MTLSSubject) + "</td><td>" + html.EscapeString(state) + "</td></tr>"
+	}
+	if rows == "" {
+		rows = `<tr><td colspan="3">No clients found.</td></tr>`
+	}
+	body := "<h1>Clients</h1><table><thead><tr><th>Client ID</th><th>mTLS subject</th><th>Status</th></tr></thead><tbody>" + rows + "</tbody></table>"
+	s.audit(r, "web.client_list", "client", "", "success", nil)
+	writeWebPage(w, "Clients", body)
+}
