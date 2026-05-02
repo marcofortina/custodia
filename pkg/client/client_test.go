@@ -182,3 +182,24 @@ func TestClientAdminClientMethodsUseDocumentedAPIPaths(t *testing.T) {
 		}
 	}
 }
+
+func TestClientMeUsesDocumentedAPIPath(t *testing.T) {
+	requests := make([]string, 0, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests = append(requests, r.Method+" "+r.URL.EscapedPath())
+		if r.Method != http.MethodGet || r.URL.EscapedPath() != "/v1/me" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
+		}
+		_ = json.NewEncoder(w).Encode(model.Client{ClientID: "client/alice"})
+	}))
+	defer server.Close()
+
+	custodiaClient := &Client{baseURL: server.URL, http: server.Client()}
+	client, err := custodiaClient.Me()
+	if err != nil || client.ClientID != "client/alice" {
+		t.Fatalf("unexpected me response: %+v err=%v", client, err)
+	}
+	if len(requests) != 1 || requests[0] != "GET /v1/me" {
+		t.Fatalf("unexpected paths: %v", requests)
+	}
+}

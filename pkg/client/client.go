@@ -41,6 +41,11 @@ func New(cfg Config) (*Client, error) {
 	}, nil
 }
 
+func (c *Client) Me() (model.Client, error) {
+	var response model.Client
+	return response, c.doJSON(http.MethodGet, "/v1/me", nil, &response)
+}
+
 func (c *Client) ListClients() ([]model.Client, error) {
 	var response struct {
 		Clients []model.Client `json:"clients"`
