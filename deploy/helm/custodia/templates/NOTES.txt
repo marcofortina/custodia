@@ -1,0 +1,15 @@
+Custodia has been installed.
+
+API service:
+  {{ include "custodia.fullname" . }}:{{ .Values.service.port }}
+
+Health listener:
+  {{ include "custodia.fullname" . }}:{{ .Values.health.port }}
+
+The API listener is expected to run behind mTLS. The health listener only exposes
+/live and /ready style operational probes and must stay private to the cluster.
+
+Required Kubernetes secrets:
+  - mTLS material: {{ .Values.mtls.secretName }}
+  - database URL: {{ .Values.config.databaseURLSecretName }} / {{ .Values.config.databaseURLSecretKey }}
+  - Valkey URL: {{ .Values.config.valkeyURLSecretName }} / {{ .Values.config.valkeyURLSecretKey }}
