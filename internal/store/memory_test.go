@@ -510,3 +510,33 @@ func TestMemoryStoreRejectsOversizedCryptoMetadata(t *testing.T) {
 		t.Fatalf("expected oversized crypto metadata to be rejected, got %v", err)
 	}
 }
+
+func TestMemoryStoreDeleteSecretRevokesPendingAccessRequests(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "admin", "admin")
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	mustCreateClient(t, store, "client_bob", "client_bob")
+	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:        "secret",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	if _, err := store.RequestAccessGrant(ctx, "admin", created.SecretID, model.AccessGrantRequest{TargetClientID: "client_bob", Permissions: int(model.PermissionRead)}); err != nil {
+		t.Fatalf("request access: %v", err)
+	}
+	if err := store.DeleteSecret(ctx, "client_alice", created.SecretID); err != nil {
+		t.Fatalf("delete secret: %v", err)
+	}
+	requests, err := store.ListAccessGrantRequests(ctx, created.SecretID)
+	if err != nil {
+		t.Fatalf("list requests: %v", err)
+	}
+	if len(requests) != 1 || requests[0].Status != "revoked" {
+		t.Fatalf("expected pending request to be revoked after secret delete, got %+v", requests)
+	}
+}

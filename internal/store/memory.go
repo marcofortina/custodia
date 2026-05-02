@@ -314,6 +314,18 @@ func (s *MemoryStore) DeleteSecret(_ context.Context, actorClientID, secretID st
 	}
 	now := time.Now().UTC()
 	secret.DeletedAt = &now
+	for _, version := range secret.Versions {
+		for _, access := range version.Access {
+			if access.RevokedAt == nil {
+				access.RevokedAt = &now
+			}
+		}
+	}
+	for _, pending := range s.pendingAccess {
+		if pending.SecretID == secretID && pending.RevokedAt == nil {
+			pending.RevokedAt = &now
+		}
+	}
 	return nil
 }
 

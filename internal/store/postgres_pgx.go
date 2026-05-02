@@ -331,14 +331,25 @@ func (s *PostgresStore) DeleteSecret(ctx context.Context, actorClientID, secretI
 	if _, _, err := visibleVersion(ctx, s.pool, actorClientID, secretID, "", model.PermissionWrite); err != nil {
 		return err
 	}
-	tag, err := s.pool.Exec(ctx, `UPDATE secrets SET deleted_at = COALESCE(deleted_at, NOW()) WHERE secret_id = $1::uuid AND deleted_at IS NULL`, secretID)
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer rollbackIgnored(ctx, tx)
+	tag, err := tx.Exec(ctx, `UPDATE secrets SET deleted_at = COALESCE(deleted_at, NOW()) WHERE secret_id = $1::uuid AND deleted_at IS NULL`, secretID)
 	if err != nil {
 		return mapPostgresError(err)
 	}
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
-	return nil
+	if _, err := tx.Exec(ctx, `UPDATE secret_access SET revoked_at = COALESCE(revoked_at, NOW()) WHERE secret_id = $1::uuid AND revoked_at IS NULL`, secretID); err != nil {
+		return mapPostgresError(err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE secret_access_requests SET revoked_at = COALESCE(revoked_at, NOW()) WHERE secret_id = $1::uuid AND activated_at IS NULL AND revoked_at IS NULL`, secretID); err != nil {
+		return mapPostgresError(err)
+	}
+	return tx.Commit(ctx)
 }
 
 func (s *PostgresStore) ShareSecret(ctx context.Context, actorClientID, secretID string, req model.ShareSecretRequest) error {
