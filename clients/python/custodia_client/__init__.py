@@ -19,8 +19,11 @@ class CustodiaClient:
     def me(self) -> dict[str, Any]:
         return self._request("GET", "/v1/me")
 
-    def list_clients(self, limit: int | None = None) -> dict[str, Any]:
-        query = _query_params(limit=str(limit) if limit is not None else None)
+    def list_clients(self, limit: int | None = None, active: bool | None = None) -> dict[str, Any]:
+        query = _query_params(
+            limit=str(limit) if limit is not None else None,
+            active=str(active).lower() if active is not None else None,
+        )
         path = "/v1/clients"
         if query:
             path += f"?{query}"
