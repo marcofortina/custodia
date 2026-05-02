@@ -22,6 +22,7 @@
 - Minimal Go/Python clients, with Go and Python helpers for secret metadata and access grant workflows.
 - Docker, Compose and Helm deployment skeletons.
 - Admin-protected metadata-only web console pages for status, clients, access requests and audit summaries.
+- Build metadata propagation through status API, web status and `vault-admin version`.
 
 ## Not claimed as complete production implementation
 
