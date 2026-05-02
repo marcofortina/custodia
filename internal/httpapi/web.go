@@ -8,6 +8,7 @@ import (
 	"html"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -87,6 +88,21 @@ func (s *Server) handleWebClients(w http.ResponseWriter, r *http.Request) {
 		s.auditStoreFailure(r, "web.client_list", "client", "", err)
 		writeMappedError(w, err)
 		return
+	}
+	if rawActive := strings.TrimSpace(r.URL.Query().Get("active")); rawActive != "" {
+		active, ok := parseBoolQuery(rawActive)
+		if !ok {
+			s.auditFailure(r, "web.client_list", "client", "", map[string]string{"reason": "invalid_active_filter"})
+			writeError(w, http.StatusBadRequest, "invalid_active_filter")
+			return
+		}
+		filtered := clients[:0]
+		for _, client := range clients {
+			if client.IsActive == active {
+				filtered = append(filtered, client)
+			}
+		}
+		clients = filtered
 	}
 	rows := ""
 	for _, client := range clients {
