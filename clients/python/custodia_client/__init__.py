@@ -19,8 +19,12 @@ class CustodiaClient:
     def me(self) -> dict[str, Any]:
         return self._request("GET", "/v1/me")
 
-    def list_clients(self) -> dict[str, Any]:
-        return self._request("GET", "/v1/clients")
+    def list_clients(self, limit: int | None = None) -> dict[str, Any]:
+        query = _query_params(limit=str(limit) if limit is not None else None)
+        path = "/v1/clients"
+        if query:
+            path += f"?{query}"
+        return self._request("GET", path)
 
     def get_client(self, client_id: str) -> dict[str, Any]:
         return self._request("GET", f"/v1/clients/{_path_escape(client_id)}")
