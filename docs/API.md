@@ -6,7 +6,7 @@ All `/v1/*` routes require mTLS. The authenticated `client_id` is extracted from
 
 `POST /v1/secrets`
 
-Stores a base64-encoded ciphertext and base64-encoded opaque recipient envelopes. The caller must include its own envelope.
+Stores a base64-encoded ciphertext and base64-encoded opaque recipient envelopes. The caller must include its own envelope. Requests with more than `CUSTODIA_MAX_ENVELOPES_PER_SECRET` recipients are rejected with `413 Payload Too Large`; the default limit is `100`.
 
 ## Secret read
 
@@ -35,7 +35,7 @@ Requires the caller to have `share` on the selected version. The request must in
 
 `POST /v1/secrets/{secret_id}/versions`
 
-Requires `write`. Used for strong revocation and client-side cryptographic rotation by uploading new base64-encoded ciphertext and new opaque envelopes.
+Requires `write`. Used for strong revocation and client-side cryptographic rotation by uploading new base64-encoded ciphertext and new opaque envelopes. Requests with more than `CUSTODIA_MAX_ENVELOPES_PER_SECRET` recipients are rejected with `413 Payload Too Large`; the default limit is `100`.
 
 ## Revocation
 

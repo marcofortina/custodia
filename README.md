@@ -8,6 +8,7 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 - Client identity extraction from certificate SAN/CN.
 - REST API for encrypted secret create/read/delete/share/new-version.
 - Per-version access grants with `read`, `write`, `share` bitmask.
+- Configurable recipient-envelope cap for create/new-version requests, defaulting to 100.
 - Future revocation semantics: revoked grants stop future reads; already downloaded material is not invalidated.
 - PostgreSQL-compatible schema and store.
 - In-memory store for local development and tests.
@@ -58,4 +59,4 @@ all   = 7
 }
 ```
 
-The server validates authorization plus base64 transport syntax and stores the strings as opaque transport data. It does not interpret the cryptographic content.
+The server validates authorization, the configured envelope-count cap and base64 transport syntax, then stores the strings as opaque transport data. It does not interpret the cryptographic content.

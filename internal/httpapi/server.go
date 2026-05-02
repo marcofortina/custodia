@@ -26,14 +26,21 @@ type Options struct {
 
 type contextKey string
 
-const clientIDContextKey contextKey = "client_id"
+const (
+	clientIDContextKey           contextKey = "client_id"
+	DefaultMaxEnvelopesPerSecret            = 100
+)
 
 func New(options Options) *http.ServeMux {
+	maxEnvelopesPerSecret := options.MaxEnvelopesPerSecret
+	if maxEnvelopesPerSecret <= 0 {
+		maxEnvelopesPerSecret = DefaultMaxEnvelopesPerSecret
+	}
 	server := &Server{
 		store:                 options.Store,
 		limiter:               options.Limiter,
 		adminClientIDs:        options.AdminClientIDs,
-		maxEnvelopesPerSecret: options.MaxEnvelopesPerSecret,
+		maxEnvelopesPerSecret: maxEnvelopesPerSecret,
 		clientRateLimit:       options.ClientRateLimit,
 		globalRateLimit:       options.GlobalRateLimit,
 	}

@@ -100,6 +100,74 @@ func TestAPIRejectsInvalidOpaquePayloadEncoding(t *testing.T) {
 	assertLastAudit(t, memoryStore, "secret.create", "failure", "invalid_input")
 }
 
+func TestAPIDefaultsEnvelopeLimitWhenOptionIsUnset(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	body := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
+	req := mtlsRequest(http.MethodPost, "/v1/secrets", body, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", res.Code, res.Body.String())
+	}
+}
+
+func TestAPIRejectsTooManyCreateEnvelopes(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 1, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	body := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"},{"client_id":"client_bob","envelope":"ZW52ZWxvcGUtZm9yLWJvYg=="}],"permissions":7}`
+	req := mtlsRequest(http.MethodPost, "/v1/secrets", body, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected 413, got %d: %s", res.Code, res.Body.String())
+	}
+	assertLastAudit(t, memoryStore, "secret.create", "failure", "too_many_envelopes")
+}
+
+func TestAPIRejectsTooManyVersionEnvelopes(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 1, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	createBody := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
+	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected create 201, got %d: %s", res.Code, res.Body.String())
+	}
+	var created model.SecretVersionRef
+	if err := json.NewDecoder(res.Body).Decode(&created); err != nil {
+		t.Fatalf("decode created: %v", err)
+	}
+
+	versionBody := `{"ciphertext":"bmV3LWNpcGhlcnRleHQ=","envelopes":[{"client_id":"client_alice","envelope":"bmV3LWVudmVsb3BlLWFsaWNl"},{"client_id":"client_bob","envelope":"bmV3LWVudmVsb3BlLWJvYg=="}],"permissions":7}`
+	req = mtlsRequest(http.MethodPost, "/v1/secrets/"+created.SecretID+"/versions", versionBody, "client_alice")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected 413, got %d: %s", res.Code, res.Body.String())
+	}
+	assertLastAudit(t, memoryStore, "secret.version_create", "failure", "too_many_envelopes")
+}
+
 func TestAPIAuditsMissingClientCertificate(t *testing.T) {
 	memoryStore := store.NewMemoryStore()
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})

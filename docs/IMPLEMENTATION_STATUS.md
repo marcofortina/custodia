@@ -8,6 +8,7 @@
 - Secret access grants and future revocation.
 - Strict permission bitmask validation for read/write/share grants.
 - Base64 transport validation for ciphertext/envelope blobs and duplicate recipient rejection.
+- Configurable recipient-envelope cap with default 100 and HTTP 413 rejection on create/new-version overflow.
 - Hash-chained audit events for successful and failed auth/API operations.
 - PostgreSQL schema contract and in-memory executable store.
 - Valkey-compatible rate limiting.
