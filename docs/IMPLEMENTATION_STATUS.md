@@ -171,3 +171,23 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Added regression coverage for missing certificate, non-admin and admin access.
 
 - Optional `CUSTODIA_HEALTH_ADDR` is configured but only used after the dedicated health listener patch.
+
+## Patch 192 - audit export SHA-256 header
+
+- Added `X-Custodia-Audit-Export-SHA256` to JSONL audit exports.
+- The digest is computed over the exact response body bytes before they are written to the client.
+- Kept the endpoint metadata-only and independent from secret ciphertext/envelopes.
+
+## Patch 193 - audit export event count header
+
+- Added `X-Custodia-Audit-Export-Events` to expose the number of exported events.
+- Preserved bounded export semantics and existing audit export filters.
+
+## Patch 194 - audit export integrity documentation
+
+- Documented offline verification of audit JSONL exports.
+- Clarified the distinction between export artifact hashing and audit hash-chain verification.
+
+## Patch 195 - audit export integrity README link
+
+- Linked the audit export integrity guide from the project README.
