@@ -35,6 +35,20 @@ func webParagraph(text string) string {
 	return "<p>" + html.EscapeString(text) + "</p>"
 }
 
+func (s *Server) webOptionalLimit(w http.ResponseWriter, r *http.Request, action, resourceType, resourceID string, fallback int) (int, bool) {
+	limit := fallback
+	if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
+		parsed, err := strconv.Atoi(rawLimit)
+		if err != nil || parsed <= 0 || parsed > 500 {
+			s.auditFailure(r, action, resourceType, resourceID, map[string]string{"reason": "invalid_limit"})
+			writeError(w, http.StatusBadRequest, "invalid_limit")
+			return 0, false
+		}
+		limit = parsed
+	}
+	return limit, true
+}
+
 func (s *Server) handleWebStatus(w http.ResponseWriter, r *http.Request) {
 	storeStatus := "ok"
 	if err := s.store.Health(r.Context()); err != nil {
@@ -91,7 +105,11 @@ func (s *Server) handleWebClients(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleWebAudit(w http.ResponseWriter, r *http.Request) {
-	events, err := s.store.ListAuditEvents(r.Context(), 100)
+	limit, ok := s.webOptionalLimit(w, r, "web.audit_list", "audit_event", "", 100)
+	if !ok {
+		return
+	}
+	events, err := s.store.ListAuditEvents(r.Context(), limit)
 	if err != nil {
 		s.auditStoreFailure(r, "web.audit_list", "audit_event", "", err)
 		writeMappedError(w, err)
