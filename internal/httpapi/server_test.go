@@ -1610,3 +1610,51 @@ func TestAPIRateLimitResponsesIncludeRetryAfter(t *testing.T) {
 type denyLimiter struct{}
 
 func (denyLimiter) Allow(context.Context, string, int) (bool, error) { return false, nil }
+
+func TestWebConsoleRequiresAdminMTLS(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/web/", "", "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d: %s", res.Code, res.Body.String())
+	}
+}
+
+func TestWebConsoleRendersMetadataOnlyPages(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, clientID := range []string{"admin", "client_alice", "client_bob"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %s: %v", clientID, err)
+		}
+	}
+	ref, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{Name: "db password", Ciphertext: "c2VjcmV0LWNpcGhlcnRleHQ=", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "c2VjcmV0LWVudmVsb3Bl"}}, Permissions: int(model.PermissionAll)})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	if _, err := memoryStore.RequestAccessGrant(ctx, "admin", ref.SecretID, model.AccessGrantRequest{TargetClientID: "client_bob", Permissions: int(model.PermissionRead)}); err != nil {
+		t.Fatalf("request grant: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	for _, path := range []string{"/web/", "/web/status", "/web/clients", "/web/access-requests", "/web/audit", "/web/audit/verify"} {
+		req := mtlsRequest(http.MethodGet, path, "", "admin")
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+		if res.Code != http.StatusOK {
+			t.Fatalf("%s expected 200, got %d: %s", path, res.Code, res.Body.String())
+		}
+		body := res.Body.String()
+		if strings.Contains(body, "c2VjcmV0LWNpcGhlcnRleHQ=") || strings.Contains(body, "c2VjcmV0LWVudmVsb3Bl") {
+			t.Fatalf("%s leaked opaque crypto payload: %s", path, body)
+		}
+	}
+}
