@@ -119,6 +119,30 @@ func TestAPIClientRevokeAuditsReason(t *testing.T) {
 	}
 }
 
+func TestAPIMeReturnsAuthenticatedClientMetadata(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/me", "", "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var client model.Client
+	if err := json.NewDecoder(res.Body).Decode(&client); err != nil {
+		t.Fatalf("decode client: %v", err)
+	}
+	if client.ClientID != "client_alice" || !client.IsActive {
+		t.Fatalf("unexpected client metadata: %+v", client)
+	}
+	assertLastAudit(t, memoryStore, "client.me", "success", "")
+}
+
 func TestAPIAdminListsClientsWithActiveFilter(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()

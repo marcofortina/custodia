@@ -75,6 +75,18 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
+	clientID := clientIDFromContext(r)
+	client, err := s.store.GetClient(r.Context(), clientID)
+	if err != nil {
+		s.auditStoreFailure(r, "client.me", "client", clientID, err)
+		writeMappedError(w, err)
+		return
+	}
+	s.audit(r, "client.me", "client", clientID, "success", nil)
+	writeJSON(w, http.StatusOK, client)
+}
+
 func (s *Server) handleListClients(w http.ResponseWriter, r *http.Request) {
 	clients, err := s.store.ListClients(r.Context())
 	if err != nil {
