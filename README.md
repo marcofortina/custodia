@@ -17,7 +17,7 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 - Hash-chained audit event model with admin audit listing API/CLI.
 - Memory and Valkey-compatible rate limiter backends with readiness checks.
 - Minimal admin CLI for metadata operations exposed by the API.
-- Minimal Go and Python client libraries that only transport ciphertext and opaque envelopes.
+- Minimal Go and Python client libraries that only transport ciphertext and opaque envelopes; the Go client includes access workflow helpers.
 - Docker, Compose and Helm skeletons.
 
 ## What is deliberately not implemented server-side

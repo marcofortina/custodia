@@ -15,7 +15,7 @@
 - PostgreSQL schema contract and in-memory executable store.
 - Valkey-compatible rate limiting with `/ready` health checks.
 - Minimal admin CLI for API-backed client metadata create/list/revoke and access revoke operations.
-- Minimal Go/Python clients.
+- Minimal Go/Python clients, with Go helpers for secret metadata and access grant workflows.
 - Docker, Compose and Helm deployment skeletons.
 
 ## Not claimed as complete production implementation
@@ -84,3 +84,10 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Added optional rate-limiter health checks to `/ready`.
 - Added Valkey `PING` readiness support without adding external dependencies.
 - Kept `/health` lightweight and `/ready` dependency-aware.
+
+
+## Patch 016 - Go client access workflow helpers
+
+- Added Go client helpers for pending grant request, activation and access revoke.
+- Escaped dynamic URL path segments in the Go client to avoid malformed paths when ids contain reserved characters.
+- Added client-side tests for documented access workflow routes.

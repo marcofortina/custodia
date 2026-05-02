@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"custodia/internal/model"
@@ -55,20 +56,35 @@ func (c *Client) ListSecrets() ([]model.SecretMetadata, error) {
 
 func (c *Client) GetSecret(secretID string) (model.SecretReadResponse, error) {
 	var response model.SecretReadResponse
-	return response, c.doJSON(http.MethodGet, "/v1/secrets/"+secretID, nil, &response)
+	return response, c.doJSON(http.MethodGet, "/v1/secrets/"+pathEscape(secretID), nil, &response)
 }
 
 func (c *Client) ShareSecret(secretID string, req model.ShareSecretRequest) error {
-	return c.doJSON(http.MethodPost, "/v1/secrets/"+secretID+"/share", req, nil)
+	return c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/share", req, nil)
+}
+
+func (c *Client) RequestAccessGrant(secretID string, req model.AccessGrantRequest) (model.AccessGrantRef, error) {
+	var ref model.AccessGrantRef
+	return ref, c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/access-requests", req, &ref)
+}
+
+func (c *Client) ActivateAccessGrant(secretID, targetClientID string, req model.ActivateAccessRequest) error {
+	path := "/v1/secrets/" + pathEscape(secretID) + "/access/" + pathEscape(targetClientID) + "/activate"
+	return c.doJSON(http.MethodPost, path, req, nil)
+}
+
+func (c *Client) RevokeAccess(secretID, targetClientID string) error {
+	path := "/v1/secrets/" + pathEscape(secretID) + "/access/" + pathEscape(targetClientID)
+	return c.doJSON(http.MethodDelete, path, nil, nil)
 }
 
 func (c *Client) CreateSecretVersion(secretID string, req model.CreateSecretVersionRequest) (model.SecretVersionRef, error) {
 	var ref model.SecretVersionRef
-	return ref, c.doJSON(http.MethodPost, "/v1/secrets/"+secretID+"/versions", req, &ref)
+	return ref, c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/versions", req, &ref)
 }
 
 func (c *Client) DeleteSecret(secretID string) error {
-	return c.doJSON(http.MethodDelete, "/v1/secrets/"+secretID, nil, nil)
+	return c.doJSON(http.MethodDelete, "/v1/secrets/"+pathEscape(secretID), nil, nil)
 }
 
 func (c *Client) doJSON(method, path string, payload any, target any) error {
@@ -101,4 +117,8 @@ func (c *Client) doJSON(method, path string, payload any, target any) error {
 		return nil
 	}
 	return json.NewDecoder(res.Body).Decode(target)
+}
+
+func pathEscape(value string) string {
+	return url.PathEscape(value)
 }
