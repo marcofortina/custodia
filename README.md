@@ -97,6 +97,10 @@ vault-admin access activate --secret-id SECRET --client-id client_bob --envelope
 
 Client creation registers metadata only. Certificate issuance/signing remains outside the vault server and belongs to the dedicated CA/signing service described by the design.
 
+## Web metadata console
+
+The admin web console is intentionally metadata-only. It requires an admin mTLS identity and never renders ciphertext, envelopes, plaintext, or key material. See `docs/WEB_CONSOLE.md` for the current page map and security boundary.
+
 ## HTTP timeout guardrails
 
 The server has bounded HTTP timeouts by default: read/write 15s, idle 60s and graceful shutdown 10s. Override with `CUSTODIA_HTTP_READ_TIMEOUT_SECONDS`, `CUSTODIA_HTTP_WRITE_TIMEOUT_SECONDS`, `CUSTODIA_HTTP_IDLE_TIMEOUT_SECONDS` and `CUSTODIA_SHUTDOWN_TIMEOUT_SECONDS`.
