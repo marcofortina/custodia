@@ -103,6 +103,36 @@ func TestAPIClientRevokeAuditsReason(t *testing.T) {
 	}
 }
 
+func TestAPIAdminListsClientsWithActiveFilter(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, clientID := range []string{"admin", "client_active", "client_revoked"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %s: %v", clientID, err)
+		}
+	}
+	if err := memoryStore.RevokeClient(ctx, "client_revoked"); err != nil {
+		t.Fatalf("revoke client: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/clients?active=false", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var payload struct {
+		Clients []model.Client `json:"clients"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode clients: %v", err)
+	}
+	if len(payload.Clients) != 1 || payload.Clients[0].ClientID != "client_revoked" {
+		t.Fatalf("unexpected inactive clients: %+v", payload.Clients)
+	}
+}
+
 func TestAPIAdminCreatesClientMetadata(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()

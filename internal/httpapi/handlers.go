@@ -78,6 +78,22 @@ func (s *Server) handleListClients(w http.ResponseWriter, r *http.Request) {
 		writeMappedError(w, err)
 		return
 	}
+	if rawActive := strings.TrimSpace(r.URL.Query().Get("active")); rawActive != "" {
+		active, ok := parseBoolQuery(rawActive)
+		if !ok {
+			s.auditFailure(r, "client.list", "client", "", map[string]string{"reason": "invalid_active_filter"})
+			writeError(w, http.StatusBadRequest, "invalid_active_filter")
+			return
+		}
+		filtered := clients[:0]
+		for _, client := range clients {
+			if client.IsActive == active {
+				filtered = append(filtered, client)
+			}
+		}
+		clients = filtered
+	}
+	s.audit(r, "client.list", "client", "", "success", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"clients": clients})
 }
 
@@ -373,6 +389,17 @@ func (s *Server) handleCreateSecretVersion(w http.ResponseWriter, r *http.Reques
 	}
 	s.audit(r, "secret.version_create", "secret", secretID, "success", nil)
 	writeJSON(w, http.StatusCreated, ref)
+}
+
+func parseBoolQuery(value string) (bool, bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "true", "1", "yes":
+		return true, true
+	case "false", "0", "no":
+		return false, true
+	default:
+		return false, false
+	}
 }
 
 const maxJSONBodyBytes = 1 << 20
