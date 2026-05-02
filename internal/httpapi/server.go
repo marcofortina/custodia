@@ -31,7 +31,7 @@ const (
 	DefaultMaxEnvelopesPerSecret            = 100
 )
 
-func New(options Options) *http.ServeMux {
+func New(options Options) http.Handler {
 	maxEnvelopesPerSecret := options.MaxEnvelopesPerSecret
 	if maxEnvelopesPerSecret <= 0 {
 		maxEnvelopesPerSecret = DefaultMaxEnvelopesPerSecret
@@ -61,5 +61,16 @@ func New(options Options) *http.ServeMux {
 	mux.Handle("POST /v1/secrets/{secret_id}/access/{client_id}/activate", server.auth(http.HandlerFunc(server.handleActivateAccessGrant)))
 	mux.Handle("DELETE /v1/secrets/{secret_id}/access/{client_id}", server.auth(http.HandlerFunc(server.handleRevokeAccess)))
 	mux.Handle("POST /v1/secrets/{secret_id}/versions", server.auth(http.HandlerFunc(server.handleCreateSecretVersion)))
-	return mux
+	return securityHeaders(mux)
+}
+
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
+		next.ServeHTTP(w, r)
+	})
 }

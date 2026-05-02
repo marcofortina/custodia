@@ -29,3 +29,8 @@ Successful and failed authentication, authorization and metadata operations are 
 ## Admin boundary
 
 Admin metadata APIs are restricted to configured admin client IDs. This does not grant decryption capability.
+
+
+## HTTP response hardening
+
+Custodia emits conservative security headers by default, including `nosniff`, `DENY` framing, `no-referrer`, `no-store` and a restrictive Content Security Policy. The current web surface remains metadata-only and does not expose plaintext or client-side key material.

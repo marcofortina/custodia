@@ -11,6 +11,7 @@
 - Strict permission bitmask validation for read/write/share grants.
 - Base64 transport validation for ciphertext/envelope blobs and duplicate recipient rejection.
 - Strict JSON transport guardrails: `application/json` content type, 1 MiB body cap and trailing-payload rejection.
+- Default HTTP security headers for API and metadata-only web responses.
 - Configurable recipient-envelope cap with default 100 and HTTP 413 rejection on create/new-version overflow.
 - Hash-chained audit events for successful and failed auth/API operations, with admin-only listing API/CLI.
 - PostgreSQL schema contract, in-memory executable store and optional `pgx` PostgreSQL store behind the `postgres` build tag.
@@ -107,3 +108,9 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Capped JSON bodies at 1 MiB before decoding.
 - Rejected trailing JSON payloads after the first decoded value.
 - Added API tests for unsupported media type, trailing payloads and oversized bodies.
+
+## Patch 019 - default HTTP security headers
+
+- Added `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` and `Cache-Control: no-store`.
+- Added a restrictive default Content Security Policy for API and placeholder web responses.
+- Added a regression test so security headers stay present on lightweight health responses.
