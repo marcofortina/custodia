@@ -14,6 +14,8 @@ type Server struct {
 	clientRateLimit       int
 	globalRateLimit       int
 	ipRateLimit           int
+	storeBackend          string
+	rateLimitBackend      string
 }
 
 type Options struct {
@@ -24,6 +26,8 @@ type Options struct {
 	ClientRateLimit       int
 	GlobalRateLimit       int
 	IPRateLimit           int
+	StoreBackend          string
+	RateLimitBackend      string
 }
 
 type contextKey string
@@ -46,6 +50,8 @@ func New(options Options) http.Handler {
 		clientRateLimit:       options.ClientRateLimit,
 		globalRateLimit:       options.GlobalRateLimit,
 		ipRateLimit:           options.IPRateLimit,
+		storeBackend:          options.StoreBackend,
+		rateLimitBackend:      options.RateLimitBackend,
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", server.handleHealth)

@@ -1255,7 +1255,7 @@ func TestAdminCanReadOperationalStatus(t *testing.T) {
 	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
 		t.Fatalf("create admin: %v", err)
 	}
-	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 5000})
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 5000, StoreBackend: "memory", RateLimitBackend: "memory"})
 
 	req := mtlsRequest(http.MethodGet, "/v1/status", "", "admin")
 	res := httptest.NewRecorder()
@@ -1264,7 +1264,7 @@ func TestAdminCanReadOperationalStatus(t *testing.T) {
 		t.Fatalf("expected status 200, got %d: %s", res.Code, res.Body.String())
 	}
 	body := res.Body.String()
-	for _, token := range []string{`"status":"success"`, `"store":"ok"`, `"rate_limiter":"ok"`, `"max_envelopes_per_secret":100`} {
+	for _, token := range []string{`"status":"success"`, `"store":"ok"`, `"store_backend":"memory"`, `"rate_limiter":"ok"`, `"rate_limit_backend":"memory"`, `"max_envelopes_per_secret":100`} {
 		if !strings.Contains(body, token) {
 			t.Fatalf("expected %s in status body: %s", token, body)
 		}

@@ -45,6 +45,8 @@ func main() {
 		ClientRateLimit:       cfg.ClientRateLimitPerSecond,
 		GlobalRateLimit:       cfg.GlobalRateLimitPerSecond,
 		IPRateLimit:           cfg.IPRateLimitPerSecond,
+		StoreBackend:          cfg.StoreBackend,
+		RateLimitBackend:      cfg.RateLimitBackend,
 	})
 
 	server := &http.Server{

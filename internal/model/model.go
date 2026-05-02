@@ -163,7 +163,9 @@ type RevokeClientRequest struct {
 type OperationalStatus struct {
 	Status                string `json:"status"`
 	Store                 string `json:"store"`
+	StoreBackend          string `json:"store_backend,omitempty"`
 	RateLimiter           string `json:"rate_limiter"`
+	RateLimitBackend      string `json:"rate_limit_backend,omitempty"`
 	MaxEnvelopesPerSecret int    `json:"max_envelopes_per_secret"`
 	ClientRateLimitPerSec int    `json:"client_rate_limit_per_sec"`
 	GlobalRateLimitPerSec int    `json:"global_rate_limit_per_sec"`

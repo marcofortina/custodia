@@ -67,7 +67,9 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, model.OperationalStatus{
 		Status:                outcome,
 		Store:                 storeStatus,
+		StoreBackend:          s.storeBackend,
 		RateLimiter:           rateLimiterStatus,
+		RateLimitBackend:      s.rateLimitBackend,
 		MaxEnvelopesPerSecret: s.maxEnvelopesPerSecret,
 		ClientRateLimitPerSec: s.clientRateLimit,
 		GlobalRateLimitPerSec: s.globalRateLimit,
