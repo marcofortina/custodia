@@ -193,6 +193,9 @@ func (s *Server) handleListAuditEvents(w http.ResponseWriter, r *http.Request) {
 		}
 		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.ActorClientID == actorClientID })
 	}
+	if resourceType := strings.TrimSpace(r.URL.Query().Get("resource_type")); resourceType != "" {
+		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.ResourceType == resourceType })
+	}
 	s.audit(r, "audit.list", "audit_event", "", "success", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"audit_events": events})
 }

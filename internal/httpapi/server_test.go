@@ -119,6 +119,33 @@ func TestAPIClientRevokeAuditsReason(t *testing.T) {
 	}
 }
 
+func TestAPIAuditListFiltersByResourceType(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	_ = memoryStore.AppendAudit(ctx, model.AuditEvent{EventID: "1", ActorClientID: "admin", Action: "client.list", ResourceType: "client", Outcome: "success"})
+	_ = memoryStore.AppendAudit(ctx, model.AuditEvent{EventID: "2", ActorClientID: "admin", Action: "audit.list", ResourceType: "audit_event", Outcome: "success"})
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/audit-events?resource_type=audit_event", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var payload struct {
+		Events []model.AuditEvent `json:"audit_events"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode audit events: %v", err)
+	}
+	if len(payload.Events) != 1 || payload.Events[0].ResourceType != "audit_event" {
+		t.Fatalf("unexpected filtered audit events: %+v", payload.Events)
+	}
+}
+
 func TestAPIAuditListFiltersByActorClientID(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()
