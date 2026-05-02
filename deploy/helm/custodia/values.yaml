@@ -58,3 +58,7 @@ containerSecurityContext:
   capabilities:
     drop:
       - ALL
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
