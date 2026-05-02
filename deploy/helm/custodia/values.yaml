@@ -81,6 +81,12 @@ networkPolicy:
   egress:
     enabled: false
 
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
 autoscaling:
   enabled: false
   minReplicas: 3
