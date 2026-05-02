@@ -49,7 +49,7 @@ func (s *PostgresStore) Health(ctx context.Context) error {
 }
 
 func (s *PostgresStore) CreateClient(ctx context.Context, client model.Client) error {
-	if strings.TrimSpace(client.ClientID) == "" || strings.TrimSpace(client.MTLSSubject) == "" {
+	if !model.ValidClientID(client.ClientID) || strings.TrimSpace(client.MTLSSubject) == "" {
 		return ErrInvalidInput
 	}
 	_, err := s.pool.Exec(ctx, `
@@ -326,7 +326,7 @@ func (s *PostgresStore) DeleteSecret(ctx context.Context, actorClientID, secretI
 }
 
 func (s *PostgresStore) ShareSecret(ctx context.Context, actorClientID, secretID string, req model.ShareSecretRequest) error {
-	if strings.TrimSpace(req.TargetClientID) == "" || !model.ValidOpaqueBlob(req.Envelope) || !model.ValidPermissionBits(req.Permissions) || !validFutureExpiry(req.ExpiresAt) {
+	if !model.ValidClientID(req.TargetClientID) || !model.ValidOpaqueBlob(req.Envelope) || !model.ValidPermissionBits(req.Permissions) || !validFutureExpiry(req.ExpiresAt) {
 		return ErrInvalidInput
 	}
 	envelopeBytes, err := decodeOpaqueBlob(req.Envelope)
@@ -369,7 +369,7 @@ func (s *PostgresStore) ShareSecret(ctx context.Context, actorClientID, secretID
 }
 
 func (s *PostgresStore) RequestAccessGrant(ctx context.Context, actorClientID, secretID string, req model.AccessGrantRequest) (model.AccessGrantRef, error) {
-	if strings.TrimSpace(req.TargetClientID) == "" || !model.ValidPermissionBits(req.Permissions) || !validFutureExpiry(req.ExpiresAt) {
+	if !model.ValidClientID(req.TargetClientID) || !model.ValidPermissionBits(req.Permissions) || !validFutureExpiry(req.ExpiresAt) {
 		return model.AccessGrantRef{}, ErrInvalidInput
 	}
 	tx, err := s.pool.Begin(ctx)
@@ -414,7 +414,7 @@ func (s *PostgresStore) RequestAccessGrant(ctx context.Context, actorClientID, s
 }
 
 func (s *PostgresStore) ActivateAccessGrant(ctx context.Context, actorClientID, secretID, targetClientID string, req model.ActivateAccessRequest) error {
-	if strings.TrimSpace(targetClientID) == "" || !model.ValidOpaqueBlob(req.Envelope) {
+	if !model.ValidClientID(targetClientID) || !model.ValidOpaqueBlob(req.Envelope) {
 		return ErrInvalidInput
 	}
 	envelopeBytes, err := decodeOpaqueBlob(req.Envelope)

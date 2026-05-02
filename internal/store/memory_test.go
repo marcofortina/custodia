@@ -455,3 +455,21 @@ func TestMemoryStoreExpiredPendingGrantCannotBeActivated(t *testing.T) {
 		t.Fatalf("expected expired pending grant activation to be rejected, got %v", err)
 	}
 }
+
+func TestMemoryStoreRejectsInvalidClientIdentifiers(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	if err := store.CreateClient(ctx, model.Client{ClientID: "client alice", MTLSSubject: "client alice"}); err != ErrInvalidInput {
+		t.Fatalf("expected invalid client id to be rejected, got %v", err)
+	}
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	_, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:        "secret",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client/alice", Envelope: "ZW52ZWxvcGU="}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != ErrInvalidInput {
+		t.Fatalf("expected invalid envelope client id to be rejected, got %v", err)
+	}
+}

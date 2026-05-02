@@ -74,7 +74,7 @@ func NewMemoryStore() *MemoryStore {
 func (s *MemoryStore) Health(context.Context) error { return nil }
 
 func (s *MemoryStore) CreateClient(_ context.Context, client model.Client) error {
-	if strings.TrimSpace(client.ClientID) == "" || strings.TrimSpace(client.MTLSSubject) == "" {
+	if !model.ValidClientID(client.ClientID) || strings.TrimSpace(client.MTLSSubject) == "" {
 		return ErrInvalidInput
 	}
 	s.mu.Lock()
@@ -305,7 +305,7 @@ func (s *MemoryStore) DeleteSecret(_ context.Context, actorClientID, secretID st
 }
 
 func (s *MemoryStore) ShareSecret(_ context.Context, actorClientID, secretID string, req model.ShareSecretRequest) error {
-	if strings.TrimSpace(req.TargetClientID) == "" || !model.ValidOpaqueBlob(req.Envelope) {
+	if !model.ValidClientID(req.TargetClientID) || !model.ValidOpaqueBlob(req.Envelope) {
 		return ErrInvalidInput
 	}
 	if !model.ValidPermissionBits(req.Permissions) {
@@ -345,7 +345,7 @@ func (s *MemoryStore) ShareSecret(_ context.Context, actorClientID, secretID str
 }
 
 func (s *MemoryStore) RequestAccessGrant(_ context.Context, actorClientID, secretID string, req model.AccessGrantRequest) (model.AccessGrantRef, error) {
-	if strings.TrimSpace(req.TargetClientID) == "" || !model.ValidPermissionBits(req.Permissions) {
+	if !model.ValidClientID(req.TargetClientID) || !model.ValidPermissionBits(req.Permissions) {
 		return model.AccessGrantRef{}, ErrInvalidInput
 	}
 	if !validFutureExpiry(req.ExpiresAt) {
@@ -384,7 +384,7 @@ func (s *MemoryStore) RequestAccessGrant(_ context.Context, actorClientID, secre
 }
 
 func (s *MemoryStore) ActivateAccessGrant(_ context.Context, actorClientID, secretID, targetClientID string, req model.ActivateAccessRequest) error {
-	if strings.TrimSpace(targetClientID) == "" || !model.ValidOpaqueBlob(req.Envelope) {
+	if !model.ValidClientID(targetClientID) || !model.ValidOpaqueBlob(req.Envelope) {
 		return ErrInvalidInput
 	}
 	s.mu.Lock()
@@ -596,7 +596,7 @@ func validateOpaqueSecretPayload(ciphertext string, envelopes []model.RecipientE
 	seen := make(map[string]bool, len(envelopes))
 	for _, envelope := range envelopes {
 		clientID := strings.TrimSpace(envelope.ClientID)
-		if clientID == "" || seen[clientID] || !model.ValidOpaqueBlob(envelope.Envelope) {
+		if !model.ValidClientID(clientID) || seen[clientID] || !model.ValidOpaqueBlob(envelope.Envelope) {
 			return ErrInvalidInput
 		}
 		seen[clientID] = true
