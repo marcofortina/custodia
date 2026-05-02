@@ -60,13 +60,13 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		outcome = "degraded"
 	}
 	s.audit(r, "status.read", "system", "", outcome, nil)
-	writeJSON(w, http.StatusOK, map[string]any{
-		"status":                    outcome,
-		"store":                     storeStatus,
-		"rate_limiter":              rateLimiterStatus,
-		"max_envelopes_per_secret":  s.maxEnvelopesPerSecret,
-		"client_rate_limit_per_sec": s.clientRateLimit,
-		"global_rate_limit_per_sec": s.globalRateLimit,
+	writeJSON(w, http.StatusOK, model.OperationalStatus{
+		Status:                outcome,
+		Store:                 storeStatus,
+		RateLimiter:           rateLimiterStatus,
+		MaxEnvelopesPerSecret: s.maxEnvelopesPerSecret,
+		ClientRateLimitPerSec: s.clientRateLimit,
+		GlobalRateLimitPerSec: s.globalRateLimit,
 	})
 }
 

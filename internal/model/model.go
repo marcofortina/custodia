@@ -144,6 +144,15 @@ type RevokeClientRequest struct {
 	Reason   string `json:"reason,omitempty"`
 }
 
+type OperationalStatus struct {
+	Status                string `json:"status"`
+	Store                 string `json:"store"`
+	RateLimiter           string `json:"rate_limiter"`
+	MaxEnvelopesPerSecret int    `json:"max_envelopes_per_secret"`
+	ClientRateLimitPerSec int    `json:"client_rate_limit_per_sec"`
+	GlobalRateLimitPerSec int    `json:"global_rate_limit_per_sec"`
+}
+
 type AuditEvent struct {
 	EventID       string          `json:"event_id"`
 	OccurredAt    time.Time       `json:"occurred_at"`

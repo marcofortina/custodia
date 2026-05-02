@@ -59,6 +59,27 @@ func (c *Client) GetSecret(secretID string) (model.SecretReadResponse, error) {
 	return response, c.doJSON(http.MethodGet, "/v1/secrets/"+pathEscape(secretID), nil, &response)
 }
 
+func (c *Client) ListSecretVersions(secretID string) ([]model.SecretVersionMetadata, error) {
+	var response struct {
+		Versions []model.SecretVersionMetadata `json:"versions"`
+	}
+	err := c.doJSON(http.MethodGet, "/v1/secrets/"+pathEscape(secretID)+"/versions", nil, &response)
+	return response.Versions, err
+}
+
+func (c *Client) ListSecretAccess(secretID string) ([]model.SecretAccessMetadata, error) {
+	var response struct {
+		Access []model.SecretAccessMetadata `json:"access"`
+	}
+	err := c.doJSON(http.MethodGet, "/v1/secrets/"+pathEscape(secretID)+"/access", nil, &response)
+	return response.Access, err
+}
+
+func (c *Client) Status() (model.OperationalStatus, error) {
+	var response model.OperationalStatus
+	return response, c.doJSON(http.MethodGet, "/v1/status", nil, &response)
+}
+
 func (c *Client) ShareSecret(secretID string, req model.ShareSecretRequest) error {
 	return c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/share", req, nil)
 }

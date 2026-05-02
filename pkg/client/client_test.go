@@ -64,3 +64,58 @@ func TestClientAccessGrantMethodsUseDocumentedAPIPaths(t *testing.T) {
 		}
 	}
 }
+
+func TestClientMetadataMethodsUseDocumentedAPIPaths(t *testing.T) {
+	requests := make([]string, 0, 3)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests = append(requests, r.Method+" "+r.URL.EscapedPath())
+		switch r.URL.EscapedPath() {
+		case "/v1/secrets/secret%2Fid/versions":
+			if r.Method != http.MethodGet {
+				t.Fatalf("unexpected versions method: %s", r.Method)
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"versions": []model.SecretVersionMetadata{{SecretID: "secret/id", VersionID: "version"}}})
+		case "/v1/secrets/secret%2Fid/access":
+			if r.Method != http.MethodGet {
+				t.Fatalf("unexpected access method: %s", r.Method)
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"access": []model.SecretAccessMetadata{{SecretID: "secret/id", VersionID: "version", ClientID: "client/bob"}}})
+		case "/v1/status":
+			if r.Method != http.MethodGet {
+				t.Fatalf("unexpected status method: %s", r.Method)
+			}
+			_ = json.NewEncoder(w).Encode(model.OperationalStatus{Status: "success", Store: "ok", RateLimiter: "ok"})
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.EscapedPath())
+		}
+	}))
+	defer server.Close()
+
+	custodiaClient := &Client{baseURL: server.URL, http: server.Client()}
+	versions, err := custodiaClient.ListSecretVersions("secret/id")
+	if err != nil || len(versions) != 1 || versions[0].VersionID != "version" {
+		t.Fatalf("unexpected versions response: %+v err=%v", versions, err)
+	}
+	access, err := custodiaClient.ListSecretAccess("secret/id")
+	if err != nil || len(access) != 1 || access[0].ClientID != "client/bob" {
+		t.Fatalf("unexpected access response: %+v err=%v", access, err)
+	}
+	status, err := custodiaClient.Status()
+	if err != nil || status.Status != "success" {
+		t.Fatalf("unexpected status response: %+v err=%v", status, err)
+	}
+
+	expected := []string{
+		"GET /v1/secrets/secret%2Fid/versions",
+		"GET /v1/secrets/secret%2Fid/access",
+		"GET /v1/status",
+	}
+	if len(requests) != len(expected) {
+		t.Fatalf("expected %d requests, got %d: %+v", len(expected), len(requests), requests)
+	}
+	for idx := range expected {
+		if requests[idx] != expected[idx] {
+			t.Fatalf("request %d: expected %q, got %q", idx, expected[idx], requests[idx])
+		}
+	}
+}
