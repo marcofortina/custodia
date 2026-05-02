@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "custodia.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "custodia.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  CUSTODIA_API_ADDR: {{ .Values.config.apiAddr | quote }}
+  CUSTODIA_STORE_BACKEND: {{ .Values.config.storeBackend | quote }}
+  CUSTODIA_RATE_LIMIT_BACKEND: {{ .Values.config.rateLimitBackend | quote }}
+  CUSTODIA_ADMIN_CLIENT_IDS: {{ .Values.config.adminClientIDs | quote }}
+  CUSTODIA_MAX_ENVELOPES_PER_SECRET: {{ .Values.config.maxEnvelopesPerSecret | quote }}
+  CUSTODIA_CLIENT_RATE_LIMIT_PER_SECOND: {{ .Values.config.clientRateLimitPerSecond | quote }}
+  CUSTODIA_GLOBAL_RATE_LIMIT_PER_SECOND: {{ .Values.config.globalRateLimitPerSecond | quote }}
+  CUSTODIA_IP_RATE_LIMIT_PER_SECOND: {{ .Values.config.ipRateLimitPerSecond | quote }}
+  CUSTODIA_HTTP_READ_TIMEOUT_SECONDS: {{ .Values.config.httpReadTimeoutSeconds | quote }}
+  CUSTODIA_HTTP_WRITE_TIMEOUT_SECONDS: {{ .Values.config.httpWriteTimeoutSeconds | quote }}
+  CUSTODIA_HTTP_IDLE_TIMEOUT_SECONDS: {{ .Values.config.httpIdleTimeoutSeconds | quote }}
+  CUSTODIA_SHUTDOWN_TIMEOUT_SECONDS: {{ .Values.config.shutdownTimeoutSeconds | quote }}

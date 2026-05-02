@@ -21,6 +21,11 @@ config:
   maxEnvelopesPerSecret: 100
   clientRateLimitPerSecond: 100
   globalRateLimitPerSecond: 5000
+  ipRateLimitPerSecond: 1000
+  httpReadTimeoutSeconds: 15
+  httpWriteTimeoutSeconds: 15
+  httpIdleTimeoutSeconds: 60
+  shutdownTimeoutSeconds: 10
 
 mtls:
   enabled: true
