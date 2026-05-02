@@ -785,3 +785,53 @@ func TestAPIListsSecretAccessMetadataOnlyForShareClient(t *testing.T) {
 	}
 	assertLastAudit(t, memoryStore, "secret.access_list", "success", "")
 }
+
+func TestAPIListsSecretVersionsMetadataOnly(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create alice: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	createBody := `{"name":"rotated","ciphertext":"Y2lwaGVydGV4dC12MQ==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtdjE="}],"permissions":7}`
+	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected create 201, got %d: %s", res.Code, res.Body.String())
+	}
+	var created model.SecretVersionRef
+	if err := json.NewDecoder(res.Body).Decode(&created); err != nil {
+		t.Fatalf("decode created: %v", err)
+	}
+
+	versionBody := `{"ciphertext":"Y2lwaGVydGV4dC12Mg==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtdjI="}],"permissions":7}`
+	req = mtlsRequest(http.MethodPost, "/v1/secrets/"+created.SecretID+"/versions", versionBody, "client_alice")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected version 201, got %d: %s", res.Code, res.Body.String())
+	}
+
+	req = mtlsRequest(http.MethodGet, "/v1/secrets/"+created.SecretID+"/versions", "", "client_alice")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected version list 200, got %d: %s", res.Code, res.Body.String())
+	}
+	body := res.Body.String()
+	if strings.Contains(body, "Y2lwaGVydGV4d") || strings.Contains(body, "ZW52ZWxvcGU") {
+		t.Fatalf("version listing leaked opaque secret material: %s", body)
+	}
+	var payload struct {
+		Versions []model.SecretVersionMetadata `json:"versions"`
+	}
+	if err := json.Unmarshal([]byte(body), &payload); err != nil {
+		t.Fatalf("decode versions: %v", err)
+	}
+	if len(payload.Versions) != 2 || payload.Versions[0].RevokedAt != nil || payload.Versions[1].RevokedAt == nil {
+		t.Fatalf("unexpected version metadata: %+v", payload.Versions)
+	}
+	assertLastAudit(t, memoryStore, "secret.version_list", "success", "")
+}

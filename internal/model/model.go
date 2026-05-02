@@ -106,6 +106,15 @@ type SecretMetadata struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+// SecretVersionMetadata exposes version lifecycle metadata only. It deliberately omits ciphertext and crypto metadata.
+type SecretVersionMetadata struct {
+	SecretID          string     `json:"secret_id"`
+	VersionID         string     `json:"version_id"`
+	CreatedAt         time.Time  `json:"created_at"`
+	CreatedByClientID string     `json:"created_by_client_id"`
+	RevokedAt         *time.Time `json:"revoked_at,omitempty"`
+}
+
 // SecretAccessMetadata exposes authorization metadata only. It deliberately omits envelopes.
 type SecretAccessMetadata struct {
 	SecretID    string     `json:"secret_id"`

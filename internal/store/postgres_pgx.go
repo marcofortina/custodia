@@ -259,6 +259,30 @@ func (s *PostgresStore) GetSecret(ctx context.Context, actorClientID, secretID s
 	return response, nil
 }
 
+func (s *PostgresStore) ListSecretVersions(ctx context.Context, actorClientID, secretID string) ([]model.SecretVersionMetadata, error) {
+	if _, _, err := visibleVersion(ctx, s.pool, actorClientID, secretID, "", model.PermissionRead); err != nil {
+		return nil, err
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT secret_id::text, version_id::text, created_at, created_by_client_id, revoked_at
+		FROM secret_versions
+		WHERE secret_id = $1::uuid
+		ORDER BY created_at DESC`, secretID)
+	if err != nil {
+		return nil, mapPostgresError(err)
+	}
+	defer rows.Close()
+	versions := make([]model.SecretVersionMetadata, 0)
+	for rows.Next() {
+		var version model.SecretVersionMetadata
+		if err := rows.Scan(&version.SecretID, &version.VersionID, &version.CreatedAt, &version.CreatedByClientID, &version.RevokedAt); err != nil {
+			return nil, mapPostgresError(err)
+		}
+		versions = append(versions, version)
+	}
+	return versions, mapPostgresError(rows.Err())
+}
+
 func (s *PostgresStore) ListSecretAccess(ctx context.Context, actorClientID, secretID string) ([]model.SecretAccessMetadata, error) {
 	_, versionID, err := visibleVersion(ctx, s.pool, actorClientID, secretID, "", model.PermissionShare)
 	if err != nil {

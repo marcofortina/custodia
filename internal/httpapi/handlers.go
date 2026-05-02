@@ -178,6 +178,18 @@ func (s *Server) handleGetSecret(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, response)
 }
 
+func (s *Server) handleListSecretVersions(w http.ResponseWriter, r *http.Request) {
+	secretID := r.PathValue("secret_id")
+	versions, err := s.store.ListSecretVersions(r.Context(), clientIDFromContext(r), secretID)
+	if err != nil {
+		s.auditStoreFailure(r, "secret.version_list", "secret", secretID, err)
+		writeMappedError(w, err)
+		return
+	}
+	s.audit(r, "secret.version_list", "secret", secretID, "success", nil)
+	writeJSON(w, http.StatusOK, map[string]any{"versions": versions})
+}
+
 func (s *Server) handleListSecretAccess(w http.ResponseWriter, r *http.Request) {
 	secretID := r.PathValue("secret_id")
 	accesses, err := s.store.ListSecretAccess(r.Context(), clientIDFromContext(r), secretID)

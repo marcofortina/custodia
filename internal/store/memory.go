@@ -247,6 +247,27 @@ func (s *MemoryStore) GetSecret(_ context.Context, actorClientID, secretID strin
 	}, nil
 }
 
+func (s *MemoryStore) ListSecretVersions(_ context.Context, actorClientID, secretID string) ([]model.SecretVersionMetadata, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	secret, _, _, err := s.visibleSecretLocked(actorClientID, secretID, model.PermissionRead)
+	if err != nil {
+		return nil, err
+	}
+	versions := make([]model.SecretVersionMetadata, 0, len(secret.Versions))
+	for i := len(secret.Versions) - 1; i >= 0; i-- {
+		version := secret.Versions[i]
+		versions = append(versions, model.SecretVersionMetadata{
+			SecretID:          secret.SecretID,
+			VersionID:         version.VersionID,
+			CreatedAt:         version.CreatedAt,
+			CreatedByClientID: version.CreatedByClientID,
+			RevokedAt:         cloneTimePtr(version.RevokedAt),
+		})
+	}
+	return versions, nil
+}
+
 func (s *MemoryStore) ListSecretAccess(_ context.Context, actorClientID, secretID string) ([]model.SecretAccessMetadata, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
