@@ -63,6 +63,19 @@ topologySpreadConstraints:
   topologyKey: topology.kubernetes.io/zone
   whenUnsatisfiable: ScheduleAnyway
 
+
+probes:
+  readiness:
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  liveness:
+    initialDelaySeconds: 10
+    periodSeconds: 20
+    timeoutSeconds: 3
+    failureThreshold: 3
+
 resources:
   requests:
     cpu: 100m
