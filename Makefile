@@ -8,6 +8,11 @@ test:
 fmt:
 	gofmt -w $$(find . -name '*.go')
 
+
+.PHONY: check
+check: test build
+	python3 -m py_compile clients/python/custodia_client/__init__.py
+
 .PHONY: run-dev
 run-dev:
 	CUSTODIA_DEV_INSECURE_HTTP=true \
