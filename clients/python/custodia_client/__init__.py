@@ -24,6 +24,15 @@ class CustodiaClient:
     def get_secret(self, secret_id: str) -> dict[str, Any]:
         return self._request("GET", f"/v1/secrets/{_path_escape(secret_id)}")
 
+    def list_secret_versions(self, secret_id: str) -> dict[str, Any]:
+        return self._request("GET", f"/v1/secrets/{_path_escape(secret_id)}/versions")
+
+    def list_secret_access(self, secret_id: str) -> dict[str, Any]:
+        return self._request("GET", f"/v1/secrets/{_path_escape(secret_id)}/access")
+
+    def status(self) -> dict[str, Any]:
+        return self._request("GET", "/v1/status")
+
     def share_secret(self, secret_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("POST", f"/v1/secrets/{_path_escape(secret_id)}/share", json=payload)
 

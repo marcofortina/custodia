@@ -7,6 +7,9 @@ Implemented helpers:
 - `create_secret(payload)`
 - `list_secrets()` metadata-only, no ciphertext or envelopes
 - `get_secret(secret_id)`
+- `list_secret_versions(secret_id)` metadata-only, no ciphertext or crypto metadata
+- `list_secret_access(secret_id)` metadata-only, no envelopes
+- `status()` admin metadata-only operational status
 - `share_secret(secret_id, payload)`
 - `request_access_grant(secret_id, payload)`
 - `activate_access_grant(secret_id, client_id, payload)`
