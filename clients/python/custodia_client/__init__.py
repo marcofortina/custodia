@@ -38,6 +38,28 @@ class CustodiaClient:
     def revoke_client(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("POST", "/v1/clients/revoke", json=payload)
 
+    def list_audit_events(
+        self,
+        limit: int | None = None,
+        outcome: str | None = None,
+        action: str | None = None,
+        actor_client_id: str | None = None,
+        resource_type: str | None = None,
+        resource_id: str | None = None,
+    ) -> dict[str, Any]:
+        query = _query_params(
+            limit=str(limit) if limit is not None else None,
+            outcome=outcome,
+            action=action,
+            actor_client_id=actor_client_id,
+            resource_type=resource_type,
+            resource_id=resource_id,
+        )
+        path = "/v1/audit-events"
+        if query:
+            path += f"?{query}"
+        return self._request("GET", path)
+
     def list_access_grant_requests(
         self,
         secret_id: str | None = None,
