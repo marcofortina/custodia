@@ -161,6 +161,9 @@ func (c *Client) ExportAuditEvents(filters AuditEventFilters) ([]byte, error) {
 }
 
 func (c *Client) ListAccessGrantRequests(filters AccessGrantRequestFilters) ([]model.AccessGrantMetadata, error) {
+	if err := validateAccessGrantRequestFilters(filters); err != nil {
+		return nil, err
+	}
 	query := url.Values{}
 	if filters.Limit > 0 {
 		query.Set("limit", fmt.Sprintf("%d", filters.Limit))
@@ -355,6 +358,25 @@ func addQueryFilter(query url.Values, key string, value string) {
 	if value != "" {
 		query.Set(key, value)
 	}
+}
+
+func validateAccessGrantRequestFilters(filters AccessGrantRequestFilters) error {
+	if err := validateOptionalLimit(filters.Limit); err != nil {
+		return err
+	}
+	if filters.SecretID != "" && !model.ValidUUIDID(filters.SecretID) {
+		return fmt.Errorf("secret id filter is invalid")
+	}
+	if filters.Status != "" && !model.ValidAccessRequestStatus(filters.Status) {
+		return fmt.Errorf("status filter is invalid")
+	}
+	if filters.ClientID != "" && !model.ValidClientID(filters.ClientID) {
+		return fmt.Errorf("client id filter is invalid")
+	}
+	if filters.RequestedByClientID != "" && !model.ValidClientID(filters.RequestedByClientID) {
+		return fmt.Errorf("requested by client id filter is invalid")
+	}
+	return nil
 }
 
 func validateAuditEventFilters(filters AuditEventFilters) error {

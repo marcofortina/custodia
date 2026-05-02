@@ -349,3 +349,22 @@ func TestClientAuditFiltersRejectInvalidValues(t *testing.T) {
 		t.Fatal("expected invalid resource id error")
 	}
 }
+
+func TestClientAccessRequestFiltersRejectInvalidValues(t *testing.T) {
+	custodiaClient := &Client{}
+	if _, err := custodiaClient.ListAccessGrantRequests(AccessGrantRequestFilters{Limit: 501}); err == nil {
+		t.Fatal("expected invalid limit error")
+	}
+	if _, err := custodiaClient.ListAccessGrantRequests(AccessGrantRequestFilters{SecretID: "not-a-uuid"}); err == nil {
+		t.Fatal("expected invalid secret id error")
+	}
+	if _, err := custodiaClient.ListAccessGrantRequests(AccessGrantRequestFilters{Status: "done"}); err == nil {
+		t.Fatal("expected invalid status error")
+	}
+	if _, err := custodiaClient.ListAccessGrantRequests(AccessGrantRequestFilters{ClientID: "client bad"}); err == nil {
+		t.Fatal("expected invalid client id error")
+	}
+	if _, err := custodiaClient.ListAccessGrantRequests(AccessGrantRequestFilters{RequestedByClientID: "client bad"}); err == nil {
+		t.Fatal("expected invalid requester id error")
+	}
+}
