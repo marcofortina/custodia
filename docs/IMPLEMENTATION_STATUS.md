@@ -21,6 +21,7 @@
 - Minimal admin CLI for API-backed client metadata create/list/revoke and access revoke operations.
 - Minimal Go/Python clients, with Go and Python helpers for secret metadata and access grant workflows.
 - Docker, Compose and Helm deployment skeletons.
+- Admin-protected metadata-only web console pages for status, clients, access requests and audit summaries.
 
 ## Not claimed as complete production implementation
 
@@ -31,7 +32,7 @@ The repository contains an executable standard-library baseline and deployable b
 - production PostgreSQL/CockroachDB topology, migrations automation and PostgreSQL integration tests against a live database;
 - Valkey cluster with mTLS;
 - load balancer TLS pass-through configuration;
-- web UI MFA/passkey implementation beyond the metadata-only placeholder;
+- web UI MFA/passkey implementation beyond the metadata-only admin console;
 - formal verification and WORM/SIEM integration.
 
 These are explicitly operational components in the analysis and cannot be truthfully completed as local source code only.
