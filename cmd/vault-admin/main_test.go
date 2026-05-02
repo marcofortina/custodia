@@ -25,3 +25,10 @@ func TestRunClientListRejectsInvalidLimit(t *testing.T) {
 		t.Fatal("expected invalid limit error")
 	}
 }
+
+func TestRunAuditExportRejectsInvalidLimit(t *testing.T) {
+	err := runAuditExport(&cliConfig{}, []string{"--limit", "0"})
+	if err == nil {
+		t.Fatal("expected invalid limit error")
+	}
+}

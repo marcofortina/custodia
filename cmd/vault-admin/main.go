@@ -157,11 +157,23 @@ func runAuditList(cfg *cliConfig, args []string) error {
 func runAuditExport(cfg *cliConfig, args []string) error {
 	cmd := flag.NewFlagSet("audit export", flag.ExitOnError)
 	limit := cmd.Int("limit", 500, "maximum audit events to export as JSONL, up to 500")
+	outcome := cmd.String("outcome", "", "optional outcome filter: success, failure or degraded")
+	action := cmd.String("action", "", "optional audit action filter")
+	actorClientID := cmd.String("actor-client-id", "", "optional actor client id filter")
+	resourceType := cmd.String("resource-type", "", "optional resource type filter")
+	resourceID := cmd.String("resource-id", "", "optional resource id filter")
 	_ = cmd.Parse(args)
 	if *limit <= 0 || *limit > 500 {
 		return fmt.Errorf("--limit must be between 1 and 500")
 	}
-	return requestJSON(cfg, http.MethodGet, fmt.Sprintf("/v1/audit-events/export?limit=%d", *limit), nil, os.Stdout)
+	query := url.Values{}
+	query.Set("limit", strconv.Itoa(*limit))
+	addQueryFilter(query, "outcome", *outcome)
+	addQueryFilter(query, "action", *action)
+	addQueryFilter(query, "actor_client_id", *actorClientID)
+	addQueryFilter(query, "resource_type", *resourceType)
+	addQueryFilter(query, "resource_id", *resourceID)
+	return requestJSON(cfg, http.MethodGet, "/v1/audit-events/export?"+query.Encode(), nil, os.Stdout)
 }
 
 func runAuditVerify(cfg *cliConfig, args []string) error {
