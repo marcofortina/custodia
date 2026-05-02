@@ -1,0 +1,34 @@
+# Audit Export Integrity
+
+Custodia exports audit events as newline-delimited JSON from `GET /v1/audit-events/export`.
+
+The export endpoint is metadata-only: it emits audit event records and never includes plaintext secrets, ciphertext payloads, recipient envelopes or client-side key material.
+
+## Integrity headers
+
+Every export response includes:
+
+- `Content-Type: application/x-ndjson; charset=utf-8`
+- `Content-Disposition: attachment; filename="custodia-audit.jsonl"`
+- `X-Custodia-Audit-Export-SHA256`: SHA-256 digest of the exact JSONL response body.
+- `X-Custodia-Audit-Export-Events`: number of events included in the response body.
+
+Operators should persist both the JSONL file and the SHA-256 header value when forwarding exports to offline storage, SIEM ingestion or WORM/ledger systems.
+
+## Verification
+
+The header digest can be checked locally:
+
+```bash
+sha256sum custodia-audit.jsonl
+```
+
+The printed digest must match `X-Custodia-Audit-Export-SHA256`.
+
+The audit hash-chain can still be verified separately with:
+
+```bash
+vault-admin audit verify --limit 500
+```
+
+The export digest protects the exported transport artifact; audit-chain verification protects the event sequence semantics.
