@@ -16,6 +16,7 @@ check: test build
 .PHONY: run-dev
 run-dev:
 	CUSTODIA_DEV_INSECURE_HTTP=true \
+	CUSTODIA_HEALTH_ADDR=:8080 \
 	CUSTODIA_STORE_BACKEND=memory \
 	CUSTODIA_BOOTSTRAP_CLIENTS=client_alice:client_alice,client_bob:client_bob,admin:admin \
 	CUSTODIA_ADMIN_CLIENT_IDS=admin \
