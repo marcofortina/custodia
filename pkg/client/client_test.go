@@ -203,3 +203,22 @@ func TestClientMeUsesDocumentedAPIPath(t *testing.T) {
 		t.Fatalf("unexpected paths: %v", requests)
 	}
 }
+
+func TestClientListAccessGrantRequestsUsesDocumentedAPIPath(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.EscapedPath() != "/v1/access-requests" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
+		}
+		if got := r.URL.Query().Get("client_id"); got != "client/bob" {
+			t.Fatalf("unexpected client filter: %q", got)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"access_requests": []model.AccessGrantMetadata{{ClientID: "client/bob", Status: "pending"}}})
+	}))
+	defer server.Close()
+
+	custodiaClient := &Client{baseURL: server.URL, http: server.Client()}
+	requests, err := custodiaClient.ListAccessGrantRequests(AccessGrantRequestFilters{Limit: 25, ClientID: "client/bob", Status: "pending"})
+	if err != nil || len(requests) != 1 || requests[0].ClientID != "client/bob" {
+		t.Fatalf("unexpected requests response: %+v err=%v", requests, err)
+	}
+}

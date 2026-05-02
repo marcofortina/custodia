@@ -25,6 +25,14 @@ type Client struct {
 	http    *http.Client
 }
 
+type AccessGrantRequestFilters struct {
+	Limit               int
+	SecretID            string
+	Status              string
+	ClientID            string
+	RequestedByClientID string
+}
+
 func New(cfg Config) (*Client, error) {
 	tlsConfig, err := mtls.ClientTLSConfig(cfg.CertFile, cfg.KeyFile, cfg.CAFile)
 	if err != nil {
@@ -65,6 +73,26 @@ func (c *Client) CreateClient(req model.CreateClientRequest) error {
 
 func (c *Client) RevokeClient(req model.RevokeClientRequest) error {
 	return c.doJSON(http.MethodPost, "/v1/clients/revoke", req, nil)
+}
+
+func (c *Client) ListAccessGrantRequests(filters AccessGrantRequestFilters) ([]model.AccessGrantMetadata, error) {
+	query := url.Values{}
+	if filters.Limit > 0 {
+		query.Set("limit", fmt.Sprintf("%d", filters.Limit))
+	}
+	addQueryFilter(query, "secret_id", filters.SecretID)
+	addQueryFilter(query, "status", filters.Status)
+	addQueryFilter(query, "client_id", filters.ClientID)
+	addQueryFilter(query, "requested_by_client_id", filters.RequestedByClientID)
+	path := "/v1/access-requests"
+	if encoded := query.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
+	var response struct {
+		AccessRequests []model.AccessGrantMetadata `json:"access_requests"`
+	}
+	err := c.doJSON(http.MethodGet, path, nil, &response)
+	return response.AccessRequests, err
 }
 
 func (c *Client) CreateSecret(req model.CreateSecretRequest) (model.SecretVersionRef, error) {
@@ -168,4 +196,10 @@ func (c *Client) doJSON(method, path string, payload any, target any) error {
 
 func pathEscape(value string) string {
 	return url.PathEscape(value)
+}
+
+func addQueryFilter(query url.Values, key string, value string) {
+	if value != "" {
+		query.Set(key, value)
+	}
 }
