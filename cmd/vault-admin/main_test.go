@@ -19,6 +19,25 @@ func TestAddQueryFilterTrimsValues(t *testing.T) {
 	}
 }
 
+func TestRunClientCommandsRejectInvalidClientIDs(t *testing.T) {
+	if err := runClientGet(&cliConfig{}, []string{"--client-id", "client bad"}); err == nil {
+		t.Fatal("expected invalid client get id error")
+	}
+	if err := runClientCreate(&cliConfig{}, []string{"--client-id", "client bad", "--mtls-subject", "subject"}); err == nil {
+		t.Fatal("expected invalid client create id error")
+	}
+	if err := runClientRevoke(&cliConfig{}, []string{"--client-id", "client bad"}); err == nil {
+		t.Fatal("expected invalid client revoke id error")
+	}
+}
+
+func TestRunClientCreateRejectsInvalidMTLSSubject(t *testing.T) {
+	err := runClientCreate(&cliConfig{}, []string{"--client-id", "client_good", "--mtls-subject", "bad\nsubject"})
+	if err == nil {
+		t.Fatal("expected invalid mtls subject error")
+	}
+}
+
 func TestRunClientListRejectsInvalidLimit(t *testing.T) {
 	err := runClientList(&cliConfig{}, []string{"--limit", "501"})
 	if err == nil {

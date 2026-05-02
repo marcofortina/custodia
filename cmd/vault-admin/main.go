@@ -113,6 +113,9 @@ func runClientGet(cfg *cliConfig, args []string) error {
 	if *clientID == "" {
 		return fmt.Errorf("--client-id is required")
 	}
+	if !model.ValidClientID(*clientID) {
+		return fmt.Errorf("--client-id is invalid")
+	}
 	return requestJSON(cfg, http.MethodGet, "/v1/clients/"+pathEscape(*clientID), nil, os.Stdout)
 }
 
@@ -125,6 +128,12 @@ func runClientCreate(cfg *cliConfig, args []string) error {
 	if req.ClientID == "" || req.MTLSSubject == "" {
 		return fmt.Errorf("--client-id and --mtls-subject are required")
 	}
+	if !model.ValidClientID(req.ClientID) {
+		return fmt.Errorf("--client-id is invalid")
+	}
+	if !model.ValidMTLSSubject(req.MTLSSubject) {
+		return fmt.Errorf("--mtls-subject is invalid")
+	}
 	return requestJSON(cfg, http.MethodPost, "/v1/clients", req, os.Stdout)
 }
 
@@ -136,6 +145,9 @@ func runClientRevoke(cfg *cliConfig, args []string) error {
 	_ = cmd.Parse(args)
 	if req.ClientID == "" {
 		return fmt.Errorf("--client-id is required")
+	}
+	if !model.ValidClientID(req.ClientID) {
+		return fmt.Errorf("--client-id is invalid")
 	}
 	if !model.ValidRevocationReason(req.Reason) {
 		return fmt.Errorf("--reason contains control characters or exceeds %d bytes", model.MaxRevocationReasonLength)
