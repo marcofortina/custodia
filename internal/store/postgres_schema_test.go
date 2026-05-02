@@ -105,3 +105,23 @@ func TestPostgresSchemaRejectsExpiredAccessRows(t *testing.T) {
 		}
 	}
 }
+
+func TestPostgresSchemaRejectsEmptyOpaqueBlobs(t *testing.T) {
+	t.Parallel()
+
+	schemaPath := filepath.Join("..", "..", "migrations", "postgres", "001_init.sql")
+	schemaBytes, err := os.ReadFile(schemaPath)
+	if err != nil {
+		t.Fatalf("read postgres schema: %v", err)
+	}
+	schema := string(schemaBytes)
+
+	for _, expected := range []string{
+		"CHECK (octet_length(ciphertext) > 0)",
+		"CHECK (octet_length(envelope) > 0)",
+	} {
+		if !strings.Contains(schema, expected) {
+			t.Fatalf("postgres schema missing opaque blob guardrail %q", expected)
+		}
+	}
+}

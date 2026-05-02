@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS secret_versions (
     created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_by_client_id TEXT NOT NULL REFERENCES clients(client_id),
     revoked_at           TIMESTAMPTZ,
-    PRIMARY KEY (secret_id, version_id)
+    PRIMARY KEY (secret_id, version_id),
+    CHECK (octet_length(ciphertext) > 0)
 );
 
 CREATE TABLE IF NOT EXISTS secret_access (
@@ -38,6 +39,7 @@ CREATE TABLE IF NOT EXISTS secret_access (
     revoked_at    TIMESTAMPTZ,
     PRIMARY KEY (secret_id, version_id, client_id),
     FOREIGN KEY (secret_id, version_id) REFERENCES secret_versions(secret_id, version_id) ON DELETE CASCADE,
+    CHECK (octet_length(envelope) > 0),
     CHECK (permissions > 0 AND permissions <= 7),
     CHECK (expires_at IS NULL OR expires_at > granted_at)
 );
