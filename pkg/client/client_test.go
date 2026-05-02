@@ -247,3 +247,23 @@ func TestClientListSecretsWithLimitUsesQuery(t *testing.T) {
 		t.Fatalf("unexpected secrets response: %+v err=%v", secrets, err)
 	}
 }
+
+func TestClientListClientsFilteredUsesActiveQuery(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.EscapedPath() != "/v1/clients" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
+		}
+		if got := r.URL.Query().Get("active"); got != "false" {
+			t.Fatalf("unexpected active filter: %q", got)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"clients": []model.Client{{ClientID: "client_old", IsActive: false}}})
+	}))
+	defer server.Close()
+
+	active := false
+	custodiaClient := &Client{baseURL: server.URL, http: server.Client()}
+	clients, err := custodiaClient.ListClientsFiltered(ClientListFilters{Limit: 10, Active: &active})
+	if err != nil || len(clients) != 1 || clients[0].IsActive {
+		t.Fatalf("unexpected clients response: %+v err=%v", clients, err)
+	}
+}

@@ -25,6 +25,11 @@ type Client struct {
 	http    *http.Client
 }
 
+type ClientListFilters struct {
+	Limit  int
+	Active *bool
+}
+
 type AccessGrantRequestFilters struct {
 	Limit               int
 	SecretID            string
@@ -55,15 +60,24 @@ func (c *Client) Me() (model.Client, error) {
 }
 
 func (c *Client) ListClients() ([]model.Client, error) {
-	return c.ListClientsWithLimit(0)
+	return c.ListClientsFiltered(ClientListFilters{})
 }
 
 func (c *Client) ListClientsWithLimit(limit int) ([]model.Client, error) {
+	return c.ListClientsFiltered(ClientListFilters{Limit: limit})
+}
+
+func (c *Client) ListClientsFiltered(filters ClientListFilters) ([]model.Client, error) {
+	query := url.Values{}
+	if filters.Limit > 0 {
+		query.Set("limit", fmt.Sprintf("%d", filters.Limit))
+	}
+	if filters.Active != nil {
+		query.Set("active", fmt.Sprintf("%t", *filters.Active))
+	}
 	path := "/v1/clients"
-	if limit > 0 {
-		query := url.Values{}
-		query.Set("limit", fmt.Sprintf("%d", limit))
-		path += "?" + query.Encode()
+	if encoded := query.Encode(); encoded != "" {
+		path += "?" + encoded
 	}
 	var response struct {
 		Clients []model.Client `json:"clients"`
