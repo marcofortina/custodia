@@ -24,6 +24,8 @@ spec:
           ports:
             - name: https
               containerPort: {{ .Values.service.port }}
+            - name: health
+              containerPort: {{ .Values.health.port }}
           envFrom:
             - configMapRef:
                 name: {{ include "custodia.fullname" . }}
@@ -46,14 +48,14 @@ spec:
               value: /etc/custodia/tls/{{ .Values.mtls.clientCAKey }}
           readinessProbe:
             httpGet:
-              scheme: HTTPS
+              scheme: HTTP
               path: /ready
-              port: https
+              port: health
           livenessProbe:
             httpGet:
-              scheme: HTTPS
+              scheme: HTTP
               path: /live
-              port: https
+              port: health
           volumeMounts:
             - name: mtls
               mountPath: /etc/custodia/tls

@@ -9,8 +9,12 @@ service:
   type: ClusterIP
   port: 8443
 
+health:
+  port: 8080
+
 config:
   apiAddr: ":8443"
+  healthAddr: ":8080"
   storeBackend: postgres
   databaseURLSecretName: custodia-database
   databaseURLSecretKey: database-url
