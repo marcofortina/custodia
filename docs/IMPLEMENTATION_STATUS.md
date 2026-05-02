@@ -11,7 +11,7 @@
 - Strict permission bitmask validation for read/write/share grants.
 - Base64 transport validation for ciphertext/envelope blobs and duplicate recipient rejection.
 - Configurable recipient-envelope cap with default 100 and HTTP 413 rejection on create/new-version overflow.
-- Hash-chained audit events for successful and failed auth/API operations.
+- Hash-chained audit events for successful and failed auth/API operations, with admin-only listing API/CLI.
 - PostgreSQL schema contract and in-memory executable store.
 - Valkey-compatible rate limiting.
 - Minimal admin CLI for API-backed client metadata create/list/revoke and access revoke operations.
@@ -55,3 +55,10 @@ These are explicitly operational components in the analysis and cannot be truthf
 
 - Aligned `secret_access.permissions` with runtime validation by rejecting `0` at the database level too.
 - Added a migration contract test to keep `secret_access` and pending grant permissions non-zero.
+
+
+## Patch 012 - audit event listing
+
+- Added admin-only `GET /v1/audit-events` with bounded `limit`.
+- Added `vault-admin audit list`.
+- Added memory-store list support while preserving immutable hash-chain fields in responses.

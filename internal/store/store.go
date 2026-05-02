@@ -21,4 +21,5 @@ type Store interface {
 	RevokeAccess(ctx context.Context, actorClientID, secretID, targetClientID string) error
 	CreateSecretVersion(ctx context.Context, actorClientID, secretID string, req model.CreateSecretVersionRequest) (model.SecretVersionRef, error)
 	AppendAudit(ctx context.Context, event model.AuditEvent) error
+	ListAuditEvents(ctx context.Context, limit int) ([]model.AuditEvent, error)
 }

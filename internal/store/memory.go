@@ -403,11 +403,22 @@ func (s *MemoryStore) AppendAudit(_ context.Context, event model.AuditEvent) err
 	return nil
 }
 
-func (s *MemoryStore) AuditEvents() []model.AuditEvent {
+func (s *MemoryStore) ListAuditEvents(_ context.Context, limit int) ([]model.AuditEvent, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	events := make([]model.AuditEvent, len(s.auditEvents))
-	copy(events, s.auditEvents)
+	if limit <= 0 || limit > len(s.auditEvents) {
+		limit = len(s.auditEvents)
+	}
+	start := len(s.auditEvents) - limit
+	events := make([]model.AuditEvent, 0, limit)
+	for _, event := range s.auditEvents[start:] {
+		events = append(events, cloneAuditEvent(event))
+	}
+	return events, nil
+}
+
+func (s *MemoryStore) AuditEvents() []model.AuditEvent {
+	events, _ := s.ListAuditEvents(context.Background(), 0)
 	return events
 }
 
@@ -542,4 +553,11 @@ func cloneBytes(value []byte) []byte {
 	copyValue := make([]byte, len(value))
 	copy(copyValue, value)
 	return copyValue
+}
+
+func cloneAuditEvent(event model.AuditEvent) model.AuditEvent {
+	event.Metadata = cloneRaw(event.Metadata)
+	event.PreviousHash = cloneBytes(event.PreviousHash)
+	event.EventHash = cloneBytes(event.EventHash)
+	return event
 }

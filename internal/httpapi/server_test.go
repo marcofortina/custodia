@@ -393,6 +393,63 @@ func TestAPICreateSecretVersionSupersedesOldVersionAccessWorkflow(t *testing.T) 
 	assertLastAudit(t, memoryStore, "secret.access_activate", "failure", "not_found")
 }
 
+func TestAdminCanListAuditEvents(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create alice: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	createBody := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
+	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected create 201, got %d: %s", res.Code, res.Body.String())
+	}
+
+	req = mtlsRequest(http.MethodGet, "/v1/audit-events?limit=10", "", "admin")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected audit list 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var payload struct {
+		AuditEvents []model.AuditEvent `json:"audit_events"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode audit list: %v", err)
+	}
+	if len(payload.AuditEvents) < 1 {
+		t.Fatal("expected at least one audit event")
+	}
+	if payload.AuditEvents[0].EventHash == nil {
+		t.Fatalf("expected hash-chained audit event, got %+v", payload.AuditEvents[0])
+	}
+	assertLastAudit(t, memoryStore, "audit.list", "success", "")
+}
+
+func TestAdminAuditListRejectsInvalidLimit(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/audit-events?limit=501", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", res.Code, res.Body.String())
+	}
+	assertLastAudit(t, memoryStore, "audit.list", "failure", "invalid_limit")
+}
+
 func assertLastAudit(t *testing.T, memoryStore *store.MemoryStore, action, outcome, reason string) model.AuditEvent {
 	t.Helper()
 	events := memoryStore.AuditEvents()

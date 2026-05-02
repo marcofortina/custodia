@@ -45,6 +45,8 @@ func main() {
 		err = runClientCreate(&cfg, args[2:])
 	case "client revoke":
 		err = runClientRevoke(&cfg, args[2:])
+	case "audit list":
+		err = runAuditList(&cfg, args[2:])
 	case "access grant-request":
 		err = runAccessGrantRequest(&cfg, args[2:])
 	case "access activate":
@@ -83,6 +85,16 @@ func runClientRevoke(cfg *cliConfig, args []string) error {
 		return fmt.Errorf("--client-id is required")
 	}
 	return requestJSON(cfg, http.MethodPost, "/v1/clients/revoke", req, os.Stdout)
+}
+
+func runAuditList(cfg *cliConfig, args []string) error {
+	cmd := flag.NewFlagSet("audit list", flag.ExitOnError)
+	limit := cmd.Int("limit", 100, "maximum audit events to return, up to 500")
+	_ = cmd.Parse(args)
+	if *limit <= 0 || *limit > 500 {
+		return fmt.Errorf("--limit must be between 1 and 500")
+	}
+	return requestJSON(cfg, http.MethodGet, fmt.Sprintf("/v1/audit-events?limit=%d", *limit), nil, os.Stdout)
 }
 
 func runAccessGrantRequest(cfg *cliConfig, args []string) error {
@@ -227,6 +239,7 @@ func usage() {
   vault-admin [global flags] client list
   vault-admin [global flags] client create --client-id ID --mtls-subject SUBJECT
   vault-admin [global flags] client revoke --client-id ID [--reason REASON]
+  vault-admin [global flags] audit list [--limit N]
   vault-admin [global flags] access grant-request --secret-id ID --client-id ID --permissions read[,write,share]
   vault-admin [global flags] access activate --secret-id ID --client-id ID --envelope-file FILE
   vault-admin [global flags] access revoke --secret-id ID --client-id ID

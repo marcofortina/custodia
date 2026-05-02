@@ -53,3 +53,6 @@ func (s *PostgresStore) CreateSecretVersion(context.Context, string, string, mod
 func (s *PostgresStore) AppendAudit(context.Context, model.AuditEvent) error {
 	return ErrPostgresStoreNotWired
 }
+func (s *PostgresStore) ListAuditEvents(context.Context, int) ([]model.AuditEvent, error) {
+	return nil, ErrPostgresStoreNotWired
+}

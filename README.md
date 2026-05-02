@@ -14,7 +14,7 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 - Future revocation semantics: revoked grants stop future reads; already downloaded material is not invalidated.
 - PostgreSQL-compatible schema contract; executable PostgreSQL store wiring is still pending.
 - In-memory store for local development and tests.
-- Hash-chained audit event model.
+- Hash-chained audit event model with admin audit listing API/CLI.
 - Memory and Valkey-compatible rate limiter backends.
 - Minimal admin CLI for metadata operations exposed by the API.
 - Minimal Go and Python client libraries that only transport ciphertext and opaque envelopes.
@@ -70,6 +70,7 @@ vault-admin client create --client-id client_bob --mtls-subject client_bob
 vault-admin client list
 vault-admin client revoke --client-id client_bob --reason compromised
 vault-admin access grant-request --secret-id SECRET --client-id client_bob --permissions read
+vault-admin audit list --limit 100
 vault-admin access activate --secret-id SECRET --client-id client_bob --envelope-file bob.envelope
 ```
 

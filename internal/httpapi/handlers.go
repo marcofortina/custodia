@@ -3,6 +3,7 @@ package httpapi
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"custodia/internal/model"
 )
@@ -70,6 +71,27 @@ func (s *Server) handleRevokeClient(w http.ResponseWriter, r *http.Request) {
 	}
 	s.audit(r, "client.revoke", "client", req.ClientID, "success", nil)
 	writeJSON(w, http.StatusOK, map[string]string{"status": "revoked"})
+}
+
+func (s *Server) handleListAuditEvents(w http.ResponseWriter, r *http.Request) {
+	limit := 100
+	if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
+		parsed, err := strconv.Atoi(rawLimit)
+		if err != nil || parsed <= 0 || parsed > 500 {
+			s.auditFailure(r, "audit.list", "audit_event", "", map[string]string{"reason": "invalid_limit"})
+			writeError(w, http.StatusBadRequest, "invalid_limit")
+			return
+		}
+		limit = parsed
+	}
+	events, err := s.store.ListAuditEvents(r.Context(), limit)
+	if err != nil {
+		s.auditStoreFailure(r, "audit.list", "audit_event", "", err)
+		writeMappedError(w, err)
+		return
+	}
+	s.audit(r, "audit.list", "audit_event", "", "success", nil)
+	writeJSON(w, http.StatusOK, map[string]any{"audit_events": events})
 }
 
 func (s *Server) handleCreateSecret(w http.ResponseWriter, r *http.Request) {
