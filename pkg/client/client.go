@@ -80,12 +80,6 @@ func (c *Client) ListClientsFiltered(filters ClientListFilters) ([]model.Client,
 	if err := validateOptionalLimit(filters.Limit); err != nil {
 		return nil, err
 	}
-	if err := validateOptionalLimit(filters.Limit); err != nil {
-		return nil, err
-	}
-	if err := validateOptionalLimit(filters.Limit); err != nil {
-		return nil, err
-	}
 	query := url.Values{}
 	if filters.Limit > 0 {
 		query.Set("limit", fmt.Sprintf("%d", filters.Limit))
