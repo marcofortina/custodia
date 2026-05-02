@@ -93,7 +93,12 @@ func (s *PostgresStore) ListClients(ctx context.Context) ([]model.Client, error)
 }
 
 func (s *PostgresStore) RevokeClient(ctx context.Context, clientID string) error {
-	tag, err := s.pool.Exec(ctx, `
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer rollbackIgnored(ctx, tx)
+	tag, err := tx.Exec(ctx, `
 		UPDATE clients
 		SET is_active = FALSE, revoked_at = COALESCE(revoked_at, NOW())
 		WHERE client_id = $1`, clientID)
@@ -103,7 +108,19 @@ func (s *PostgresStore) RevokeClient(ctx context.Context, clientID string) error
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
-	return nil
+	if _, err := tx.Exec(ctx, `
+		UPDATE secret_access
+		SET revoked_at = COALESCE(revoked_at, NOW())
+		WHERE client_id = $1 AND revoked_at IS NULL`, clientID); err != nil {
+		return mapPostgresError(err)
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE secret_access_requests
+		SET revoked_at = COALESCE(revoked_at, NOW())
+		WHERE (client_id = $1 OR requested_by_client_id = $1) AND activated_at IS NULL AND revoked_at IS NULL`, clientID); err != nil {
+		return mapPostgresError(err)
+	}
+	return tx.Commit(ctx)
 }
 
 func (s *PostgresStore) CreateSecret(ctx context.Context, actorClientID string, req model.CreateSecretRequest) (model.SecretVersionRef, error) {

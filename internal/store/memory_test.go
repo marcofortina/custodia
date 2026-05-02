@@ -380,3 +380,45 @@ func TestMemoryStoreExpiresAccessGrants(t *testing.T) {
 		t.Fatalf("expected past share expiration to be invalid, got %v", err)
 	}
 }
+
+func TestMemoryStoreRevokeClientRevokesAccessAndPendingGrants(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_admin", "client_admin")
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	mustCreateClient(t, store, "client_bob", "client_bob")
+	mustCreateClient(t, store, "client_charlie", "client_charlie")
+
+	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:       "secret",
+		Ciphertext: "Y2lwaGVydGV4dA==",
+		Envelopes: []model.RecipientEnvelope{
+			{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"},
+			{ClientID: "client_bob", Envelope: "ZW52ZWxvcGUtZm9yLWJvYg=="},
+		},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	if _, err := store.RequestAccessGrant(ctx, "client_admin", created.SecretID, model.AccessGrantRequest{
+		TargetClientID: "client_charlie",
+		Permissions:    int(model.PermissionRead),
+	}); err != nil {
+		t.Fatalf("request grant: %v", err)
+	}
+
+	if err := store.RevokeClient(ctx, "client_bob"); err != nil {
+		t.Fatalf("revoke bob: %v", err)
+	}
+	if _, err := store.GetSecret(ctx, "client_bob", created.SecretID); err != ErrForbidden {
+		t.Fatalf("expected revoked client read to be forbidden, got %v", err)
+	}
+
+	if err := store.RevokeClient(ctx, "client_admin"); err != nil {
+		t.Fatalf("revoke admin: %v", err)
+	}
+	if err := store.ActivateAccessGrant(ctx, "client_alice", created.SecretID, "client_charlie", model.ActivateAccessRequest{Envelope: "ZW52ZWxvcGUtY2hhcmxpZQ=="}); err != ErrNotFound {
+		t.Fatalf("expected pending grant from revoked requester to be revoked, got %v", err)
+	}
+}

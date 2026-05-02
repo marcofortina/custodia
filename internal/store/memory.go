@@ -129,6 +129,18 @@ func (s *MemoryStore) RevokeClient(_ context.Context, clientID string) error {
 	client.IsActive = false
 	client.RevokedAt = &now
 	s.clients[clientID] = client
+	for _, secret := range s.secrets {
+		for _, version := range secret.Versions {
+			if access, ok := version.Access[clientID]; ok && access.RevokedAt == nil {
+				access.RevokedAt = &now
+			}
+		}
+	}
+	for _, pending := range s.pendingAccess {
+		if (pending.ClientID == clientID || pending.RequestedByClientID == clientID) && pending.RevokedAt == nil {
+			pending.RevokedAt = &now
+		}
+	}
 	return nil
 }
 
@@ -471,6 +483,9 @@ func (s *MemoryStore) AuditEvents() []model.AuditEvent {
 }
 
 func (s *MemoryStore) visibleSecretLocked(actorClientID, secretID string, permission model.Permission) (*memorySecret, *memoryVersion, *memoryAccess, error) {
+	if !s.clientActiveLocked(actorClientID) {
+		return nil, nil, nil, ErrForbidden
+	}
 	secret, ok := s.secrets[secretID]
 	if !ok || secret.DeletedAt != nil {
 		return nil, nil, nil, ErrNotFound
