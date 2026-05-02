@@ -95,6 +95,58 @@ func TestMemoryStoreRevokesFutureReadsOnly(t *testing.T) {
 	}
 }
 
+func TestMemoryStoreRejectsInvalidPermissionBits(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	mustCreateClient(t, store, "client_bob", "client_bob")
+
+	for _, permissions := range []int{0, 8, -1} {
+		_, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+			Name:        "secret",
+			Ciphertext:  "ciphertext",
+			Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "envelope-for-alice"}},
+			Permissions: permissions,
+		})
+		if err != ErrInvalidInput {
+			t.Fatalf("expected create with permissions %d to be invalid, got %v", permissions, err)
+		}
+	}
+
+	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:        "secret",
+		Ciphertext:  "ciphertext",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "envelope-for-alice"}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+
+	for _, permissions := range []int{0, 8, -1} {
+		err = store.ShareSecret(ctx, "client_alice", created.SecretID, model.ShareSecretRequest{
+			VersionID:      created.VersionID,
+			TargetClientID: "client_bob",
+			Envelope:       "envelope-for-bob",
+			Permissions:    permissions,
+		})
+		if err != ErrInvalidInput {
+			t.Fatalf("expected share with permissions %d to be invalid, got %v", permissions, err)
+		}
+	}
+
+	for _, permissions := range []int{0, 8, -1} {
+		_, err = store.CreateSecretVersion(ctx, "client_alice", created.SecretID, model.CreateSecretVersionRequest{
+			Ciphertext:  "ciphertext-v2",
+			Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "envelope-for-alice-v2"}},
+			Permissions: permissions,
+		})
+		if err != ErrInvalidInput {
+			t.Fatalf("expected version create with permissions %d to be invalid, got %v", permissions, err)
+		}
+	}
+}
+
 func mustCreateClient(t *testing.T, store *MemoryStore, clientID, subject string) {
 	t.Helper()
 	if err := store.CreateClient(context.Background(), model.Client{ClientID: clientID, MTLSSubject: subject}); err != nil {

@@ -11,10 +11,16 @@ const (
 	PermissionShare Permission = 1
 	PermissionWrite Permission = 2
 	PermissionRead  Permission = 4
+
+	PermissionAll = PermissionShare | PermissionWrite | PermissionRead
 )
 
 func HasPermission(bits int, permission Permission) bool {
 	return bits&int(permission) == int(permission)
+}
+
+func ValidPermissionBits(bits int) bool {
+	return bits > 0 && bits&^int(PermissionAll) == 0
 }
 
 type Client struct {

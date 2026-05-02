@@ -122,6 +122,9 @@ func (s *MemoryStore) CreateSecret(_ context.Context, actorClientID string, req 
 	if strings.TrimSpace(req.Name) == "" || strings.TrimSpace(req.Ciphertext) == "" || len(req.Envelopes) == 0 {
 		return model.SecretVersionRef{}, ErrInvalidInput
 	}
+	if !model.ValidPermissionBits(req.Permissions) {
+		return model.SecretVersionRef{}, ErrInvalidInput
+	}
 	if !containsEnvelopeFor(req.Envelopes, actorClientID) {
 		return model.SecretVersionRef{}, ErrForbidden
 	}
@@ -197,6 +200,9 @@ func (s *MemoryStore) ShareSecret(_ context.Context, actorClientID, secretID str
 	if strings.TrimSpace(req.TargetClientID) == "" || strings.TrimSpace(req.Envelope) == "" {
 		return ErrInvalidInput
 	}
+	if !model.ValidPermissionBits(req.Permissions) {
+		return ErrInvalidInput
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	secret, ok := s.secrets[secretID]
@@ -217,14 +223,10 @@ func (s *MemoryStore) ShareSecret(_ context.Context, actorClientID, secretID str
 	if existing, ok := version.Access[req.TargetClientID]; ok && activeAccess(existing) {
 		return ErrConflict
 	}
-	permissions := req.Permissions
-	if permissions == 0 {
-		permissions = int(model.PermissionRead)
-	}
 	version.Access[req.TargetClientID] = &memoryAccess{
 		ClientID:    req.TargetClientID,
 		Envelope:    req.Envelope,
-		Permissions: permissions,
+		Permissions: req.Permissions,
 		GrantedAt:   time.Now().UTC(),
 	}
 	return nil
@@ -255,6 +257,9 @@ func (s *MemoryStore) CreateSecretVersion(_ context.Context, actorClientID, secr
 	if strings.TrimSpace(req.Ciphertext) == "" || len(req.Envelopes) == 0 {
 		return model.SecretVersionRef{}, ErrInvalidInput
 	}
+	if !model.ValidPermissionBits(req.Permissions) {
+		return model.SecretVersionRef{}, ErrInvalidInput
+	}
 	if !containsEnvelopeFor(req.Envelopes, actorClientID) {
 		return model.SecretVersionRef{}, ErrForbidden
 	}
@@ -271,10 +276,6 @@ func (s *MemoryStore) CreateSecretVersion(_ context.Context, actorClientID, secr
 	}
 	versionID := id.New()
 	now := time.Now().UTC()
-	permissions := req.Permissions
-	if permissions == 0 {
-		permissions = int(model.PermissionRead)
-	}
 	version := &memoryVersion{
 		VersionID:         versionID,
 		Ciphertext:        req.Ciphertext,
@@ -287,7 +288,7 @@ func (s *MemoryStore) CreateSecretVersion(_ context.Context, actorClientID, secr
 		version.Access[envelope.ClientID] = &memoryAccess{
 			ClientID:    envelope.ClientID,
 			Envelope:    envelope.Envelope,
-			Permissions: permissions,
+			Permissions: req.Permissions,
 			GrantedAt:   now,
 		}
 	}

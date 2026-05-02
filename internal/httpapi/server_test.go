@@ -63,6 +63,24 @@ func TestAPICreateAndReadOpaqueSecret(t *testing.T) {
 	}
 }
 
+func TestAPIRejectsInvalidPermissionBits(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	body := `{"name":"secret","ciphertext":"ciphertext","envelopes":[{"client_id":"client_alice","envelope":"envelope-for-alice"}],"permissions":8}`
+	req := mtlsRequest(http.MethodPost, "/v1/secrets", body, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", res.Code, res.Body.String())
+	}
+}
+
 func mtlsRequest(method, target, body, clientID string) *http.Request {
 	req := httptest.NewRequest(method, target, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
