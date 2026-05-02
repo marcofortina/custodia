@@ -218,16 +218,16 @@ func TestClientListAccessGrantRequestsUsesDocumentedAPIPath(t *testing.T) {
 		if r.Method != http.MethodGet || r.URL.EscapedPath() != "/v1/access-requests" {
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
 		}
-		if got := r.URL.Query().Get("client_id"); got != "client/bob" {
+		if got := r.URL.Query().Get("client_id"); got != "client_bob" {
 			t.Fatalf("unexpected client filter: %q", got)
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"access_requests": []model.AccessGrantMetadata{{ClientID: "client/bob", Status: "pending"}}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"access_requests": []model.AccessGrantMetadata{{ClientID: "client_bob", Status: "pending"}}})
 	}))
 	defer server.Close()
 
 	custodiaClient := &Client{baseURL: server.URL, http: server.Client()}
-	requests, err := custodiaClient.ListAccessGrantRequests(AccessGrantRequestFilters{Limit: 25, ClientID: "client/bob", Status: "pending"})
-	if err != nil || len(requests) != 1 || requests[0].ClientID != "client/bob" {
+	requests, err := custodiaClient.ListAccessGrantRequests(AccessGrantRequestFilters{Limit: 25, ClientID: "client_bob", Status: "pending"})
+	if err != nil || len(requests) != 1 || requests[0].ClientID != "client_bob" {
 		t.Fatalf("unexpected requests response: %+v err=%v", requests, err)
 	}
 }
@@ -273,16 +273,16 @@ func TestClientListAuditEventsUsesFilters(t *testing.T) {
 		if r.Method != http.MethodGet || r.URL.EscapedPath() != "/v1/audit-events" {
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
 		}
-		if got := r.URL.Query().Get("actor_client_id"); got != "client/alice" {
+		if got := r.URL.Query().Get("actor_client_id"); got != "client_alice" {
 			t.Fatalf("unexpected actor filter: %q", got)
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"audit_events": []model.AuditEvent{{Action: "secret.read", ActorClientID: "client/alice"}}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"audit_events": []model.AuditEvent{{Action: "secret.read", ActorClientID: "client_alice"}}})
 	}))
 	defer server.Close()
 
 	custodiaClient := &Client{baseURL: server.URL, http: server.Client()}
-	events, err := custodiaClient.ListAuditEvents(AuditEventFilters{Limit: 25, ActorClientID: "client/alice", Action: "secret.read"})
-	if err != nil || len(events) != 1 || events[0].ActorClientID != "client/alice" {
+	events, err := custodiaClient.ListAuditEvents(AuditEventFilters{Limit: 25, ActorClientID: "client_alice", Action: "secret.read"})
+	if err != nil || len(events) != 1 || events[0].ActorClientID != "client_alice" {
 		t.Fatalf("unexpected audit response: %+v err=%v", events, err)
 	}
 }
