@@ -1,7 +1,9 @@
 package model
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"strings"
 	"time"
 )
 
@@ -21,6 +23,18 @@ func HasPermission(bits int, permission Permission) bool {
 
 func ValidPermissionBits(bits int) bool {
 	return bits > 0 && bits&^int(PermissionAll) == 0
+}
+
+func ValidOpaqueBlob(value string) bool {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return false
+	}
+	if _, err := base64.StdEncoding.DecodeString(value); err == nil {
+		return true
+	}
+	_, err := base64.RawStdEncoding.DecodeString(value)
+	return err == nil
 }
 
 type Client struct {

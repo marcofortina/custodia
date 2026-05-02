@@ -8,7 +8,7 @@ The server never receives plaintext, DEKs, private keys, public encryption keys 
 - `crypto_metadata`
 - `envelope`
 
-The server does not expose a public-key directory and does not mediate trust between clients.
+The server does not expose a public-key directory and does not mediate trust between clients. It validates base64 transport syntax for opaque blobs only; this is not cryptographic interpretation.
 
 ## Authentication and authorization
 

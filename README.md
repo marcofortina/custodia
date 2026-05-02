@@ -49,13 +49,13 @@ all   = 7
 ```json
 {
   "name": "db_prod_password",
-  "ciphertext": "base64-client-ciphertext",
+  "ciphertext": "Y2lwaGVydGV4dA==",
   "crypto_metadata": { "format": "client-defined" },
   "envelopes": [
-    { "client_id": "client_alice", "envelope": "base64-client-envelope" }
+    { "client_id": "client_alice", "envelope": "ZW52ZWxvcGUtZm9yLWFsaWNl" }
   ],
   "permissions": 7
 }
 ```
 
-The server validates authorization and stores the strings as opaque transport data. It does not interpret the cryptographic content.
+The server validates authorization plus base64 transport syntax and stores the strings as opaque transport data. It does not interpret the cryptographic content.

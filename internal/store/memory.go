@@ -119,8 +119,11 @@ func (s *MemoryStore) RevokeClient(_ context.Context, clientID string) error {
 }
 
 func (s *MemoryStore) CreateSecret(_ context.Context, actorClientID string, req model.CreateSecretRequest) (model.SecretVersionRef, error) {
-	if strings.TrimSpace(req.Name) == "" || strings.TrimSpace(req.Ciphertext) == "" || len(req.Envelopes) == 0 {
+	if strings.TrimSpace(req.Name) == "" {
 		return model.SecretVersionRef{}, ErrInvalidInput
+	}
+	if err := validateOpaqueSecretPayload(req.Ciphertext, req.Envelopes); err != nil {
+		return model.SecretVersionRef{}, err
 	}
 	if !model.ValidPermissionBits(req.Permissions) {
 		return model.SecretVersionRef{}, ErrInvalidInput
@@ -134,7 +137,7 @@ func (s *MemoryStore) CreateSecret(_ context.Context, actorClientID string, req 
 		return model.SecretVersionRef{}, ErrForbidden
 	}
 	for _, envelope := range req.Envelopes {
-		if !s.clientActiveLocked(envelope.ClientID) || strings.TrimSpace(envelope.Envelope) == "" {
+		if !s.clientActiveLocked(envelope.ClientID) {
 			return model.SecretVersionRef{}, ErrInvalidInput
 		}
 	}
@@ -197,7 +200,7 @@ func (s *MemoryStore) DeleteSecret(_ context.Context, actorClientID, secretID st
 }
 
 func (s *MemoryStore) ShareSecret(_ context.Context, actorClientID, secretID string, req model.ShareSecretRequest) error {
-	if strings.TrimSpace(req.TargetClientID) == "" || strings.TrimSpace(req.Envelope) == "" {
+	if strings.TrimSpace(req.TargetClientID) == "" || !model.ValidOpaqueBlob(req.Envelope) {
 		return ErrInvalidInput
 	}
 	if !model.ValidPermissionBits(req.Permissions) {
@@ -254,8 +257,8 @@ func (s *MemoryStore) RevokeAccess(_ context.Context, actorClientID, secretID, t
 }
 
 func (s *MemoryStore) CreateSecretVersion(_ context.Context, actorClientID, secretID string, req model.CreateSecretVersionRequest) (model.SecretVersionRef, error) {
-	if strings.TrimSpace(req.Ciphertext) == "" || len(req.Envelopes) == 0 {
-		return model.SecretVersionRef{}, ErrInvalidInput
+	if err := validateOpaqueSecretPayload(req.Ciphertext, req.Envelopes); err != nil {
+		return model.SecretVersionRef{}, err
 	}
 	if !model.ValidPermissionBits(req.Permissions) {
 		return model.SecretVersionRef{}, ErrInvalidInput
@@ -270,7 +273,7 @@ func (s *MemoryStore) CreateSecretVersion(_ context.Context, actorClientID, secr
 		return model.SecretVersionRef{}, err
 	}
 	for _, envelope := range req.Envelopes {
-		if !s.clientActiveLocked(envelope.ClientID) || strings.TrimSpace(envelope.Envelope) == "" {
+		if !s.clientActiveLocked(envelope.ClientID) {
 			return model.SecretVersionRef{}, ErrInvalidInput
 		}
 	}
@@ -353,6 +356,21 @@ func (s *MemoryStore) versionLocked(secret *memorySecret, versionID string) *mem
 func (s *MemoryStore) clientActiveLocked(clientID string) bool {
 	client, ok := s.clients[clientID]
 	return ok && client.IsActive && client.RevokedAt == nil
+}
+
+func validateOpaqueSecretPayload(ciphertext string, envelopes []model.RecipientEnvelope) error {
+	if !model.ValidOpaqueBlob(ciphertext) || len(envelopes) == 0 {
+		return ErrInvalidInput
+	}
+	seen := make(map[string]bool, len(envelopes))
+	for _, envelope := range envelopes {
+		clientID := strings.TrimSpace(envelope.ClientID)
+		if clientID == "" || seen[clientID] || !model.ValidOpaqueBlob(envelope.Envelope) {
+			return ErrInvalidInput
+		}
+		seen[clientID] = true
+	}
+	return nil
 }
 
 func activeAccess(access *memoryAccess) bool {

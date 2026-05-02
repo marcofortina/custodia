@@ -15,9 +15,9 @@ func TestMemoryStoreSecretLifecycleKeepsEnvelopePerClient(t *testing.T) {
 
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
 		Name:       "db_prod_password",
-		Ciphertext: "ciphertext-for-server-storage",
+		Ciphertext: "Y2lwaGVydGV4dC1mb3Itc2VydmVyLXN0b3JhZ2U=",
 		Envelopes: []model.RecipientEnvelope{
-			{ClientID: "client_alice", Envelope: "envelope-for-alice"},
+			{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"},
 		},
 		Permissions: 7,
 	})
@@ -32,7 +32,7 @@ func TestMemoryStoreSecretLifecycleKeepsEnvelopePerClient(t *testing.T) {
 	err = store.ShareSecret(ctx, "client_alice", created.SecretID, model.ShareSecretRequest{
 		VersionID:      created.VersionID,
 		TargetClientID: "client_bob",
-		Envelope:       "envelope-for-bob",
+		Envelope:       "ZW52ZWxvcGUtZm9yLWJvYg==",
 		Permissions:    int(model.PermissionRead),
 	})
 	if err != nil {
@@ -43,10 +43,10 @@ func TestMemoryStoreSecretLifecycleKeepsEnvelopePerClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("bob read after share: %v", err)
 	}
-	if read.Envelope != "envelope-for-bob" {
+	if read.Envelope != "ZW52ZWxvcGUtZm9yLWJvYg==" {
 		t.Fatalf("expected bob envelope only, got %q", read.Envelope)
 	}
-	if read.Ciphertext != "ciphertext-for-server-storage" {
+	if read.Ciphertext != "Y2lwaGVydGV4dC1mb3Itc2VydmVyLXN0b3JhZ2U=" {
 		t.Fatalf("unexpected ciphertext: %q", read.Ciphertext)
 	}
 }
@@ -59,9 +59,9 @@ func TestMemoryStoreRequiresCreatorEnvelope(t *testing.T) {
 
 	_, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
 		Name:       "db_prod_password",
-		Ciphertext: "ciphertext",
+		Ciphertext: "Y2lwaGVydGV4dA==",
 		Envelopes: []model.RecipientEnvelope{
-			{ClientID: "client_bob", Envelope: "envelope-for-bob"},
+			{ClientID: "client_bob", Envelope: "ZW52ZWxvcGUtZm9yLWJvYg=="},
 		},
 		Permissions: 7,
 	})
@@ -77,10 +77,10 @@ func TestMemoryStoreRevokesFutureReadsOnly(t *testing.T) {
 	mustCreateClient(t, store, "client_bob", "client_bob")
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
 		Name:       "secret",
-		Ciphertext: "ciphertext-v1",
+		Ciphertext: "Y2lwaGVydGV4dC12MQ==",
 		Envelopes: []model.RecipientEnvelope{
-			{ClientID: "client_alice", Envelope: "envelope-for-alice"},
-			{ClientID: "client_bob", Envelope: "envelope-for-bob"},
+			{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"},
+			{ClientID: "client_bob", Envelope: "ZW52ZWxvcGUtZm9yLWJvYg=="},
 		},
 		Permissions: 7,
 	})
@@ -104,8 +104,8 @@ func TestMemoryStoreRejectsInvalidPermissionBits(t *testing.T) {
 	for _, permissions := range []int{0, 8, -1} {
 		_, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
 			Name:        "secret",
-			Ciphertext:  "ciphertext",
-			Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "envelope-for-alice"}},
+			Ciphertext:  "Y2lwaGVydGV4dA==",
+			Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"}},
 			Permissions: permissions,
 		})
 		if err != ErrInvalidInput {
@@ -115,8 +115,8 @@ func TestMemoryStoreRejectsInvalidPermissionBits(t *testing.T) {
 
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
 		Name:        "secret",
-		Ciphertext:  "ciphertext",
-		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "envelope-for-alice"}},
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"}},
 		Permissions: int(model.PermissionAll),
 	})
 	if err != nil {
@@ -127,7 +127,7 @@ func TestMemoryStoreRejectsInvalidPermissionBits(t *testing.T) {
 		err = store.ShareSecret(ctx, "client_alice", created.SecretID, model.ShareSecretRequest{
 			VersionID:      created.VersionID,
 			TargetClientID: "client_bob",
-			Envelope:       "envelope-for-bob",
+			Envelope:       "ZW52ZWxvcGUtZm9yLWJvYg==",
 			Permissions:    permissions,
 		})
 		if err != ErrInvalidInput {
@@ -137,13 +137,88 @@ func TestMemoryStoreRejectsInvalidPermissionBits(t *testing.T) {
 
 	for _, permissions := range []int{0, 8, -1} {
 		_, err = store.CreateSecretVersion(ctx, "client_alice", created.SecretID, model.CreateSecretVersionRequest{
-			Ciphertext:  "ciphertext-v2",
-			Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "envelope-for-alice-v2"}},
+			Ciphertext:  "Y2lwaGVydGV4dC12Mg==",
+			Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNlLXYy"}},
 			Permissions: permissions,
 		})
 		if err != ErrInvalidInput {
 			t.Fatalf("expected version create with permissions %d to be invalid, got %v", permissions, err)
 		}
+	}
+}
+
+func TestMemoryStoreRejectsInvalidOpaquePayloadEncoding(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	mustCreateClient(t, store, "client_bob", "client_bob")
+
+	_, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:        "secret",
+		Ciphertext:  "not base64",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != ErrInvalidInput {
+		t.Fatalf("expected invalid ciphertext to be rejected, got %v", err)
+	}
+
+	_, err = store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:        "secret",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "not base64"}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != ErrInvalidInput {
+		t.Fatalf("expected invalid envelope to be rejected, got %v", err)
+	}
+
+	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:        "secret",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+
+	err = store.ShareSecret(ctx, "client_alice", created.SecretID, model.ShareSecretRequest{
+		VersionID:      created.VersionID,
+		TargetClientID: "client_bob",
+		Envelope:       "not base64",
+		Permissions:    int(model.PermissionRead),
+	})
+	if err != ErrInvalidInput {
+		t.Fatalf("expected invalid share envelope to be rejected, got %v", err)
+	}
+
+	_, err = store.CreateSecretVersion(ctx, "client_alice", created.SecretID, model.CreateSecretVersionRequest{
+		Ciphertext:  "not base64",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNlLXYy"}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != ErrInvalidInput {
+		t.Fatalf("expected invalid version ciphertext to be rejected, got %v", err)
+	}
+}
+
+func TestMemoryStoreRejectsDuplicateRecipientEnvelopes(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_alice", "client_alice")
+
+	_, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:       "secret",
+		Ciphertext: "Y2lwaGVydGV4dA==",
+		Envelopes: []model.RecipientEnvelope{
+			{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"},
+			{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNlLTI="},
+		},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != ErrInvalidInput {
+		t.Fatalf("expected duplicate recipient envelopes to be rejected, got %v", err)
 	}
 }
 

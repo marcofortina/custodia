@@ -36,7 +36,7 @@ func TestAPICreateAndReadOpaqueSecret(t *testing.T) {
 		t.Fatalf("create client: %v", err)
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
-	createBody := `{"name":"secret","ciphertext":"ciphertext","envelopes":[{"client_id":"client_alice","envelope":"envelope-for-alice"}],"permissions":7}`
+	createBody := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -58,7 +58,7 @@ func TestAPICreateAndReadOpaqueSecret(t *testing.T) {
 	if err := json.NewDecoder(res.Body).Decode(&read); err != nil {
 		t.Fatalf("decode read: %v", err)
 	}
-	if read.Ciphertext != "ciphertext" || read.Envelope != "envelope-for-alice" {
+	if read.Ciphertext != "Y2lwaGVydGV4dA==" || read.Envelope != "ZW52ZWxvcGUtZm9yLWFsaWNl" {
 		t.Fatalf("unexpected opaque payload: %+v", read)
 	}
 }
@@ -71,7 +71,7 @@ func TestAPIRejectsInvalidPermissionBits(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	body := `{"name":"secret","ciphertext":"ciphertext","envelopes":[{"client_id":"client_alice","envelope":"envelope-for-alice"}],"permissions":8}`
+	body := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":8}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", body, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -79,6 +79,25 @@ func TestAPIRejectsInvalidPermissionBits(t *testing.T) {
 	if res.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", res.Code, res.Body.String())
 	}
+}
+
+func TestAPIRejectsInvalidOpaquePayloadEncoding(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	body := `{"name":"secret","ciphertext":"not base64","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
+	req := mtlsRequest(http.MethodPost, "/v1/secrets", body, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", res.Code, res.Body.String())
+	}
+	assertLastAudit(t, memoryStore, "secret.create", "failure", "invalid_input")
 }
 
 func TestAPIAuditsMissingClientCertificate(t *testing.T) {
@@ -106,7 +125,7 @@ func TestAPIAuditsForbiddenSecretRead(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	createBody := `{"name":"secret","ciphertext":"ciphertext","envelopes":[{"client_id":"client_alice","envelope":"envelope-for-alice"}],"permissions":7}`
+	createBody := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
