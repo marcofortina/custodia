@@ -92,6 +92,19 @@ func (s *PostgresStore) ListClients(ctx context.Context) ([]model.Client, error)
 	return clients, mapPostgresError(rows.Err())
 }
 
+func (s *PostgresStore) GetClient(ctx context.Context, clientID string) (model.Client, error) {
+	var client model.Client
+	err := s.pool.QueryRow(ctx, `
+		SELECT client_id, mtls_subject, is_active, created_at, revoked_at
+		FROM clients
+		WHERE client_id = $1`, clientID).
+		Scan(&client.ClientID, &client.MTLSSubject, &client.IsActive, &client.CreatedAt, &client.RevokedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return model.Client{}, ErrNotFound
+	}
+	return client, mapPostgresError(err)
+}
+
 func (s *PostgresStore) RevokeClient(ctx context.Context, clientID string) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {

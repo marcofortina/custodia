@@ -11,6 +11,7 @@ type Store interface {
 	CreateClient(ctx context.Context, client model.Client) error
 	GetActiveClientBySubject(ctx context.Context, mtlsSubject string) (model.Client, error)
 	ListClients(ctx context.Context) ([]model.Client, error)
+	GetClient(ctx context.Context, clientID string) (model.Client, error)
 	RevokeClient(ctx context.Context, clientID string) error
 	CreateSecret(ctx context.Context, actorClientID string, req model.CreateSecretRequest) (model.SecretVersionRef, error)
 	ListSecrets(ctx context.Context, actorClientID string) ([]model.SecretMetadata, error)

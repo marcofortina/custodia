@@ -80,6 +80,18 @@ func (s *Server) handleListClients(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"clients": clients})
 }
 
+func (s *Server) handleGetClient(w http.ResponseWriter, r *http.Request) {
+	clientID := r.PathValue("client_id")
+	client, err := s.store.GetClient(r.Context(), clientID)
+	if err != nil {
+		s.auditStoreFailure(r, "client.read", "client", clientID, err)
+		writeMappedError(w, err)
+		return
+	}
+	s.audit(r, "client.read", "client", clientID, "success", nil)
+	writeJSON(w, http.StatusOK, client)
+}
+
 func (s *Server) handleCreateClient(w http.ResponseWriter, r *http.Request) {
 	var req model.CreateClientRequest
 	if !decodeJSON(w, r, &req) {

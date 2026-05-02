@@ -889,3 +889,30 @@ func TestAdminCanReadOperationalStatus(t *testing.T) {
 	}
 	assertLastAudit(t, memoryStore, "status.read", "success", "")
 }
+
+func TestAPIAdminGetsClientMetadata(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_bob", MTLSSubject: "client_bob"}); err != nil {
+		t.Fatalf("create bob: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/clients/client_bob", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var client model.Client
+	if err := json.NewDecoder(res.Body).Decode(&client); err != nil {
+		t.Fatalf("decode client: %v", err)
+	}
+	if client.ClientID != "client_bob" || client.MTLSSubject != "client_bob" {
+		t.Fatalf("unexpected client metadata: %+v", client)
+	}
+}

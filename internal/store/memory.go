@@ -118,6 +118,16 @@ func (s *MemoryStore) ListClients(context.Context) ([]model.Client, error) {
 	return clients, nil
 }
 
+func (s *MemoryStore) GetClient(_ context.Context, clientID string) (model.Client, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	client, ok := s.clients[clientID]
+	if !ok {
+		return model.Client{}, ErrNotFound
+	}
+	return client, nil
+}
+
 func (s *MemoryStore) RevokeClient(_ context.Context, clientID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
