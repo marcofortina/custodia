@@ -45,3 +45,10 @@ func TestBuildStoreRejectsUnsupportedBackend(t *testing.T) {
 		t.Fatal("expected unsupported store backend error")
 	}
 }
+
+func TestBuildLimiterRejectsUnsupportedBackend(t *testing.T) {
+	_, err := buildLimiter(config.Config{RateLimitBackend: "memcached"})
+	if err == nil {
+		t.Fatal("expected unsupported rate limit backend error")
+	}
+}

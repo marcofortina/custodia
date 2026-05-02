@@ -145,8 +145,19 @@ func bootstrapClients(ctx context.Context, vaultStore store.Store, clients map[s
 }
 
 func buildLimiter(cfg config.Config) (ratelimit.Limiter, error) {
-	if strings.EqualFold(cfg.RateLimitBackend, "valkey") || cfg.ValkeyURL != "" {
-		return ratelimit.NewValkeyLimiter(cfg.ValkeyURL)
+	backend := strings.ToLower(strings.TrimSpace(cfg.RateLimitBackend))
+	if backend == "" {
+		backend = "memory"
 	}
-	return ratelimit.NewMemoryLimiter(), nil
+	if cfg.ValkeyURL != "" && backend == "memory" {
+		backend = "valkey"
+	}
+	switch backend {
+	case "valkey":
+		return ratelimit.NewValkeyLimiter(cfg.ValkeyURL)
+	case "memory":
+		return ratelimit.NewMemoryLimiter(), nil
+	default:
+		return nil, errors.New("unsupported rate limit backend")
+	}
 }
