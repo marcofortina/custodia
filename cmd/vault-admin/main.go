@@ -48,6 +48,8 @@ func main() {
 		err = runClientRevoke(&cfg, args[2:])
 	case "audit list":
 		err = runAuditList(&cfg, args[2:])
+	case "audit export":
+		err = runAuditExport(&cfg, args[2:])
 	case "audit verify":
 		err = runAuditVerify(&cfg, args[2:])
 	case "secret versions":
@@ -102,6 +104,16 @@ func runAuditList(cfg *cliConfig, args []string) error {
 		return fmt.Errorf("--limit must be between 1 and 500")
 	}
 	return requestJSON(cfg, http.MethodGet, fmt.Sprintf("/v1/audit-events?limit=%d", *limit), nil, os.Stdout)
+}
+
+func runAuditExport(cfg *cliConfig, args []string) error {
+	cmd := flag.NewFlagSet("audit export", flag.ExitOnError)
+	limit := cmd.Int("limit", 500, "maximum audit events to export as JSONL, up to 500")
+	_ = cmd.Parse(args)
+	if *limit <= 0 || *limit > 500 {
+		return fmt.Errorf("--limit must be between 1 and 500")
+	}
+	return requestJSON(cfg, http.MethodGet, fmt.Sprintf("/v1/audit-events/export?limit=%d", *limit), nil, os.Stdout)
 }
 
 func runAuditVerify(cfg *cliConfig, args []string) error {
@@ -281,6 +293,7 @@ func usage() {
   vault-admin [global flags] client create --client-id ID --mtls-subject SUBJECT
   vault-admin [global flags] client revoke --client-id ID [--reason REASON]
   vault-admin [global flags] audit list [--limit N]
+  vault-admin [global flags] audit export [--limit N]
   vault-admin [global flags] audit verify [--limit N]
   vault-admin [global flags] secret versions --secret-id ID
   vault-admin [global flags] access list --secret-id ID

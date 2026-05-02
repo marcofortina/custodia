@@ -107,6 +107,33 @@ func (s *Server) handleListAuditEvents(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"audit_events": events})
 }
 
+func (s *Server) handleExportAuditEvents(w http.ResponseWriter, r *http.Request) {
+	limit := 500
+	if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
+		parsed, err := strconv.Atoi(rawLimit)
+		if err != nil || parsed <= 0 || parsed > 500 {
+			s.auditFailure(r, "audit.export", "audit_event", "", map[string]string{"reason": "invalid_limit"})
+			writeError(w, http.StatusBadRequest, "invalid_limit")
+			return
+		}
+		limit = parsed
+	}
+	events, err := s.store.ListAuditEvents(r.Context(), limit)
+	if err != nil {
+		s.auditStoreFailure(r, "audit.export", "audit_event", "", err)
+		writeMappedError(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/x-ndjson; charset=utf-8")
+	encoder := json.NewEncoder(w)
+	for _, event := range events {
+		if err := encoder.Encode(event); err != nil {
+			return
+		}
+	}
+	s.audit(r, "audit.export", "audit_event", "", "success", nil)
+}
+
 func (s *Server) handleVerifyAuditEvents(w http.ResponseWriter, r *http.Request) {
 	limit := 500
 	if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {

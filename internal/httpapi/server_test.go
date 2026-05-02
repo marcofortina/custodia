@@ -835,3 +835,34 @@ func TestAPIListsSecretVersionsMetadataOnly(t *testing.T) {
 	}
 	assertLastAudit(t, memoryStore, "secret.version_list", "success", "")
 }
+
+func TestAdminCanExportAuditEventsAsJSONL(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/audit-events?limit=10", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected audit list 200, got %d: %s", res.Code, res.Body.String())
+	}
+
+	req = mtlsRequest(http.MethodGet, "/v1/audit-events/export?limit=10", "", "admin")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected audit export 200, got %d: %s", res.Code, res.Body.String())
+	}
+	if got := res.Header().Get("Content-Type"); !strings.Contains(got, "application/x-ndjson") {
+		t.Fatalf("expected JSONL content type, got %q", got)
+	}
+	lines := strings.Split(strings.TrimSpace(res.Body.String()), "\n")
+	if len(lines) == 0 || !strings.Contains(lines[0], `"action":"audit.list"`) {
+		t.Fatalf("expected exported audit JSONL, got %q", res.Body.String())
+	}
+	assertLastAudit(t, memoryStore, "audit.export", "success", "")
+}
