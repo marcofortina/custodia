@@ -1255,6 +1255,26 @@ func TestAdminCanExportAuditEventsAsJSONL(t *testing.T) {
 	assertLastAudit(t, memoryStore, "audit.export", "success", "")
 }
 
+func TestAdminCanReadVersion(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/version", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected version 200, got %d: %s", res.Code, res.Body.String())
+	}
+	if !strings.Contains(res.Body.String(), `"version"`) || !strings.Contains(res.Body.String(), `"commit"`) {
+		t.Fatalf("expected build metadata, got %s", res.Body.String())
+	}
+	assertLastAudit(t, memoryStore, "version.read", "success", "")
+}
+
 func TestAdminCanReadOperationalStatus(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()

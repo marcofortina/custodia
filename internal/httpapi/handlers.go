@@ -77,6 +77,11 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
+	s.audit(r, "version.read", "system", "", "success", nil)
+	writeJSON(w, http.StatusOK, model.BuildInfo(build.Current()))
+}
+
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
 	clientID := clientIDFromContext(r)
 	client, err := s.store.GetClient(r.Context(), clientID)
