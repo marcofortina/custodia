@@ -42,6 +42,10 @@ The development mode uses the in-memory store and insecure HTTP only when `CUSTO
 
 Release builds can stamp version, commit and date into both server and CLI binaries. The values are exposed through `GET /v1/status`, `/web/status` and `vault-admin version`. See `docs/BUILD_METADATA.md`.
 
+## Audit export integrity
+
+Audit JSONL exports include SHA-256 and event-count headers for offline verification. See `docs/AUDIT_EXPORT_INTEGRITY.md`.
+
 ## PostgreSQL store
 
 The default build keeps the project standard-library-only for local tests. To enable the real PostgreSQL store, add the driver dependency and build with the explicit tag:
