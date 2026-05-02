@@ -39,3 +39,10 @@ func TestRunClientListRejectsInvalidActiveFilter(t *testing.T) {
 		t.Fatal("expected invalid active filter error")
 	}
 }
+
+func TestRunSecretVersionsRejectsInvalidLimit(t *testing.T) {
+	err := runSecretVersions(&cliConfig{}, []string{"--secret-id", "550e8400-e29b-41d4-a716-446655440000", "--limit", "501"})
+	if err == nil {
+		t.Fatal("expected invalid limit error")
+	}
+}
