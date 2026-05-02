@@ -380,7 +380,8 @@ func (s *PostgresStore) ActivateAccessGrant(ctx context.Context, actorClientID, 
 	err = tx.QueryRow(ctx, `
 		SELECT version_id::text, permissions, expires_at
 		FROM secret_access_requests
-		WHERE secret_id = $1::uuid AND client_id = $2 AND activated_at IS NULL AND revoked_at IS NULL`, secretID, targetClientID).
+		WHERE secret_id = $1::uuid AND client_id = $2 AND activated_at IS NULL AND revoked_at IS NULL
+		  AND (expires_at IS NULL OR expires_at > NOW())`, secretID, targetClientID).
 		Scan(&versionID, &permissions, &expiresAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrNotFound
@@ -442,7 +443,8 @@ func (s *PostgresStore) RevokeAccess(ctx context.Context, actorClientID, secretI
 	pendingTag, err := tx.Exec(ctx, `
 		UPDATE secret_access_requests
 		SET revoked_at = NOW()
-		WHERE secret_id = $1::uuid AND client_id = $2 AND activated_at IS NULL AND revoked_at IS NULL`, secretID, targetClientID)
+		WHERE secret_id = $1::uuid AND client_id = $2 AND activated_at IS NULL AND revoked_at IS NULL
+		  AND (expires_at IS NULL OR expires_at > NOW())`, secretID, targetClientID)
 	if err != nil {
 		return mapPostgresError(err)
 	}
@@ -722,6 +724,7 @@ func activePendingAccessExists(ctx context.Context, q pgQuerier, secretID, versi
 			SELECT 1 FROM secret_access_requests
 			WHERE secret_id = $1::uuid AND version_id = $2::uuid AND client_id = $3
 			  AND activated_at IS NULL AND revoked_at IS NULL
+			  AND (expires_at IS NULL OR expires_at > NOW())
 		)`, secretID, versionID, clientID).Scan(&exists)
 	return exists, mapPostgresError(err)
 }

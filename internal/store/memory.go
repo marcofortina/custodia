@@ -581,7 +581,10 @@ func pendingAccessKey(secretID, versionID, clientID string) string {
 }
 
 func activePendingAccess(pending *memoryPendingAccess) bool {
-	return pending != nil && pending.ActivatedAt == nil && pending.RevokedAt == nil
+	if pending == nil || pending.ActivatedAt != nil || pending.RevokedAt != nil {
+		return false
+	}
+	return pending.ExpiresAt == nil || pending.ExpiresAt.After(time.Now().UTC())
 }
 
 func activeAccess(access *memoryAccess) bool {
