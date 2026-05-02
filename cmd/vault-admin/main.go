@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -124,7 +125,7 @@ func runAccessGrantRequest(cfg *cliConfig, args []string) error {
 		return err
 	}
 	req := model.AccessGrantRequest{VersionID: *versionID, TargetClientID: *clientID, Permissions: bits}
-	return requestJSON(cfg, http.MethodPost, fmt.Sprintf("/v1/secrets/%s/access-requests", *secretID), req, os.Stdout)
+	return requestJSON(cfg, http.MethodPost, "/v1/secrets/"+pathEscape(*secretID)+"/access-requests", req, os.Stdout)
 }
 
 func runAccessActivate(cfg *cliConfig, args []string) error {
@@ -141,7 +142,7 @@ func runAccessActivate(cfg *cliConfig, args []string) error {
 		return err
 	}
 	req := model.ActivateAccessRequest{Envelope: strings.TrimSpace(string(envelope))}
-	path := fmt.Sprintf("/v1/secrets/%s/access/%s/activate", *secretID, *clientID)
+	path := "/v1/secrets/" + pathEscape(*secretID) + "/access/" + pathEscape(*clientID) + "/activate"
 	return requestJSON(cfg, http.MethodPost, path, req, os.Stdout)
 }
 
@@ -153,8 +154,12 @@ func runAccessRevoke(cfg *cliConfig, args []string) error {
 	if *secretID == "" || *clientID == "" {
 		return fmt.Errorf("--secret-id and --client-id are required")
 	}
-	path := fmt.Sprintf("/v1/secrets/%s/access/%s", *secretID, *clientID)
+	path := "/v1/secrets/" + pathEscape(*secretID) + "/access/" + pathEscape(*clientID)
 	return requestJSON(cfg, http.MethodDelete, path, nil, os.Stdout)
+}
+
+func pathEscape(value string) string {
+	return url.PathEscape(value)
 }
 
 func parsePermissionBits(value string) (int, error) {
