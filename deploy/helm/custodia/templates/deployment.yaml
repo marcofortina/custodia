@@ -18,6 +18,7 @@ spec:
     metadata:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        custodia.io/mtls-secret: {{ .Values.mtls.secretName | quote }}
 {{- with .Values.podAnnotations }}
 {{ toYaml . | indent 8 }}
 {{- end }}
