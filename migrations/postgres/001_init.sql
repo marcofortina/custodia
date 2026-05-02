@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS clients (
 
 CREATE TABLE IF NOT EXISTS secrets (
     secret_id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name                 TEXT NOT NULL,
+    name                 TEXT NOT NULL CHECK (length(btrim(name)) > 0 AND length(name) <= 255),
     created_by_client_id TEXT NOT NULL REFERENCES clients(client_id),
     created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at           TIMESTAMPTZ

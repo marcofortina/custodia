@@ -14,3 +14,16 @@ func TestValidClientID(t *testing.T) {
 		}
 	}
 }
+
+func TestValidSecretName(t *testing.T) {
+	for _, value := range []string{"db password", "tenant/prod/api-key"} {
+		if !ValidSecretName(value) {
+			t.Fatalf("expected %q to be valid", value)
+		}
+	}
+	for _, value := range []string{"", "   ", "secret\nname"} {
+		if ValidSecretName(value) {
+			t.Fatalf("expected %q to be invalid", value)
+		}
+	}
+}

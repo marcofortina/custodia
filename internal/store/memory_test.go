@@ -473,3 +473,20 @@ func TestMemoryStoreRejectsInvalidClientIdentifiers(t *testing.T) {
 		t.Fatalf("expected invalid envelope client id to be rejected, got %v", err)
 	}
 }
+
+func TestMemoryStoreRejectsInvalidSecretNames(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	for _, name := range []string{"", "   ", "secret\nname"} {
+		_, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+			Name:        name,
+			Ciphertext:  "Y2lwaGVydGV4dA==",
+			Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
+			Permissions: int(model.PermissionAll),
+		})
+		if err != ErrInvalidInput {
+			t.Fatalf("expected invalid secret name %q to be rejected, got %v", name, err)
+		}
+	}
+}
