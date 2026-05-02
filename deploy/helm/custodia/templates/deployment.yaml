@@ -4,67 +4,60 @@ metadata:
   name: {{ include "custodia.fullname" . }}
   labels:
     app.kubernetes.io/name: {{ include "custodia.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "custodia.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
         app.kubernetes.io/name: {{ include "custodia.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       containers:
         - name: custodia
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - containerPort: 8443
+            - name: https
+              containerPort: {{ .Values.service.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "custodia.fullname" . }}
           env:
-            - name: CUSTODIA_API_ADDR
-              value: {{ .Values.config.apiAddr | quote }}
-            - name: CUSTODIA_STORE_BACKEND
-              value: {{ .Values.config.storeBackend | quote }}
             - name: CUSTODIA_DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.config.databaseURLSecretName }}
                   key: {{ .Values.config.databaseURLSecretKey }}
-            - name: CUSTODIA_RATE_LIMIT_BACKEND
-              value: {{ .Values.config.rateLimitBackend | quote }}
             - name: CUSTODIA_VALKEY_URL
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.config.valkeyURLSecretName }}
                   key: {{ .Values.config.valkeyURLSecretKey }}
-            - name: CUSTODIA_ADMIN_CLIENT_IDS
-              value: {{ .Values.config.adminClientIDs | quote }}
-            - name: CUSTODIA_MAX_ENVELOPES_PER_SECRET
-              value: {{ .Values.config.maxEnvelopesPerSecret | quote }}
-            - name: CUSTODIA_CLIENT_RATE_LIMIT_PER_SECOND
-              value: {{ .Values.config.clientRateLimitPerSecond | quote }}
-            - name: CUSTODIA_GLOBAL_RATE_LIMIT_PER_SECOND
-              value: {{ .Values.config.globalRateLimitPerSecond | quote }}
             - name: CUSTODIA_TLS_CERT_FILE
-              value: /mtls/tls.crt
+              value: /etc/custodia/tls/{{ .Values.mtls.certKey }}
             - name: CUSTODIA_TLS_KEY_FILE
-              value: /mtls/tls.key
+              value: /etc/custodia/tls/{{ .Values.mtls.keyKey }}
             - name: CUSTODIA_CLIENT_CA_FILE
-              value: /mtls/ca.crt
-          volumeMounts:
-            - name: mtls
-              mountPath: /mtls
-              readOnly: true
+              value: /etc/custodia/tls/{{ .Values.mtls.clientCAKey }}
           readinessProbe:
             httpGet:
               scheme: HTTPS
               path: /ready
-              port: 8443
+              port: https
           livenessProbe:
             httpGet:
               scheme: HTTPS
               path: /health
-              port: 8443
+              port: https
+          volumeMounts:
+            - name: mtls
+              mountPath: /etc/custodia/tls
+              readOnly: true
           resources:
 {{ toYaml .Values.resources | indent 12 }}
       volumes:
