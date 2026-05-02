@@ -1,6 +1,6 @@
 # Custodia API
 
-All `/v1/*` routes require mTLS. The authenticated `client_id` is extracted from the client certificate SAN/CN and mapped to an active row in `clients`.
+All `/v1/*` routes require mTLS. The authenticated `client_id` is extracted from the client certificate SAN/CN and mapped to an active row in `clients`. JSON request bodies must use `Content-Type: application/json`, are capped at 1 MiB and must contain a single JSON value.
 
 
 ## Client metadata create

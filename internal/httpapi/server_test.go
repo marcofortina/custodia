@@ -166,6 +166,63 @@ func TestAPIRejectsInvalidOpaquePayloadEncoding(t *testing.T) {
 	assertLastAudit(t, memoryStore, "secret.create", "failure", "invalid_input")
 }
 
+func TestAPIRejectsUnsupportedJSONContentType(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/secrets", strings.NewReader(`{"name":"secret"}`))
+	req.TLS = &tls.ConnectionState{PeerCertificates: []*x509.Certificate{{DNSNames: []string{"client_alice"}, Subject: pkix.Name{CommonName: "client_alice"}}}}
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusUnsupportedMediaType {
+		t.Fatalf("expected 415, got %d: %s", res.Code, res.Body.String())
+	}
+	assertLastAudit(t, memoryStore, "secret.create", "failure", "invalid_json")
+}
+
+func TestAPIRejectsTrailingJSONPayload(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	body := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}{}`
+	req := mtlsRequest(http.MethodPost, "/v1/secrets", body, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", res.Code, res.Body.String())
+	}
+	assertLastAudit(t, memoryStore, "secret.create", "failure", "invalid_json")
+}
+
+func TestAPIRejectsOversizedJSONPayload(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	body := `{"name":"` + strings.Repeat("a", maxJSONBodyBytes+1) + `"}`
+	req := mtlsRequest(http.MethodPost, "/v1/secrets", body, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected 413, got %d: %s", res.Code, res.Body.String())
+	}
+	assertLastAudit(t, memoryStore, "secret.create", "failure", "invalid_json")
+}
+
 func TestAPIDefaultsEnvelopeLimitWhenOptionIsUnset(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()

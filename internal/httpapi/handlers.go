@@ -2,8 +2,12 @@ package httpapi
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
+	"mime"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"custodia/internal/model"
 	"custodia/internal/ratelimit"
@@ -240,10 +244,28 @@ func (s *Server) handleCreateSecretVersion(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusCreated, ref)
 }
 
+const maxJSONBodyBytes = 1 << 20
+
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
+	contentType := strings.TrimSpace(r.Header.Get("Content-Type"))
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil || mediaType != "application/json" {
+		writeError(w, http.StatusUnsupportedMediaType, "unsupported_media_type")
+		return false
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxJSONBodyBytes)
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(target); err != nil {
+		if errors.As(err, new(*http.MaxBytesError)) {
+			writeError(w, http.StatusRequestEntityTooLarge, "json_body_too_large")
+			return false
+		}
+		writeError(w, http.StatusBadRequest, "invalid_json")
+		return false
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
 		writeError(w, http.StatusBadRequest, "invalid_json")
 		return false
 	}
