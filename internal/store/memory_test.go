@@ -76,6 +76,37 @@ func TestMemoryStoreListsSecretAccessByClientID(t *testing.T) {
 	}
 }
 
+func TestMemoryStoreListSecretsReleasesReadLock(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	if _, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:        "secret",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
+		Permissions: int(model.PermissionAll),
+	}); err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	if _, err := store.ListSecrets(ctx, "client_alice"); err != nil {
+		t.Fatalf("list secrets: %v", err)
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- store.CreateClient(ctx, model.Client{ClientID: "client_bob", MTLSSubject: "client_bob"})
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("create client after list secrets: %v", err)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("ListSecrets leaked a read lock and blocked writers")
+	}
+}
+
 func TestMemoryStoreListsSecretsNewestFirst(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryStore()
