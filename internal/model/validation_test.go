@@ -15,6 +15,12 @@ func TestValidClientID(t *testing.T) {
 	}
 }
 
+func TestNormalizeSecretName(t *testing.T) {
+	if got := NormalizeSecretName("  db password  "); got != "db password" {
+		t.Fatalf("unexpected normalized secret name: %q", got)
+	}
+}
+
 func TestValidSecretName(t *testing.T) {
 	for _, value := range []string{"db password", "tenant/prod/api-key"} {
 		if !ValidSecretName(value) {

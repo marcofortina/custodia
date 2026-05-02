@@ -155,6 +155,7 @@ func (s *MemoryStore) RevokeClient(_ context.Context, clientID string) error {
 }
 
 func (s *MemoryStore) CreateSecret(_ context.Context, actorClientID string, req model.CreateSecretRequest) (model.SecretVersionRef, error) {
+	req.Name = model.NormalizeSecretName(req.Name)
 	if !model.ValidSecretName(req.Name) {
 		return model.SecretVersionRef{}, ErrInvalidInput
 	}

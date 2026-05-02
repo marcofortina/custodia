@@ -19,9 +19,14 @@ func ValidClientID(value string) bool {
 	return value != "" && len(value) <= MaxClientIDLength && clientIDPattern.MatchString(value)
 }
 
+// NormalizeSecretName trims surrounding whitespace without changing the caller-defined secret name body.
+func NormalizeSecretName(value string) string {
+	return strings.TrimSpace(value)
+}
+
 // ValidSecretName keeps secret metadata bounded and printable while leaving ciphertext opaque.
 func ValidSecretName(value string) bool {
-	value = strings.TrimSpace(value)
+	value = NormalizeSecretName(value)
 	if value == "" || len(value) > MaxSecretNameLength {
 		return false
 	}
