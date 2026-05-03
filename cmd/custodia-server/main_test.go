@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"custodia/internal/config"
@@ -56,8 +57,18 @@ func TestBootstrapClientsRejectsInvalidMappings(t *testing.T) {
 	}
 }
 
+func TestBuildStoreReturnsSQLiteBuildGuardWithoutSQLiteTag(t *testing.T) {
+	_, closeStore, err := buildStore(context.Background(), config.Config{StoreBackend: "sqlite", DatabaseURL: "file:/tmp/custodia-test.db"})
+	if closeStore != nil {
+		closeStore()
+	}
+	if err == nil || !errors.Is(err, store.ErrSQLiteStoreNotWired) {
+		t.Fatalf("expected sqlite build guard error, got %v", err)
+	}
+}
+
 func TestBuildStoreRejectsUnsupportedBackend(t *testing.T) {
-	_, closeStore, err := buildStore(context.Background(), config.Config{StoreBackend: "sqlite"})
+	_, closeStore, err := buildStore(context.Background(), config.Config{StoreBackend: "badger"})
 	if closeStore != nil {
 		closeStore()
 	}
