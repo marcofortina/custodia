@@ -151,6 +151,7 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 
 - [Production checklist](docs/PRODUCTION_CHECKLIST.md)
 - [Disaster recovery runbook](docs/DR_RUNBOOK.md)
+- [Database HA runbook](docs/DATABASE_HA_RUNBOOK.md)
 - [Backup and restore runbook](docs/BACKUP_RESTORE_RUNBOOK.md)
 - [CA signing service design](docs/CA_SIGNING_SERVICE.md)
 - [Client certificate lifecycle](docs/CLIENT_CERTIFICATE_LIFECYCLE.md)
