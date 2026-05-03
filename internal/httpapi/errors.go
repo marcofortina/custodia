@@ -60,6 +60,24 @@ func (s *Server) auditStoreFailure(r *http.Request, action, resourceType, resour
 	s.auditFailure(r, action, resourceType, resourceID, map[string]string{"reason": code})
 }
 
+func enrichAuditMetadata(metadata json.RawMessage, requestID string) json.RawMessage {
+	if requestID == "" {
+		return metadata
+	}
+	fields := map[string]any{}
+	if len(metadata) > 0 {
+		if err := json.Unmarshal(metadata, &fields); err != nil {
+			fields = map[string]any{"metadata": string(metadata)}
+		}
+	}
+	fields["request_id"] = requestID
+	enriched, err := json.Marshal(fields)
+	if err != nil {
+		return metadata
+	}
+	return enriched
+}
+
 func (s *Server) audit(r *http.Request, action, resourceType, resourceID, outcome string, metadata json.RawMessage) {
 	_ = s.store.AppendAudit(r.Context(), model.AuditEvent{
 		EventID:       id.New(),
@@ -69,6 +87,6 @@ func (s *Server) audit(r *http.Request, action, resourceType, resourceID, outcom
 		ResourceType:  resourceType,
 		ResourceID:    resourceID,
 		Outcome:       outcome,
-		Metadata:      metadata,
+		Metadata:      enrichAuditMetadata(metadata, requestIDFromContext(r)),
 	})
 }
