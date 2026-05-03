@@ -150,6 +150,7 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 ### Operational runbooks
 
 - [Production checklist](docs/PRODUCTION_CHECKLIST.md)
+- [Phase 3 closure boundary](docs/PHASE3_CLOSURE.md)
 - [Disaster recovery runbook](docs/DR_RUNBOOK.md)
 - [Database HA runbook](docs/DATABASE_HA_RUNBOOK.md)
 - [Backup and restore runbook](docs/BACKUP_RESTORE_RUNBOOK.md)
