@@ -20,7 +20,10 @@ import (
 )
 
 func main() {
-	cfg := config.Load()
+	cfg, err := config.LoadWithArgs(os.Args[1:])
+	if err != nil {
+		log.Fatalf("config load failed: %v", err)
+	}
 	ctx := context.Background()
 
 	vaultStore, closeStore, err := buildStore(ctx, cfg)
