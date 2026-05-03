@@ -63,6 +63,11 @@ production-check:
 	fi
 	$(GO) run ./cmd/vault-admin production check --env-file "$(CUSTODIA_PRODUCTION_ENV_FILE)"
 
+.PHONY: production-evidence-check
+production-evidence-check:
+	@if [ -z "$(CUSTODIA_PRODUCTION_ENV_FILE)" ]; then 		echo "CUSTODIA_PRODUCTION_ENV_FILE is required" >&2; 		exit 2; 	fi
+	$(GO) run ./cmd/vault-admin production evidence-check --env-file "$(CUSTODIA_PRODUCTION_ENV_FILE)"
+
 .PHONY: release-check
 release-check:
 	./scripts/release-check.sh
