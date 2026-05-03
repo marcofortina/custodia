@@ -155,6 +155,7 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 - [CA signing service design](docs/CA_SIGNING_SERVICE.md)
 - [Client certificate lifecycle](docs/CLIENT_CERTIFICATE_LIFECYCLE.md)
 - [Web MFA](docs/WEB_MFA.md)
+- [Web passkey support](docs/WEB_PASSKEY.md)
 - [CRL and OCSP operations](docs/CRL_OCSP_RUNBOOK.md)
 - [SIEM and WORM audit export](docs/SIEM_WORM_EXPORT.md)
 - [Formal verification scope](docs/FORMAL_VERIFICATION.md)
