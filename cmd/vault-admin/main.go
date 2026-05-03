@@ -59,6 +59,8 @@ func main() {
 		err = requestJSON(&cfg, http.MethodGet, "/v1/diagnostics", nil, os.Stdout)
 	case "revocation status":
 		err = requestJSON(&cfg, http.MethodGet, "/v1/revocation/status", nil, os.Stdout)
+	case "revocation fetch-crl":
+		err = runRevocationFetchCRL(&cfg, args[2:])
 	case "certificate sign":
 		err = runCertificateSign(&cfg, args[2:])
 	case "client whoami":
@@ -105,6 +107,22 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func runRevocationFetchCRL(cfg *cliConfig, args []string) error {
+	cmd := flag.NewFlagSet("revocation fetch-crl", flag.ExitOnError)
+	out := cmd.String("out", "", "path for the downloaded PEM CRL")
+	_ = cmd.Parse(args)
+	if *out == "" {
+		return fmt.Errorf("--out is required")
+	}
+	file, err := os.OpenFile(*out, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = requestRaw(cfg, http.MethodGet, "/v1/crl.pem", nil, file)
+	return err
 }
 
 func runCertificateSign(cfg *cliConfig, args []string) error {
