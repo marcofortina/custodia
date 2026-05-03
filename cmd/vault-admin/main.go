@@ -55,6 +55,8 @@ func main() {
 		err = requestJSON(&cfg, http.MethodGet, "/v1/version", nil, os.Stdout)
 	case "diagnostics read":
 		err = requestJSON(&cfg, http.MethodGet, "/v1/diagnostics", nil, os.Stdout)
+	case "revocation status":
+		err = requestJSON(&cfg, http.MethodGet, "/v1/revocation/status", nil, os.Stdout)
 	case "certificate sign":
 		err = runCertificateSign(&cfg, args[2:])
 	case "client whoami":
