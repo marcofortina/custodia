@@ -189,3 +189,79 @@ func TestLoadConfigReadsSignerKeyProvider(t *testing.T) {
 		t.Fatalf("keyProvider = %q, want %q", cfg.keyProvider, signing.KeyProviderPKCS11)
 	}
 }
+
+func TestSignerServesConfiguredCRL(t *testing.T) {
+	crlPath := t.TempDir() + "/client.crl"
+	if err := os.WriteFile(crlPath, testSignerCRL(t), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	handler := testSignerHandlerWithCRL(t, crlPath)
+	req := httptest.NewRequest(http.MethodGet, "/v1/crl.pem", nil)
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", res.Code, res.Body.String())
+	}
+	if got := res.Header().Get("Content-Type"); got != "application/pkix-crl" {
+		t.Fatalf("content type = %q", got)
+	}
+	if got := res.Header().Get("X-Custodia-CRL-Revoked-Count"); got != "1" {
+		t.Fatalf("revoked count header = %q", got)
+	}
+	if !bytes.Contains(res.Body.Bytes(), []byte("BEGIN X509 CRL")) {
+		t.Fatalf("missing CRL PEM body: %s", res.Body.String())
+	}
+}
+
+func TestSignerCRLReturnsNotFoundWhenUnconfigured(t *testing.T) {
+	handler := testSignerHandler(t)
+	req := httptest.NewRequest(http.MethodGet, "/v1/crl.pem", nil)
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", res.Code, http.StatusNotFound)
+	}
+}
+
+func testSignerHandlerWithCRL(t *testing.T, crlPath string) http.Handler {
+	t.Helper()
+	caCertPEM, caKeyPEM := testSignerCA(t)
+	clientSigner, err := signing.NewClientCertificateSigner(caCertPEM, caKeyPEM)
+	if err != nil {
+		t.Fatalf("NewClientCertificateSigner() error = %v", err)
+	}
+	return newSignerServer(clientSigner, map[string]bool{"signer_admin": true}, 1, true, signeraudit.NopRecorder{}, crlPath)
+}
+
+func testSignerCRL(t *testing.T) []byte {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("GenerateKey() error = %v", err)
+	}
+	now := time.Now().UTC()
+	ca := &x509.Certificate{
+		SerialNumber:          big.NewInt(99),
+		Subject:               pkix.Name{CommonName: "crl-test-ca"},
+		NotBefore:             now.Add(-time.Hour),
+		NotAfter:              now.Add(time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		SubjectKeyId:          []byte{9, 9, 9},
+	}
+	der, err := x509.CreateRevocationList(rand.Reader, &x509.RevocationList{
+		SignatureAlgorithm: x509.ECDSAWithSHA256,
+		Number:             big.NewInt(1),
+		ThisUpdate:         now,
+		NextUpdate:         now.Add(time.Hour),
+		RevokedCertificateEntries: []x509.RevocationListEntry{{
+			SerialNumber:   big.NewInt(100),
+			RevocationTime: now,
+		}},
+	}, ca, key)
+	if err != nil {
+		t.Fatalf("CreateRevocationList() error = %v", err)
+	}
+	return pem.EncodeToMemory(&pem.Block{Type: "X509 CRL", Bytes: der})
+}
