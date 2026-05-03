@@ -11,10 +11,12 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"custodia/internal/model"
 	"custodia/internal/ratelimit"
 	"custodia/internal/store"
+	"custodia/internal/webauth"
 )
 
 func TestAPIPropagatesRequestID(t *testing.T) {
@@ -1908,5 +1910,101 @@ func TestWebConsoleRendersMetadataOnlyPages(t *testing.T) {
 		if strings.Contains(body, "c2VjcmV0LWNpcGhlcnRleHQ=") || strings.Contains(body, "c2VjcmV0LWVudmVsb3Bl") {
 			t.Fatalf("%s leaked opaque crypto payload: %s", path, body)
 		}
+	}
+}
+
+func TestWebConsoleRequiresTOTPWhenConfigured(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{
+		Store:            memoryStore,
+		Limiter:          ratelimit.NewMemoryLimiter(),
+		AdminClientIDs:   map[string]bool{"admin": true},
+		ClientRateLimit:  100,
+		GlobalRateLimit:  100,
+		WebMFARequired:   true,
+		WebTOTPSecret:    "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+		WebSessionSecret: "01234567890123456789012345678901",
+		WebSessionTTL:    time.Minute,
+		WebSessionSecure: false,
+	})
+
+	req := mtlsRequest(http.MethodGet, "/web/", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusSeeOther || res.Header().Get("Location") != "/web/login" {
+		t.Fatalf("expected redirect to login, got %d location=%q body=%s", res.Code, res.Header().Get("Location"), res.Body.String())
+	}
+}
+
+func TestWebTOTPLoginUnlocksConsole(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	secret := "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+	handler := New(Options{
+		Store:            memoryStore,
+		Limiter:          ratelimit.NewMemoryLimiter(),
+		AdminClientIDs:   map[string]bool{"admin": true},
+		ClientRateLimit:  100,
+		GlobalRateLimit:  100,
+		WebMFARequired:   true,
+		WebTOTPSecret:    secret,
+		WebSessionSecret: "01234567890123456789012345678901",
+		WebSessionTTL:    time.Minute,
+		WebSessionSecure: false,
+	})
+	code, err := webauth.TOTPCode(secret, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("TOTPCode() error = %v", err)
+	}
+
+	login := mtlsRequest(http.MethodPost, "/web/login", "totp="+code, "admin")
+	login.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	loginRes := httptest.NewRecorder()
+	handler.ServeHTTP(loginRes, login)
+	if loginRes.Code != http.StatusSeeOther {
+		t.Fatalf("expected login redirect, got %d: %s", loginRes.Code, loginRes.Body.String())
+	}
+	cookie := loginRes.Result().Cookies()[0]
+
+	page := mtlsRequest(http.MethodGet, "/web/", "", "admin")
+	page.AddCookie(cookie)
+	pageRes := httptest.NewRecorder()
+	handler.ServeHTTP(pageRes, page)
+	if pageRes.Code != http.StatusOK || !strings.Contains(pageRes.Body.String(), "metadata console") {
+		t.Fatalf("expected unlocked console, got %d: %s", pageRes.Code, pageRes.Body.String())
+	}
+}
+
+func TestWebTOTPLoginRejectsInvalidCode(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{
+		Store:            memoryStore,
+		Limiter:          ratelimit.NewMemoryLimiter(),
+		AdminClientIDs:   map[string]bool{"admin": true},
+		ClientRateLimit:  100,
+		GlobalRateLimit:  100,
+		WebMFARequired:   true,
+		WebTOTPSecret:    "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+		WebSessionSecret: "01234567890123456789012345678901",
+		WebSessionTTL:    time.Minute,
+	})
+
+	login := mtlsRequest(http.MethodPost, "/web/login", "totp=000000", "admin")
+	login.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, login)
+	if res.Code != http.StatusUnauthorized {
+		t.Fatalf("expected invalid TOTP 401, got %d: %s", res.Code, res.Body.String())
 	}
 }
