@@ -308,3 +308,11 @@ func TestSignerRevocationSerialStatusRejectsInvalidSerial(t *testing.T) {
 		t.Fatalf("status = %d, want %d", res.Code, http.StatusBadRequest)
 	}
 }
+
+func TestLoadConfigReadsSignerCAKeyPassphraseFile(t *testing.T) {
+	t.Setenv("CUSTODIA_SIGNER_CA_KEY_PASSPHRASE_FILE", "/etc/custodia/ca.pass")
+	cfg := loadConfig()
+	if cfg.caKeyPassphraseFile != "/etc/custodia/ca.pass" {
+		t.Fatalf("caKeyPassphraseFile = %q", cfg.caKeyPassphraseFile)
+	}
+}
