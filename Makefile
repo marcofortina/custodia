@@ -99,3 +99,13 @@ k3s-cockroachdb-smoke:
 .PHONY: passkey-assertion-verifier-template-check
 passkey-assertion-verifier-template-check:
 	@printf '{"credential_id":"fixture"}' | ./scripts/passkey-assertion-verify-command.sh | grep '"valid":false' >/dev/null
+
+.PHONY: build-sqlite
+build-sqlite:
+	$(GO) build -tags sqlite -ldflags "$(LDFLAGS)" ./cmd/custodia-server
+	$(GO) build -tags sqlite -ldflags "$(LDFLAGS)" ./cmd/vault-admin
+	$(GO) build -tags sqlite -ldflags "$(LDFLAGS)" ./cmd/custodia-signer
+
+.PHONY: test-sqlite
+test-sqlite:
+	$(GO) test -tags sqlite -p=1 -timeout 60s ./internal/store ./cmd/custodia-server
