@@ -27,6 +27,7 @@ type signerConfig struct {
 	clientCAFile    string
 	caCertFile      string
 	caKeyFile       string
+	keyProvider     string
 	adminSubjects   map[string]bool
 	defaultTTLHours int
 	devInsecureHTTP bool
@@ -44,15 +45,7 @@ type signerServer struct {
 
 func main() {
 	cfg := loadConfig()
-	caCertPEM, err := os.ReadFile(cfg.caCertFile)
-	if err != nil {
-		log.Fatalf("read CA certificate failed: %v", err)
-	}
-	caKeyPEM, err := os.ReadFile(cfg.caKeyFile)
-	if err != nil {
-		log.Fatalf("read CA key failed: %v", err)
-	}
-	clientSigner, err := signing.NewClientCertificateSigner(caCertPEM, caKeyPEM)
+	clientSigner, err := signing.LoadClientCertificateSigner(cfg.keyProvider, cfg.caCertFile, cfg.caKeyFile)
 	if err != nil {
 		log.Fatalf("signer init failed: %v", err)
 	}
@@ -266,6 +259,7 @@ func loadConfig() signerConfig {
 		clientCAFile:    os.Getenv("CUSTODIA_SIGNER_CLIENT_CA_FILE"),
 		caCertFile:      os.Getenv("CUSTODIA_SIGNER_CA_CERT_FILE"),
 		caKeyFile:       os.Getenv("CUSTODIA_SIGNER_CA_KEY_FILE"),
+		keyProvider:     env("CUSTODIA_SIGNER_KEY_PROVIDER", signing.KeyProviderFile),
 		adminSubjects:   envSet("CUSTODIA_SIGNER_ADMIN_SUBJECTS"),
 		defaultTTLHours: envInt("CUSTODIA_SIGNER_DEFAULT_TTL_HOURS", int(signing.DefaultClientCertificateTTL/time.Hour)),
 		devInsecureHTTP: envBool("CUSTODIA_SIGNER_DEV_INSECURE_HTTP", false),
