@@ -127,3 +127,21 @@ Supported metadata forms:
 - RSA/RS256 COSE keys (`kty=3`, `alg=-257`, modulus and exponent byte strings)
 
 The parser validates the shape and supported algorithm metadata. It still does not perform authenticator signature verification; that remains the final WebAuthn production boundary.
+
+## External assertion verification command
+
+Custodia can delegate the final WebAuthn assertion signature check to an external audited verifier by setting:
+
+```bash
+CUSTODIA_WEB_PASSKEY_ASSERTION_VERIFY_COMMAND=/usr/local/bin/verify-passkey-assertion
+```
+
+When configured, `/web/passkey/authenticate/verify` requires `authenticator_data` and `signature` in addition to the existing `client_data_json`, `credential_id` and `credential_key_cose` metadata. The server sends a JSON payload to the command over stdin and expects:
+
+```json
+{"valid":true}
+```
+
+Any command error, malformed response or `valid:false` fails closed with `invalid_assertion_signature`.
+
+The repository includes `scripts/passkey-assertion-verify-command.sh` as a fail-closed template. It is not a verifier. Production must replace it with an audited WebAuthn verifier implementation.
