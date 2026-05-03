@@ -63,13 +63,13 @@ Request body:
 
 The server validates the WebAuthn `clientDataJSON` fields that are safe to verify without credential storage: `type`, `challenge` and `origin`. A successful response is `verified_challenge` and consumes the challenge so it cannot be replayed.
 
-This is still not full WebAuthn assertion verification. Credential public-key storage, COSE/CBOR handling and signature verification remain the next production passkey milestone.
+This is still not full WebAuthn assertion verification. Credential credential-key storage, COSE/CBOR handling and signature verification remain the next production passkey milestone.
 
 ## Credential metadata store
 
 Passkey registration preverification now records credential metadata after a valid
 challenge has been consumed. The stored metadata is intentionally limited to the
-credential id, owning client id and timestamps. It does not store COSE public keys,
+credential id, owning client id and timestamps. It does not store COSE credential keys,
 authenticator data or attestation statements yet.
 
 Authentication preverification requires the supplied credential id to exist for the
@@ -98,7 +98,7 @@ Request body with authenticator data:
 }
 ```
 
-This is still not full WebAuthn assertion verification. Custodia now parses authenticator data and enforces stored counters when provided, but it still does not parse attestation objects, store COSE public keys or verify authenticator signatures.
+This is still not full WebAuthn assertion verification. Custodia now parses authenticator data and enforces stored counters when provided, but it still does not parse attestation objects, store COSE credential keys or verify authenticator signatures.
 
 ## Authenticator data RP ID and user-verification enforcement
 
@@ -109,10 +109,10 @@ Passkey preverification now validates supplied `authenticator_data` when present
 - the user-verified flag must be set because generated passkey options require user verification;
 - the signature counter must increase for known credentials.
 
-This is still not full WebAuthn assertion verification. The server does not yet verify the authenticator signature over `authenticatorData || SHA256(clientDataJSON)` because credential public-key COSE/CBOR parsing is still intentionally out of scope for this scaffold.
+This is still not full WebAuthn assertion verification. The server does not yet verify the authenticator signature over `authenticatorData || SHA256(clientDataJSON)` because credential credential-key COSE/CBOR parsing is still intentionally out of scope for this scaffold.
 
-## Credential public key metadata
+## Credential credential key metadata
 
-Registration preverification now requires `public_key_cose`, a base64url-encoded opaque COSE public key blob. Custodia stores this metadata with the credential id and client id, then requires the stored public-key metadata before authentication preverification can succeed.
+Registration preverification now requires `credential_key_cose`, a base64url-encoded opaque COSE credential key blob. Custodia stores this metadata with the credential id and client id, then requires the stored credential-key metadata before authentication preverification can succeed.
 
 This is still not signature verification. The server stores the COSE bytes as opaque metadata and does not yet parse CBOR/COSE or verify authenticator signatures against the stored key.

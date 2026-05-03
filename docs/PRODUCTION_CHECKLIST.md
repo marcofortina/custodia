@@ -21,7 +21,7 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 
 ## Must remain false
 
-- Do not add a server-side public-key directory.
+- Do not add a server-side credential-key directory.
 - Do not add DEK, wrapped DEK or key unwrap logic to the server.
 - Do not render ciphertext/envelopes in web pages.
 - Do not use the memory store for production.
@@ -77,7 +77,7 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 
 - Passkey challenges must be stored with TTL and consumed once.
 - `POST /web/passkey/*/verify` must reject replayed, expired or wrong-origin `clientDataJSON`.
-- Full WebAuthn production promotion still requires credential public-key storage, authenticatorData parsing, COSE/CBOR parsing, signature verification and signature-counter checks.
+- Full WebAuthn production promotion still requires credential credential-key storage, authenticatorData parsing, COSE/CBOR parsing, signature verification and signature-counter checks.
 
 ## Passkey credential metadata gate
 
@@ -89,16 +89,16 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 
 - Passkey authentication preverification must include `authenticator_data` during production drills.
 - Non-increasing signature counters must be rejected before passkeys are considered beyond challenge-only preverification.
-- Full WebAuthn promotion still requires COSE public-key storage, authenticator signature verification and attestation/authenticatorData review with an audited WebAuthn library or reviewed verifier.
+- Full WebAuthn promotion still requires COSE credential-key storage, authenticator signature verification and attestation/authenticatorData review with an audited WebAuthn library or reviewed verifier.
 
 ## Passkey authenticator data gate
 
 - `CUSTODIA_WEB_PASSKEY_RP_ID` matches the browser-visible RP ID and the authenticator RP ID hash validation path is covered in release tests.
 - User verification remains required for passkey options and supplied authenticator data.
-- Do not promote passkeys as the only MFA factor until COSE public-key storage and authenticator signature verification are implemented.
+- Do not promote passkeys as the only MFA factor until COSE credential-key storage and authenticator signature verification are implemented.
 
-## Passkey public-key metadata gate
+## Passkey credential-key metadata gate
 
-- Registration preverification must require `public_key_cose` before passkeys are considered beyond challenge-only mode.
-- Authentication preverification must reject credentials without stored public-key metadata.
+- Registration preverification must require `credential_key_cose` before passkeys are considered beyond challenge-only mode.
+- Authentication preverification must reject credentials without stored credential-key metadata.
 - Do not promote passkeys as a standalone MFA factor until CBOR/COSE parsing and authenticator signature verification are implemented.

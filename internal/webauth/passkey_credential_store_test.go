@@ -85,10 +85,10 @@ func TestPasskeyCredentialStoreTouchPreservesSignCountWithoutAuthenticatorData(t
 	}
 }
 
-func TestPasskeyCredentialStoreStoresPublicKeyCOSE(t *testing.T) {
+func TestPasskeyCredentialStoreStoresCredentialKeyCOSE(t *testing.T) {
 	store := NewPasskeyCredentialStore()
 	key := []byte{0xa5, 0x01, 0x02}
-	if !store.Register(PasskeyCredentialRecord{CredentialID: "credential-1", ClientID: "admin", CreatedAt: time.Now().UTC(), PublicKeyCOSE: key}) {
+	if !store.Register(PasskeyCredentialRecord{CredentialID: "credential-1", ClientID: "admin", CreatedAt: time.Now().UTC(), CredentialKeyCOSE: key}) {
 		t.Fatal("Register() = false")
 	}
 	key[0] = 0xff
@@ -96,27 +96,27 @@ func TestPasskeyCredentialStoreStoresPublicKeyCOSE(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get() error = %v", err)
 	}
-	if len(record.PublicKeyCOSE) != 3 || record.PublicKeyCOSE[0] != 0xa5 {
-		t.Fatalf("unexpected public key COSE clone: %x", record.PublicKeyCOSE)
+	if len(record.CredentialKeyCOSE) != 3 || record.CredentialKeyCOSE[0] != 0xa5 {
+		t.Fatalf("unexpected credential key COSE clone: %x", record.CredentialKeyCOSE)
 	}
-	record.PublicKeyCOSE[0] = 0xee
+	record.CredentialKeyCOSE[0] = 0xee
 	record, err = store.Get("credential-1", "admin")
 	if err != nil {
 		t.Fatalf("Get() error = %v", err)
 	}
-	if record.PublicKeyCOSE[0] != 0xa5 {
-		t.Fatalf("stored public key COSE was mutated: %x", record.PublicKeyCOSE)
+	if record.CredentialKeyCOSE[0] != 0xa5 {
+		t.Fatalf("stored credential key COSE was mutated: %x", record.CredentialKeyCOSE)
 	}
 }
 
-func TestPasskeyCredentialStoreRequiresPublicKeyCOSE(t *testing.T) {
+func TestPasskeyCredentialStoreRequiresCredentialKeyCOSE(t *testing.T) {
 	store := NewPasskeyCredentialStore()
 	store.Register(PasskeyCredentialRecord{CredentialID: "credential-1", ClientID: "admin", CreatedAt: time.Now().UTC()})
-	if err := store.RequirePublicKeyCOSE("credential-1", "admin"); err != ErrPasskeyCredentialPublicKeyMissing {
-		t.Fatalf("RequirePublicKeyCOSE() error = %v, want %v", err, ErrPasskeyCredentialPublicKeyMissing)
+	if err := store.RequireCredentialKeyCOSE("credential-1", "admin"); err != ErrPasskeyCredentialCredentialKeyMissing {
+		t.Fatalf("RequireCredentialKeyCOSE() error = %v, want %v", err, ErrPasskeyCredentialCredentialKeyMissing)
 	}
-	store.Register(PasskeyCredentialRecord{CredentialID: "credential-2", ClientID: "admin", CreatedAt: time.Now().UTC(), PublicKeyCOSE: []byte{1}})
-	if err := store.RequirePublicKeyCOSE("credential-2", "admin"); err != nil {
-		t.Fatalf("RequirePublicKeyCOSE() error = %v", err)
+	store.Register(PasskeyCredentialRecord{CredentialID: "credential-2", ClientID: "admin", CreatedAt: time.Now().UTC(), CredentialKeyCOSE: []byte{1}})
+	if err := store.RequireCredentialKeyCOSE("credential-2", "admin"); err != nil {
+		t.Fatalf("RequireCredentialKeyCOSE() error = %v", err)
 	}
 }

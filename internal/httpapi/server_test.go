@@ -2186,7 +2186,7 @@ func registerPasskeyCredential(t *testing.T, handler http.Handler, clientID, hos
 		t.Fatalf("decode register options: %v", err)
 	}
 	payload := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.create", Challenge: options.Challenge, Origin: "https://" + host})
-	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/register/verify", `{"client_data_json":"`+payload+`","credential_id":"`+credentialID+`","public_key_cose":"`+passkeyPublicKeyCOSEPayload()+`"}`, clientID)
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/register/verify", `{"client_data_json":"`+payload+`","credential_id":"`+credentialID+`","credential_key_cose":"`+passkeyCredentialKeyCOSEPayload()+`"}`, clientID)
 	verifyReq.Host = host
 	verifyReq.Header.Set("Content-Type", "application/json")
 	verifyRes := httptest.NewRecorder()
@@ -2196,7 +2196,7 @@ func registerPasskeyCredential(t *testing.T, handler http.Handler, clientID, hos
 	}
 }
 
-func TestWebPasskeyRegisterVerifyRequiresPublicKeyCOSE(t *testing.T) {
+func TestWebPasskeyRegisterVerifyRequiresCredentialKeyCOSE(t *testing.T) {
 	handler := newPasskeyCounterTestHandler(t)
 	optionsReq := mtlsRequest(http.MethodGet, "/web/passkey/register/options", "", "admin")
 	optionsReq.Host = "example.com"
@@ -2441,7 +2441,7 @@ func registerPasskeyCredentialWithAuthenticatorData(t *testing.T, handler http.H
 		t.Fatalf("decode register options: %v", err)
 	}
 	payload := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.create", Challenge: options.Challenge, Origin: "https://" + host})
-	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/register/verify", `{"client_data_json":"`+payload+`","credential_id":"`+credentialID+`","authenticator_data":"`+passkeyAuthenticatorDataPayload(signCount)+`","public_key_cose":"`+passkeyPublicKeyCOSEPayload()+`"}`, clientID)
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/register/verify", `{"client_data_json":"`+payload+`","credential_id":"`+credentialID+`","authenticator_data":"`+passkeyAuthenticatorDataPayload(signCount)+`","credential_key_cose":"`+passkeyCredentialKeyCOSEPayload()+`"}`, clientID)
 	verifyReq.Host = host
 	verifyReq.Header.Set("X-Forwarded-Proto", "https")
 	verifyRes := httptest.NewRecorder()
@@ -2451,7 +2451,7 @@ func registerPasskeyCredentialWithAuthenticatorData(t *testing.T, handler http.H
 	}
 }
 
-func passkeyPublicKeyCOSEPayload() string {
+func passkeyCredentialKeyCOSEPayload() string {
 	return base64.RawURLEncoding.EncodeToString([]byte{0xa5, 0x01, 0x02, 0x03})
 }
 

@@ -5,7 +5,7 @@
 - Phase 1 is closed at repository level.
 - Phase 2 is closed at repository level: mTLS lifecycle, strong-revocation versioning, Valkey-compatible rate limiting, Go/Python SDK helpers, metadata-only web console, TOTP MFA and passkey challenge/options boundaries are implemented.
 - Phase 3 is closed as a repository baseline: Helm/Kubernetes deployment metadata, HA/DR runbooks, diagnostics, audit export integrity, audit archive/shipment helpers, dedicated signer service, CRL distribution, formal verification artifacts, production readiness gates and external evidence gates are implemented.
-- The cryptographic boundary remains unchanged: Custodia stores and authorizes opaque ciphertext, crypto metadata and recipient envelopes, but never decrypts, unwraps keys or publishes client encryption public keys.
+- The cryptographic boundary remains unchanged: Custodia stores and authorizes opaque ciphertext, crypto metadata and recipient envelopes, but never decrypts, unwraps keys or publishes client encryption credential keys.
 - Production Fort Knox completeness still depends on external evidence: real HSM/PKCS#11/TPM, WORM/object-lock storage, database HA, Valkey HA, zero-trust network controls, penetration testing, revocation drills and formal verification execution in the target environment.
 
 
@@ -157,7 +157,7 @@ These are explicitly operational components in the analysis and cannot be truthf
 ## Patch 024 - web user metadata schema
 
 - Added PostgreSQL `web_users` and `web_user_mappings` schema for the future metadata-only Web UI.
-- Kept the crypto boundary intact: no server-side encryption keys, public-key directory or secret plaintext fields.
+- Kept the crypto boundary intact: no server-side encryption keys, credential-key directory or secret plaintext fields.
 - Added schema guardrails for role constraints and client mappings.
 
 ## Patch 025 - reloadable client CRL verifier
@@ -841,7 +841,7 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 476 - passkey credential metadata store
 
 - Added an in-memory passkey credential metadata store for credential id, client id and usage timestamps.
-- Kept the store metadata-only: no COSE public key, authenticator data, attestation object or signature material is interpreted or persisted.
+- Kept the store metadata-only: no COSE credential key, authenticator data, attestation object or signature material is interpreted or persisted.
 
 ## Patch 478 - passkey credential metadata verifier wiring
 
@@ -896,20 +896,20 @@ The repository still does not claim to implement physical HSM hardware, external
 
 - Documented RP ID hash, user-present and user-verified enforcement and kept the COSE/signature verification boundary explicit.
 
-## Patch 507 - passkey credential public-key metadata store
+## Patch 507 - passkey credential credential-key metadata store
 
-- Added opaque COSE public-key metadata storage to passkey credential records.
+- Added opaque COSE credential-key metadata storage to passkey credential records.
 - Credential records now defensively clone stored COSE bytes before returning them.
 
-## Patch 509 - passkey public-key metadata verifier
+## Patch 509 - passkey credential-key metadata verifier
 
-- Registration preverification now requires `public_key_cose` and stores it with the credential metadata.
-- Authentication preverification now requires the credential to have stored public-key metadata before it can succeed.
+- Registration preverification now requires `credential_key_cose` and stores it with the credential metadata.
+- Authentication preverification now requires the credential to have stored credential-key metadata before it can succeed.
 
-## Patch 511 - passkey public-key storage status
+## Patch 511 - passkey credential-key storage status
 
 - `/v1/status` now reports `web_passkey_public_key_storage: opaque_cose`.
 
-## Patch 513 - passkey public-key metadata documentation
+## Patch 513 - passkey credential-key metadata documentation
 
-- Documented that Custodia stores opaque COSE public-key metadata without yet parsing CBOR/COSE or verifying authenticator signatures.
+- Documented that Custodia stores opaque COSE credential-key metadata without yet parsing CBOR/COSE or verifying authenticator signatures.

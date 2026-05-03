@@ -183,10 +183,10 @@ keys, attestation objects or WebAuthn signatures.
 
 When `authenticator_data` is supplied to `/web/passkey/register/verify` or `/web/passkey/authenticate/verify`, the server validates the RP ID hash against the configured passkey RP ID, requires user presence and requires user verification. Authentication responses with non-increasing signature counters are rejected.
 
-This API remains a preverification scaffold and does not yet accept/store COSE public keys or verify authenticator signatures.
+This API remains a preverification scaffold and does not yet accept/store COSE credential keys or verify authenticator signatures.
 
-### Passkey public-key metadata
+### Passkey credential-key metadata
 
-`POST /web/passkey/register/verify` also requires `public_key_cose`, a base64url-encoded opaque COSE public-key blob. Custodia stores the blob with the credential metadata. `POST /web/passkey/authenticate/verify` requires the credential to have stored public-key metadata before preverification can succeed.
+`POST /web/passkey/register/verify` also requires `credential_key_cose`, a base64url-encoded opaque COSE credential-key blob. Custodia stores the blob with the credential metadata. `POST /web/passkey/authenticate/verify` requires the credential to have stored credential-key metadata before preverification can succeed.
 
 This remains a metadata/preverification API: the stored COSE key is not yet parsed for CBOR/COSE structure and authenticator signatures are not yet verified.
