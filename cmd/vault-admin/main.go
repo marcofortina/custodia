@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -218,6 +220,76 @@ func runRevocationFetchCRL(cfg *cliConfig, args []string) error {
 	defer file.Close()
 	_, err = requestRaw(cfg, http.MethodGet, "/v1/crl.pem", nil, file)
 	return err
+}
+
+func runCABootstrapLocal(args []string) error {
+	cmd := flag.NewFlagSet("ca bootstrap-local", flag.ExitOnError)
+	outDir := cmd.String("out-dir", "", "directory for generated Lite CA artifacts")
+	adminClientID := cmd.String("admin-client-id", "admin", "initial admin client id")
+	serverName := cmd.String("server-name", "localhost", "server DNS name or IP address for the TLS certificate")
+	passphraseFile := cmd.String("ca-passphrase-file", "", "optional file containing the CA key passphrase")
+	generatePassphrase := cmd.Bool("generate-ca-passphrase", false, "generate a CA key passphrase file when --ca-passphrase-file is not provided")
+	_ = cmd.Parse(args)
+	if strings.TrimSpace(*outDir) == "" {
+		return fmt.Errorf("--out-dir is required")
+	}
+	passphrase, passphrasePath, err := liteCAPassphrase(*outDir, *passphraseFile, *generatePassphrase)
+	if err != nil {
+		return err
+	}
+	artifacts, err := certutil.GenerateLiteBootstrap(certutil.LiteBootstrapRequest{AdminClientID: *adminClientID, ServerName: *serverName, Passphrase: passphrase})
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(*outDir, 0o700); err != nil {
+		return err
+	}
+	files := []struct {
+		name string
+		data []byte
+		perm os.FileMode
+	}{
+		{"ca.crt", artifacts.CACertPEM, 0o644},
+		{"ca.key", artifacts.CAKeyPEM, 0o600},
+		{"client-ca.crt", artifacts.CACertPEM, 0o644},
+		{"client.crl.pem", artifacts.ClientCRLPEM, 0o644},
+		{"server.crt", artifacts.ServerCertPEM, 0o644},
+		{"server.key", artifacts.ServerKeyPEM, 0o600},
+		{"admin.crt", artifacts.AdminCertPEM, 0o644},
+		{"admin.key", artifacts.AdminKeyPEM, 0o600},
+		{"config.lite.yaml", artifacts.ConfigYAML, 0o640},
+	}
+	for _, file := range files {
+		if err := writeExclusive(strings.TrimRight(*outDir, "/")+"/"+file.name, file.data, file.perm); err != nil {
+			return err
+		}
+	}
+	if *generatePassphrase && strings.TrimSpace(*passphraseFile) == "" {
+		if err := writeExclusive(passphrasePath, append(passphrase, '\n'), 0o600); err != nil {
+			return err
+		}
+	}
+	fmt.Fprintf(os.Stdout, "wrote Lite bootstrap artifacts to %s\n", *outDir)
+	return nil
+}
+
+func liteCAPassphrase(outDir, passphraseFile string, generate bool) ([]byte, string, error) {
+	passphraseFile = strings.TrimSpace(passphraseFile)
+	if passphraseFile != "" {
+		payload, err := os.ReadFile(passphraseFile)
+		if err != nil {
+			return nil, "", err
+		}
+		return []byte(strings.TrimSpace(string(payload))), passphraseFile, nil
+	}
+	if !generate {
+		return nil, "", nil
+	}
+	secret := make([]byte, 32)
+	if _, err := rand.Read(secret); err != nil {
+		return nil, "", err
+	}
+	return []byte(base64.RawURLEncoding.EncodeToString(secret)), strings.TrimRight(outDir, "/") + "/ca.pass", nil
 }
 
 func runCertificateSign(cfg *cliConfig, args []string) error {
