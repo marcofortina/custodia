@@ -194,6 +194,20 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 		}
 		requests = filtered
 	}
+	if requestedBy := strings.TrimSpace(r.URL.Query().Get("requested_by_client_id")); requestedBy != "" {
+		if !model.ValidClientID(requestedBy) {
+			s.auditFailure(r, "web.access_request_list", "secret", secretID, map[string]string{"reason": "invalid_requested_by_filter"})
+			writeError(w, http.StatusBadRequest, "invalid_requested_by_filter")
+			return
+		}
+		filtered := requests[:0]
+		for _, request := range requests {
+			if request.RequestedByClientID == requestedBy {
+				filtered = append(filtered, request)
+			}
+		}
+		requests = filtered
+	}
 	if len(requests) > limit {
 		requests = requests[:limit]
 	}
