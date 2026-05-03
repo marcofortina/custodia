@@ -10,7 +10,8 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - `CUSTODIA_CLIENT_CRL_FILE` is mounted when local CRL enforcement is used.
 - `/ready` runs on a dedicated health listener that is not exposed outside the cluster.
 - Admin client IDs are explicitly configured; no wildcard admin mode exists.
-- Web console remains metadata-only until MFA/passkey authentication is implemented.
+- Web console remains metadata-only and requires admin mTLS; enable TOTP MFA before production.
+- Passkey challenge endpoints are available, but keep TOTP enabled until full assertion verification is completed and audited.
 - Audit export integrity headers are validated by downstream archival jobs.
 
 ## Must remain false
@@ -19,3 +20,4 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - Do not add DEK, wrapped DEK or key unwrap logic to the server.
 - Do not render ciphertext/envelopes in web pages.
 - Do not use the memory store for production.
+- Do not disable web MFA on externally reachable deployments.
