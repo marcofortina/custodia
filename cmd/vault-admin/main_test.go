@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"net/url"
 	"os"
@@ -231,5 +233,35 @@ func TestRunAuditVerifyExport(t *testing.T) {
 func TestRunAuditVerifyExportRejectsMissingArgs(t *testing.T) {
 	if err := runAuditVerifyExport(nil); err == nil {
 		t.Fatal("expected missing args error")
+	}
+}
+
+func TestRunAuditArchiveExportWritesBundle(t *testing.T) {
+	dir := t.TempDir()
+	bodyFile := dir + "/audit.jsonl"
+	shaFile := dir + "/audit.sha256"
+	eventsFile := dir + "/audit.events"
+	archiveDir := dir + "/archive"
+	body := []byte("{}\n")
+	digest := sha256.Sum256(body)
+	if err := os.WriteFile(bodyFile, body, 0o600); err != nil {
+		t.Fatalf("write body: %v", err)
+	}
+	if err := os.WriteFile(shaFile, []byte(hex.EncodeToString(digest[:])+"\n"), 0o600); err != nil {
+		t.Fatalf("write digest: %v", err)
+	}
+	if err := os.WriteFile(eventsFile, []byte("1\n"), 0o600); err != nil {
+		t.Fatalf("write events: %v", err)
+	}
+
+	if err := runAuditArchiveExport([]string{"--file", bodyFile, "--sha256-file", shaFile, "--events-file", eventsFile, "--archive-dir", archiveDir}); err != nil {
+		t.Fatalf("runAuditArchiveExport() error = %v", err)
+	}
+	entries, err := os.ReadDir(archiveDir)
+	if err != nil {
+		t.Fatalf("read archive dir: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected one archive bundle, got %d", len(entries))
 	}
 }
