@@ -147,6 +147,8 @@ func (s *Server) handleWebStatus(w http.ResponseWriter, r *http.Request) {
 		"<dt>Max envelopes per secret</dt><dd>" + html.EscapeString(strconv.Itoa(s.maxEnvelopesPerSecret)) + "</dd>" +
 		"<dt>Build version</dt><dd>" + html.EscapeString(info.Version) + "</dd>" +
 		"<dt>Build commit</dt><dd>" + html.EscapeString(info.Commit) + "</dd>" +
+		"<dt>Web MFA required</dt><dd>" + html.EscapeString(strconv.FormatBool(s.webMFARequired)) + "</dd>" +
+		"<dt>Web passkey enabled</dt><dd>" + html.EscapeString(strconv.FormatBool(s.webPasskeyEnabled)) + "</dd>" +
 		"</dl>"
 	s.audit(r, "web.status", "system", "", statusOutcome(storeStatus, rateLimiterStatus), nil)
 	writeWebPage(w, "Operational status", body)

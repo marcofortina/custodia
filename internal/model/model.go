@@ -186,6 +186,8 @@ type OperationalStatus struct {
 	GlobalRateLimitPerSec int       `json:"global_rate_limit_per_sec"`
 	IPRateLimitPerSec     int       `json:"ip_rate_limit_per_sec"`
 	Build                 BuildInfo `json:"build"`
+	WebMFARequired        bool      `json:"web_mfa_required"`
+	WebPasskeyEnabled     bool      `json:"web_passkey_enabled"`
 }
 
 type AuditEvent struct {

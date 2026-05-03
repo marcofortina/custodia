@@ -1374,7 +1374,7 @@ func TestAdminCanReadOperationalStatus(t *testing.T) {
 		t.Fatalf("expected status 200, got %d: %s", res.Code, res.Body.String())
 	}
 	body := res.Body.String()
-	for _, token := range []string{`"status":"success"`, `"store":"ok"`, `"store_backend":"memory"`, `"rate_limiter":"ok"`, `"rate_limit_backend":"memory"`, `"max_envelopes_per_secret":100`} {
+	for _, token := range []string{`"status":"success"`, `"store":"ok"`, `"store_backend":"memory"`, `"rate_limiter":"ok"`, `"rate_limit_backend":"memory"`, `"max_envelopes_per_secret":100`, `"web_mfa_required":false`, `"web_passkey_enabled":false`} {
 		if !strings.Contains(body, token) {
 			t.Fatalf("expected %s in status body: %s", token, body)
 		}

@@ -76,6 +76,8 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		GlobalRateLimitPerSec: s.globalRateLimit,
 		IPRateLimitPerSec:     s.ipRateLimit,
 		Build:                 model.BuildInfo(build.Current()),
+		WebMFARequired:        s.webMFARequired,
+		WebPasskeyEnabled:     s.webPasskeyEnabled,
 	})
 }
 
