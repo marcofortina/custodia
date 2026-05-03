@@ -5,6 +5,7 @@ import (
 	"custodia/internal/audit"
 	"custodia/internal/build"
 	"custodia/internal/model"
+	"custodia/internal/webauth"
 
 	"html"
 	"net/http"
@@ -13,6 +14,47 @@ import (
 	"strings"
 	"time"
 )
+
+func (s *Server) handleWebLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		body := "<h1>Web MFA</h1>" +
+			webParagraph("Enter your TOTP code to unlock the metadata console for this mTLS admin session.") +
+			`<form method="post" action="/web/login"><label for="totp">TOTP code</label><input id="totp" name="totp" inputmode="numeric" autocomplete="one-time-code" required><button type="submit">Unlock console</button></form>`
+		writeWebPage(w, "Web MFA", body)
+		return
+	}
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed")
+		return
+	}
+	if s.webSessionManager == nil || strings.TrimSpace(s.webTOTPSecret) == "" {
+		s.auditFailure(r, "web.login", "system", "", map[string]string{"reason": "mfa_not_configured"})
+		writeError(w, http.StatusServiceUnavailable, "mfa_not_configured")
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		s.auditFailure(r, "web.login", "system", "", map[string]string{"reason": "invalid_form"})
+		writeError(w, http.StatusBadRequest, "invalid_form")
+		return
+	}
+	code := r.FormValue("totp")
+	if !webauth.VerifyTOTP(s.webTOTPSecret, code, time.Now().UTC(), 1) {
+		s.auditFailure(r, "web.login", "system", "", map[string]string{"reason": "invalid_totp"})
+		writeError(w, http.StatusUnauthorized, "invalid_totp")
+		return
+	}
+	clientID := clientIDFromContext(r)
+	token, expires := s.webSessionManager.Issue(clientID, time.Now().UTC())
+	w.Header().Add("Set-Cookie", webauth.CookieHeaderValue(token, expires, s.webSessionSecure))
+	s.audit(r, "web.login", "system", "", "success", nil)
+	http.Redirect(w, r, "/web/", http.StatusSeeOther)
+}
+
+func (s *Server) handleWebLogout(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Set-Cookie", webauth.ExpiredCookieHeaderValue(s.webSessionSecure))
+	s.audit(r, "web.logout", "system", "", "success", nil)
+	http.Redirect(w, r, "/web/login", http.StatusSeeOther)
+}
 
 func writeWebPage(w http.ResponseWriter, title string, body string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
