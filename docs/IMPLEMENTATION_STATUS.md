@@ -908,7 +908,7 @@ The repository still does not claim to implement physical HSM hardware, external
 
 ## Patch 511 - passkey credential-key storage status
 
-- `/v1/status` now reports `web_passkey_public_key_storage: opaque_cose`.
+- `/v1/status` now reports `web_passkey_credential_key_storage: opaque_cose`.
 
 ## Patch 513 - passkey credential-key metadata documentation
 
