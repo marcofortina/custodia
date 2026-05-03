@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -377,4 +378,43 @@ func writeTestEnv(t *testing.T, content string) string {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 	return path
+}
+
+func TestRunAuditShipArchiveS3RejectsMissingArgs(t *testing.T) {
+	if err := runAuditShipArchiveS3([]string{"--archive-dir", "bundle"}); err == nil {
+		t.Fatal("expected missing S3 args error")
+	}
+}
+
+func TestRunAuditShipArchiveS3UploadsBundle(t *testing.T) {
+	body := []byte("{}\n")
+	digest := sha256.Sum256(body)
+	archiveRoot := filepath.Join(t.TempDir(), "archive")
+	archive, err := auditarchive.Archive(body, hex.EncodeToString(digest[:]), "1", archiveRoot, time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("Archive() error = %v", err)
+	}
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		if r.Header.Get("X-Amz-Object-Lock-Mode") != "COMPLIANCE" {
+			t.Fatalf("missing object lock mode: %q", r.Header.Get("X-Amz-Object-Lock-Mode"))
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+	err = runAuditShipArchiveS3([]string{
+		"--archive-dir", archive.Directory,
+		"--endpoint", server.URL,
+		"--bucket", "custodia-audit",
+		"--access-key-id", "minio",
+		"--secret-access-key", "minio-secret",
+		"--retain-until", "2027-01-02T03:04:05Z",
+	})
+	if err != nil {
+		t.Fatalf("runAuditShipArchiveS3() error = %v", err)
+	}
+	if requests != 4 {
+		t.Fatalf("requests = %d, want 4", requests)
+	}
 }
