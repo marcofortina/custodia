@@ -522,36 +522,47 @@ func parsePermissionBits(value string) (int, error) {
 }
 
 func requestJSON(cfg *cliConfig, method, path string, payload any, out io.Writer) error {
+	_, err := requestRaw(cfg, method, path, payload, out)
+	return err
+}
+
+func requestRaw(cfg *cliConfig, method, path string, payload any, out io.Writer) (http.Header, error) {
 	client, err := httpClient(cfg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var body io.Reader
 	if payload != nil {
 		encoded, err := json.Marshal(payload)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		body = bytes.NewReader(encoded)
 	}
 	req, err := http.NewRequest(method, cfg.serverURL+path, body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if payload != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	res, err := client.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer res.Body.Close()
 	if res.StatusCode < 200 || res.StatusCode > 299 {
 		responseBody, _ := io.ReadAll(res.Body)
-		return fmt.Errorf("request failed: %s: %s", res.Status, string(responseBody))
+		return nil, fmt.Errorf("request failed: %s: %s", res.Status, string(responseBody))
 	}
-	_, err = io.Copy(out, res.Body)
-	return err
+	if out != nil {
+		if _, err := io.Copy(out, res.Body); err != nil {
+			return nil, err
+		}
+	} else {
+		_, _ = io.Copy(io.Discard, res.Body)
+	}
+	return res.Header, nil
 }
 
 func httpClient(cfg *cliConfig) (*http.Client, error) {
