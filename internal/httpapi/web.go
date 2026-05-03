@@ -4,6 +4,7 @@ import (
 	"context"
 	"custodia/internal/audit"
 	"custodia/internal/build"
+	"custodia/internal/model"
 
 	"html"
 	"net/http"
@@ -158,6 +159,20 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 		s.auditStoreFailure(r, "web.access_request_list", "secret", "", err)
 		writeMappedError(w, err)
 		return
+	}
+	if status := strings.TrimSpace(r.URL.Query().Get("status")); status != "" {
+		if !model.ValidAccessRequestStatus(status) {
+			s.auditFailure(r, "web.access_request_list", "secret", "", map[string]string{"reason": "invalid_status_filter"})
+			writeError(w, http.StatusBadRequest, "invalid_status_filter")
+			return
+		}
+		filtered := requests[:0]
+		for _, request := range requests {
+			if request.Status == status {
+				filtered = append(filtered, request)
+			}
+		}
+		requests = filtered
 	}
 	if len(requests) > limit {
 		requests = requests[:limit]
