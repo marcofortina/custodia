@@ -8,6 +8,7 @@ import (
 
 	"html"
 	"net/http"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -22,6 +23,7 @@ func writeWebPage(w http.ResponseWriter, title string, body string) {
 <nav>
 <a href="/web/">Overview</a> |
 <a href="/web/status">Status</a> |
+<a href="/web/diagnostics">Diagnostics</a> |
 <a href="/web/clients">Clients</a> |
 <a href="/web/access-requests">Access requests</a> |
 <a href="/web/audit">Audit</a> |
@@ -74,6 +76,21 @@ func (s *Server) handleWebStatus(w http.ResponseWriter, r *http.Request) {
 		"</dl>"
 	s.audit(r, "web.status", "system", "", statusOutcome(storeStatus, rateLimiterStatus), nil)
 	writeWebPage(w, "Operational status", body)
+}
+
+func (s *Server) handleWebDiagnostics(w http.ResponseWriter, r *http.Request) {
+	var mem runtime.MemStats
+	runtime.ReadMemStats(&mem)
+	body := "<h1>Runtime diagnostics</h1>" +
+		"<p>Operational runtime metadata only; secret payloads are never rendered.</p>" +
+		"<dl>" +
+		"<dt>Started at</dt><dd>" + html.EscapeString(s.startedAt.Format(time.RFC3339)) + "</dd>" +
+		"<dt>Uptime seconds</dt><dd>" + html.EscapeString(strconv.FormatInt(int64(time.Since(s.startedAt).Seconds()), 10)) + "</dd>" +
+		"<dt>Goroutines</dt><dd>" + html.EscapeString(strconv.Itoa(runtime.NumGoroutine())) + "</dd>" +
+		"<dt>Alloc bytes</dt><dd>" + html.EscapeString(strconv.FormatUint(mem.Alloc, 10)) + "</dd>" +
+		"</dl>"
+	s.audit(r, "web.diagnostics", "system", "", "success", nil)
+	writeWebPage(w, "Runtime diagnostics", body)
 }
 
 func statusOutcome(storeStatus, rateLimiterStatus string) string {

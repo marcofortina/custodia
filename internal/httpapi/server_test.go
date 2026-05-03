@@ -78,6 +78,27 @@ func TestAPIAdminDiagnosticsEndpoint(t *testing.T) {
 	}
 }
 
+func TestWebDiagnosticsPageIsAdminOnlyMetadata(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/web/diagnostics", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	body := res.Body.String()
+	if !strings.Contains(body, "Runtime diagnostics") || strings.Contains(body, "ciphertext") || strings.Contains(body, "envelope") {
+		t.Fatalf("unexpected diagnostics page body: %s", body)
+	}
+}
+
 func TestAPISetsSecurityHeaders(t *testing.T) {
 	memoryStore := store.NewMemoryStore()
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
