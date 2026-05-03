@@ -47,3 +47,20 @@ CUSTODIA_SIGNER_CRL_FILE=/path/to/client.crl
 ```
 
 The endpoint returns `application/pkix-crl` and includes `X-Custodia-CRL-Revoked-Count`. It is a CRL distribution helper, not a full OCSP responder.
+
+## Revocation serial status responder
+
+`custodia-signer` also exposes a JSON revocation responder for lab and operator checks:
+
+```bash
+vault-admin \
+  --server-url https://signer.internal:9444 \
+  --cert admin.crt \
+  --key admin.key \
+  --ca signer-ca.crt \
+  revocation check-serial --serial-hex 01af
+```
+
+The endpoint is `GET /v1/revocation/serial?serial_hex=<hex>` and evaluates the currently configured signer CRL file. It returns `good` or `revoked` with CRL metadata and revoked-count context.
+
+This is not a full RFC 6960 OCSP responder. It is a deterministic JSON responder over the CRL-backed revocation state, useful for smoke tests, operational dashboards and revocation drills while keeping the OCSP protocol itself out of the vault API process.
