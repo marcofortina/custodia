@@ -165,11 +165,14 @@ func (s *signerServer) handleHealth(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *signerServer) handleSignClientCertificate(w http.ResponseWriter, r *http.Request) {
+	actor := s.actor(r)
 	if !s.authorized(r) {
+		s.record(r, "certificate.sign", "failure", actor, "", map[string]string{"reason": "admin_required"})
 		writeError(w, http.StatusForbidden, "admin_required")
 		return
 	}
 	if !strings.HasPrefix(strings.ToLower(r.Header.Get("Content-Type")), "application/json") {
+		s.record(r, "certificate.sign", "failure", actor, "", map[string]string{"reason": "unsupported_media_type"})
 		writeError(w, http.StatusUnsupportedMediaType, "unsupported_media_type")
 		return
 	}
@@ -178,6 +181,8 @@ func (s *signerServer) handleSignClientCertificate(w http.ResponseWriter, r *htt
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&req); err != nil {
+		s.record(r, "certificate.sign", "failure", actor, "", map[string]string{"reason": "invalid_json"})
+		s.record(r, "certificate.sign", "failure", actor, req.ClientID, map[string]string{"reason": "invalid_json"})
 		writeError(w, http.StatusBadRequest, "invalid_json")
 		return
 	}
@@ -191,10 +196,38 @@ func (s *signerServer) handleSignClientCertificate(w http.ResponseWriter, r *htt
 	}
 	res, err := s.signer.SignClientCSR([]byte(req.CSRPem), req.ClientID, time.Duration(ttlHours)*time.Hour, time.Now().UTC())
 	if err != nil {
+		s.record(r, "certificate.sign", "failure", actor, req.ClientID, map[string]string{"reason": "invalid_csr"})
 		writeError(w, http.StatusBadRequest, "invalid_csr")
 		return
 	}
+	s.record(r, "certificate.sign", "success", actor, req.ClientID, nil)
 	writeJSON(w, http.StatusCreated, res)
+}
+
+func (s *signerServer) actor(r *http.Request) string {
+	if s.devInsecureHTTP {
+		return strings.TrimSpace(r.Header.Get("X-Custodia-Signer-Admin-Subject"))
+	}
+	subject, err := mtls.ClientIDFromRequest(r)
+	if err != nil {
+		return ""
+	}
+	return subject
+}
+
+func (s *signerServer) record(r *http.Request, action, outcome, actor, clientID string, metadata map[string]string) {
+	if s.audit == nil {
+		return
+	}
+	_ = s.audit.Record(signeraudit.Event{
+		OccurredAt: time.Now().UTC(),
+		Action:     action,
+		Outcome:    outcome,
+		Actor:      actor,
+		ClientID:   clientID,
+		RequestID:  requestIDFromContext(r),
+		Metadata:   metadata,
+	})
 }
 
 func (s *signerServer) authorized(r *http.Request) bool {
