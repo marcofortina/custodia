@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -2087,4 +2088,90 @@ func TestAdminCanReadUnconfiguredRevocationStatus(t *testing.T) {
 		t.Fatalf("unexpected unconfigured revocation status: %+v", payload)
 	}
 	assertLastAudit(t, memoryStore, "revocation.status", "success", "")
+}
+
+func TestWebPasskeyAuthenticateVerifyConsumesChallengeOnce(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{
+		Store:                  memoryStore,
+		Limiter:                ratelimit.NewMemoryLimiter(),
+		AdminClientIDs:         map[string]bool{"admin": true},
+		ClientRateLimit:        100,
+		GlobalRateLimit:        100,
+		WebPasskeyEnabled:      true,
+		WebPasskeyRPID:         "example.com",
+		WebPasskeyRPName:       "Custodia Vault",
+		WebPasskeyChallengeTTL: time.Minute,
+	})
+
+	optionsReq := mtlsRequest(http.MethodGet, "/web/passkey/authenticate/options", "", "admin")
+	optionsReq.Host = "example.com"
+	optionsRes := httptest.NewRecorder()
+	handler.ServeHTTP(optionsRes, optionsReq)
+	if optionsRes.Code != http.StatusOK {
+		t.Fatalf("options status = %d: %s", optionsRes.Code, optionsRes.Body.String())
+	}
+	var options webauth.PasskeyOptions
+	if err := json.NewDecoder(optionsRes.Body).Decode(&options); err != nil {
+		t.Fatalf("decode options: %v", err)
+	}
+	payload := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.get", Challenge: options.Challenge, Origin: "https://example.com"})
+
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/authenticate/verify", `{"client_data_json":"`+payload+`"}`, "admin")
+	verifyReq.Host = "example.com"
+	verifyReq.Header.Set("Content-Type", "application/json")
+	verifyRes := httptest.NewRecorder()
+	handler.ServeHTTP(verifyRes, verifyReq)
+	if verifyRes.Code != http.StatusOK {
+		t.Fatalf("verify status = %d: %s", verifyRes.Code, verifyRes.Body.String())
+	}
+
+	replayReq := mtlsRequest(http.MethodPost, "/web/passkey/authenticate/verify", `{"client_data_json":"`+payload+`"}`, "admin")
+	replayReq.Host = "example.com"
+	replayReq.Header.Set("Content-Type", "application/json")
+	replayRes := httptest.NewRecorder()
+	handler.ServeHTTP(replayRes, replayReq)
+	if replayRes.Code != http.StatusUnauthorized {
+		t.Fatalf("replay status = %d, want %d: %s", replayRes.Code, http.StatusUnauthorized, replayRes.Body.String())
+	}
+}
+
+func TestWebPasskeyAuthenticateVerifyRejectsWrongOrigin(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, ClientRateLimit: 100, GlobalRateLimit: 100, WebPasskeyEnabled: true, WebPasskeyRPID: "example.com", WebPasskeyRPName: "Custodia Vault", WebPasskeyChallengeTTL: time.Minute})
+
+	optionsReq := mtlsRequest(http.MethodGet, "/web/passkey/authenticate/options", "", "admin")
+	optionsReq.Host = "example.com"
+	optionsRes := httptest.NewRecorder()
+	handler.ServeHTTP(optionsRes, optionsReq)
+	var options webauth.PasskeyOptions
+	if err := json.NewDecoder(optionsRes.Body).Decode(&options); err != nil {
+		t.Fatalf("decode options: %v", err)
+	}
+	payload := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.get", Challenge: options.Challenge, Origin: "https://evil.example.com"})
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/authenticate/verify", `{"client_data_json":"`+payload+`"}`, "admin")
+	verifyReq.Host = "example.com"
+	verifyReq.Header.Set("Content-Type", "application/json")
+	verifyRes := httptest.NewRecorder()
+	handler.ServeHTTP(verifyRes, verifyReq)
+	if verifyRes.Code != http.StatusUnauthorized {
+		t.Fatalf("verify status = %d, want %d: %s", verifyRes.Code, http.StatusUnauthorized, verifyRes.Body.String())
+	}
+}
+
+func passkeyClientDataPayload(t *testing.T, data webauth.PasskeyClientData) string {
+	t.Helper()
+	encoded, err := json.Marshal(data)
+	if err != nil {
+		t.Fatalf("marshal client data: %v", err)
+	}
+	return base64.RawURLEncoding.EncodeToString(encoded)
 }
