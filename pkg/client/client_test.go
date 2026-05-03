@@ -413,3 +413,25 @@ func TestClientAccessRequestFiltersRejectInvalidValues(t *testing.T) {
 		t.Fatal("expected invalid requester id error")
 	}
 }
+
+func TestClientRevocationSerialStatusUsesEscapedSerial(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.EscapedPath() != "/v1/revocation/serial" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
+		}
+		if got := r.URL.Query().Get("serial_hex"); got != "0xCAFE" {
+			t.Fatalf("serial_hex = %q", got)
+		}
+		_ = json.NewEncoder(w).Encode(RevocationSerialStatus{SerialHex: "cafe", Status: "good"})
+	}))
+	defer server.Close()
+
+	custodiaClient := &Client{baseURL: server.URL, http: server.Client()}
+	status, err := custodiaClient.RevocationSerialStatus("0xCAFE")
+	if err != nil {
+		t.Fatalf("RevocationSerialStatus() error = %v", err)
+	}
+	if status.SerialHex != "cafe" || status.Status != "good" {
+		t.Fatalf("unexpected status: %+v", status)
+	}
+}
