@@ -43,3 +43,14 @@ sqlite3 /var/lib/custodia/custodia.db ".backup '/backup/custodia-$(date +%Y%m%d-
 ```
 
 Stop Custodia before restoring a backup.
+
+
+## Backup helper
+
+Use the Lite backup helper for online SQLite backups:
+
+```bash
+CUSTODIA_SQLITE_DB=/var/lib/custodia/custodia.db CUSTODIA_SQLITE_BACKUP_DIR=/var/lib/custodia/backups make sqlite-backup
+```
+
+The helper requires the `sqlite3` CLI and uses SQLite `.backup` rather than raw file copies.
