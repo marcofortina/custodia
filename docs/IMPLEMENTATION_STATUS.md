@@ -855,3 +855,26 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 482 - passkey credential metadata documentation
 
 - Documented the remaining boundary: credential metadata and anti-replay are implemented, while full WebAuthn COSE/CBOR/signature verification remains explicit future work.
+
+## Patch 486 - passkey authenticator data parser
+
+- Added WebAuthn authenticator data parsing for RP ID hash, flags and signature counter.
+- Added sign-counter validation helper for anti-clone scaffolding.
+
+## Patch 488 - passkey credential sign counter store
+
+- Added signature-counter metadata to passkey credential records.
+- Added `TouchWithSignCount` to reject non-increasing counters when authenticator data is supplied.
+
+## Patch 490 - passkey authenticator data verifier wiring
+
+- Passkey registration/authentication preverification can now parse optional base64url `authenticator_data`.
+- Registration stores the parsed signature counter; authentication rejects non-increasing counters for known credentials.
+
+## Patch 494 - passkey counter compatibility fix
+
+- Preserved existing counters when authentication preverification omits authenticator data, avoiding artificial counter increments.
+
+## Patch 495 - passkey authenticator data production gate
+
+- Documented production gates for authenticator data drills and the remaining COSE/signature verification boundary.
