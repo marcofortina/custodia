@@ -64,3 +64,19 @@ Request body:
 The server validates the WebAuthn `clientDataJSON` fields that are safe to verify without credential storage: `type`, `challenge` and `origin`. A successful response is `verified_challenge` and consumes the challenge so it cannot be replayed.
 
 This is still not full WebAuthn assertion verification. Credential public-key storage, authenticatorData parsing, COSE/CBOR handling, signature verification and clone-counter checks remain the next production passkey milestone.
+
+## Credential metadata store
+
+Passkey registration preverification now records credential metadata after a valid
+challenge has been consumed. The stored metadata is intentionally limited to the
+credential id, owning client id and timestamps. It does not store COSE public keys,
+authenticator data or attestation statements yet.
+
+Authentication preverification requires the supplied credential id to exist for the
+calling client before the challenge can be accepted. This prevents unknown
+credential ids from being treated as valid passkey assertions while keeping the
+server-side cryptographic boundary honest.
+
+This is still not full WebAuthn assertion verification. The remaining production
+work is COSE/CBOR parsing, authenticatorData validation, signature verification
+and signature-counter clone detection.
