@@ -735,3 +735,66 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 431 - S3 Object Lock audit shipment documentation
 
 - Documented MinIO/S3 Object Lock audit shipment, SigV4 headers and the external storage immutability boundary.
+
+## Patch 436 - k3s CockroachDB profile guide
+
+- Added a k3s-friendly CockroachDB HA profile guide for repository-level database HA rehearsal.
+- The guide explicitly marks the profile as lab/dev and not a managed production database replacement.
+
+## Patch 437 - k3s CockroachDB namespace
+
+- Added the `custodia-db` namespace manifest used by the k3s CockroachDB profile.
+
+## Patch 438 - k3s CockroachDB services
+
+- Added headless and public ClusterIP services for CockroachDB SQL, gossip and health access.
+
+## Patch 439 - k3s CockroachDB StatefulSet
+
+- Added a three-node CockroachDB StatefulSet for HA-like k3s rehearsal.
+- The manifest uses insecure CockroachDB mode intentionally for local reproducibility and must be hardened for production.
+
+## Patch 440 - k3s CockroachDB init job
+
+- Added a Kubernetes Job that initializes the CockroachDB cluster and creates the `custodia` database/user.
+
+## Patch 441 - k3s CockroachDB smoke script
+
+- Added a `kubectl`-based smoke script that waits for CockroachDB readiness and runs `SELECT 1` through the SQL service.
+
+## Patch 442 - k3s CockroachDB make targets
+
+- Added `make k3s-cockroachdb-apply` and `make k3s-cockroachdb-smoke`.
+
+## Patch 443 - production env k3s CockroachDB target
+
+- Updated the production env example with a concrete CockroachDB/k3s HA database target.
+
+## Patch 444 - k3s Custodia database secret example
+
+- Added an example Kubernetes Secret wiring Custodia to the k3s CockroachDB SQL endpoint.
+
+## Patch 445 - k3s Custodia Helm values example
+
+- Added a Helm values example for running Custodia against the k3s CockroachDB profile.
+
+## Patch 446 - k3s CockroachDB HA documentation
+
+- Added an end-to-end guide for applying CockroachDB, wiring Custodia and documenting the production boundary.
+
+## Patch 447 - k3s CockroachDB README link
+
+- Linked the k3s CockroachDB HA guide from the README operational runbook list.
+
+## Patch 448 - database HA runbook k3s rehearsal
+
+- Added k3s CockroachDB rehearsal steps to the database HA runbook.
+
+## Patch 449 - production checklist k3s CockroachDB gate
+
+- Added production checklist gates for k3s CockroachDB smoke output and TLS hardening.
+
+## Patch 450 - release check k3s CockroachDB smoke
+
+- Added syntax checking for the k3s CockroachDB smoke script.
+- Added an opt-in `CUSTODIA_RUN_K3S_COCKROACHDB_SMOKE=true` release-check path.
