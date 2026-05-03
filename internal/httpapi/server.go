@@ -29,6 +29,7 @@ type Server struct {
 	webPasskeyRPID         string
 	webPasskeyRPName       string
 	webPasskeyChallengeTTL time.Duration
+	webPasskeyChallenges   *webauth.PasskeyChallengeStore
 	deploymentMode         string
 	databaseHATarget       string
 	auditShipmentSink      string
@@ -113,6 +114,7 @@ func New(options Options) http.Handler {
 		webPasskeyRPID:         webPasskeyRPID,
 		webPasskeyRPName:       webPasskeyRPName,
 		webPasskeyChallengeTTL: webPasskeyChallengeTTL,
+		webPasskeyChallenges:   webauth.NewPasskeyChallengeStore(),
 		deploymentMode:         options.DeploymentMode,
 		databaseHATarget:       options.DatabaseHATarget,
 		auditShipmentSink:      options.AuditShipmentSink,
@@ -125,7 +127,9 @@ func New(options Options) http.Handler {
 	mux.Handle("POST /web/login", server.auth(server.adminOnly(http.HandlerFunc(server.handleWebLogin))))
 	mux.Handle("POST /web/logout", server.auth(server.adminOnly(http.HandlerFunc(server.handleWebLogout))))
 	mux.Handle("GET /web/passkey/register/options", server.webAdmin(http.HandlerFunc(server.handleWebPasskeyRegisterOptions)))
+	mux.Handle("POST /web/passkey/register/verify", server.webAdmin(http.HandlerFunc(server.handleWebPasskeyRegisterVerify)))
 	mux.Handle("GET /web/passkey/authenticate/options", server.webAdmin(http.HandlerFunc(server.handleWebPasskeyAuthenticateOptions)))
+	mux.Handle("POST /web/passkey/authenticate/verify", server.webAdmin(http.HandlerFunc(server.handleWebPasskeyAuthenticateVerify)))
 	mux.Handle("GET /web/", server.webAdmin(http.HandlerFunc(server.handleWeb)))
 	mux.Handle("GET /web/status", server.webAdmin(http.HandlerFunc(server.handleWebStatus)))
 	mux.Handle("GET /web/diagnostics", server.webAdmin(http.HandlerFunc(server.handleWebDiagnostics)))

@@ -6,6 +6,8 @@ import (
 	"custodia/internal/build"
 	"custodia/internal/model"
 	"custodia/internal/webauth"
+	"encoding/base64"
+	"encoding/json"
 
 	"html"
 	"net/http"
@@ -95,6 +97,73 @@ func (s *Server) webOptionalLimit(w http.ResponseWriter, r *http.Request, action
 	return limit, true
 }
 
+type passkeyVerifyRequest struct {
+	ClientDataJSON string `json:"client_data_json"`
+}
+
+type passkeyVerifyResponse struct {
+	Status    string `json:"status"`
+	Challenge string `json:"challenge"`
+	Origin    string `json:"origin"`
+	Type      string `json:"type"`
+}
+
+func (s *Server) handleWebPasskeyRegisterVerify(w http.ResponseWriter, r *http.Request) {
+	s.handleWebPasskeyVerify(w, r, "register", "webauthn.create", "web.passkey_register_verify")
+}
+
+func (s *Server) handleWebPasskeyAuthenticateVerify(w http.ResponseWriter, r *http.Request) {
+	s.handleWebPasskeyVerify(w, r, "authenticate", "webauthn.get", "web.passkey_authenticate_verify")
+}
+
+func (s *Server) handleWebPasskeyVerify(w http.ResponseWriter, r *http.Request, purpose, clientDataType, action string) {
+	if !s.webPasskeyEnabled {
+		writeError(w, http.StatusNotFound, "passkey_disabled")
+		return
+	}
+	var payload passkeyVerifyRequest
+	if !decodeJSON(w, r, &payload) {
+		return
+	}
+	rawClientData, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(payload.ClientDataJSON))
+	if err != nil {
+		s.auditFailure(r, action, "system", "", map[string]string{"reason": "invalid_client_data_json"})
+		writeError(w, http.StatusBadRequest, "invalid_client_data_json")
+		return
+	}
+	var clientData webauth.PasskeyClientData
+	if err := json.Unmarshal(rawClientData, &clientData); err != nil || strings.TrimSpace(clientData.Challenge) == "" {
+		s.auditFailure(r, action, "system", "", map[string]string{"reason": "invalid_client_data"})
+		writeError(w, http.StatusBadRequest, "invalid_client_data")
+		return
+	}
+	clientID := clientIDFromContext(r)
+	record, err := s.webPasskeyChallenges.Consume(clientData.Challenge, clientID, purpose, time.Now().UTC())
+	if err != nil {
+		s.auditFailure(r, action, "system", "", map[string]string{"reason": "invalid_or_replayed_challenge"})
+		writeError(w, http.StatusUnauthorized, "invalid_or_replayed_challenge")
+		return
+	}
+	verified, err := webauth.VerifyPasskeyClientDataJSON(rawClientData, clientDataType, record.Challenge, s.expectedPasskeyOrigin(r))
+	if err != nil {
+		s.auditFailure(r, action, "system", "", map[string]string{"reason": "invalid_client_data"})
+		writeError(w, http.StatusUnauthorized, "invalid_client_data")
+		return
+	}
+	s.audit(r, action, "system", "", "success", nil)
+	writeJSON(w, http.StatusOK, passkeyVerifyResponse{Status: "verified_challenge", Challenge: verified.Challenge, Origin: verified.Origin, Type: verified.Type})
+}
+
+func (s *Server) expectedPasskeyOrigin(r *http.Request) string {
+	scheme := "https"
+	if forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")); forwarded != "" {
+		scheme = forwarded
+	} else if r.TLS == nil {
+		scheme = "http"
+	}
+	return scheme + "://" + r.Host
+}
+
 func (s *Server) handleWebPasskeyRegisterOptions(w http.ResponseWriter, r *http.Request) {
 	if !s.webPasskeyEnabled {
 		writeError(w, http.StatusNotFound, "passkey_disabled")
@@ -107,6 +176,8 @@ func (s *Server) handleWebPasskeyRegisterOptions(w http.ResponseWriter, r *http.
 		writeError(w, http.StatusServiceUnavailable, "invalid_passkey_config")
 		return
 	}
+	s.webPasskeyChallenges.Prune(time.Now().UTC())
+	s.webPasskeyChallenges.Store(webauth.PasskeyChallengeRecord{Challenge: options.Challenge, ClientID: clientID, Purpose: "register", ExpiresAt: time.Now().UTC().Add(s.webPasskeyChallengeTTL)})
 	s.audit(r, "web.passkey_register_options", "system", "", "success", nil)
 	writeJSON(w, http.StatusOK, options)
 }
@@ -123,6 +194,8 @@ func (s *Server) handleWebPasskeyAuthenticateOptions(w http.ResponseWriter, r *h
 		writeError(w, http.StatusServiceUnavailable, "invalid_passkey_config")
 		return
 	}
+	s.webPasskeyChallenges.Prune(time.Now().UTC())
+	s.webPasskeyChallenges.Store(webauth.PasskeyChallengeRecord{Challenge: options.Challenge, ClientID: clientID, Purpose: "authenticate", ExpiresAt: time.Now().UTC().Add(s.webPasskeyChallengeTTL)})
 	s.audit(r, "web.passkey_authenticate_options", "system", "", "success", nil)
 	writeJSON(w, http.StatusOK, options)
 }
