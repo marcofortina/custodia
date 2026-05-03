@@ -38,9 +38,9 @@ Only admin certificate subjects listed in `CUSTODIA_SIGNER_ADMIN_SUBJECTS` may s
 Current implementation supports explicit signer key providers:
 
 - `CUSTODIA_SIGNER_KEY_PROVIDER=file` uses `CUSTODIA_SIGNER_CA_CERT_FILE` and `CUSTODIA_SIGNER_CA_KEY_FILE`.
-- `CUSTODIA_SIGNER_KEY_PROVIDER=pkcs11` is reserved and fails closed in this build.
+- `CUSTODIA_SIGNER_KEY_PROVIDER=pkcs11` delegates certificate digest signing to `CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND`.
 
-The `file` provider is acceptable for development, isolated bootstrap and tests. Production deployments should use the provider abstraction to integrate TPM/HSM/PKCS#11 before exposing signing in a live environment. The signer process must fail closed rather than silently falling back to file-backed CA material when an unsupported provider is requested.
+The `file` provider is acceptable for development, isolated bootstrap and tests. Production deployments should use the PKCS#11 command bridge with an HSM/TPM/vendor module before exposing signing in a live environment. The signer process must fail closed rather than silently falling back to file-backed CA material when an unsupported provider is requested. SoftHSM is supported only as a development/test harness.
 
 ## CSR policy
 
@@ -63,7 +63,7 @@ The issued certificate is client-auth only and carries the requested `client_id`
 
 ## Remaining production gap
 
-TPM/HSM-backed signing, CA key unseal workflow, CRL publication automation and OCSP responder integration are still separate hardening steps.
+CA key unseal workflow, production HSM attestation, CRL publication automation and OCSP responder integration are still separate deployment/evidence steps. The repository includes a PKCS#11 command bridge and SoftHSM development harness, but it cannot prove the existence of a physical HSM without external evidence.
 
 ## Audit trail
 
