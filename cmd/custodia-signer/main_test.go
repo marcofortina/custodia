@@ -115,3 +115,24 @@ func testSignerCSR(t *testing.T, clientID string) []byte {
 	}
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: der})
 }
+
+func TestSignerPropagatesRequestID(t *testing.T) {
+	handler := testSignerHandler(t)
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req.Header.Set("X-Request-ID", "signer-trace-1")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if got := res.Header().Get("X-Request-ID"); got != "signer-trace-1" {
+		t.Fatalf("expected propagated request id, got %q", got)
+	}
+}
+
+func TestSignerGeneratesRequestID(t *testing.T) {
+	handler := testSignerHandler(t)
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if got := res.Header().Get("X-Request-ID"); got == "" {
+		t.Fatal("expected generated request id")
+	}
+}
