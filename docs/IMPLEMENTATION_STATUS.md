@@ -1012,3 +1012,29 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 562 - Lite env example
 
 - Added a Lite `.env` example using the existing Custodia configuration vocabulary.
+
+## Patch 564 - SQLite Lite schema contract
+
+- Added the SQLite Lite schema contract with WAL, busy timeout, foreign keys and a single persisted state table.
+- The schema intentionally avoids reduced Lite tables so the Lite profile preserves the same logical model as FULL.
+
+## Patch 566 - SQLite Lite store build guard
+
+- Added a fail-closed SQLite store guard for standard builds without the `sqlite` build tag.
+
+## Patch 568 - build-tagged SQLite Lite store
+
+- Added an opt-in SQLite Lite store implementation behind `-tags sqlite`.
+- The implementation persists the same in-process logical model snapshot instead of introducing a separate reduced SQLite schema.
+
+## Patch 569 - SQLite Lite store backend wiring
+
+- Wired `CUSTODIA_STORE_BACKEND=sqlite` through `custodia-server` so Lite can start with the tagged SQLite artifact.
+
+## Patch 572 - SQLite Lite build targets
+
+- Added `make build-sqlite` and `make test-sqlite` for Lite release artifacts.
+
+## Patch 573 - Lite SQLite store guide
+
+- Documented the SQLite Lite store scope, build tag, configuration, safety properties and backup guidance.
