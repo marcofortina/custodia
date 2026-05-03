@@ -82,6 +82,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		WebPasskeyEnabled:          s.webPasskeyEnabled,
 		WebPasskeyCredentials:      s.webPasskeyCredentials.Count(),
 		WebPasskeyUserVerification: "required",
+		WebPasskeyPublicKeyStorage: "opaque_cose",
 		DeploymentMode:             s.deploymentMode,
 		DatabaseHATarget:           s.databaseHATarget,
 		AuditShipmentSink:          s.auditShipmentSink,
