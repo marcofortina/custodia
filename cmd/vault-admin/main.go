@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 
 	"custodia/internal/auditarchive"
 	"custodia/internal/auditartifact"
+	"custodia/internal/audits3shipper"
 	"custodia/internal/auditshipper"
 	"custodia/internal/build"
 	"custodia/internal/certutil"
@@ -93,6 +95,8 @@ func main() {
 		err = runAuditArchiveExport(args[2:])
 	case "audit ship-archive":
 		err = runAuditShipArchive(args[2:])
+	case "audit ship-archive-s3":
+		err = runAuditShipArchiveS3(args[2:])
 	case "secret versions":
 		err = runSecretVersions(&cfg, args[2:])
 	case "access list":
@@ -436,6 +440,41 @@ func validateAuditFilterFlags(outcome, action, actorClientID, resourceType, reso
 		return fmt.Errorf("--resource-id is invalid")
 	}
 	return nil
+}
+
+func runAuditShipArchiveS3(args []string) error {
+	cmd := flag.NewFlagSet("audit ship-archive-s3", flag.ExitOnError)
+	archiveDir := cmd.String("archive-dir", "", "verified audit archive bundle directory")
+	endpoint := cmd.String("endpoint", env("CUSTODIA_AUDIT_S3_ENDPOINT", ""), "S3-compatible endpoint URL")
+	region := cmd.String("region", env("CUSTODIA_AUDIT_S3_REGION", "us-east-1"), "S3 signing region")
+	bucket := cmd.String("bucket", env("CUSTODIA_AUDIT_S3_BUCKET", ""), "S3 bucket with Object Lock enabled")
+	prefix := cmd.String("prefix", env("CUSTODIA_AUDIT_S3_PREFIX", "custodia/audit"), "S3 object key prefix")
+	accessKeyID := cmd.String("access-key-id", env("CUSTODIA_AUDIT_S3_ACCESS_KEY_ID", ""), "S3 access key id")
+	secretAccessKey := cmd.String("secret-access-key", env("CUSTODIA_AUDIT_S3_SECRET_ACCESS_KEY", ""), "S3 secret access key")
+	objectLockMode := cmd.String("object-lock-mode", env("CUSTODIA_AUDIT_S3_OBJECT_LOCK_MODE", "COMPLIANCE"), "S3 Object Lock mode")
+	retainUntil := cmd.String("retain-until", env("CUSTODIA_AUDIT_S3_RETAIN_UNTIL", ""), "RFC3339 retention deadline")
+	_ = cmd.Parse(args)
+	if *archiveDir == "" || *endpoint == "" || *bucket == "" || *accessKeyID == "" || *secretAccessKey == "" || *retainUntil == "" {
+		return fmt.Errorf("--archive-dir, --endpoint, --bucket, --access-key-id, --secret-access-key and --retain-until are required")
+	}
+	parsedRetainUntil, err := time.Parse(time.RFC3339, *retainUntil)
+	if err != nil {
+		return fmt.Errorf("--retain-until must be RFC3339: %w", err)
+	}
+	result, err := audits3shipper.ShipArchive(context.Background(), *archiveDir, audits3shipper.Config{
+		Endpoint:        *endpoint,
+		Region:          *region,
+		Bucket:          *bucket,
+		Prefix:          *prefix,
+		AccessKeyID:     *accessKeyID,
+		SecretAccessKey: *secretAccessKey,
+		ObjectLockMode:  *objectLockMode,
+		RetainUntil:     parsedRetainUntil,
+	})
+	if encodeErr := json.NewEncoder(os.Stdout).Encode(result); encodeErr != nil {
+		return encodeErr
+	}
+	return err
 }
 
 func runAuditShipArchive(args []string) error {
