@@ -26,3 +26,9 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - Do not render ciphertext/envelopes in web pages.
 - Do not use the memory store for production.
 - Do not disable web MFA on externally reachable deployments.
+
+## Formal verification gate
+
+- Run `go test ./internal/formalmodel` after authorization model changes.
+- Run `make formal-check` in release pipelines where TLC is installed.
+- Treat new authorization transitions as requiring updates to both executable model tests and the TLA+ model.
