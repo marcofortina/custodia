@@ -6,7 +6,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
+
+	"custodia/internal/auditarchive"
 )
 
 func TestVaultAdminPathEscapeProtectsDynamicSegments(t *testing.T) {
@@ -263,5 +267,28 @@ func TestRunAuditArchiveExportWritesBundle(t *testing.T) {
 	}
 	if len(entries) != 1 {
 		t.Fatalf("expected one archive bundle, got %d", len(entries))
+	}
+}
+
+func TestRunAuditShipArchiveRejectsMissingArgs(t *testing.T) {
+	if err := runAuditShipArchive([]string{"--archive-dir", "bundle"}); err == nil {
+		t.Fatal("expected missing sink dir error")
+	}
+}
+
+func TestRunAuditShipArchiveCopiesBundle(t *testing.T) {
+	body := []byte("{}\n")
+	digest := sha256.Sum256(body)
+	archiveRoot := filepath.Join(t.TempDir(), "archive")
+	archive, err := auditarchive.Archive(body, hex.EncodeToString(digest[:]), "1", archiveRoot, time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("Archive() error = %v", err)
+	}
+	sinkRoot := filepath.Join(t.TempDir(), "sink")
+	if err := runAuditShipArchive([]string{"--archive-dir", archive.Directory, "--sink-dir", sinkRoot}); err != nil {
+		t.Fatalf("runAuditShipArchive() error = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(sinkRoot, filepath.Base(archive.Directory), "shipment.json")); err != nil {
+		t.Fatalf("expected shipment manifest: %v", err)
 	}
 }
