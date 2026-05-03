@@ -67,3 +67,15 @@ make test-sqlite
 ```
 
 The default build fails closed for `CUSTODIA_STORE_BACKEND=sqlite` unless the SQLite build tag is used. This keeps the standard-library bootstrap dependency-light while making SQLite an explicit Lite artifact.
+
+
+## Operational guides
+
+After choosing the Lite profile, use the dedicated operational guides:
+
+- `docs/LITE_INSTALL.md` for secure single-node installation;
+- `docs/LITE_CA_BOOTSTRAP.md` for local CA and certificate handling;
+- `docs/LITE_BACKUP_RESTORE.md` for SQLite backup and restore;
+- `docs/LITE_TO_FULL_UPGRADE.md` for the path toward Full deployments.
+
+Lite keeps the same security model as Full. These guides only reduce external dependencies; they do not remove mTLS, Web MFA, audit integrity or the opaque crypto boundary.
