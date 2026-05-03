@@ -658,3 +658,22 @@ The remaining Fort Knox items are no longer undocumented repository gaps. They a
 - release-check evidence for the shipped commit/image.
 
 The repository still does not claim to implement physical HSM hardware, external WORM storage, managed database clusters or third-party penetration testing. Those are operator-controlled production artifacts by design.
+
+## Patch 401 - id package tests
+
+- Added UUIDv4 format and uniqueness tests for `internal/id`.
+- The package now reports `ok` under `go test ./...` instead of `[no test files]`.
+
+## Patch 402 - memory rate limiter tests
+
+- Added coverage for memory limiter allow/deny behavior, unlimited zero-limit behavior and health checks.
+
+## Patch 403 - Valkey rate limiter protocol tests
+
+- Added coverage for Redis/Valkey URL parsing and RESP helper behavior.
+- The `internal/ratelimit` package now reports `ok` under `go test ./...` instead of `[no test files]`.
+
+## Patch 404 - final test coverage status
+
+- All Go packages now contain tests where they include executable project logic.
+- Remaining `[no test files]` output should be treated as a regression unless the package is intentionally interface-only.
