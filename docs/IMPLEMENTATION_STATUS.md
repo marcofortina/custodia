@@ -279,3 +279,26 @@ Implemented runbooks now cover production readiness, backup/restore, disaster re
 ## Patch 239 - implemented signer service docs
 
 - Documented the implemented signer API boundary, production mTLS requirements and remaining TPM/HSM gap.
+
+## Patch 242 - client CSR generation helper
+
+- Added local ECDSA client key and CSR generation helper.
+- The generated CSR binds the `client_id` into CN and DNS SAN for mTLS identity extraction.
+
+## Patch 244 - vault-admin client CSR command
+
+- Added `vault-admin client csr` for local key/CSR generation.
+- Private keys are written locally with exclusive creation and restrictive permissions.
+
+## Patch 246 - vault-admin certificate sign command
+
+- Added `vault-admin certificate sign` to submit CSRs to the dedicated signer service.
+- The command targets `custodia-signer`, not the vault API server.
+
+## Patch 248 - certificate lifecycle guide
+
+- Documented the metadata registration, CSR generation, signer submission and API mTLS usage flow.
+
+## Patch 249 - compose signer profile
+
+- Added an optional Compose signer profile for local development workflows.
