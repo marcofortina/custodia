@@ -133,3 +133,13 @@ Every HTTP response includes an `X-Request-ID` header. If the caller sends a bou
 ## Runtime diagnostics
 
 `GET /v1/diagnostics` is admin-only and returns operational runtime metadata: start time, uptime, goroutine count and memory counters. It does not expose secret payloads, envelopes or client-side cryptographic material.
+
+## Signer revocation serial status
+
+When pointed at `custodia-signer`, admin clients may query CRL-backed certificate status by serial number:
+
+```text
+GET /v1/revocation/serial?serial_hex=<hex>
+```
+
+The response is JSON and returns `good` or `revoked` plus CRL update metadata. This endpoint is an operational JSON responder backed by the configured CRL, not a binary OCSP responder.
