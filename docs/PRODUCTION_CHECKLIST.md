@@ -6,6 +6,7 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 
 - API listener serves TLS 1.3 with `ClientAuth: RequireAndVerifyClientCert`.
 - `CUSTODIA_STORE_BACKEND=postgres` or a CockroachDB-compatible PostgreSQL endpoint is configured.
+- `CUSTODIA_DEPLOYMENT_MODE` and `CUSTODIA_DATABASE_HA_TARGET` reflect the real DB HA topology.
 - `CUSTODIA_RATE_LIMIT_BACKEND=valkey` is configured for shared rate limits.
 - `CUSTODIA_CLIENT_CRL_FILE` is mounted when local CRL enforcement is used.
 - `vault-admin revocation status` is monitored and alerts before CRL expiry.
