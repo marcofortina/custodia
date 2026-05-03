@@ -611,3 +611,11 @@ Any future implementation patch must update this file or an explicitly linked st
 ## Patch 384 - CI release check workflow
 
 - Added a GitHub Actions workflow that runs the release check on pushes and pull requests.
+
+## Patch 386 - production env readiness example
+
+- Added `deploy/examples/production.env.example` with production-readiness inputs for API, signer, HA metadata and audit shipment.
+
+## Patch 387 - production env example docs
+
+- Documented how to use the production env example with `make production-check`.
