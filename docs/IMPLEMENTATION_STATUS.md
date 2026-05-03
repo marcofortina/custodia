@@ -256,3 +256,26 @@ These are explicitly operational components in the analysis and cannot be truthf
 ## Operational documentation
 
 Implemented runbooks now cover production readiness, backup/restore, disaster recovery, CA signing service boundaries, CRL/OCSP operations, SIEM/WORM audit export and formal verification scope. These documents do not claim that TPM/HSM signing, OCSP stapling, WORM storage or formal proofs are implemented in code yet.
+
+## Patch 232 - client certificate signing package
+
+- Added an internal client certificate signer that validates CSR signatures, client-id identity binding and certificate TTL bounds.
+- The signer issues client-auth certificates only and does not handle application encryption keys.
+
+## Patch 234 - dedicated certificate signer service
+
+- Added `custodia-signer`, a separate admin-only service for CSR signing.
+- The vault API process still does not load or use CA private key material.
+
+## Patch 236 - Docker signer binary
+
+- The Docker image now includes `custodia-signer` alongside `custodia-server` and `vault-admin`.
+
+## Patch 237 - signer build targets
+
+- Local build targets now compile `custodia-signer`.
+- A development signer target is available for isolated local workflows.
+
+## Patch 239 - implemented signer service docs
+
+- Documented the implemented signer API boundary, production mTLS requirements and remaining TPM/HSM gap.
