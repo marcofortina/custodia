@@ -61,3 +61,6 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 - SoftHSM is not used for production signing.
 - PKCS#11 token/key labels and PIN source are managed outside the repository.
 - HSM/TPM attestation is attached to the production evidence gate.
+
+- S3/Object Lock audit shipment is configured and verified with `vault-admin audit ship-archive-s3` or an equivalent WORM sink adapter.
+- `make minio-object-lock-smoke` passes in development if MinIO is used as the WORM-like test profile.
