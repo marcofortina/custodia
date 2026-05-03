@@ -820,3 +820,20 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 461 - revocation serial responder docs
 
 - Documented the responder as JSON/CRL-backed and explicitly not a full RFC 6960 OCSP responder.
+
+## Patch 466 - passkey challenge store
+
+- Added an in-memory passkey challenge store with TTL, prune and consume-once semantics.
+
+## Patch 468 - passkey client data verifier
+
+- Added server-side validation for WebAuthn `clientDataJSON` fields that are safe to verify without credential storage: `type`, `challenge` and `origin`.
+
+## Patch 470 - passkey challenge preverification endpoints
+
+- Added `POST /web/passkey/register/verify` and `POST /web/passkey/authenticate/verify`.
+- The endpoints consume stored challenges exactly once and reject replay or wrong-origin client data.
+
+## Patch 472 - passkey preverification documentation
+
+- Documented the passkey challenge preverification boundary and clarified that full WebAuthn assertion verification still requires credential storage, authenticatorData parsing, COSE/CBOR parsing, signature verification and counter checks.
