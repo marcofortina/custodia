@@ -153,6 +153,7 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 - [Phase 3 closure boundary](docs/PHASE3_CLOSURE.md)
 - [Disaster recovery runbook](docs/DR_RUNBOOK.md)
 - [Database HA runbook](docs/DATABASE_HA_RUNBOOK.md)
+- [k3s CockroachDB HA profile](docs/K3S_COCKROACHDB_HA.md)
 - [Backup and restore runbook](docs/BACKUP_RESTORE_RUNBOOK.md)
 - [CA signing service design](docs/CA_SIGNING_SERVICE.md)
 - [PKCS#11 and SoftHSM signer bridge](docs/PKCS11_SOFTHSM.md)
