@@ -64,6 +64,7 @@ services:
       CUSTODIA_SIGNER_ADMIN_SUBJECTS: signer_admin
       CUSTODIA_SIGNER_CA_CERT_FILE: /certs/vault-ca.pem
       CUSTODIA_SIGNER_CA_KEY_FILE: /certs/vault-ca-key.pem
+      CUSTODIA_SIGNER_CRL_FILE: /certs/client.crl
       CUSTODIA_SIGNER_KEY_PROVIDER: file
     volumes:
       - ../certs:/certs:ro
