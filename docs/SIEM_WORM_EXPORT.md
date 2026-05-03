@@ -24,3 +24,8 @@ Custodia writes an internal hash-chained audit log and can export JSONL with int
 ## Security boundary
 
 Audit exports may contain metadata, actor IDs, resource IDs and operation outcomes. They must not contain plaintext, envelopes or client-side key material.
+
+
+## S3 Object Lock shipment
+
+For S3-compatible WORM sinks, use `vault-admin audit ship-archive-s3` after `vault-admin audit archive-export`. The command verifies the archive body, digest and event count before uploading objects with SigV4 and Object Lock retention headers. MinIO Object Lock is suitable for development and smoke testing; production compliance still depends on the external storage provider enforcing retention.
