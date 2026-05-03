@@ -73,7 +73,7 @@ func testSignerHandler(t *testing.T) http.Handler {
 	if err != nil {
 		t.Fatalf("NewClientCertificateSigner() error = %v", err)
 	}
-	return newSignerServer(clientSigner, map[string]bool{"signer_admin": true}, 1, true, signeraudit.NopRecorder{})
+	return newSignerServer(clientSigner, map[string]bool{"signer_admin": true}, 1, true, signeraudit.NopRecorder{}, "")
 }
 
 func testSignerCA(t *testing.T) ([]byte, []byte) {
@@ -151,7 +151,7 @@ func TestSignerAuditsCertificateRequests(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewClientCertificateSigner() error = %v", err)
 	}
-	handler := newSignerServer(clientSigner, map[string]bool{"signer_admin": true}, 1, true, recorder)
+	handler := newSignerServer(clientSigner, map[string]bool{"signer_admin": true}, 1, true, recorder, "")
 	payload, err := json.Marshal(signing.SignClientCertificateRequest{ClientID: "client_alice", CSRPem: string(testSignerCSR(t, "client_alice")), TTLHours: 1})
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)

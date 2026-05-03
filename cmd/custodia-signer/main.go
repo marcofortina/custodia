@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"custodia/internal/crldist"
 	"custodia/internal/id"
 	"custodia/internal/mtls"
 	"custodia/internal/signeraudit"
@@ -33,6 +34,7 @@ type signerConfig struct {
 	devInsecureHTTP bool
 	shutdownTimeout time.Duration
 	auditLogFile    string
+	crlFile         string
 }
 
 type signerServer struct {
@@ -41,6 +43,7 @@ type signerServer struct {
 	defaultTTLHours int
 	devInsecureHTTP bool
 	audit           signeraudit.Recorder
+	crlFile         string
 }
 
 func main() {
@@ -57,7 +60,7 @@ func main() {
 		log.Fatalf("signer audit init failed: %v", err)
 	}
 	defer auditRecorder.Close()
-	handler := newSignerServer(clientSigner, cfg.adminSubjects, cfg.defaultTTLHours, cfg.devInsecureHTTP, auditRecorder)
+	handler := newSignerServer(clientSigner, cfg.adminSubjects, cfg.defaultTTLHours, cfg.devInsecureHTTP, auditRecorder, cfg.crlFile)
 	httpServer := &http.Server{
 		Addr:              cfg.addr,
 		Handler:           handler,
@@ -102,7 +105,7 @@ type contextKey string
 
 const requestIDContextKey contextKey = "request_id"
 
-func newSignerServer(clientSigner *signing.ClientCertificateSigner, adminSubjects map[string]bool, defaultTTLHours int, devInsecureHTTP bool, auditRecorder signeraudit.Recorder) http.Handler {
+func newSignerServer(clientSigner *signing.ClientCertificateSigner, adminSubjects map[string]bool, defaultTTLHours int, devInsecureHTTP bool, auditRecorder signeraudit.Recorder, crlFile string) http.Handler {
 	if auditRecorder == nil {
 		auditRecorder = signeraudit.NopRecorder{}
 	}
@@ -115,10 +118,12 @@ func newSignerServer(clientSigner *signing.ClientCertificateSigner, adminSubject
 		defaultTTLHours: defaultTTLHours,
 		devInsecureHTTP: devInsecureHTTP,
 		audit:           auditRecorder,
+		crlFile:         strings.TrimSpace(crlFile),
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", server.handleHealth)
 	mux.HandleFunc("GET /live", server.handleHealth)
+	mux.HandleFunc("GET /v1/crl.pem", server.handleCRL)
 	mux.HandleFunc("POST /v1/certificates/sign", server.handleSignClientCertificate)
 	return requestIDs(securityHeaders(mux))
 }
@@ -155,6 +160,26 @@ func validRequestID(value string) bool {
 
 func (s *signerServer) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (s *signerServer) handleCRL(w http.ResponseWriter, r *http.Request) {
+	if s.crlFile == "" {
+		s.record(r, "crl.read", "failure", s.actor(r), "", map[string]string{"reason": "crl_not_configured"})
+		writeError(w, http.StatusNotFound, "crl_not_configured")
+		return
+	}
+	payload, list, err := crldist.LoadPEM(s.crlFile)
+	if err != nil {
+		s.record(r, "crl.read", "failure", s.actor(r), "", map[string]string{"reason": "invalid_crl"})
+		writeError(w, http.StatusServiceUnavailable, "invalid_crl")
+		return
+	}
+	w.Header().Set("Content-Type", "application/pkix-crl")
+	w.Header().Set("Cache-Control", "max-age=300, must-revalidate")
+	w.Header().Set("X-Custodia-CRL-Revoked-Count", strconv.Itoa(len(list.RevokedCertificateEntries)))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(payload)
+	s.record(r, "crl.read", "success", s.actor(r), "", map[string]string{"revoked_count": strconv.Itoa(len(list.RevokedCertificateEntries))})
 }
 
 func (s *signerServer) handleSignClientCertificate(w http.ResponseWriter, r *http.Request) {
@@ -265,6 +290,7 @@ func loadConfig() signerConfig {
 		devInsecureHTTP: envBool("CUSTODIA_SIGNER_DEV_INSECURE_HTTP", false),
 		shutdownTimeout: time.Duration(envInt("CUSTODIA_SIGNER_SHUTDOWN_TIMEOUT_SECONDS", 10)) * time.Second,
 		auditLogFile:    os.Getenv("CUSTODIA_SIGNER_AUDIT_LOG_FILE"),
+		crlFile:         os.Getenv("CUSTODIA_SIGNER_CRL_FILE"),
 	}
 }
 
