@@ -1,6 +1,7 @@
 package webauth
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
 	"testing"
 )
@@ -51,4 +52,47 @@ func TestValidatePasskeySignCount(t *testing.T) {
 	if err := ValidatePasskeySignCount(7, 7); err != ErrInvalidPasskeyAuthenticatorData {
 		t.Fatalf("non-increasing counter error = %v", err)
 	}
+}
+
+func TestValidatePasskeyAuthenticatorData(t *testing.T) {
+	raw := authenticatorDataForRPID("example.com", 0x05, 9)
+	data, err := ParsePasskeyAuthenticatorData(raw)
+	if err != nil {
+		t.Fatalf("ParsePasskeyAuthenticatorData() error = %v", err)
+	}
+	if err := ValidatePasskeyAuthenticatorData(data, "example.com", true); err != nil {
+		t.Fatalf("ValidatePasskeyAuthenticatorData() error = %v", err)
+	}
+}
+
+func TestValidatePasskeyAuthenticatorDataRejectsWrongRPID(t *testing.T) {
+	data, err := ParsePasskeyAuthenticatorData(authenticatorDataForRPID("example.com", 0x05, 9))
+	if err != nil {
+		t.Fatalf("ParsePasskeyAuthenticatorData() error = %v", err)
+	}
+	if err := ValidatePasskeyAuthenticatorData(data, "evil.example.com", true); err != ErrInvalidPasskeyAuthenticatorData {
+		t.Fatalf("ValidatePasskeyAuthenticatorData() error = %v, want %v", err, ErrInvalidPasskeyAuthenticatorData)
+	}
+}
+
+func TestValidatePasskeyAuthenticatorDataRejectsMissingUserVerification(t *testing.T) {
+	data, err := ParsePasskeyAuthenticatorData(authenticatorDataForRPID("example.com", 0x01, 9))
+	if err != nil {
+		t.Fatalf("ParsePasskeyAuthenticatorData() error = %v", err)
+	}
+	if err := ValidatePasskeyAuthenticatorData(data, "example.com", true); err != ErrInvalidPasskeyAuthenticatorData {
+		t.Fatalf("ValidatePasskeyAuthenticatorData() error = %v, want %v", err, ErrInvalidPasskeyAuthenticatorData)
+	}
+}
+
+func authenticatorDataForRPID(rpID string, flags byte, signCount uint32) []byte {
+	raw := make([]byte, 37)
+	digest := sha256.Sum256([]byte(rpID))
+	copy(raw[:32], digest[:])
+	raw[32] = flags
+	raw[33] = byte(signCount >> 24)
+	raw[34] = byte(signCount >> 16)
+	raw[35] = byte(signCount >> 8)
+	raw[36] = byte(signCount)
+	return raw
 }
