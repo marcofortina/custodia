@@ -7,76 +7,78 @@ import (
 )
 
 type Config struct {
-	APIAddr                       string
-	HealthAddr                    string
-	WebAddr                       string
-	StoreBackend                  string
-	DatabaseURL                   string
-	TLSCertFile                   string
-	TLSKeyFile                    string
-	ClientCAFile                  string
-	ClientCRLFile                 string
-	DevInsecureHTTP               bool
-	BootstrapClients              map[string]string
-	AdminClientIDs                map[string]bool
-	MaxEnvelopesPerSecret         int
-	RateLimitBackend              string
-	ValkeyURL                     string
-	ClientRateLimitPerSecond      int
-	GlobalRateLimitPerSecond      int
-	IPRateLimitPerSecond          int
-	HTTPReadTimeoutSeconds        int
-	HTTPWriteTimeoutSeconds       int
-	HTTPIdleTimeoutSeconds        int
-	ShutdownTimeoutSeconds        int
-	WebMFARequired                bool
-	WebTOTPSecret                 string
-	WebSessionSecret              string
-	WebSessionTTLSeconds          int
-	WebPasskeyEnabled             bool
-	WebPasskeyRPID                string
-	WebPasskeyRPName              string
-	WebPasskeyChallengeTTLSeconds int
-	DeploymentMode                string
-	DatabaseHATarget              string
-	AuditShipmentSink             string
+	APIAddr                          string
+	HealthAddr                       string
+	WebAddr                          string
+	StoreBackend                     string
+	DatabaseURL                      string
+	TLSCertFile                      string
+	TLSKeyFile                       string
+	ClientCAFile                     string
+	ClientCRLFile                    string
+	DevInsecureHTTP                  bool
+	BootstrapClients                 map[string]string
+	AdminClientIDs                   map[string]bool
+	MaxEnvelopesPerSecret            int
+	RateLimitBackend                 string
+	ValkeyURL                        string
+	ClientRateLimitPerSecond         int
+	GlobalRateLimitPerSecond         int
+	IPRateLimitPerSecond             int
+	HTTPReadTimeoutSeconds           int
+	HTTPWriteTimeoutSeconds          int
+	HTTPIdleTimeoutSeconds           int
+	ShutdownTimeoutSeconds           int
+	WebMFARequired                   bool
+	WebTOTPSecret                    string
+	WebSessionSecret                 string
+	WebSessionTTLSeconds             int
+	WebPasskeyEnabled                bool
+	WebPasskeyRPID                   string
+	WebPasskeyRPName                 string
+	WebPasskeyChallengeTTLSeconds    int
+	WebPasskeyAssertionVerifyCommand string
+	DeploymentMode                   string
+	DatabaseHATarget                 string
+	AuditShipmentSink                string
 }
 
 func Load() Config {
 	return Config{
-		APIAddr:                       env("CUSTODIA_API_ADDR", ":8443"),
-		HealthAddr:                    env("CUSTODIA_HEALTH_ADDR", ""),
-		WebAddr:                       env("CUSTODIA_WEB_ADDR", ":9443"),
-		StoreBackend:                  env("CUSTODIA_STORE_BACKEND", "memory"),
-		DatabaseURL:                   os.Getenv("CUSTODIA_DATABASE_URL"),
-		TLSCertFile:                   os.Getenv("CUSTODIA_TLS_CERT_FILE"),
-		TLSKeyFile:                    os.Getenv("CUSTODIA_TLS_KEY_FILE"),
-		ClientCAFile:                  os.Getenv("CUSTODIA_CLIENT_CA_FILE"),
-		ClientCRLFile:                 os.Getenv("CUSTODIA_CLIENT_CRL_FILE"),
-		DevInsecureHTTP:               envBool("CUSTODIA_DEV_INSECURE_HTTP", false),
-		BootstrapClients:              envPairs("CUSTODIA_BOOTSTRAP_CLIENTS"),
-		AdminClientIDs:                envSet("CUSTODIA_ADMIN_CLIENT_IDS"),
-		MaxEnvelopesPerSecret:         envInt("CUSTODIA_MAX_ENVELOPES_PER_SECRET", 100),
-		RateLimitBackend:              env("CUSTODIA_RATE_LIMIT_BACKEND", "memory"),
-		ValkeyURL:                     os.Getenv("CUSTODIA_VALKEY_URL"),
-		ClientRateLimitPerSecond:      envInt("CUSTODIA_CLIENT_RATE_LIMIT_PER_SECOND", 100),
-		GlobalRateLimitPerSecond:      envInt("CUSTODIA_GLOBAL_RATE_LIMIT_PER_SECOND", 5000),
-		IPRateLimitPerSecond:          envInt("CUSTODIA_IP_RATE_LIMIT_PER_SECOND", 1000),
-		HTTPReadTimeoutSeconds:        envInt("CUSTODIA_HTTP_READ_TIMEOUT_SECONDS", 15),
-		HTTPWriteTimeoutSeconds:       envInt("CUSTODIA_HTTP_WRITE_TIMEOUT_SECONDS", 15),
-		HTTPIdleTimeoutSeconds:        envInt("CUSTODIA_HTTP_IDLE_TIMEOUT_SECONDS", 60),
-		ShutdownTimeoutSeconds:        envInt("CUSTODIA_SHUTDOWN_TIMEOUT_SECONDS", 10),
-		WebMFARequired:                envBool("CUSTODIA_WEB_MFA_REQUIRED", false),
-		WebTOTPSecret:                 os.Getenv("CUSTODIA_WEB_TOTP_SECRET"),
-		WebSessionSecret:              os.Getenv("CUSTODIA_WEB_SESSION_SECRET"),
-		WebSessionTTLSeconds:          envInt("CUSTODIA_WEB_SESSION_TTL_SECONDS", 900),
-		WebPasskeyEnabled:             envBool("CUSTODIA_WEB_PASSKEY_ENABLED", false),
-		WebPasskeyRPID:                env("CUSTODIA_WEB_PASSKEY_RP_ID", "localhost"),
-		WebPasskeyRPName:              env("CUSTODIA_WEB_PASSKEY_RP_NAME", "Custodia"),
-		WebPasskeyChallengeTTLSeconds: envInt("CUSTODIA_WEB_PASSKEY_CHALLENGE_TTL_SECONDS", 300),
-		DeploymentMode:                env("CUSTODIA_DEPLOYMENT_MODE", "single-region"),
-		DatabaseHATarget:              env("CUSTODIA_DATABASE_HA_TARGET", "external"),
-		AuditShipmentSink:             os.Getenv("CUSTODIA_AUDIT_SHIPMENT_SINK"),
+		APIAddr:                          env("CUSTODIA_API_ADDR", ":8443"),
+		HealthAddr:                       env("CUSTODIA_HEALTH_ADDR", ""),
+		WebAddr:                          env("CUSTODIA_WEB_ADDR", ":9443"),
+		StoreBackend:                     env("CUSTODIA_STORE_BACKEND", "memory"),
+		DatabaseURL:                      os.Getenv("CUSTODIA_DATABASE_URL"),
+		TLSCertFile:                      os.Getenv("CUSTODIA_TLS_CERT_FILE"),
+		TLSKeyFile:                       os.Getenv("CUSTODIA_TLS_KEY_FILE"),
+		ClientCAFile:                     os.Getenv("CUSTODIA_CLIENT_CA_FILE"),
+		ClientCRLFile:                    os.Getenv("CUSTODIA_CLIENT_CRL_FILE"),
+		DevInsecureHTTP:                  envBool("CUSTODIA_DEV_INSECURE_HTTP", false),
+		BootstrapClients:                 envPairs("CUSTODIA_BOOTSTRAP_CLIENTS"),
+		AdminClientIDs:                   envSet("CUSTODIA_ADMIN_CLIENT_IDS"),
+		MaxEnvelopesPerSecret:            envInt("CUSTODIA_MAX_ENVELOPES_PER_SECRET", 100),
+		RateLimitBackend:                 env("CUSTODIA_RATE_LIMIT_BACKEND", "memory"),
+		ValkeyURL:                        os.Getenv("CUSTODIA_VALKEY_URL"),
+		ClientRateLimitPerSecond:         envInt("CUSTODIA_CLIENT_RATE_LIMIT_PER_SECOND", 100),
+		GlobalRateLimitPerSecond:         envInt("CUSTODIA_GLOBAL_RATE_LIMIT_PER_SECOND", 5000),
+		IPRateLimitPerSecond:             envInt("CUSTODIA_IP_RATE_LIMIT_PER_SECOND", 1000),
+		HTTPReadTimeoutSeconds:           envInt("CUSTODIA_HTTP_READ_TIMEOUT_SECONDS", 15),
+		HTTPWriteTimeoutSeconds:          envInt("CUSTODIA_HTTP_WRITE_TIMEOUT_SECONDS", 15),
+		HTTPIdleTimeoutSeconds:           envInt("CUSTODIA_HTTP_IDLE_TIMEOUT_SECONDS", 60),
+		ShutdownTimeoutSeconds:           envInt("CUSTODIA_SHUTDOWN_TIMEOUT_SECONDS", 10),
+		WebMFARequired:                   envBool("CUSTODIA_WEB_MFA_REQUIRED", false),
+		WebTOTPSecret:                    os.Getenv("CUSTODIA_WEB_TOTP_SECRET"),
+		WebSessionSecret:                 os.Getenv("CUSTODIA_WEB_SESSION_SECRET"),
+		WebSessionTTLSeconds:             envInt("CUSTODIA_WEB_SESSION_TTL_SECONDS", 900),
+		WebPasskeyEnabled:                envBool("CUSTODIA_WEB_PASSKEY_ENABLED", false),
+		WebPasskeyRPID:                   env("CUSTODIA_WEB_PASSKEY_RP_ID", "localhost"),
+		WebPasskeyRPName:                 env("CUSTODIA_WEB_PASSKEY_RP_NAME", "Custodia"),
+		WebPasskeyChallengeTTLSeconds:    envInt("CUSTODIA_WEB_PASSKEY_CHALLENGE_TTL_SECONDS", 300),
+		WebPasskeyAssertionVerifyCommand: os.Getenv("CUSTODIA_WEB_PASSKEY_ASSERTION_VERIFY_COMMAND"),
+		DeploymentMode:                   env("CUSTODIA_DEPLOYMENT_MODE", "single-region"),
+		DatabaseHATarget:                 env("CUSTODIA_DATABASE_HA_TARGET", "external"),
+		AuditShipmentSink:                os.Getenv("CUSTODIA_AUDIT_SHIPMENT_SINK"),
 	}
 }
 
