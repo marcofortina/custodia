@@ -599,3 +599,15 @@ Any future implementation patch must update this file or an explicitly linked st
 
 - Phase 3 is closed as a code, runbook and deployment-readiness baseline.
 - Production 101% still depends on external systems that cannot be proven inside this repository: real PKCS#11/HSM hardware, actual WORM/SIEM retention, and real HA database topology.
+
+## Patch 381 - release check script
+
+- Added `scripts/release-check.sh` to run Go tests, builds, Python client syntax checks and formal verification when TLC is installed.
+
+## Patch 382 - release check Make target
+
+- Added `make release-check` as a single local pre-release gate.
+
+## Patch 384 - CI release check workflow
+
+- Added a GitHub Actions workflow that runs the release check on pushes and pull requests.
