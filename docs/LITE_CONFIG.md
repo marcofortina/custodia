@@ -55,3 +55,15 @@ See `deploy/examples/config.full.yaml` for a complete example.
 Lite reduces external runtime dependencies, not security boundaries. API mTLS,
 Web MFA, opaque ciphertext handling, authorization grants and audit integrity
 remain part of the same server model.
+
+
+## SQLite Lite store build note
+
+The `sqlite` store is scoped to the Lite/custom single-node profile. Release artifacts intended for Lite SQLite deployments must be built with the SQLite build tag and driver dependency available:
+
+```bash
+make build-sqlite
+make test-sqlite
+```
+
+The default build fails closed for `CUSTODIA_STORE_BACKEND=sqlite` unless the SQLite build tag is used. This keeps the standard-library bootstrap dependency-light while making SQLite an explicit Lite artifact.
