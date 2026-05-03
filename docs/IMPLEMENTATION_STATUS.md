@@ -878,3 +878,20 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 495 - passkey authenticator data production gate
 
 - Documented production gates for authenticator data drills and the remaining COSE/signature verification boundary.
+
+## Patch 497 - passkey authenticator RP ID validator
+
+- Added authenticator-data validation for RP ID hash, user-present and user-verified flags.
+- This hardens the existing passkey scaffold without claiming full WebAuthn signature verification.
+
+## Patch 499 - passkey authenticator RP ID enforcement
+
+- Wired RP ID hash and user-verification enforcement into passkey register/authenticate preverification when authenticator data is supplied.
+
+## Patch 501 - passkey user-verification status
+
+- Exposed the passkey user-verification policy in operational status.
+
+## Patch 503 - passkey authenticator validation docs
+
+- Documented RP ID hash, user-present and user-verified enforcement and kept the COSE/signature verification boundary explicit.
