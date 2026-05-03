@@ -142,3 +142,22 @@ func TestRunAuditCommandsRejectInvalidFilters(t *testing.T) {
 		t.Fatal("expected invalid audit export resource id error")
 	}
 }
+
+func TestRunClientCSRRejectsInvalidClientID(t *testing.T) {
+	err := runClientCSR([]string{"--client-id", "client bad", "--private-key-out", "key.pem", "--csr-out", "client.csr"})
+	if err == nil {
+		t.Fatal("expected invalid client csr id error")
+	}
+}
+
+func TestRunClientCSRWritesFiles(t *testing.T) {
+	dir := t.TempDir()
+	keyPath := dir + "/client.key"
+	csrPath := dir + "/client.csr"
+	if err := runClientCSR([]string{"--client-id", "client_alice", "--private-key-out", keyPath, "--csr-out", csrPath}); err != nil {
+		t.Fatalf("runClientCSR() error = %v", err)
+	}
+	if err := runClientCSR([]string{"--client-id", "client_alice", "--private-key-out", keyPath, "--csr-out", csrPath}); err == nil {
+		t.Fatal("expected exclusive write error for existing files")
+	}
+}
