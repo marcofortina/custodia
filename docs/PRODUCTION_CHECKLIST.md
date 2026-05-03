@@ -84,3 +84,9 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 - Passkey registration preverification must record a credential id for the mTLS/web client before authentication preverification is enabled.
 - Passkey authentication preverification must reject unknown credential ids for the calling client.
 - Full WebAuthn production enablement still requires COSE/CBOR parsing, authenticatorData validation, signature verification and signature counter checks.
+
+## Passkey authenticator data gate
+
+- Passkey authentication preverification must include `authenticator_data` during production drills.
+- Non-increasing signature counters must be rejected before passkeys are considered beyond challenge-only preverification.
+- Full WebAuthn promotion still requires COSE public-key storage, authenticator signature verification and attestation/authenticatorData review with an audited WebAuthn library or reviewed verifier.
