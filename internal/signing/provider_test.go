@@ -2,6 +2,9 @@ package signing
 
 import (
 	"crypto"
+	"crypto/rand"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"os"
 	"testing"
@@ -16,6 +19,64 @@ func TestClientCertificateSignerWithFileKeyProvider(t *testing.T) {
 	if signer == nil {
 		t.Fatal("expected signer")
 	}
+}
+
+func TestClientCertificateSignerWithEncryptedFileKeyProvider(t *testing.T) {
+	caCertPEM, caKeyPEM := testCA(t)
+	encryptedKeyPEM := encryptTestKeyPEM(t, caKeyPEM, []byte("correct horse battery staple"))
+	signer, err := NewClientCertificateSignerWithKeyProvider(caCertPEM, FileCAKeyProvider{KeyPEM: encryptedKeyPEM, Passphrase: []byte("correct horse battery staple")})
+	if err != nil {
+		t.Fatalf("NewClientCertificateSignerWithKeyProvider() error = %v", err)
+	}
+	if signer == nil {
+		t.Fatal("expected signer")
+	}
+}
+
+func TestClientCertificateSignerRejectsEncryptedFileKeyWithoutPassphrase(t *testing.T) {
+	caCertPEM, caKeyPEM := testCA(t)
+	encryptedKeyPEM := encryptTestKeyPEM(t, caKeyPEM, []byte("correct horse battery staple"))
+	_, err := NewClientCertificateSignerWithKeyProvider(caCertPEM, FileCAKeyProvider{KeyPEM: encryptedKeyPEM})
+	if !errors.Is(err, ErrInvalidCA) {
+		t.Fatalf("NewClientCertificateSignerWithKeyProvider() error = %v, want %v", err, ErrInvalidCA)
+	}
+}
+
+func TestLoadClientCertificateSignerWithPassphraseFile(t *testing.T) {
+	caCertPEM, caKeyPEM := testCA(t)
+	dir := t.TempDir()
+	certPath := dir + "/ca.pem"
+	keyPath := dir + "/ca.key"
+	passphrasePath := dir + "/ca.pass"
+	if err := os.WriteFile(certPath, caCertPEM, 0o600); err != nil {
+		t.Fatalf("WriteFile(cert) error = %v", err)
+	}
+	if err := os.WriteFile(keyPath, encryptTestKeyPEM(t, caKeyPEM, []byte("correct horse battery staple")), 0o600); err != nil {
+		t.Fatalf("WriteFile(key) error = %v", err)
+	}
+	if err := os.WriteFile(passphrasePath, []byte("correct horse battery staple\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile(passphrase) error = %v", err)
+	}
+	signer, err := LoadClientCertificateSignerWithOptions(KeyProviderFile, certPath, keyPath, "", passphrasePath)
+	if err != nil {
+		t.Fatalf("LoadClientCertificateSignerWithOptions() error = %v", err)
+	}
+	if signer == nil {
+		t.Fatal("expected signer")
+	}
+}
+
+func encryptTestKeyPEM(t *testing.T, keyPEM []byte, passphrase []byte) []byte {
+	t.Helper()
+	block, _ := pem.Decode(keyPEM)
+	if block == nil {
+		t.Fatal("missing key PEM block")
+	}
+	encryptedBlock, err := x509.EncryptPEMBlock(rand.Reader, block.Type, block.Bytes, passphrase, x509.PEMCipherAES256)
+	if err != nil {
+		t.Fatalf("EncryptPEMBlock() error = %v", err)
+	}
+	return pem.EncodeToMemory(encryptedBlock)
 }
 
 func TestLoadClientCertificateSignerRejectsPKCS11InThisBuild(t *testing.T) {
