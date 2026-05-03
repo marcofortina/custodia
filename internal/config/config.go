@@ -37,6 +37,9 @@ type Config struct {
 	WebPasskeyRPID                string
 	WebPasskeyRPName              string
 	WebPasskeyChallengeTTLSeconds int
+	DeploymentMode                string
+	DatabaseHATarget              string
+	AuditShipmentSink             string
 }
 
 func Load() Config {
@@ -71,6 +74,9 @@ func Load() Config {
 		WebPasskeyRPID:                env("CUSTODIA_WEB_PASSKEY_RP_ID", "localhost"),
 		WebPasskeyRPName:              env("CUSTODIA_WEB_PASSKEY_RP_NAME", "Custodia"),
 		WebPasskeyChallengeTTLSeconds: envInt("CUSTODIA_WEB_PASSKEY_CHALLENGE_TTL_SECONDS", 300),
+		DeploymentMode:                env("CUSTODIA_DEPLOYMENT_MODE", "single-region"),
+		DatabaseHATarget:              env("CUSTODIA_DATABASE_HA_TARGET", "external"),
+		AuditShipmentSink:             os.Getenv("CUSTODIA_AUDIT_SHIPMENT_SINK"),
 	}
 }
 

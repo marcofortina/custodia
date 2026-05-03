@@ -52,3 +52,13 @@ func TestLoadWebAuthConfigFromEnvironment(t *testing.T) {
 		t.Fatalf("unexpected passkey config: %+v", cfg)
 	}
 }
+
+func TestLoadReadsDeploymentMetadata(t *testing.T) {
+	t.Setenv("CUSTODIA_DEPLOYMENT_MODE", "multi-region")
+	t.Setenv("CUSTODIA_DATABASE_HA_TARGET", "cockroachdb")
+	t.Setenv("CUSTODIA_AUDIT_SHIPMENT_SINK", "s3://audit-bucket/custodia")
+	cfg := Load()
+	if cfg.DeploymentMode != "multi-region" || cfg.DatabaseHATarget != "cockroachdb" || cfg.AuditShipmentSink != "s3://audit-bucket/custodia" {
+		t.Fatalf("unexpected deployment metadata: %+v", cfg)
+	}
+}
