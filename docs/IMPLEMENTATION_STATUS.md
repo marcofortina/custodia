@@ -209,3 +209,41 @@ These are explicitly operational components in the analysis and cannot be truthf
 ## Patch 200 - Python client version helper
 
 - Added `CustodiaClient.version()` and documented it in the Python client README.
+
+## Patch 202 - bounded web audit listings
+
+- Added a bounded `limit` query parameter to `/web/audit`.
+- Invalid web audit limits are rejected and audited.
+
+## Patch 203 - web audit filters
+
+- Reused API audit filters on the metadata-only web audit page.
+- Invalid outcome/action/resource filters are rejected before rendering.
+
+## Patch 204 - bounded web audit verification
+
+- Added bounded `limit` support to `/web/audit/verify`.
+
+## Patch 205 - web client active filter
+
+- Added `active=true|false` filtering to the metadata-only clients page.
+
+## Patch 206 - bounded web access request listings
+
+- Added bounded `limit` support to `/web/access-requests`.
+
+## Patch 207 - web access request status filter
+
+- Added pending-grant status filtering to the web access request page.
+
+## Patch 208 - web access request secret filter
+
+- Added `secret_id` filtering with UUID validation to the web access request page.
+
+## Patch 209 - web access request target filter
+
+- Added target client filtering to the web access request page.
+
+## Patch 210 - web access request requester filter
+
+- Added requester client filtering to the web access request page.
