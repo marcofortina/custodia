@@ -9,8 +9,10 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"custodia/internal/audit"
 	"custodia/internal/build"
@@ -80,6 +82,21 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
 	s.audit(r, "version.read", "system", "", "success", nil)
 	writeJSON(w, http.StatusOK, model.BuildInfo(build.Current()))
+}
+
+func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
+	var mem runtime.MemStats
+	runtime.ReadMemStats(&mem)
+	diagnostics := model.RuntimeDiagnostics{
+		StartedAt:       s.startedAt,
+		UptimeSeconds:   int64(time.Since(s.startedAt).Seconds()),
+		Goroutines:      runtime.NumGoroutine(),
+		AllocBytes:      mem.Alloc,
+		TotalAllocBytes: mem.TotalAlloc,
+		SysBytes:        mem.Sys,
+	}
+	s.audit(r, "diagnostics.read", "system", "", "success", nil)
+	writeJSON(w, http.StatusOK, diagnostics)
 }
 
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {

@@ -166,6 +166,15 @@ type BuildInfo struct {
 	Date    string `json:"date"`
 }
 
+type RuntimeDiagnostics struct {
+	StartedAt       time.Time `json:"started_at"`
+	UptimeSeconds   int64     `json:"uptime_seconds"`
+	Goroutines      int       `json:"goroutines"`
+	AllocBytes      uint64    `json:"alloc_bytes"`
+	TotalAllocBytes uint64    `json:"total_alloc_bytes"`
+	SysBytes        uint64    `json:"sys_bytes"`
+}
+
 type OperationalStatus struct {
 	Status                string    `json:"status"`
 	Store                 string    `json:"store"`

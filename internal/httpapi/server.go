@@ -4,6 +4,7 @@ import (
 	"custodia/internal/ratelimit"
 	"custodia/internal/store"
 	"net/http"
+	"time"
 )
 
 type Server struct {
@@ -16,6 +17,7 @@ type Server struct {
 	ipRateLimit           int
 	storeBackend          string
 	rateLimitBackend      string
+	startedAt             time.Time
 }
 
 type Options struct {
@@ -53,6 +55,7 @@ func New(options Options) http.Handler {
 		ipRateLimit:           options.IPRateLimit,
 		storeBackend:          options.StoreBackend,
 		rateLimitBackend:      options.RateLimitBackend,
+		startedAt:             time.Now().UTC(),
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", server.handleHealth)
@@ -71,6 +74,7 @@ func New(options Options) http.Handler {
 	mux.Handle("POST /v1/clients/revoke", server.auth(server.adminOnly(http.HandlerFunc(server.handleRevokeClient))))
 	mux.Handle("GET /v1/status", server.auth(server.adminOnly(http.HandlerFunc(server.handleStatus))))
 	mux.Handle("GET /v1/version", server.auth(server.adminOnly(http.HandlerFunc(server.handleVersion))))
+	mux.Handle("GET /v1/diagnostics", server.auth(server.adminOnly(http.HandlerFunc(server.handleDiagnostics))))
 	mux.Handle("GET /v1/access-requests", server.auth(server.adminOnly(http.HandlerFunc(server.handleListAccessGrantRequests))))
 	mux.Handle("GET /v1/audit-events", server.auth(server.adminOnly(http.HandlerFunc(server.handleListAuditEvents))))
 	mux.Handle("GET /v1/audit-events/export", server.auth(server.adminOnly(http.HandlerFunc(server.handleExportAuditEvents))))
