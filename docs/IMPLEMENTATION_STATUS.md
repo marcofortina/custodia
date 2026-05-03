@@ -510,3 +510,21 @@ Any future implementation patch must update this file or an explicitly linked st
 ## Patch 329 - backup restore audit archive manifest
 
 - Backup/restore guidance now requires checking the audit archive manifest produced by the verifier/archive workflow.
+
+
+## Patch 331 - audit archive shipper package
+
+- Added verified archive shipment support for copying audit bundles to a sink directory.
+- The shipper re-verifies JSONL digest and event count before copying.
+
+## Patch 333 - vault-admin audit ship-archive
+
+- Added `vault-admin audit ship-archive` to write sink-ready audit shipments with `shipment.json`.
+
+## Patch 335 - audit shipment runbook
+
+- Documented the audit archive shipment workflow and the external WORM boundary.
+
+## Patch 337 - SIEM/WORM shipment step
+
+- Updated SIEM/WORM guidance to require shipment manifests before external ingestion.
