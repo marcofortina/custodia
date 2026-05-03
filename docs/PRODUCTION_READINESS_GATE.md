@@ -38,3 +38,20 @@ Warnings currently cover HA metadata that cannot be proven locally, such as the 
 ## Boundary
 
 The readiness gate does not prove that a cloud bucket is WORM, that an HSM exists, or that a database is actually multi-region. It enforces the local deployment contract and makes unsafe defaults explicit before rollout.
+
+
+## Example environment template
+
+A production-readiness template is available at:
+
+```bash
+deploy/examples/production.env.example
+```
+
+Copy it to a private environment file, replace every placeholder, then run:
+
+```bash
+CUSTODIA_PRODUCTION_ENV_FILE=.env.production make production-check
+```
+
+The template intentionally includes external controls such as the WORM sink URI, HA database target and PKCS#11 signer provider. The readiness gate validates that these controls are declared; infrastructure evidence must still prove they exist.
