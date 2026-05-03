@@ -99,3 +99,14 @@ Request body with authenticator data:
 ```
 
 This is still not full WebAuthn assertion verification. Custodia now parses authenticator data and enforces stored counters when provided, but it still does not parse attestation objects, store COSE public keys or verify authenticator signatures.
+
+## Authenticator data RP ID and user-verification enforcement
+
+Passkey preverification now validates supplied `authenticator_data` when present:
+
+- the authenticator RP ID hash must match `CUSTODIA_WEB_PASSKEY_RP_ID`;
+- the user-present flag must be set;
+- the user-verified flag must be set because generated passkey options require user verification;
+- the signature counter must increase for known credentials.
+
+This is still not full WebAuthn assertion verification. The server does not yet verify the authenticator signature over `authenticatorData || SHA256(clientDataJSON)` because credential public-key COSE/CBOR parsing is still intentionally out of scope for this scaffold.
