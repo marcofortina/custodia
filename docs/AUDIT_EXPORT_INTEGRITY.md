@@ -32,3 +32,20 @@ vault-admin audit verify --limit 500
 ```
 
 The export digest protects the exported transport artifact; audit-chain verification protects the event sequence semantics.
+
+## SDK and CLI artifact helpers
+
+Go callers can use `ExportAuditEventsWithMetadata(...)` to receive the JSONL body together with the SHA-256 and event-count response headers.
+
+Python callers can use `export_audit_events_with_metadata(...)` for the same artifact bundle.
+
+`vault-admin audit export` can write the body and headers to separate files:
+
+```bash
+vault-admin audit export \
+  --out-file custodia-audit.jsonl \
+  --sha256-out custodia-audit.sha256 \
+  --events-out custodia-audit.events
+```
+
+Persist the three files together before forwarding to SIEM or WORM storage.
