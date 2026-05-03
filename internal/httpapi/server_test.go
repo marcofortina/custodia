@@ -2255,3 +2255,23 @@ func TestWebPasskeyAuthenticateVerifyRejectsUnknownCredential(t *testing.T) {
 		t.Fatalf("verify status = %d, want %d: %s", verifyRes.Code, http.StatusUnauthorized, verifyRes.Body.String())
 	}
 }
+
+func TestStatusReportsPasskeyCredentialCount(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100, WebPasskeyEnabled: true, WebPasskeyRPID: "example.com", WebPasskeyRPName: "Custodia Vault", WebPasskeyChallengeTTL: time.Minute})
+	registerPasskeyCredential(t, handler, "admin", "example.com", "credential-1")
+
+	req := mtlsRequest(http.MethodGet, "/v1/status", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("status = %d: %s", res.Code, res.Body.String())
+	}
+	if !strings.Contains(res.Body.String(), `"web_passkey_credentials":1`) {
+		t.Fatalf("missing passkey credential count: %s", res.Body.String())
+	}
+}
