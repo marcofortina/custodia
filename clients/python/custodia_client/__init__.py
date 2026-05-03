@@ -179,6 +179,9 @@ class CustodiaClient:
     def diagnostics(self) -> dict[str, Any]:
         return self._request("GET", "/v1/diagnostics")
 
+    def revocation_status(self) -> dict[str, Any]:
+        return self._request("GET", "/v1/revocation/status")
+
     def share_secret(self, secret_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("POST", f"/v1/secrets/{_path_escape(secret_id)}/share", json=payload)
 
