@@ -158,4 +158,5 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 - [Web passkey support](docs/WEB_PASSKEY.md)
 - [CRL and OCSP operations](docs/CRL_OCSP_RUNBOOK.md)
 - [SIEM and WORM audit export](docs/SIEM_WORM_EXPORT.md)
+- [Audit archive runbook](docs/AUDIT_ARCHIVE_RUNBOOK.md)
 - [Formal verification scope](docs/FORMAL_VERIFICATION.md)
