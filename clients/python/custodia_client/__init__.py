@@ -182,6 +182,12 @@ class CustodiaClient:
     def revocation_status(self) -> dict[str, Any]:
         return self._request("GET", "/v1/revocation/status")
 
+    def revocation_serial_status(self, serial_hex: str) -> dict[str, Any]:
+        if not serial_hex.strip():
+            raise ValueError("serial_hex is required")
+        query = _query_params(serial_hex=serial_hex.strip())
+        return self._request("GET", f"/v1/revocation/serial?{query}")
+
     def share_secret(self, secret_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("POST", f"/v1/secrets/{_path_escape(secret_id)}/share", json=payload)
 
