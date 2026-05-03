@@ -72,3 +72,9 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 - Capture the smoke output as production evidence when `CUSTODIA_DATABASE_HA_TARGET=cockroachdb-k3s-3node` is used.
 
 - Signer revocation serial status responder is exercised during certificate revocation drills.
+
+## Passkey challenge gate
+
+- Passkey challenges must be stored with TTL and consumed once.
+- `POST /web/passkey/*/verify` must reject replayed, expired or wrong-origin `clientDataJSON`.
+- Full WebAuthn production promotion still requires credential public-key storage, authenticatorData parsing, COSE/CBOR parsing, signature verification and signature-counter checks.
