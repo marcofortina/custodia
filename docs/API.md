@@ -123,3 +123,8 @@ Create, share, new-version and pending grant request payloads may include `expir
 `GET /web/`
 
 The current web console shell is protected by the same mTLS admin guard as admin APIs until the dedicated username/password + MFA/passkey web authentication flow is implemented. It is metadata-only and must not expose plaintext, ciphertext reads, envelopes or client-side key material.
+
+
+## Request correlation
+
+Every HTTP response includes an `X-Request-ID` header. If the caller sends a bounded printable `X-Request-ID`, Custodia propagates it; otherwise the server generates one. Audit metadata includes the same `request_id` so operators can correlate API responses, web-console requests and immutable audit events without exposing plaintext, ciphertext internals or client-side key material.

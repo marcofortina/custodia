@@ -247,3 +247,5 @@ These are explicitly operational components in the analysis and cannot be truthf
 ## Patch 210 - web access request requester filter
 
 - Added requester client filtering to the web access request page.
+
+- Request correlation is implemented through `X-Request-ID` response headers and audit metadata enrichment.
