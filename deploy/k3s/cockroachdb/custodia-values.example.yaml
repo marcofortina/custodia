@@ -1,0 +1,18 @@
+replicaCount: 3
+
+config:
+  storeBackend: postgres
+  databaseURLSecretName: custodia-database
+  databaseURLSecretKey: database-url
+  deploymentMode: k3s-ha-dev
+  databaseHATarget: cockroachdb-k3s-3node
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+topologySpreadConstraints:
+  enabled: true
+  maxSkew: 1
+  topologyKey: kubernetes.io/hostname
+  whenUnsatisfiable: ScheduleAnyway
