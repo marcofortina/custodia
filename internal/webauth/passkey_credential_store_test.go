@@ -52,3 +52,23 @@ func TestPasskeyCredentialStoreRejectsInvalidRecord(t *testing.T) {
 		t.Fatal("expected missing CreatedAt to be rejected")
 	}
 }
+
+func TestPasskeyCredentialStoreTouchWithSignCountRejectsNonIncreasingCounter(t *testing.T) {
+	store := NewPasskeyCredentialStore()
+	store.Register(PasskeyCredentialRecord{CredentialID: "credential-1", ClientID: "admin", CreatedAt: time.Now().UTC(), SignCount: 5})
+	if _, err := store.TouchWithSignCount("credential-1", "admin", 5, time.Now().UTC()); err != ErrInvalidPasskeyAuthenticatorData {
+		t.Fatalf("TouchWithSignCount() error = %v, want %v", err, ErrInvalidPasskeyAuthenticatorData)
+	}
+}
+
+func TestPasskeyCredentialStoreTouchWithSignCountUpdatesCounter(t *testing.T) {
+	store := NewPasskeyCredentialStore()
+	store.Register(PasskeyCredentialRecord{CredentialID: "credential-1", ClientID: "admin", CreatedAt: time.Now().UTC(), SignCount: 5})
+	record, err := store.TouchWithSignCount("credential-1", "admin", 6, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("TouchWithSignCount() error = %v", err)
+	}
+	if record.SignCount != 6 || record.LastUsedAt.IsZero() {
+		t.Fatalf("unexpected record: %+v", record)
+	}
+}
