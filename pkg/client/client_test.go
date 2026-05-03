@@ -343,6 +343,8 @@ func TestClientExportAuditEventsUsesFilters(t *testing.T) {
 		if got := r.URL.Query().Get("outcome"); got != "failure" {
 			t.Fatalf("unexpected outcome filter: %q", got)
 		}
+		w.Header().Set("X-Custodia-Audit-Export-SHA256", "abc123")
+		w.Header().Set("X-Custodia-Audit-Export-Events", "1")
 		_, _ = w.Write([]byte("{}\n"))
 	}))
 	defer server.Close()
@@ -354,6 +356,13 @@ func TestClientExportAuditEventsUsesFilters(t *testing.T) {
 	}
 	if string(payload) != "{}\n" {
 		t.Fatalf("unexpected export payload: %q", string(payload))
+	}
+	artifact, err := custodiaClient.ExportAuditEventsWithMetadata(AuditEventFilters{Limit: 10, Outcome: "failure"})
+	if err != nil {
+		t.Fatalf("export audit with metadata: %v", err)
+	}
+	if artifact.SHA256 != "abc123" || artifact.EventCount != "1" || string(artifact.Body) != "{}\n" {
+		t.Fatalf("unexpected export artifact: %+v", artifact)
 	}
 }
 
