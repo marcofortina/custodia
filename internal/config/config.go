@@ -51,6 +51,11 @@ type Config struct {
 	DeploymentMode                   string
 	DatabaseHATarget                 string
 	AuditShipmentSink                string
+	SignerKeyProvider                string
+	SignerCACertFile                 string
+	SignerCAKeyFile                  string
+	SignerCAKeyPassphraseFile        string
+	SignerPKCS11SignCommand          string
 }
 
 func Load() Config {
@@ -310,6 +315,16 @@ func applyValues(cfg *Config, values map[string]string) error {
 			cfg.DatabaseHATarget = value
 		case "audit_shipment_sink":
 			cfg.AuditShipmentSink = value
+		case "signer_key_provider":
+			cfg.SignerKeyProvider = value
+		case "signer_ca_cert_file":
+			cfg.SignerCACertFile = value
+		case "signer_ca_key_file":
+			cfg.SignerCAKeyFile = value
+		case "signer_ca_key_passphrase_file":
+			cfg.SignerCAKeyPassphraseFile = value
+		case "signer_pkcs11_sign_command":
+			cfg.SignerPKCS11SignCommand = value
 		default:
 			return fmt.Errorf("unsupported config key %q", key)
 		}
@@ -359,6 +374,11 @@ func applyEnv(cfg *Config) {
 	cfg.DeploymentMode = env("CUSTODIA_DEPLOYMENT_MODE", cfg.DeploymentMode)
 	cfg.DatabaseHATarget = env("CUSTODIA_DATABASE_HA_TARGET", cfg.DatabaseHATarget)
 	cfg.AuditShipmentSink = env("CUSTODIA_AUDIT_SHIPMENT_SINK", cfg.AuditShipmentSink)
+	cfg.SignerKeyProvider = env("CUSTODIA_SIGNER_KEY_PROVIDER", cfg.SignerKeyProvider)
+	cfg.SignerCACertFile = env("CUSTODIA_SIGNER_CA_CERT_FILE", cfg.SignerCACertFile)
+	cfg.SignerCAKeyFile = env("CUSTODIA_SIGNER_CA_KEY_FILE", cfg.SignerCAKeyFile)
+	cfg.SignerCAKeyPassphraseFile = env("CUSTODIA_SIGNER_CA_KEY_PASSPHRASE_FILE", cfg.SignerCAKeyPassphraseFile)
+	cfg.SignerPKCS11SignCommand = env("CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND", cfg.SignerPKCS11SignCommand)
 }
 
 func parsePositiveInt(value string, fallback int) int {
