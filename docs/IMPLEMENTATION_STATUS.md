@@ -966,3 +966,14 @@ The repository still does not claim to implement physical HSM hardware, external
 - Updated current implementation status from the stale post-404 wording to the post-545 repository baseline.
 - Clarified that WebAuthn/passkey support now includes challenge lifecycle, credential metadata, authenticator-data validation, COSE credential-key parsing and a fail-closed external assertion verifier adapter.
 - Kept the final production boundary honest: the audited WebAuthn verifier implementation and external infrastructure evidence remain operator-provided, not invented inside the vault server.
+
+## Patch 549 - phase 3 closure documentation sync
+
+- Updated `docs/PHASE3_CLOSURE.md` to reflect the final post-545 repository baseline.
+- Added explicit coverage for PKCS#11/SoftHSM, S3/Object Lock/MinIO, k3s/CockroachDB, CRL-backed revocation responder, release gates and external evidence gates.
+- Clarified that SoftHSM, MinIO and k3s profiles are rehearsal tools, not production evidence replacements.
+
+## Patch 550 - phase closure README links
+
+- Linked `docs/PHASE1_CLOSURE.md` and `docs/PHASE2_CLOSURE.md` from the README operational runbook list.
+- Moved production readiness/evidence links into the runbook list instead of leaving them under the formal-verification section.
