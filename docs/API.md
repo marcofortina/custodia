@@ -160,3 +160,16 @@ The request body contains base64url-encoded `clientDataJSON`:
 ```
 
 The server checks `type`, `challenge`, `origin`, TTL and consume-once semantics. These endpoints do not replace full WebAuthn credential registration/assertion verification.
+
+### Passkey credential metadata preverification
+
+`POST /web/passkey/register/verify` accepts `credential_id` together with
+`client_data_json`. After challenge, type and origin preverification, the server
+stores metadata for the credential id and owning client.
+
+`POST /web/passkey/authenticate/verify` also requires `credential_id`. The
+credential id must already be registered for the mTLS/web client before the
+challenge can be consumed successfully.
+
+This API remains a passkey preverification boundary. It does not verify COSE
+public keys, authenticatorData or WebAuthn signatures.
