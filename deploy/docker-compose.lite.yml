@@ -1,0 +1,31 @@
+services:
+  custodia-lite:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        GO_BUILD_TAGS: sqlite
+        CUSTODIA_VERSION: "${CUSTODIA_VERSION:-lite-dev}"
+        CUSTODIA_COMMIT: "${CUSTODIA_COMMIT:-unknown}"
+        CUSTODIA_DATE: "${CUSTODIA_DATE:-unknown}"
+    command: ["/usr/local/bin/custodia-server", "--config", "/etc/custodia/config.yaml"]
+    environment:
+      CUSTODIA_PROFILE: lite
+    volumes:
+      - ./examples/config.lite.yaml:/etc/custodia/config.yaml:ro
+      - ../.dev-certs:/etc/custodia:ro
+      - custodia-lite-data:/var/lib/custodia
+      - custodia-lite-logs:/var/log/custodia
+    ports:
+      - "8443:8443"
+      - "9443:9443"
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/live"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  custodia-lite-data:
+  custodia-lite-logs:
