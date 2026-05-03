@@ -136,3 +136,14 @@ TEST_CUSTODIA_POSTGRES_URL=postgres://user:pass@localhost:5432/custodia_test?ssl
 ### Runtime diagnostics
 
 Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS client to inspect runtime metadata. The diagnostics output is metadata-only and never includes secret payloads or client-side cryptographic material.
+
+
+### Operational runbooks
+
+- [Production checklist](docs/PRODUCTION_CHECKLIST.md)
+- [Disaster recovery runbook](docs/DR_RUNBOOK.md)
+- [Backup and restore runbook](docs/BACKUP_RESTORE_RUNBOOK.md)
+- [CA signing service design](docs/CA_SIGNING_SERVICE.md)
+- [CRL and OCSP operations](docs/CRL_OCSP_RUNBOOK.md)
+- [SIEM and WORM audit export](docs/SIEM_WORM_EXPORT.md)
+- [Formal verification scope](docs/FORMAL_VERIFICATION.md)
