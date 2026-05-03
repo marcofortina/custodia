@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"custodia/internal/signeraudit"
 	"custodia/internal/signing"
 )
 
@@ -71,7 +72,7 @@ func testSignerHandler(t *testing.T) http.Handler {
 	if err != nil {
 		t.Fatalf("NewClientCertificateSigner() error = %v", err)
 	}
-	return newSignerServer(clientSigner, map[string]bool{"signer_admin": true}, 1, true)
+	return newSignerServer(clientSigner, map[string]bool{"signer_admin": true}, 1, true, signeraudit.NopRecorder{})
 }
 
 func testSignerCA(t *testing.T) ([]byte, []byte) {

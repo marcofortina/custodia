@@ -16,6 +16,7 @@ import (
 
 	"custodia/internal/id"
 	"custodia/internal/mtls"
+	"custodia/internal/signeraudit"
 	"custodia/internal/signing"
 )
 
@@ -30,6 +31,7 @@ type signerConfig struct {
 	defaultTTLHours int
 	devInsecureHTTP bool
 	shutdownTimeout time.Duration
+	auditLogFile    string
 }
 
 type signerServer struct {
@@ -37,6 +39,7 @@ type signerServer struct {
 	adminSubjects   map[string]bool
 	defaultTTLHours int
 	devInsecureHTTP bool
+	audit           signeraudit.Recorder
 }
 
 func main() {
@@ -56,7 +59,12 @@ func main() {
 	if len(cfg.adminSubjects) == 0 {
 		log.Fatalf("at least one CUSTODIA_SIGNER_ADMIN_SUBJECTS entry is required")
 	}
-	handler := newSignerServer(clientSigner, cfg.adminSubjects, cfg.defaultTTLHours, cfg.devInsecureHTTP)
+	auditRecorder, err := buildAuditRecorder(cfg.auditLogFile)
+	if err != nil {
+		log.Fatalf("signer audit init failed: %v", err)
+	}
+	defer auditRecorder.Close()
+	handler := newSignerServer(clientSigner, cfg.adminSubjects, cfg.defaultTTLHours, cfg.devInsecureHTTP, auditRecorder)
 	httpServer := &http.Server{
 		Addr:              cfg.addr,
 		Handler:           handler,
@@ -101,7 +109,10 @@ type contextKey string
 
 const requestIDContextKey contextKey = "request_id"
 
-func newSignerServer(clientSigner *signing.ClientCertificateSigner, adminSubjects map[string]bool, defaultTTLHours int, devInsecureHTTP bool) http.Handler {
+func newSignerServer(clientSigner *signing.ClientCertificateSigner, adminSubjects map[string]bool, defaultTTLHours int, devInsecureHTTP bool, auditRecorder signeraudit.Recorder) http.Handler {
+	if auditRecorder == nil {
+		auditRecorder = signeraudit.NopRecorder{}
+	}
 	if defaultTTLHours <= 0 {
 		defaultTTLHours = int(signing.DefaultClientCertificateTTL / time.Hour)
 	}
@@ -110,6 +121,7 @@ func newSignerServer(clientSigner *signing.ClientCertificateSigner, adminSubject
 		adminSubjects:   adminSubjects,
 		defaultTTLHours: defaultTTLHours,
 		devInsecureHTTP: devInsecureHTTP,
+		audit:           auditRecorder,
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", server.handleHealth)
@@ -225,7 +237,16 @@ func loadConfig() signerConfig {
 		defaultTTLHours: envInt("CUSTODIA_SIGNER_DEFAULT_TTL_HOURS", int(signing.DefaultClientCertificateTTL/time.Hour)),
 		devInsecureHTTP: envBool("CUSTODIA_SIGNER_DEV_INSECURE_HTTP", false),
 		shutdownTimeout: time.Duration(envInt("CUSTODIA_SIGNER_SHUTDOWN_TIMEOUT_SECONDS", 10)) * time.Second,
+		auditLogFile:    os.Getenv("CUSTODIA_SIGNER_AUDIT_LOG_FILE"),
 	}
+}
+
+func buildAuditRecorder(path string) (signeraudit.Recorder, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return signeraudit.NopRecorder{}, nil
+	}
+	return signeraudit.NewJSONLRecorder(path)
 }
 
 func env(key, fallback string) string {
