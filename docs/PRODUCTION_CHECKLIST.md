@@ -70,3 +70,5 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 - Run `make k3s-cockroachdb-smoke` against the rehearsal cluster before relying on the CockroachDB HA profile.
 - Replace the example insecure SQL endpoint with TLS-enabled CockroachDB credentials before production.
 - Capture the smoke output as production evidence when `CUSTODIA_DATABASE_HA_TARGET=cockroachdb-k3s-3node` is used.
+
+- Signer revocation serial status responder is exercised during certificate revocation drills.
