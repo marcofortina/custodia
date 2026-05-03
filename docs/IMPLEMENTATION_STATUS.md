@@ -251,3 +251,8 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Request correlation is implemented through `X-Request-ID` response headers and audit metadata enrichment.
 
 - Runtime diagnostics are implemented through admin API `/v1/diagnostics`, web `/web/diagnostics`, Go/Python helpers and `vault-admin diagnostics read`.
+
+
+## Operational documentation
+
+Implemented runbooks now cover production readiness, backup/restore, disaster recovery, CA signing service boundaries, CRL/OCSP operations, SIEM/WORM audit export and formal verification scope. These documents do not claim that TPM/HSM signing, OCSP stapling, WORM storage or formal proofs are implemented in code yet.
