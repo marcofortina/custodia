@@ -165,11 +165,16 @@ The server checks `type`, `challenge`, `origin`, TTL and consume-once semantics.
 
 `POST /web/passkey/register/verify` accepts `credential_id` together with
 `client_data_json`. After challenge, type and origin preverification, the server
-stores metadata for the credential id and owning client.
+stores metadata for the credential id and owning client. It may also accept
+`authenticator_data` as base64url WebAuthn authenticator data; when present, the
+parsed signature counter is stored with credential metadata.
 
 `POST /web/passkey/authenticate/verify` also requires `credential_id`. The
 credential id must already be registered for the mTLS/web client before the
-challenge can be consumed successfully.
+challenge can be consumed successfully. When `authenticator_data` is present, the
+parsed signature counter must increase over the stored counter for that
+credential.
 
-This API remains a passkey preverification boundary. It does not verify COSE
-public keys, authenticatorData or WebAuthn signatures.
+This API remains a passkey preverification boundary. It parses authenticator data
+headers and enforces counters when supplied, but it does not verify COSE public
+keys, attestation objects or WebAuthn signatures.
