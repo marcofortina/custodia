@@ -49,3 +49,17 @@ vault-admin audit export \
 ```
 
 Persist the three files together before forwarding to SIEM or WORM storage.
+
+
+## Verifying exported artifacts with vault-admin
+
+When an export is written with sidecar files, verify the body, digest and event count together:
+
+```bash
+vault-admin audit verify-export \
+  --file custodia-audit.jsonl \
+  --sha256-file custodia-audit.jsonl.sha256 \
+  --events-file custodia-audit.jsonl.events
+```
+
+The command recomputes SHA-256 over the exact JSONL body and compares the non-empty JSONL line count with the recorded event-count header. It returns a JSON verification result and exits non-zero on digest or count mismatch.
