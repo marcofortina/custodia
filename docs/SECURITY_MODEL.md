@@ -43,3 +43,16 @@ When `CUSTODIA_CLIENT_CRL_FILE` is configured, the mTLS verifier fails closed on
 ## Web user metadata boundary
 
 The HTTP `/web/` shell is currently protected by mTLS admin authorization until dedicated MFA/passkey web sessions are implemented. The PostgreSQL schema includes `web_users` and `web_user_mappings` for the metadata-only admin console described by the design document. These tables store authentication and role metadata only. They do not store plaintext secrets, client encryption keys, public-key directories or decryptable envelopes. Web operators can only be mapped to existing `client_id` subjects; access activation still requires an opaque envelope produced outside the vault by a subject with `share` permission.
+
+
+## Explicit remaining security gaps
+
+The implemented server keeps the application cryptographic boundary intact, but the following Fort Knox items remain external or future work:
+
+- MFA/passkey authentication for non-mTLS web operators.
+- Dedicated CA signing service backed by TPM/HSM.
+- OCSP stapling and revocation distribution monitoring.
+- External WORM/SIEM archival pipeline.
+- Formal verification artifacts.
+
+These gaps must not be closed by moving client-side encryption keys, public-key trust directories or plaintext handling into the vault server.
