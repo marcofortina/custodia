@@ -302,3 +302,12 @@ Implemented runbooks now cover production readiness, backup/restore, disaster re
 ## Patch 249 - compose signer profile
 
 - Added an optional Compose signer profile for local development workflows.
+
+
+## Patch 252-261 - web TOTP MFA
+
+- Added RFC 6238-compatible TOTP generation and verification.
+- Added signed HttpOnly/SameSite web sessions.
+- Added `/web/login` and `/web/logout`.
+- Protected metadata-only web pages can now require admin mTLS plus TOTP-backed web sessions.
+- Web MFA does not change the crypto boundary: no plaintext, ciphertext, envelopes or client-side key material are rendered.
