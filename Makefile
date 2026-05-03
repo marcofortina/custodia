@@ -79,3 +79,7 @@ softhsm-dev-token:
 .PHONY: pkcs11-bridge-check
 pkcs11-bridge-check:
 	bash -n scripts/pkcs11-sign-command.sh scripts/softhsm-dev-token.sh
+
+.PHONY: minio-object-lock-smoke
+minio-object-lock-smoke:
+	./scripts/minio-object-lock-smoke.sh
