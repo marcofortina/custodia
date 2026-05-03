@@ -14,6 +14,7 @@ type PasskeyCredentialRecord struct {
 	ClientID     string    `json:"client_id"`
 	CreatedAt    time.Time `json:"created_at"`
 	LastUsedAt   time.Time `json:"last_used_at,omitempty"`
+	SignCount    uint32    `json:"sign_count"`
 }
 
 type PasskeyCredentialStore struct {
@@ -60,7 +61,30 @@ func (s *PasskeyCredentialStore) Touch(credentialID, clientID string, now time.T
 	if !ok || record.ClientID != strings.TrimSpace(clientID) {
 		return PasskeyCredentialRecord{}, ErrPasskeyCredentialNotFound
 	}
+	if err := ValidatePasskeySignCount(record.SignCount, record.SignCount+1); err != nil {
+		return PasskeyCredentialRecord{}, err
+	}
 	record.LastUsedAt = now.UTC()
+	record.SignCount++
+	s.credentials[record.CredentialID] = record
+	return record, nil
+}
+
+func (s *PasskeyCredentialStore) TouchWithSignCount(credentialID, clientID string, signCount uint32, now time.Time) (PasskeyCredentialRecord, error) {
+	if s == nil || now.IsZero() {
+		return PasskeyCredentialRecord{}, ErrPasskeyCredentialNotFound
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	record, ok := s.credentials[strings.TrimSpace(credentialID)]
+	if !ok || record.ClientID != strings.TrimSpace(clientID) {
+		return PasskeyCredentialRecord{}, ErrPasskeyCredentialNotFound
+	}
+	if err := ValidatePasskeySignCount(record.SignCount, signCount); err != nil {
+		return PasskeyCredentialRecord{}, err
+	}
+	record.LastUsedAt = now.UTC()
+	record.SignCount = signCount
 	s.credentials[record.CredentialID] = record
 	return record, nil
 }
