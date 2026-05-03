@@ -17,6 +17,7 @@ import (
 	"custodia/internal/certutil"
 	"custodia/internal/model"
 	"custodia/internal/mtls"
+	"custodia/internal/signing"
 )
 
 type cliConfig struct {
@@ -53,6 +54,8 @@ func main() {
 		err = requestJSON(&cfg, http.MethodGet, "/v1/version", nil, os.Stdout)
 	case "diagnostics read":
 		err = requestJSON(&cfg, http.MethodGet, "/v1/diagnostics", nil, os.Stdout)
+	case "certificate sign":
+		err = runCertificateSign(&cfg, args[2:])
 	case "client whoami":
 		err = requestJSON(&cfg, http.MethodGet, "/v1/me", nil, os.Stdout)
 	case "client list":
@@ -91,6 +94,29 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func runCertificateSign(cfg *cliConfig, args []string) error {
+	cmd := flag.NewFlagSet("certificate sign", flag.ExitOnError)
+	clientID := cmd.String("client-id", "", "client id bound to the CSR")
+	csrFile := cmd.String("csr-file", "", "CSR PEM file to submit to custodia-signer")
+	ttlHours := cmd.Int("ttl-hours", 0, "optional certificate TTL in hours")
+	_ = cmd.Parse(args)
+	if *clientID == "" || *csrFile == "" {
+		return fmt.Errorf("--client-id and --csr-file are required")
+	}
+	if !model.ValidClientID(*clientID) {
+		return fmt.Errorf("--client-id is invalid")
+	}
+	if *ttlHours < 0 {
+		return fmt.Errorf("--ttl-hours must be positive when set")
+	}
+	csrPEM, err := os.ReadFile(*csrFile)
+	if err != nil {
+		return err
+	}
+	req := signing.SignClientCertificateRequest{ClientID: *clientID, CSRPem: string(csrPEM), TTLHours: *ttlHours}
+	return requestJSON(cfg, http.MethodPost, "/v1/certificates/sign", req, os.Stdout)
 }
 
 func runClientCSR(args []string) error {
