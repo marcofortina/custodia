@@ -110,3 +110,9 @@ Passkey preverification now validates supplied `authenticator_data` when present
 - the signature counter must increase for known credentials.
 
 This is still not full WebAuthn assertion verification. The server does not yet verify the authenticator signature over `authenticatorData || SHA256(clientDataJSON)` because credential public-key COSE/CBOR parsing is still intentionally out of scope for this scaffold.
+
+## Credential public key metadata
+
+Registration preverification now requires `public_key_cose`, a base64url-encoded opaque COSE public key blob. Custodia stores this metadata with the credential id and client id, then requires the stored public-key metadata before authentication preverification can succeed.
+
+This is still not signature verification. The server stores the COSE bytes as opaque metadata and does not yet parse CBOR/COSE or verify authenticator signatures against the stored key.
