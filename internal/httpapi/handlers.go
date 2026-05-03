@@ -84,6 +84,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		WebPasskeyUserVerification:     "required",
 		WebPasskeyCredentialKeyStorage: "opaque_cose",
 		WebPasskeyCredentialKeyParser:  "cose_es256_rs256",
+		WebPasskeyAssertionVerifier:    passkeyAssertionVerifierStatus(s.webPasskeyAssertionVerifyCommand),
 		DeploymentMode:                 s.deploymentMode,
 		DatabaseHATarget:               s.databaseHATarget,
 		AuditShipmentSink:              s.auditShipmentSink,

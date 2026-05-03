@@ -204,6 +204,7 @@ type OperationalStatus struct {
 	WebPasskeyUserVerification     string    `json:"web_passkey_user_verification,omitempty"`
 	WebPasskeyCredentialKeyStorage string    `json:"web_passkey_credential_key_storage,omitempty"`
 	WebPasskeyCredentialKeyParser  string    `json:"web_passkey_credential_key_parser,omitempty"`
+	WebPasskeyAssertionVerifier    string    `json:"web_passkey_assertion_verifier,omitempty"`
 	DeploymentMode                 string    `json:"deployment_mode,omitempty"`
 	DatabaseHATarget               string    `json:"database_ha_target,omitempty"`
 	AuditShipmentSink              string    `json:"audit_shipment_sink,omitempty"`

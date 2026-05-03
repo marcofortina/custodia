@@ -268,6 +268,13 @@ func decodePasskeyCredentialKeyCOSE(value string) ([]byte, error) {
 	return decoded, nil
 }
 
+func passkeyAssertionVerifierStatus(command string) string {
+	if strings.TrimSpace(command) == "" {
+		return "preverify_only"
+	}
+	return "external_command"
+}
+
 func (s *Server) expectedPasskeyOrigin(r *http.Request) string {
 	scheme := "https"
 	if forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")); forwarded != "" {
