@@ -33,14 +33,14 @@ Production mode requires mTLS:
 
 Only admin certificate subjects listed in `CUSTODIA_SIGNER_ADMIN_SUBJECTS` may submit CSR signing requests.
 
-## CA material
+## CA material and key providers
 
-Current implementation loads:
+Current implementation supports explicit signer key providers:
 
-- `CUSTODIA_SIGNER_CA_CERT_FILE`
-- `CUSTODIA_SIGNER_CA_KEY_FILE`
+- `CUSTODIA_SIGNER_KEY_PROVIDER=file` uses `CUSTODIA_SIGNER_CA_CERT_FILE` and `CUSTODIA_SIGNER_CA_KEY_FILE`.
+- `CUSTODIA_SIGNER_KEY_PROVIDER=pkcs11` is reserved and fails closed in this build.
 
-This is acceptable for development, isolated bootstrap and tests. Production deployments should replace the file-backed private key with TPM/HSM/PKCS#11 integration before exposing signing in a live environment.
+The `file` provider is acceptable for development, isolated bootstrap and tests. Production deployments should use the provider abstraction to integrate TPM/HSM/PKCS#11 before exposing signing in a live environment. The signer process must fail closed rather than silently falling back to file-backed CA material when an unsupported provider is requested.
 
 ## CSR policy
 
