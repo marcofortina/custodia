@@ -83,3 +83,15 @@ pkcs11-bridge-check:
 .PHONY: minio-object-lock-smoke
 minio-object-lock-smoke:
 	./scripts/minio-object-lock-smoke.sh
+
+.PHONY: k3s-cockroachdb-apply
+k3s-cockroachdb-apply:
+	kubectl apply -f deploy/k3s/cockroachdb/namespace.yaml
+	kubectl apply -f deploy/k3s/cockroachdb/cockroachdb-services.yaml
+	kubectl apply -f deploy/k3s/cockroachdb/cockroachdb-statefulset.yaml
+	kubectl rollout status statefulset/cockroachdb -n custodia-db --timeout=180s
+	kubectl apply -f deploy/k3s/cockroachdb/cockroachdb-init-job.yaml
+
+.PHONY: k3s-cockroachdb-smoke
+k3s-cockroachdb-smoke:
+	./scripts/k3s-cockroachdb-smoke.sh
