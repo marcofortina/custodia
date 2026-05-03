@@ -102,3 +102,9 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 - Registration preverification must require `credential_key_cose` before passkeys are considered beyond challenge-only mode.
 - Authentication preverification must reject credentials without stored credential-key metadata.
 - Do not promote passkeys as a standalone MFA factor until CBOR/COSE parsing and authenticator signature verification are implemented.
+
+## Passkey COSE parser gate
+
+- Registration preverification must reject malformed or unsupported `credential_key_cose` values.
+- `/v1/status` must report `web_passkey_credential_key_parser: cose_es256_rs256` before passkeys are considered beyond opaque credential-key storage.
+- Do not promote passkeys as standalone MFA until authenticator signature verification is implemented or delegated to an audited WebAuthn library.
