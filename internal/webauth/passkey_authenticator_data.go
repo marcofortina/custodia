@@ -1,9 +1,12 @@
 package webauth
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
+	"strings"
 )
 
 var ErrInvalidPasskeyAuthenticatorData = errors.New("invalid passkey authenticator data")
@@ -42,6 +45,21 @@ func ParsePasskeyAuthenticatorDataBase64URL(value string) (*PasskeyAuthenticator
 		return nil, ErrInvalidPasskeyAuthenticatorData
 	}
 	return ParsePasskeyAuthenticatorData(raw)
+}
+
+func ValidatePasskeyAuthenticatorData(data *PasskeyAuthenticatorData, rpID string, requireUserVerified bool) error {
+	rpID = strings.TrimSpace(rpID)
+	if data == nil || rpID == "" || !data.UserPresent {
+		return ErrInvalidPasskeyAuthenticatorData
+	}
+	if requireUserVerified && !data.UserVerified {
+		return ErrInvalidPasskeyAuthenticatorData
+	}
+	expectedRPIDHash := sha256.Sum256([]byte(rpID))
+	if !bytes.Equal(data.RPIDHash, expectedRPIDHash[:]) {
+		return ErrInvalidPasskeyAuthenticatorData
+	}
+	return nil
 }
 
 func ValidatePasskeySignCount(previous, current uint32) error {
