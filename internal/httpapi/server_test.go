@@ -2346,6 +2346,60 @@ func newPasskeyCounterTestHandler(t *testing.T) http.Handler {
 	return New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100, WebPasskeyEnabled: true, WebPasskeyRPID: "example.com", WebPasskeyRPName: "Custodia"})
 }
 
+func TestWebPasskeyAuthenticateVerifyRejectsWrongRPIDHash(t *testing.T) {
+	handler := newPasskeyCounterTestHandler(t)
+	registerPasskeyCredentialWithAuthenticatorData(t, handler, "admin", "example.com", "credential-rpid", 7)
+
+	optionsReq := mtlsRequest(http.MethodGet, "/web/passkey/authenticate/options", "", "admin")
+	optionsReq.Host = "example.com"
+	optionsReq.Header.Set("X-Forwarded-Proto", "https")
+	optionsRes := httptest.NewRecorder()
+	handler.ServeHTTP(optionsRes, optionsReq)
+	if optionsRes.Code != http.StatusOK {
+		t.Fatalf("options status = %d, body = %s", optionsRes.Code, optionsRes.Body.String())
+	}
+	var options webauth.PasskeyOptions
+	if err := json.Unmarshal(optionsRes.Body.Bytes(), &options); err != nil {
+		t.Fatalf("decode options: %v", err)
+	}
+	clientData := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.get", Challenge: options.Challenge, Origin: "https://example.com"})
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/authenticate/verify", `{"client_data_json":"`+clientData+`","credential_id":"credential-rpid","authenticator_data":"`+passkeyAuthenticatorDataPayloadForRPID("evil.example.com", 0x05, 8)+`"}`, "admin")
+	verifyReq.Host = "example.com"
+	verifyReq.Header.Set("X-Forwarded-Proto", "https")
+	verifyRes := httptest.NewRecorder()
+	handler.ServeHTTP(verifyRes, verifyReq)
+	if verifyRes.Code != http.StatusUnauthorized {
+		t.Fatalf("verify status = %d, body = %s", verifyRes.Code, verifyRes.Body.String())
+	}
+}
+
+func TestWebPasskeyAuthenticateVerifyRequiresUserVerificationFlag(t *testing.T) {
+	handler := newPasskeyCounterTestHandler(t)
+	registerPasskeyCredentialWithAuthenticatorData(t, handler, "admin", "example.com", "credential-uv", 7)
+
+	optionsReq := mtlsRequest(http.MethodGet, "/web/passkey/authenticate/options", "", "admin")
+	optionsReq.Host = "example.com"
+	optionsReq.Header.Set("X-Forwarded-Proto", "https")
+	optionsRes := httptest.NewRecorder()
+	handler.ServeHTTP(optionsRes, optionsReq)
+	if optionsRes.Code != http.StatusOK {
+		t.Fatalf("options status = %d, body = %s", optionsRes.Code, optionsRes.Body.String())
+	}
+	var options webauth.PasskeyOptions
+	if err := json.Unmarshal(optionsRes.Body.Bytes(), &options); err != nil {
+		t.Fatalf("decode options: %v", err)
+	}
+	clientData := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.get", Challenge: options.Challenge, Origin: "https://example.com"})
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/authenticate/verify", `{"client_data_json":"`+clientData+`","credential_id":"credential-uv","authenticator_data":"`+passkeyAuthenticatorDataPayloadForRPID("example.com", 0x01, 8)+`"}`, "admin")
+	verifyReq.Host = "example.com"
+	verifyReq.Header.Set("X-Forwarded-Proto", "https")
+	verifyRes := httptest.NewRecorder()
+	handler.ServeHTTP(verifyRes, verifyReq)
+	if verifyRes.Code != http.StatusUnauthorized {
+		t.Fatalf("verify status = %d, body = %s", verifyRes.Code, verifyRes.Body.String())
+	}
+}
+
 func registerPasskeyCredentialWithAuthenticatorData(t *testing.T, handler http.Handler, clientID, host, credentialID string, signCount uint32) {
 	t.Helper()
 	optionsReq := mtlsRequest(http.MethodGet, "/web/passkey/register/options", "", clientID)
@@ -2372,10 +2426,14 @@ func registerPasskeyCredentialWithAuthenticatorData(t *testing.T, handler http.H
 }
 
 func passkeyAuthenticatorDataPayload(signCount uint32) string {
+	return passkeyAuthenticatorDataPayloadForRPID("example.com", 0x05, signCount)
+}
+
+func passkeyAuthenticatorDataPayloadForRPID(rpID string, flags byte, signCount uint32) string {
 	raw := make([]byte, 37)
-	digest := sha256.Sum256([]byte("example.com"))
+	digest := sha256.Sum256([]byte(rpID))
 	copy(raw[:32], digest[:])
-	raw[32] = 0x05
+	raw[32] = flags
 	raw[33] = byte(signCount >> 24)
 	raw[34] = byte(signCount >> 16)
 	raw[35] = byte(signCount >> 8)
