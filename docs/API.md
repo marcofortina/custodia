@@ -194,3 +194,9 @@ This remains a metadata/preverification API: the stored COSE key is not yet pars
 ### Passkey COSE credential-key parser
 
 `credential_key_cose` on `/web/passkey/register/verify` must be a base64url-encoded COSE_Key CBOR map with supported metadata. Custodia currently accepts EC2/P-256/ES256 and RSA/RS256 key metadata and stores the COSE blob as opaque passkey credential-key metadata. Unsupported or malformed COSE maps are rejected before credential metadata is registered.
+
+### Passkey assertion signature delegation
+
+When `CUSTODIA_WEB_PASSKEY_ASSERTION_VERIFY_COMMAND` is configured, `POST /web/passkey/authenticate/verify` requires a base64url `signature` field and delegates final assertion verification to the configured external command. The server still performs challenge, origin, credential id, RP ID hash, UP/UV, sign-counter and COSE credential-key checks before delegating.
+
+The command receives JSON on stdin and must return `{"valid":true}` on stdout. Any other result fails closed.
