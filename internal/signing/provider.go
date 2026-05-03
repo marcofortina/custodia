@@ -29,11 +29,12 @@ type CAKeyProvider interface {
 }
 
 type FileCAKeyProvider struct {
-	KeyPEM []byte
+	KeyPEM     []byte
+	Passphrase []byte
 }
 
 func (p FileCAKeyProvider) Signer() (crypto.Signer, error) {
-	return parseSignerPEM(p.KeyPEM)
+	return parseSignerPEMWithPassphrase(p.KeyPEM, p.Passphrase)
 }
 
 type PKCS11CAKeyProvider struct {
@@ -118,10 +119,14 @@ func NewClientCertificateSignerWithKeyProvider(caCertPEM []byte, provider CAKeyP
 }
 
 func LoadClientCertificateSigner(providerName, caCertFile, caKeyFile string) (*ClientCertificateSigner, error) {
-	return LoadClientCertificateSignerWithPKCS11Command(providerName, caCertFile, caKeyFile, os.Getenv("CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND"))
+	return LoadClientCertificateSignerWithOptions(providerName, caCertFile, caKeyFile, os.Getenv("CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND"), os.Getenv("CUSTODIA_SIGNER_CA_KEY_PASSPHRASE_FILE"))
 }
 
 func LoadClientCertificateSignerWithPKCS11Command(providerName, caCertFile, caKeyFile, pkcs11SignCommand string) (*ClientCertificateSigner, error) {
+	return LoadClientCertificateSignerWithOptions(providerName, caCertFile, caKeyFile, pkcs11SignCommand, "")
+}
+
+func LoadClientCertificateSignerWithOptions(providerName, caCertFile, caKeyFile, pkcs11SignCommand, passphraseFile string) (*ClientCertificateSigner, error) {
 	caCertPEM, err := os.ReadFile(strings.TrimSpace(caCertFile))
 	if err != nil {
 		return nil, fmt.Errorf("read CA certificate: %w", err)
@@ -136,12 +141,28 @@ func LoadClientCertificateSignerWithPKCS11Command(providerName, caCertFile, caKe
 		if err != nil {
 			return nil, fmt.Errorf("read CA key: %w", err)
 		}
-		return NewClientCertificateSignerWithKeyProvider(caCertPEM, FileCAKeyProvider{KeyPEM: caKeyPEM})
+		passphrase, err := readPassphraseFile(passphraseFile)
+		if err != nil {
+			return nil, err
+		}
+		return NewClientCertificateSignerWithKeyProvider(caCertPEM, FileCAKeyProvider{KeyPEM: caKeyPEM, Passphrase: passphrase})
 	case KeyProviderPKCS11:
 		return NewClientCertificateSignerWithKeyProvider(caCertPEM, PKCS11CAKeyProvider{PublicKey: caCert.PublicKey, Command: pkcs11SignCommand})
 	default:
 		return nil, ErrUnsupportedKeyProvider
 	}
+}
+
+func readPassphraseFile(path string) ([]byte, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return nil, nil
+	}
+	payload, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read CA key passphrase: %w", err)
+	}
+	return []byte(strings.TrimSpace(string(payload))), nil
 }
 
 func normalizedKeyProvider(providerName string) string {

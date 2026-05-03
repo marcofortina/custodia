@@ -137,9 +137,23 @@ func parseCSRPEM(data []byte) (*x509.CertificateRequest, error) {
 }
 
 func parseSignerPEM(data []byte) (crypto.Signer, error) {
+	return parseSignerPEMWithPassphrase(data, nil)
+}
+
+func parseSignerPEMWithPassphrase(data []byte, passphrase []byte) (crypto.Signer, error) {
 	block, _ := pem.Decode(data)
 	if block == nil {
 		return nil, ErrInvalidCA
+	}
+	if x509.IsEncryptedPEMBlock(block) {
+		if len(passphrase) == 0 {
+			return nil, ErrInvalidCA
+		}
+		decrypted, err := x509.DecryptPEMBlock(block, passphrase)
+		if err != nil {
+			return nil, ErrInvalidCA
+		}
+		block = &pem.Block{Type: block.Type, Bytes: decrypted}
 	}
 	if key, err := x509.ParsePKCS8PrivateKey(block.Bytes); err == nil {
 		return signerFromPrivateKey(key)
