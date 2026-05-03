@@ -23,3 +23,7 @@ Backups protect only server-side metadata, ciphertext blobs and recipient envelo
 ## Retention notes
 
 Backup retention must match the business audit-retention policy. Deleting a server-side grant only blocks future reads; clients may already have downloaded ciphertext and envelopes.
+
+## Audit shipment restore check
+
+When restoring archived audit evidence, verify `manifest.json` and `shipment.json` together. The archive manifest proves the export body matched its sidecars before archive creation; the shipment manifest proves the bundle copied to the sink without per-file digest drift.
