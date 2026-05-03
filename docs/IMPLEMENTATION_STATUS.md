@@ -563,3 +563,19 @@ Any future implementation patch must update this file or an explicitly linked st
 ## Patch 359 - signer CRL distribution documentation
 
 - Documented the CRL distribution endpoint and clarified that full OCSP remains a separate hardening step.
+
+## Patch 361 - executable access invariant model
+
+- Added a small executable access-control model for client activation, grants, client revocation and strong secret-version revocation.
+
+## Patch 363 - TLA access-control model
+
+- Added `formal/CustodiaAccess.tla` and bounded TLC configuration for server-side authorization invariants.
+
+## Patch 365 - formal verification check script
+
+- Added `scripts/check-formal.sh` and `make formal-check` integration for local TLC checks.
+
+## Patch 367 - formal verification scope update
+
+- Updated formal-verification documentation to distinguish implemented server-side artifacts from out-of-scope client cryptography and WebAuthn proof work.
