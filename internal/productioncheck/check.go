@@ -50,6 +50,9 @@ func CheckEnvironment(env map[string]string) []Finding {
 	if len(envValue(env, "CUSTODIA_WEB_SESSION_SECRET")) < 32 {
 		add("web_session_secret", SeverityCritical, "CUSTODIA_WEB_SESSION_SECRET must be at least 32 bytes")
 	}
+	if truthy(envValue(env, "CUSTODIA_WEB_PASSKEY_ENABLED")) && envValue(env, "CUSTODIA_WEB_PASSKEY_ASSERTION_VERIFY_COMMAND") == "" {
+		add("web_passkey_assertion_verify_command", SeverityCritical, "CUSTODIA_WEB_PASSKEY_ASSERTION_VERIFY_COMMAND is required when passkeys are enabled in production")
+	}
 	deploymentMode := strings.ToLower(envValue(env, "CUSTODIA_DEPLOYMENT_MODE"))
 	if deploymentMode == "" || deploymentMode == "single-region" {
 		add("deployment_mode", SeverityWarning, "CUSTODIA_DEPLOYMENT_MODE should describe the HA deployment topology")
