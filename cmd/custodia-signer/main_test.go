@@ -1,0 +1,117 @@
+package main
+
+import (
+	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/json"
+	"encoding/pem"
+	"math/big"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
+	"custodia/internal/signing"
+)
+
+func TestSignerRequiresAdminSubject(t *testing.T) {
+	handler := testSignerHandler(t)
+	req := httptest.NewRequest(http.MethodPost, "/v1/certificates/sign", bytes.NewBufferString(`{}`))
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", res.Code, http.StatusForbidden)
+	}
+}
+
+func TestSignerSignsClientCertificate(t *testing.T) {
+	handler := testSignerHandler(t)
+	payload, err := json.Marshal(signing.SignClientCertificateRequest{
+		ClientID: "client_alice",
+		CSRPem:   string(testSignerCSR(t, "client_alice")),
+		TTLHours: 1,
+	})
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/v1/certificates/sign", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Custodia-Signer-Admin-Subject", "signer_admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", res.Code, res.Body.String())
+	}
+	var issued signing.SignClientCertificateResponse
+	if err := json.NewDecoder(res.Body).Decode(&issued); err != nil {
+		t.Fatalf("Decode() error = %v", err)
+	}
+	block, _ := pem.Decode([]byte(issued.CertificatePEM))
+	if block == nil {
+		t.Fatal("missing issued certificate PEM")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatalf("ParseCertificate() error = %v", err)
+	}
+	if cert.Subject.CommonName != "client_alice" {
+		t.Fatalf("CommonName = %q", cert.Subject.CommonName)
+	}
+}
+
+func testSignerHandler(t *testing.T) http.Handler {
+	t.Helper()
+	caCertPEM, caKeyPEM := testSignerCA(t)
+	clientSigner, err := signing.NewClientCertificateSigner(caCertPEM, caKeyPEM)
+	if err != nil {
+		t.Fatalf("NewClientCertificateSigner() error = %v", err)
+	}
+	return newSignerServer(clientSigner, map[string]bool{"signer_admin": true}, 1, true)
+}
+
+func testSignerCA(t *testing.T) ([]byte, []byte) {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("GenerateKey() error = %v", err)
+	}
+	tmpl := &x509.Certificate{
+		SerialNumber:          big.NewInt(42),
+		Subject:               pkix.Name{CommonName: "custodia-signer-test-ca"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	if err != nil {
+		t.Fatalf("CreateCertificate() error = %v", err)
+	}
+	keyDER, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		t.Fatalf("MarshalPKCS8PrivateKey() error = %v", err)
+	}
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyDER})
+}
+
+func testSignerCSR(t *testing.T, clientID string) []byte {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("GenerateKey() error = %v", err)
+	}
+	der, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
+		Subject:  pkix.Name{CommonName: clientID},
+		DNSNames: []string{clientID},
+	}, key)
+	if err != nil {
+		t.Fatalf("CreateCertificateRequest() error = %v", err)
+	}
+	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: der})
+}
