@@ -61,11 +61,7 @@ func (s *PasskeyCredentialStore) Touch(credentialID, clientID string, now time.T
 	if !ok || record.ClientID != strings.TrimSpace(clientID) {
 		return PasskeyCredentialRecord{}, ErrPasskeyCredentialNotFound
 	}
-	if err := ValidatePasskeySignCount(record.SignCount, record.SignCount+1); err != nil {
-		return PasskeyCredentialRecord{}, err
-	}
 	record.LastUsedAt = now.UTC()
-	record.SignCount++
 	s.credentials[record.CredentialID] = record
 	return record, nil
 }

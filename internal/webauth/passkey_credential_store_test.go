@@ -72,3 +72,15 @@ func TestPasskeyCredentialStoreTouchWithSignCountUpdatesCounter(t *testing.T) {
 		t.Fatalf("unexpected record: %+v", record)
 	}
 }
+
+func TestPasskeyCredentialStoreTouchPreservesSignCountWithoutAuthenticatorData(t *testing.T) {
+	store := NewPasskeyCredentialStore()
+	store.Register(PasskeyCredentialRecord{CredentialID: "credential-1", ClientID: "admin", CreatedAt: time.Now().UTC(), SignCount: 7})
+	record, err := store.Touch("credential-1", "admin", time.Now().UTC())
+	if err != nil {
+		t.Fatalf("Touch() error = %v", err)
+	}
+	if record.SignCount != 7 {
+		t.Fatalf("Touch() sign count = %d, want 7", record.SignCount)
+	}
+}
