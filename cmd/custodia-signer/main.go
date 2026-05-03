@@ -17,6 +17,7 @@ import (
 	"custodia/internal/crldist"
 	"custodia/internal/id"
 	"custodia/internal/mtls"
+	"custodia/internal/revocationresponder"
 	"custodia/internal/signeraudit"
 	"custodia/internal/signing"
 )
@@ -125,6 +126,7 @@ func newSignerServer(clientSigner *signing.ClientCertificateSigner, adminSubject
 	mux.HandleFunc("GET /health", server.handleHealth)
 	mux.HandleFunc("GET /live", server.handleHealth)
 	mux.HandleFunc("GET /v1/crl.pem", server.handleCRL)
+	mux.HandleFunc("GET /v1/revocation/serial", server.handleRevocationSerialStatus)
 	mux.HandleFunc("POST /v1/certificates/sign", server.handleSignClientCertificate)
 	return requestIDs(securityHeaders(mux))
 }
@@ -181,6 +183,34 @@ func (s *signerServer) handleCRL(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(payload)
 	s.record(r, "crl.read", "success", s.actor(r), "", map[string]string{"revoked_count": strconv.Itoa(len(list.RevokedCertificateEntries))})
+}
+
+func (s *signerServer) handleRevocationSerialStatus(w http.ResponseWriter, r *http.Request) {
+	if s.crlFile == "" {
+		s.record(r, "revocation.serial_status", "failure", s.actor(r), "", map[string]string{"reason": "crl_not_configured"})
+		writeError(w, http.StatusNotFound, "crl_not_configured")
+		return
+	}
+	serialHex := strings.TrimSpace(r.URL.Query().Get("serial_hex"))
+	if serialHex == "" {
+		s.record(r, "revocation.serial_status", "failure", s.actor(r), "", map[string]string{"reason": "missing_serial_hex"})
+		writeError(w, http.StatusBadRequest, "missing_serial_hex")
+		return
+	}
+	_, list, err := crldist.LoadPEM(s.crlFile)
+	if err != nil {
+		s.record(r, "revocation.serial_status", "failure", s.actor(r), "", map[string]string{"reason": "invalid_crl"})
+		writeError(w, http.StatusServiceUnavailable, "invalid_crl")
+		return
+	}
+	status, err := revocationresponder.CheckCRL(list, serialHex)
+	if err != nil {
+		s.record(r, "revocation.serial_status", "failure", s.actor(r), serialHex, map[string]string{"reason": "invalid_serial_hex"})
+		writeError(w, http.StatusBadRequest, "invalid_serial_hex")
+		return
+	}
+	s.record(r, "revocation.serial_status", "success", s.actor(r), status.SerialHex, map[string]string{"status": status.Status})
+	writeJSON(w, http.StatusOK, status)
 }
 
 func (s *signerServer) handleSignClientCertificate(w http.ResponseWriter, r *http.Request) {
