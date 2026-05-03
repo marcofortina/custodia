@@ -29,6 +29,9 @@ type Server struct {
 	webPasskeyRPID         string
 	webPasskeyRPName       string
 	webPasskeyChallengeTTL time.Duration
+	deploymentMode         string
+	databaseHATarget       string
+	auditShipmentSink      string
 }
 
 type Options struct {
@@ -52,6 +55,9 @@ type Options struct {
 	WebPasskeyRPID         string
 	WebPasskeyRPName       string
 	WebPasskeyChallengeTTL time.Duration
+	DeploymentMode         string
+	DatabaseHATarget       string
+	AuditShipmentSink      string
 }
 
 type contextKey string
@@ -107,6 +113,9 @@ func New(options Options) http.Handler {
 		webPasskeyRPID:         webPasskeyRPID,
 		webPasskeyRPName:       webPasskeyRPName,
 		webPasskeyChallengeTTL: webPasskeyChallengeTTL,
+		deploymentMode:         options.DeploymentMode,
+		databaseHATarget:       options.DatabaseHATarget,
+		auditShipmentSink:      options.AuditShipmentSink,
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", server.handleHealth)

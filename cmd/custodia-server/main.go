@@ -60,6 +60,9 @@ func main() {
 		WebPasskeyRPID:         cfg.WebPasskeyRPID,
 		WebPasskeyRPName:       cfg.WebPasskeyRPName,
 		WebPasskeyChallengeTTL: time.Duration(cfg.WebPasskeyChallengeTTLSeconds) * time.Second,
+		DeploymentMode:         cfg.DeploymentMode,
+		DatabaseHATarget:       cfg.DatabaseHATarget,
+		AuditShipmentSink:      cfg.AuditShipmentSink,
 	})
 
 	server := &http.Server{

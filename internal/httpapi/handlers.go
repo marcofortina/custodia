@@ -80,6 +80,9 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		Build:                 model.BuildInfo(build.Current()),
 		WebMFARequired:        s.webMFARequired,
 		WebPasskeyEnabled:     s.webPasskeyEnabled,
+		DeploymentMode:        s.deploymentMode,
+		DatabaseHATarget:      s.databaseHATarget,
+		AuditShipmentSink:     s.auditShipmentSink,
 	})
 }
 
