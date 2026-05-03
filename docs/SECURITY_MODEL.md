@@ -49,10 +49,15 @@ The HTTP `/web/` shell is currently protected by mTLS admin authorization until 
 
 The implemented server keeps the application cryptographic boundary intact, but the following Fort Knox items remain external or future work:
 
-- MFA/passkey authentication for non-mTLS web operators.
+- Full WebAuthn assertion verification for passkeys; TOTP MFA for admin mTLS web operators is implemented.
 - Dedicated CA signing service backed by TPM/HSM.
 - OCSP stapling and revocation distribution monitoring.
 - External WORM/SIEM archival pipeline.
 - Formal verification artifacts.
 
 These gaps must not be closed by moving client-side encryption keys, public-key trust directories or plaintext handling into the vault server.
+
+
+## Web authentication boundary
+
+The metadata-only web console can require admin mTLS plus a TOTP-backed signed web session. Passkey challenge/options endpoints are available for WebAuthn integration, but TOTP must stay enabled in production until assertion verification is completed and independently reviewed. Web authentication never changes the vault cryptographic boundary: plaintext, ciphertext, envelopes and client-side key material are not rendered or processed by the web console.
