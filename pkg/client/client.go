@@ -31,6 +31,12 @@ type ClientListFilters struct {
 	Active *bool
 }
 
+type AuditExportArtifact struct {
+	Body       []byte
+	SHA256     string
+	EventCount string
+}
+
 type AuditEventFilters struct {
 	Limit         int
 	Outcome       string
@@ -137,8 +143,16 @@ func (c *Client) ListAuditEvents(filters AuditEventFilters) ([]model.AuditEvent,
 }
 
 func (c *Client) ExportAuditEvents(filters AuditEventFilters) ([]byte, error) {
-	if err := validateAuditEventFilters(filters); err != nil {
+	artifact, err := c.ExportAuditEventsWithMetadata(filters)
+	if err != nil {
 		return nil, err
+	}
+	return artifact.Body, nil
+}
+
+func (c *Client) ExportAuditEventsWithMetadata(filters AuditEventFilters) (AuditExportArtifact, error) {
+	if err := validateAuditEventFilters(filters); err != nil {
+		return AuditExportArtifact{}, err
 	}
 	query := url.Values{}
 	if filters.Limit > 0 {
@@ -154,10 +168,15 @@ func (c *Client) ExportAuditEvents(filters AuditEventFilters) ([]byte, error) {
 		path += "?" + encoded
 	}
 	var response bytes.Buffer
-	if err := c.doRaw(http.MethodGet, path, nil, &response); err != nil {
-		return nil, err
+	headers, err := c.doRawWithHeaders(http.MethodGet, path, nil, &response)
+	if err != nil {
+		return AuditExportArtifact{}, err
 	}
-	return response.Bytes(), nil
+	return AuditExportArtifact{
+		Body:       response.Bytes(),
+		SHA256:     headers.Get("X-Custodia-Audit-Export-SHA256"),
+		EventCount: headers.Get("X-Custodia-Audit-Export-Events"),
+	}, nil
 }
 
 func (c *Client) ListAccessGrantRequests(filters AccessGrantRequestFilters) ([]model.AccessGrantMetadata, error) {
@@ -300,32 +319,40 @@ func (c *Client) DeleteSecret(secretID string) error {
 }
 
 func (c *Client) doRaw(method, path string, payload any, out io.Writer) error {
+	_, err := c.doRawWithHeaders(method, path, payload, out)
+	return err
+}
+
+func (c *Client) doRawWithHeaders(method, path string, payload any, out io.Writer) (http.Header, error) {
 	var body io.Reader
 	if payload != nil {
 		encoded, err := json.Marshal(payload)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		body = bytes.NewReader(encoded)
 	}
 	req, err := http.NewRequest(method, c.baseURL+path, body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if payload != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	res, err := c.http.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer res.Body.Close()
 	if res.StatusCode < 200 || res.StatusCode > 299 {
 		responseBody, _ := io.ReadAll(res.Body)
-		return fmt.Errorf("custodia request failed: %s: %s", res.Status, string(responseBody))
+		return nil, fmt.Errorf("custodia request failed: %s: %s", res.Status, string(responseBody))
 	}
 	_, err = io.Copy(out, res.Body)
-	return err
+	if err != nil {
+		return nil, err
+	}
+	return res.Header, nil
 }
 
 func (c *Client) doJSON(method, path string, payload any, target any) error {
