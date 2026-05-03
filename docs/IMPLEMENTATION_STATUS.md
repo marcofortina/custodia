@@ -1,11 +1,12 @@
 # Implementation status
 
-## Current status after patch 271
+## Current status after patch 404
 
-- Phase 1 is closed.
-- Phase 2 is closed for the server baseline: mTLS lifecycle, strong-revocation versioning, Valkey-compatible rate limiting, Go/Python SDK helpers, metadata-only web console, TOTP MFA and passkey challenge/options boundaries are implemented.
-- Phase 3 is partially implemented: Helm/Kubernetes deployment, HA/DR runbooks, diagnostics, audit export integrity and the dedicated signer service exist, but TPM/HSM/PKCS#11 signing, OCSP responder integration, external WORM/SIEM archival and formal verification artifacts remain production hardening work.
+- Phase 1 is closed at repository level.
+- Phase 2 is closed at repository level: mTLS lifecycle, strong-revocation versioning, Valkey-compatible rate limiting, Go/Python SDK helpers, metadata-only web console, TOTP MFA and passkey challenge/options boundaries are implemented.
+- Phase 3 is closed as a repository baseline: Helm/Kubernetes deployment metadata, HA/DR runbooks, diagnostics, audit export integrity, audit archive/shipment helpers, dedicated signer service, CRL distribution, formal verification artifacts, production readiness gates and external evidence gates are implemented.
 - The cryptographic boundary remains unchanged: Custodia stores and authorizes opaque ciphertext, crypto metadata and recipient envelopes, but never decrypts, unwraps keys or publishes client encryption public keys.
+- Production Fort Knox completeness still depends on external evidence: real HSM/PKCS#11/TPM, WORM/object-lock storage, database HA, Valkey HA, zero-trust network controls, penetration testing, revocation drills and formal verification execution in the target environment.
 
 
 ## Implemented
@@ -32,17 +33,18 @@
 - Admin-protected metadata-only web console pages for status, clients, access requests and audit summaries.
 - Build metadata propagation through status API, web status and `vault-admin version`.
 
-## Not claimed as complete production implementation
+## Not claimed as local-only source-code guarantees
 
-The repository contains an executable standard-library baseline and deployable building blocks. A real production implementation still needs environment-specific work:
+The repository contains executable code, tests, runbooks, release gates and evidence gates for the Fort Knox design. The following items are intentionally treated as operator-controlled production evidence instead of pretending they can be proven by local source code alone:
 
-- production CA/signing backend backed by TPM/HSM/PKCS#11; the dedicated signer service exists with file-backed CA material for development/bootstrap;
-- CRL distribution/refresh automation and OCSP stapling;
-- production PostgreSQL/CockroachDB topology, migrations automation and PostgreSQL integration tests against a live database;
-- Valkey cluster with mTLS;
-- load balancer TLS pass-through configuration;
-- full WebAuthn assertion verification for passkeys; TOTP-backed metadata-only web MFA is implemented;
-- formal verification and WORM/SIEM integration.
+- real HSM/PKCS#11/TPM-backed CA key custody; the file provider remains a development/bootstrap path and the PKCS#11 provider fails closed unless implemented for the deployment;
+- external WORM/object-lock storage and SIEM retention policy enforcement;
+- real PostgreSQL/CockroachDB/managed database HA topology and failover evidence;
+- Valkey cluster and production network policy evidence;
+- CRL/OCSP revocation distribution drills in the target environment;
+- penetration-test evidence and release artifact evidence;
+- TLC/formal verification execution evidence in CI or a dedicated verification pipeline;
+- full WebAuthn assertion verification if passkeys are promoted beyond the current challenge/options boundary; TOTP-backed metadata-only web MFA is implemented.
 
 These are explicitly operational components in the analysis and cannot be truthfully completed as local source code only.
 
@@ -677,3 +679,9 @@ The repository still does not claim to implement physical HSM hardware, external
 
 - All Go packages now contain tests where they include executable project logic.
 - Remaining `[no test files]` output should be treated as a regression unless the package is intentionally interface-only.
+
+## Patch 405 - implementation status post-404 sync
+
+- Updated the top-level implementation status from the stale post-271 wording to the current post-404 baseline.
+- Clarified that Phase 3 is closed as a repository baseline while real Fort Knox production still requires external evidence for HSM/PKCS#11/TPM, WORM/Object Lock, HA databases, Valkey HA, revocation drills, penetration testing and formal verification execution.
+- Replaced the older “not claimed as complete production implementation” wording with an explicit local-source-code versus production-evidence boundary.
