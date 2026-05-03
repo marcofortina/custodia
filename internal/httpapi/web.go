@@ -98,8 +98,9 @@ func (s *Server) webOptionalLimit(w http.ResponseWriter, r *http.Request, action
 }
 
 type passkeyVerifyRequest struct {
-	ClientDataJSON string `json:"client_data_json"`
-	CredentialID   string `json:"credential_id"`
+	ClientDataJSON    string `json:"client_data_json"`
+	CredentialID      string `json:"credential_id"`
+	AuthenticatorData string `json:"authenticator_data"`
 }
 
 type passkeyVerifyResponse struct {
@@ -108,6 +109,7 @@ type passkeyVerifyResponse struct {
 	Origin       string `json:"origin"`
 	Type         string `json:"type"`
 	CredentialID string `json:"credential_id,omitempty"`
+	SignCount    uint32 `json:"sign_count,omitempty"`
 }
 
 func (s *Server) handleWebPasskeyRegisterVerify(w http.ResponseWriter, r *http.Request) {
@@ -153,13 +155,27 @@ func (s *Server) handleWebPasskeyVerify(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	credentialID := strings.TrimSpace(payload.CredentialID)
+	var authenticatorData *webauth.PasskeyAuthenticatorData
+	if strings.TrimSpace(payload.AuthenticatorData) != "" {
+		var err error
+		authenticatorData, err = webauth.ParsePasskeyAuthenticatorDataBase64URL(strings.TrimSpace(payload.AuthenticatorData))
+		if err != nil {
+			s.auditFailure(r, action, "system", "", map[string]string{"reason": "invalid_authenticator_data"})
+			writeError(w, http.StatusBadRequest, "invalid_authenticator_data")
+			return
+		}
+	}
+	signCount := uint32(0)
+	if authenticatorData != nil {
+		signCount = authenticatorData.SignCount
+	}
 	if purpose == "register" {
 		if credentialID == "" {
 			s.auditFailure(r, action, "system", "", map[string]string{"reason": "missing_credential_id"})
 			writeError(w, http.StatusBadRequest, "missing_credential_id")
 			return
 		}
-		if !s.webPasskeyCredentials.Register(webauth.PasskeyCredentialRecord{CredentialID: credentialID, ClientID: clientID, CreatedAt: time.Now().UTC()}) {
+		if !s.webPasskeyCredentials.Register(webauth.PasskeyCredentialRecord{CredentialID: credentialID, ClientID: clientID, CreatedAt: time.Now().UTC(), SignCount: signCount}) {
 			s.auditFailure(r, action, "system", "", map[string]string{"reason": "invalid_credential"})
 			writeError(w, http.StatusBadRequest, "invalid_credential")
 			return
@@ -170,14 +186,20 @@ func (s *Server) handleWebPasskeyVerify(w http.ResponseWriter, r *http.Request, 
 			writeError(w, http.StatusBadRequest, "missing_credential_id")
 			return
 		}
-		if _, err := s.webPasskeyCredentials.Touch(credentialID, clientID, time.Now().UTC()); err != nil {
+		if authenticatorData != nil {
+			if _, err := s.webPasskeyCredentials.TouchWithSignCount(credentialID, clientID, authenticatorData.SignCount, time.Now().UTC()); err != nil {
+				s.auditFailure(r, action, "system", "", map[string]string{"reason": "invalid_sign_count"})
+				writeError(w, http.StatusUnauthorized, "invalid_sign_count")
+				return
+			}
+		} else if _, err := s.webPasskeyCredentials.Touch(credentialID, clientID, time.Now().UTC()); err != nil {
 			s.auditFailure(r, action, "system", "", map[string]string{"reason": "unknown_credential"})
 			writeError(w, http.StatusUnauthorized, "unknown_credential")
 			return
 		}
 	}
 	s.audit(r, action, "system", "", "success", nil)
-	writeJSON(w, http.StatusOK, passkeyVerifyResponse{Status: "verified_challenge", Challenge: verified.Challenge, Origin: verified.Origin, Type: verified.Type, CredentialID: credentialID})
+	writeJSON(w, http.StatusOK, passkeyVerifyResponse{Status: "verified_challenge", Challenge: verified.Challenge, Origin: verified.Origin, Type: verified.Type, CredentialID: credentialID, SignCount: signCount})
 }
 
 func (s *Server) expectedPasskeyOrigin(r *http.Request) string {
