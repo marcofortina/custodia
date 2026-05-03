@@ -155,6 +155,7 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 - [Database HA runbook](docs/DATABASE_HA_RUNBOOK.md)
 - [Backup and restore runbook](docs/BACKUP_RESTORE_RUNBOOK.md)
 - [CA signing service design](docs/CA_SIGNING_SERVICE.md)
+- [PKCS#11 and SoftHSM signer bridge](docs/PKCS11_SOFTHSM.md)
 - [Client certificate lifecycle](docs/CLIENT_CERTIFICATE_LIFECYCLE.md)
 - [Web MFA](docs/WEB_MFA.md)
 - [Web passkey support](docs/WEB_PASSKEY.md)
