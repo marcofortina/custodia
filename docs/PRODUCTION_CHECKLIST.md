@@ -78,3 +78,9 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 - Passkey challenges must be stored with TTL and consumed once.
 - `POST /web/passkey/*/verify` must reject replayed, expired or wrong-origin `clientDataJSON`.
 - Full WebAuthn production promotion still requires credential public-key storage, authenticatorData parsing, COSE/CBOR parsing, signature verification and signature-counter checks.
+
+## Passkey credential metadata gate
+
+- Passkey registration preverification must record a credential id for the mTLS/web client before authentication preverification is enabled.
+- Passkey authentication preverification must reject unknown credential ids for the calling client.
+- Full WebAuthn production enablement still requires COSE/CBOR parsing, authenticatorData validation, signature verification and signature counter checks.
