@@ -546,3 +546,20 @@ Any future implementation patch must update this file or an explicitly linked st
 
 - Documented CockroachDB and PostgreSQL Patroni/managed HA deployment boundaries.
 - Clarified that DB HA is an external control-plane responsibility, not embedded in the vault API process.
+
+## Patch 351 - CRL distribution loader
+
+- Added a small CRL distribution loader that validates PEM CRL files before serving or shipping them.
+
+## Patch 353 - signer CRL distribution endpoint
+
+- Added `GET /v1/crl.pem` to `custodia-signer` for configured PEM CRL publication.
+- The endpoint returns CRL metadata headers and audits read success/failure.
+
+## Patch 355 - vault-admin CRL fetch command
+
+- Added `vault-admin revocation fetch-crl --out FILE` to download signer-published CRLs into exclusive output files.
+
+## Patch 359 - signer CRL distribution documentation
+
+- Documented the CRL distribution endpoint and clarified that full OCSP remains a separate hardening step.
