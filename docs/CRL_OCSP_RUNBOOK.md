@@ -19,3 +19,15 @@ Custodia currently supports local client CRL enforcement. This runbook defines t
 ## OCSP gap
 
 OCSP stapling is not implemented in the API process yet. Until then, CRL enforcement is the implemented revocation control and must be monitored as a production dependency.
+
+## Revocation status API
+
+Custodia exposes an admin-only revocation monitor endpoint:
+
+```bash
+vault-admin revocation status
+```
+
+The endpoint is backed by `GET /v1/revocation/status` and reports whether a client CRL is configured, valid, trusted by the configured client CA, how many entries it contains and when the CRL expires.
+
+This does not replace OCSP. It is a production guardrail for the currently implemented fail-closed CRL path.
