@@ -266,6 +266,11 @@ func (c *Client) Version() (model.BuildInfo, error) {
 	return response, c.doJSON(http.MethodGet, "/v1/version", nil, &response)
 }
 
+func (c *Client) Diagnostics() (model.RuntimeDiagnostics, error) {
+	var response model.RuntimeDiagnostics
+	return response, c.doJSON(http.MethodGet, "/v1/diagnostics", nil, &response)
+}
+
 func (c *Client) ShareSecret(secretID string, req model.ShareSecretRequest) error {
 	return c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/share", req, nil)
 }

@@ -10,7 +10,7 @@ import (
 )
 
 func TestClientAccessGrantMethodsUseDocumentedAPIPaths(t *testing.T) {
-	requests := make([]string, 0, 3)
+	requests := make([]string, 0, 4)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requests = append(requests, r.Method+" "+r.URL.EscapedPath())
 		switch r.URL.EscapedPath() {
@@ -91,6 +91,11 @@ func TestClientMetadataMethodsUseDocumentedAPIPaths(t *testing.T) {
 				t.Fatalf("unexpected status method: %s", r.Method)
 			}
 			_ = json.NewEncoder(w).Encode(model.OperationalStatus{Status: "success", Store: "ok", RateLimiter: "ok"})
+		case "/v1/diagnostics":
+			if r.Method != http.MethodGet {
+				t.Fatalf("unexpected diagnostics method: %s", r.Method)
+			}
+			_ = json.NewEncoder(w).Encode(model.RuntimeDiagnostics{Goroutines: 3})
 		default:
 			t.Fatalf("unexpected path: %s", r.URL.EscapedPath())
 		}
@@ -110,11 +115,16 @@ func TestClientMetadataMethodsUseDocumentedAPIPaths(t *testing.T) {
 	if err != nil || status.Status != "success" {
 		t.Fatalf("unexpected status response: %+v err=%v", status, err)
 	}
+	diagnostics, err := custodiaClient.Diagnostics()
+	if err != nil || diagnostics.Goroutines != 3 {
+		t.Fatalf("unexpected diagnostics response: %+v err=%v", diagnostics, err)
+	}
 
 	expected := []string{
 		"GET /v1/secrets/secret%2Fid/versions",
 		"GET /v1/secrets/secret%2Fid/access",
 		"GET /v1/status",
+		"GET /v1/diagnostics",
 	}
 	if len(requests) != len(expected) {
 		t.Fatalf("expected %d requests, got %d: %+v", len(expected), len(requests), requests)
