@@ -9,7 +9,7 @@ cd "$root_dir"
 $GO test -p=1 -timeout 60s ./...
 $GO build ./cmd/custodia-server ./cmd/vault-admin ./cmd/custodia-signer
 python3 -m py_compile clients/python/custodia_client/__init__.py
-bash -n scripts/check-formal.sh scripts/pkcs11-sign-command.sh scripts/softhsm-dev-token.sh scripts/minio-object-lock-smoke.sh scripts/k3s-cockroachdb-smoke.sh scripts/passkey-assertion-verify-command.sh
+bash -n scripts/check-formal.sh scripts/pkcs11-sign-command.sh scripts/softhsm-dev-token.sh scripts/minio-object-lock-smoke.sh scripts/k3s-cockroachdb-smoke.sh scripts/passkey-assertion-verify-command.sh scripts/sqlite-backup.sh
 
 if command -v tlc >/dev/null 2>&1; then
   ./scripts/check-formal.sh
@@ -25,7 +25,7 @@ fi
 
 
 if [ "${CUSTODIA_RUN_K3S_COCKROACHDB_SMOKE:-false}" = "true" ]; then
-  ./scripts/k3s-cockroachdb-smoke.sh scripts/passkey-assertion-verify-command.sh
+  ./scripts/k3s-cockroachdb-smoke.sh scripts/passkey-assertion-verify-command.sh scripts/sqlite-backup.sh
 else
   echo "CUSTODIA_RUN_K3S_COCKROACHDB_SMOKE not true; skipping k3s CockroachDB smoke check." >&2
 fi
