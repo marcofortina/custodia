@@ -200,6 +200,7 @@ type OperationalStatus struct {
 	Build                 BuildInfo `json:"build"`
 	WebMFARequired        bool      `json:"web_mfa_required"`
 	WebPasskeyEnabled     bool      `json:"web_passkey_enabled"`
+	WebPasskeyCredentials int       `json:"web_passkey_credentials"`
 	DeploymentMode        string    `json:"deployment_mode,omitempty"`
 	DatabaseHATarget      string    `json:"database_ha_target,omitempty"`
 	AuditShipmentSink     string    `json:"audit_shipment_sink,omitempty"`

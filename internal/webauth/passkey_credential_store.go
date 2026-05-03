@@ -79,3 +79,12 @@ func (s *PasskeyCredentialStore) CountForClient(clientID string) int {
 	}
 	return count
 }
+
+func (s *PasskeyCredentialStore) Count() int {
+	if s == nil {
+		return 0
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.credentials)
+}
