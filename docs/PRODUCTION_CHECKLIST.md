@@ -32,3 +32,14 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - Run `go test ./internal/formalmodel` after authorization model changes.
 - Run `make formal-check` in release pipelines where TLC is installed.
 - Treat new authorization transitions as requiring updates to both executable model tests and the TLA+ model.
+
+
+## Final promotion gate
+
+Before promoting a release, run:
+
+```bash
+vault-admin production check --env-file .env.production
+```
+
+Promotion must stop on any `critical` finding. Warnings require an explicit operator decision and should be resolved before declaring a Fort Knox production deployment complete.
