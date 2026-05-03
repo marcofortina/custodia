@@ -418,3 +418,9 @@ func TestRunAuditShipArchiveS3UploadsBundle(t *testing.T) {
 		t.Fatalf("requests = %d, want 4", requests)
 	}
 }
+
+func TestRunRevocationCheckSerialRejectsMissingSerial(t *testing.T) {
+	if err := runRevocationCheckSerial(&cliConfig{}, []string{}); err == nil {
+		t.Fatal("expected missing serial error")
+	}
+}
