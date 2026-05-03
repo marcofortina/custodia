@@ -49,6 +49,8 @@ func main() {
 		IPRateLimit:            cfg.IPRateLimitPerSecond,
 		StoreBackend:           storeBackend,
 		RateLimitBackend:       rateLimitBackend,
+		ClientCAFile:           cfg.ClientCAFile,
+		ClientCRLFile:          cfg.ClientCRLFile,
 		WebMFARequired:         cfg.WebMFARequired,
 		WebTOTPSecret:          cfg.WebTOTPSecret,
 		WebSessionSecret:       cfg.WebSessionSecret,

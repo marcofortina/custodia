@@ -18,6 +18,8 @@ type Server struct {
 	ipRateLimit            int
 	storeBackend           string
 	rateLimitBackend       string
+	clientCAFile           string
+	clientCRLFile          string
 	startedAt              time.Time
 	webMFARequired         bool
 	webTOTPSecret          string
@@ -39,6 +41,8 @@ type Options struct {
 	IPRateLimit            int
 	StoreBackend           string
 	RateLimitBackend       string
+	ClientCAFile           string
+	ClientCRLFile          string
 	WebMFARequired         bool
 	WebTOTPSecret          string
 	WebSessionSecret       string
@@ -92,6 +96,8 @@ func New(options Options) http.Handler {
 		ipRateLimit:            options.IPRateLimit,
 		storeBackend:           options.StoreBackend,
 		rateLimitBackend:       options.RateLimitBackend,
+		clientCAFile:           options.ClientCAFile,
+		clientCRLFile:          options.ClientCRLFile,
 		startedAt:              time.Now().UTC(),
 		webMFARequired:         options.WebMFARequired,
 		webTOTPSecret:          options.WebTOTPSecret,
@@ -126,6 +132,7 @@ func New(options Options) http.Handler {
 	mux.Handle("GET /v1/status", server.auth(server.adminOnly(http.HandlerFunc(server.handleStatus))))
 	mux.Handle("GET /v1/version", server.auth(server.adminOnly(http.HandlerFunc(server.handleVersion))))
 	mux.Handle("GET /v1/diagnostics", server.auth(server.adminOnly(http.HandlerFunc(server.handleDiagnostics))))
+	mux.Handle("GET /v1/revocation/status", server.auth(server.adminOnly(http.HandlerFunc(server.handleRevocationStatus))))
 	mux.Handle("GET /v1/access-requests", server.auth(server.adminOnly(http.HandlerFunc(server.handleListAccessGrantRequests))))
 	mux.Handle("GET /v1/audit-events", server.auth(server.adminOnly(http.HandlerFunc(server.handleListAuditEvents))))
 	mux.Handle("GET /v1/audit-events/export", server.auth(server.adminOnly(http.HandlerFunc(server.handleExportAuditEvents))))

@@ -9,6 +9,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -17,6 +18,7 @@ import (
 	"custodia/internal/audit"
 	"custodia/internal/build"
 	"custodia/internal/model"
+	"custodia/internal/mtls"
 	"custodia/internal/ratelimit"
 )
 
@@ -99,6 +101,41 @@ func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
 	}
 	s.audit(r, "diagnostics.read", "system", "", "success", nil)
 	writeJSON(w, http.StatusOK, diagnostics)
+}
+
+func (s *Server) handleRevocationStatus(w http.ResponseWriter, r *http.Request) {
+	if strings.TrimSpace(s.clientCRLFile) == "" {
+		s.audit(r, "revocation.status", "system", "", "success", nil)
+		writeJSON(w, http.StatusOK, model.RevocationStatus{Configured: false, Valid: true})
+		return
+	}
+	caPEM, err := os.ReadFile(s.clientCAFile)
+	if err != nil {
+		s.auditFailure(r, "revocation.status", "system", "", map[string]string{"reason": "client_ca_unavailable"})
+		writeJSON(w, http.StatusServiceUnavailable, model.RevocationStatus{Configured: true, Valid: false, Source: s.clientCRLFile, Error: "client_ca_unavailable"})
+		return
+	}
+	crlStatus, err := mtls.LoadClientCRLStatus(s.clientCRLFile, caPEM)
+	if err != nil {
+		s.auditFailure(r, "revocation.status", "system", "", map[string]string{"reason": "client_crl_invalid"})
+		writeJSON(w, http.StatusServiceUnavailable, model.RevocationStatus{Configured: true, Valid: false, Source: s.clientCRLFile, Error: "client_crl_invalid"})
+		return
+	}
+	expiresIn := int64(0)
+	if !crlStatus.NextUpdate.IsZero() {
+		expiresIn = int64(time.Until(crlStatus.NextUpdate).Seconds())
+	}
+	s.audit(r, "revocation.status", "system", "", "success", nil)
+	writeJSON(w, http.StatusOK, model.RevocationStatus{
+		Configured:       true,
+		Valid:            true,
+		Source:           crlStatus.Source,
+		Issuer:           crlStatus.Issuer,
+		ThisUpdate:       crlStatus.ThisUpdate,
+		NextUpdate:       crlStatus.NextUpdate,
+		RevokedCount:     crlStatus.RevokedCount,
+		ExpiresInSeconds: expiresIn,
+	})
 }
 
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {
