@@ -167,3 +167,15 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 ### Formal verification
 
 Server-side authorization invariants have executable Go model tests and a TLA+ model under `formal/`. Run `make formal-check` when TLC is installed.
+
+- [Production readiness gate](docs/PRODUCTION_READINESS_GATE.md)
+
+### Production readiness gate
+
+Validate production environment files before promotion:
+
+```bash
+vault-admin production check --env-file .env.production
+```
+
+The command fails on unsafe development defaults and missing external production dependencies.
