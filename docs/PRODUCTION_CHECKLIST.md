@@ -96,3 +96,9 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 - `CUSTODIA_WEB_PASSKEY_RP_ID` matches the browser-visible RP ID and the authenticator RP ID hash validation path is covered in release tests.
 - User verification remains required for passkey options and supplied authenticator data.
 - Do not promote passkeys as the only MFA factor until COSE public-key storage and authenticator signature verification are implemented.
+
+## Passkey public-key metadata gate
+
+- Registration preverification must require `public_key_cose` before passkeys are considered beyond challenge-only mode.
+- Authentication preverification must reject credentials without stored public-key metadata.
+- Do not promote passkeys as a standalone MFA factor until CBOR/COSE parsing and authenticator signature verification are implemented.
