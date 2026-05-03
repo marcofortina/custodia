@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"flag"
@@ -20,6 +21,7 @@ import (
 	"custodia/internal/certutil"
 	"custodia/internal/model"
 	"custodia/internal/mtls"
+	"custodia/internal/productioncheck"
 	"custodia/internal/signing"
 )
 
@@ -61,6 +63,8 @@ func main() {
 		err = requestJSON(&cfg, http.MethodGet, "/v1/revocation/status", nil, os.Stdout)
 	case "revocation fetch-crl":
 		err = runRevocationFetchCRL(&cfg, args[2:])
+	case "production check":
+		err = runProductionCheck(args[2:])
 	case "certificate sign":
 		err = runCertificateSign(&cfg, args[2:])
 	case "client whoami":
@@ -107,6 +111,53 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func runProductionCheck(args []string) error {
+	cmd := flag.NewFlagSet("production check", flag.ExitOnError)
+	envFile := cmd.String("env-file", "", "environment file to validate")
+	_ = cmd.Parse(args)
+	if *envFile == "" {
+		return fmt.Errorf("--env-file is required")
+	}
+	env, err := readEnvFile(*envFile)
+	if err != nil {
+		return err
+	}
+	findings := productioncheck.CheckEnvironment(env)
+	if len(findings) == 0 {
+		fmt.Fprintln(os.Stdout, "production readiness: ok")
+		return nil
+	}
+	for _, finding := range findings {
+		fmt.Fprintf(os.Stdout, "%s\t%s\t%s\n", finding.Severity, finding.Code, finding.Message)
+	}
+	if productioncheck.HasCritical(findings) {
+		return fmt.Errorf("production readiness check failed")
+	}
+	return nil
+}
+
+func readEnvFile(path string) (map[string]string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	env := make(map[string]string)
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			return nil, fmt.Errorf("invalid env line: %s", line)
+		}
+		env[strings.TrimSpace(key)] = strings.Trim(strings.TrimSpace(value), `"'`)
+	}
+	return env, scanner.Err()
 }
 
 func runRevocationFetchCRL(cfg *cliConfig, args []string) error {
