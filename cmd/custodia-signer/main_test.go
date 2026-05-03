@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -135,5 +136,40 @@ func TestSignerGeneratesRequestID(t *testing.T) {
 	handler.ServeHTTP(res, req)
 	if got := res.Header().Get("X-Request-ID"); got == "" {
 		t.Fatal("expected generated request id")
+	}
+}
+
+func TestSignerAuditsCertificateRequests(t *testing.T) {
+	path := t.TempDir() + "/signer-audit.jsonl"
+	recorder, err := signeraudit.NewJSONLRecorder(path)
+	if err != nil {
+		t.Fatalf("NewJSONLRecorder() error = %v", err)
+	}
+	defer recorder.Close()
+	caCertPEM, caKeyPEM := testSignerCA(t)
+	clientSigner, err := signing.NewClientCertificateSigner(caCertPEM, caKeyPEM)
+	if err != nil {
+		t.Fatalf("NewClientCertificateSigner() error = %v", err)
+	}
+	handler := newSignerServer(clientSigner, map[string]bool{"signer_admin": true}, 1, true, recorder)
+	payload, err := json.Marshal(signing.SignClientCertificateRequest{ClientID: "client_alice", CSRPem: string(testSignerCSR(t, "client_alice")), TTLHours: 1})
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/v1/certificates/sign", bytes.NewReader(payload))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Custodia-Signer-Admin-Subject", "signer_admin")
+	req.Header.Set("X-Request-ID", "signer-audit-trace")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", res.Code, res.Body.String())
+	}
+	payloadBytes, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	if !bytes.Contains(payloadBytes, []byte(`"action":"certificate.sign"`)) || !bytes.Contains(payloadBytes, []byte(`"request_id":"signer-audit-trace"`)) || !bytes.Contains(payloadBytes, []byte(`"client_id":"client_alice"`)) {
+		t.Fatalf("unexpected audit payload: %s", string(payloadBytes))
 	}
 }
