@@ -54,6 +54,17 @@
         "ipRateLimitPerSecond": {
           "type": "integer",
           "minimum": 1
+        },
+        "deploymentMode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "databaseHATarget": {
+          "type": "string",
+          "minLength": 1
+        },
+        "auditShipmentSink": {
+          "type": "string"
         }
       }
     },
