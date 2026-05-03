@@ -837,3 +837,21 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 472 - passkey preverification documentation
 
 - Documented the passkey challenge preverification boundary and clarified that full WebAuthn assertion verification still requires credential storage, authenticatorData parsing, COSE/CBOR parsing, signature verification and counter checks.
+
+## Patch 476 - passkey credential metadata store
+
+- Added an in-memory passkey credential metadata store for credential id, client id and usage timestamps.
+- Kept the store metadata-only: no COSE public key, authenticator data, attestation object or signature material is interpreted or persisted.
+
+## Patch 478 - passkey credential metadata verifier wiring
+
+- Registration preverification now requires and records a credential id after challenge/clientData validation.
+- Authentication preverification now requires the credential id to already belong to the calling client before the challenge can be accepted.
+
+## Patch 480 - passkey credential status count
+
+- Operational status now reports the number of registered passkey credential metadata records.
+
+## Patch 482 - passkey credential metadata documentation
+
+- Documented the remaining boundary: credential metadata and anti-replay are implemented, while full WebAuthn COSE/CBOR/signature verification remains explicit future work.
