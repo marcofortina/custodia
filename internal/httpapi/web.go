@@ -164,6 +164,11 @@ func (s *Server) handleWebPasskeyVerify(w http.ResponseWriter, r *http.Request, 
 			writeError(w, http.StatusBadRequest, "invalid_authenticator_data")
 			return
 		}
+		if err := webauth.ValidatePasskeyAuthenticatorData(authenticatorData, s.webPasskeyRPID, true); err != nil {
+			s.auditFailure(r, action, "system", "", map[string]string{"reason": "invalid_authenticator_data"})
+			writeError(w, http.StatusUnauthorized, "invalid_authenticator_data")
+			return
+		}
 	}
 	signCount := uint32(0)
 	if authenticatorData != nil {

@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -2372,7 +2373,9 @@ func registerPasskeyCredentialWithAuthenticatorData(t *testing.T, handler http.H
 
 func passkeyAuthenticatorDataPayload(signCount uint32) string {
 	raw := make([]byte, 37)
-	raw[32] = 0x01
+	digest := sha256.Sum256([]byte("example.com"))
+	copy(raw[:32], digest[:])
+	raw[32] = 0x05
 	raw[33] = byte(signCount >> 24)
 	raw[34] = byte(signCount >> 16)
 	raw[35] = byte(signCount >> 8)
