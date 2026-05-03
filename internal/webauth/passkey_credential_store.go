@@ -8,13 +8,15 @@ import (
 )
 
 var ErrPasskeyCredentialNotFound = errors.New("passkey credential not found")
+var ErrPasskeyCredentialPublicKeyMissing = errors.New("passkey credential public key missing")
 
 type PasskeyCredentialRecord struct {
-	CredentialID string    `json:"credential_id"`
-	ClientID     string    `json:"client_id"`
-	CreatedAt    time.Time `json:"created_at"`
-	LastUsedAt   time.Time `json:"last_used_at,omitempty"`
-	SignCount    uint32    `json:"sign_count"`
+	CredentialID  string    `json:"credential_id"`
+	ClientID      string    `json:"client_id"`
+	CreatedAt     time.Time `json:"created_at"`
+	LastUsedAt    time.Time `json:"last_used_at,omitempty"`
+	SignCount     uint32    `json:"sign_count"`
+	PublicKeyCOSE []byte    `json:"-"`
 }
 
 type PasskeyCredentialStore struct {
@@ -32,6 +34,7 @@ func (s *PasskeyCredentialStore) Register(record PasskeyCredentialRecord) bool {
 	}
 	record.CredentialID = strings.TrimSpace(record.CredentialID)
 	record.ClientID = strings.TrimSpace(record.ClientID)
+	record.PublicKeyCOSE = cloneBytes(record.PublicKeyCOSE)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.credentials[record.CredentialID] = record
@@ -48,7 +51,19 @@ func (s *PasskeyCredentialStore) Get(credentialID, clientID string) (PasskeyCred
 	if !ok || record.ClientID != strings.TrimSpace(clientID) {
 		return PasskeyCredentialRecord{}, ErrPasskeyCredentialNotFound
 	}
+	record.PublicKeyCOSE = cloneBytes(record.PublicKeyCOSE)
 	return record, nil
+}
+
+func (s *PasskeyCredentialStore) RequirePublicKeyCOSE(credentialID, clientID string) error {
+	record, err := s.Get(credentialID, clientID)
+	if err != nil {
+		return err
+	}
+	if len(record.PublicKeyCOSE) == 0 {
+		return ErrPasskeyCredentialPublicKeyMissing
+	}
+	return nil
 }
 
 func (s *PasskeyCredentialStore) Touch(credentialID, clientID string, now time.Time) (PasskeyCredentialRecord, error) {
@@ -63,6 +78,7 @@ func (s *PasskeyCredentialStore) Touch(credentialID, clientID string, now time.T
 	}
 	record.LastUsedAt = now.UTC()
 	s.credentials[record.CredentialID] = record
+	record.PublicKeyCOSE = cloneBytes(record.PublicKeyCOSE)
 	return record, nil
 }
 
@@ -82,6 +98,7 @@ func (s *PasskeyCredentialStore) TouchWithSignCount(credentialID, clientID strin
 	record.LastUsedAt = now.UTC()
 	record.SignCount = signCount
 	s.credentials[record.CredentialID] = record
+	record.PublicKeyCOSE = cloneBytes(record.PublicKeyCOSE)
 	return record, nil
 }
 
@@ -107,4 +124,13 @@ func (s *PasskeyCredentialStore) Count() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return len(s.credentials)
+}
+
+func cloneBytes(value []byte) []byte {
+	if len(value) == 0 {
+		return nil
+	}
+	clone := make([]byte, len(value))
+	copy(clone, value)
+	return clone
 }
