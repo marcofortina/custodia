@@ -1076,3 +1076,26 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 587 - Lite operations guide links
 
 - Linked Lite installation, CA bootstrap, backup/restore and upgrade guides from the README.
+
+## Patch 591 - file-backed CA key passphrase support
+
+- Added passphrase support for encrypted file-backed CA keys.
+- The signer can now read `CUSTODIA_SIGNER_CA_KEY_PASSPHRASE_FILE` and decrypt local Lite CA key material.
+
+## Patch 593 - signer CA passphrase file config
+
+- Wired the signer service to pass the configured CA passphrase file into the file-backed CA provider.
+
+## Patch 595 - Lite local CA bootstrap generator
+
+- Added a Lite bootstrap generator that creates a local self-signed CA, server certificate, admin client certificate, empty CRL and `config.lite.yaml`.
+- The generated CA key can be encrypted when a passphrase is provided.
+
+## Patch 597 - Lite local CA bootstrap command
+
+- Added `vault-admin ca bootstrap-local` for single-node Lite bootstrap.
+- The command writes local CA/cert/CRL/config artifacts, supports an existing passphrase file, can generate `ca.pass`, and refuses to overwrite existing files.
+
+## Patch 599 - Lite CA bootstrap documentation sync
+
+- Updated Lite CA/bootstrap docs and installation guidance to describe the implemented bootstrap command and passphrase-file behavior.
