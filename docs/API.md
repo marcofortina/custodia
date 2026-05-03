@@ -128,3 +128,8 @@ The current web console shell is protected by the same mTLS admin guard as admin
 ## Request correlation
 
 Every HTTP response includes an `X-Request-ID` header. If the caller sends a bounded printable `X-Request-ID`, Custodia propagates it; otherwise the server generates one. Audit metadata includes the same `request_id` so operators can correlate API responses, web-console requests and immutable audit events without exposing plaintext, ciphertext internals or client-side key material.
+
+
+## Runtime diagnostics
+
+`GET /v1/diagnostics` is admin-only and returns operational runtime metadata: start time, uptime, goroutine count and memory counters. It does not expose secret payloads, envelopes or client-side cryptographic material.
