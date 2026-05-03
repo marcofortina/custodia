@@ -166,6 +166,18 @@ type BuildInfo struct {
 	Date    string `json:"date"`
 }
 
+type RevocationStatus struct {
+	Configured       bool      `json:"configured"`
+	Valid            bool      `json:"valid"`
+	Source           string    `json:"source,omitempty"`
+	Issuer           string    `json:"issuer,omitempty"`
+	ThisUpdate       time.Time `json:"this_update,omitempty"`
+	NextUpdate       time.Time `json:"next_update,omitempty"`
+	RevokedCount     int       `json:"revoked_count"`
+	ExpiresInSeconds int64     `json:"expires_in_seconds,omitempty"`
+	Error            string    `json:"error,omitempty"`
+}
+
 type RuntimeDiagnostics struct {
 	StartedAt       time.Time `json:"started_at"`
 	UptimeSeconds   int64     `json:"uptime_seconds"`

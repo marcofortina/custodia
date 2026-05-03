@@ -13,6 +13,59 @@ import (
 
 var ErrRevokedClientCertificate = errors.New("revoked client certificate")
 
+type ClientCRLStatus struct {
+	Source       string
+	Issuer       string
+	ThisUpdate   time.Time
+	NextUpdate   time.Time
+	RevokedCount int
+}
+
+func LoadClientCRLStatus(crlFile string, caPEM []byte) (ClientCRLStatus, error) {
+	crlPEM, err := os.ReadFile(crlFile)
+	if err != nil {
+		return ClientCRLStatus{}, fmt.Errorf("read client CRL: %w", err)
+	}
+	issuers, err := parseCertificatesFromPEM(caPEM)
+	if err != nil {
+		return ClientCRLStatus{}, err
+	}
+	status := ClientCRLStatus{Source: crlFile}
+	parsedAny := false
+	for len(crlPEM) > 0 {
+		var block *pem.Block
+		block, crlPEM = pem.Decode(crlPEM)
+		if block == nil {
+			break
+		}
+		if block.Type != "X509 CRL" {
+			continue
+		}
+		parsedAny = true
+		list, err := x509.ParseRevocationList(block.Bytes)
+		if err != nil {
+			return ClientCRLStatus{}, fmt.Errorf("parse client CRL: %w", err)
+		}
+		if err := verifyRevocationList(list, issuers); err != nil {
+			return ClientCRLStatus{}, err
+		}
+		if status.Issuer == "" {
+			status.Issuer = list.Issuer.String()
+		}
+		if status.ThisUpdate.IsZero() || list.ThisUpdate.Before(status.ThisUpdate) {
+			status.ThisUpdate = list.ThisUpdate
+		}
+		if status.NextUpdate.IsZero() || list.NextUpdate.Before(status.NextUpdate) {
+			status.NextUpdate = list.NextUpdate
+		}
+		status.RevokedCount += len(list.RevokedCertificateEntries)
+	}
+	if !parsedAny {
+		return ClientCRLStatus{}, fmt.Errorf("client CRL file does not contain a valid PEM CRL")
+	}
+	return status, nil
+}
+
 func LoadRevokedClientSerials(crlFile string, caPEM []byte) (map[string]struct{}, error) {
 	crlPEM, err := os.ReadFile(crlFile)
 	if err != nil {
