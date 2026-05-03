@@ -33,3 +33,22 @@ func TestLoadReadsOptionalHealthAddress(t *testing.T) {
 		t.Fatalf("expected health addr from env, got %q", cfg.HealthAddr)
 	}
 }
+
+func TestLoadWebAuthConfigFromEnvironment(t *testing.T) {
+	t.Setenv("CUSTODIA_WEB_MFA_REQUIRED", "true")
+	t.Setenv("CUSTODIA_WEB_TOTP_SECRET", "SECRET")
+	t.Setenv("CUSTODIA_WEB_SESSION_SECRET", "01234567890123456789012345678901")
+	t.Setenv("CUSTODIA_WEB_SESSION_TTL_SECONDS", "120")
+	t.Setenv("CUSTODIA_WEB_PASSKEY_ENABLED", "true")
+	t.Setenv("CUSTODIA_WEB_PASSKEY_RP_ID", "vault.example.com")
+	t.Setenv("CUSTODIA_WEB_PASSKEY_RP_NAME", "Custodia Vault")
+	t.Setenv("CUSTODIA_WEB_PASSKEY_CHALLENGE_TTL_SECONDS", "180")
+
+	cfg := Load()
+	if !cfg.WebMFARequired || cfg.WebTOTPSecret != "SECRET" || cfg.WebSessionSecret == "" || cfg.WebSessionTTLSeconds != 120 {
+		t.Fatalf("unexpected web MFA config: %+v", cfg)
+	}
+	if !cfg.WebPasskeyEnabled || cfg.WebPasskeyRPID != "vault.example.com" || cfg.WebPasskeyRPName != "Custodia Vault" || cfg.WebPasskeyChallengeTTLSeconds != 180 {
+		t.Fatalf("unexpected passkey config: %+v", cfg)
+	}
+}
