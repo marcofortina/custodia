@@ -14,6 +14,7 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - Web console remains metadata-only and requires admin mTLS; enable TOTP MFA before production.
 - Passkey challenge endpoints are available, but keep TOTP enabled until full assertion verification is completed and audited.
 - Audit export integrity headers are validated by downstream archival jobs with `vault-admin audit verify-export`.
+- Audit export artifacts are bundled with `vault-admin audit archive-export` before WORM/SIEM ingestion.
 - `CUSTODIA_SIGNER_KEY_PROVIDER` is explicitly set; production must not rely on file-backed CA keys unless this is an isolated bootstrap environment.
 
 ## Must remain false
