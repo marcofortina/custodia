@@ -194,3 +194,7 @@ The command fails on unsafe development defaults and missing external production
 `custodia-signer` exposes a CRL-backed JSON revocation responder at `/v1/revocation/serial`. Use `vault-admin revocation check-serial --serial-hex HEX` for operator drills. See `docs/CRL_OCSP_RUNBOOK.md`.
 
 - [Lite SQLite store](docs/LITE_SQLITE_STORE.md)
+- [Lite installation guide](docs/LITE_INSTALL.md)
+- [Lite local CA bootstrap](docs/LITE_CA_BOOTSTRAP.md)
+- [Lite backup and restore](docs/LITE_BACKUP_RESTORE.md)
+- [Lite to Full upgrade path](docs/LITE_TO_FULL_UPGRADE.md)
