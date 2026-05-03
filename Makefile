@@ -50,3 +50,7 @@ run-signer-dev:
 	CUSTODIA_SIGNER_CA_CERT_FILE=./certs/vault-ca.pem \
 	CUSTODIA_SIGNER_CA_KEY_FILE=./certs/vault-ca-key.pem \
 	$(GO) run ./cmd/custodia-signer
+
+.PHONY: formal-check
+formal-check:
+	./scripts/check-formal.sh
