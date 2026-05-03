@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"custodia/internal/id"
 	"custodia/internal/mtls"
 	"custodia/internal/signing"
 )
@@ -96,6 +97,10 @@ func main() {
 	}
 }
 
+type contextKey string
+
+const requestIDContextKey contextKey = "request_id"
+
 func newSignerServer(clientSigner *signing.ClientCertificateSigner, adminSubjects map[string]bool, defaultTTLHours int, devInsecureHTTP bool) http.Handler {
 	if defaultTTLHours <= 0 {
 		defaultTTLHours = int(signing.DefaultClientCertificateTTL / time.Hour)
@@ -110,7 +115,37 @@ func newSignerServer(clientSigner *signing.ClientCertificateSigner, adminSubject
 	mux.HandleFunc("GET /health", server.handleHealth)
 	mux.HandleFunc("GET /live", server.handleHealth)
 	mux.HandleFunc("POST /v1/certificates/sign", server.handleSignClientCertificate)
-	return securityHeaders(mux)
+	return requestIDs(securityHeaders(mux))
+}
+
+func requestIDs(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestID := strings.TrimSpace(r.Header.Get("X-Request-ID"))
+		if !validRequestID(requestID) {
+			requestID = id.New()
+		}
+		w.Header().Set("X-Request-ID", requestID)
+		ctx := context.WithValue(r.Context(), requestIDContextKey, requestID)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func requestIDFromContext(r *http.Request) string {
+	value, _ := r.Context().Value(requestIDContextKey).(string)
+	return value
+}
+
+func validRequestID(value string) bool {
+	value = strings.TrimSpace(value)
+	if value == "" || len(value) > 128 {
+		return false
+	}
+	for _, r := range value {
+		if r < 32 || r == 127 {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *signerServer) handleHealth(w http.ResponseWriter, _ *http.Request) {
