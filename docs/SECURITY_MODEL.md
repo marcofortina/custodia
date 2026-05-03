@@ -61,3 +61,15 @@ These gaps must not be closed by moving client-side encryption keys, public-key 
 ## Web authentication boundary
 
 The metadata-only web console can require admin mTLS plus a TOTP-backed signed web session. Passkey challenge/options endpoints are available for WebAuthn integration, but TOTP must stay enabled in production until assertion verification is completed and independently reviewed. Web authentication never changes the vault cryptographic boundary: plaintext, ciphertext, envelopes and client-side key material are not rendered or processed by the web console.
+
+
+## Phase 3 closure boundary
+
+The repository now includes a production readiness gate and operational artifacts for Phase 3, but the following claims remain deliberately external:
+
+- `pkcs11` signer provider is the production target and readiness requirement; actual HSM/PKCS#11 integration must be validated in the deployment environment.
+- Audit archive shipment is verified before handoff; legal WORM immutability is provided by the external sink.
+- Database HA metadata and runbooks describe the topology; quorum, failover and multi-region behavior must be proven by the selected database platform.
+- Formal artifacts model server authorization invariants; they do not prove client-side encryption algorithms or external CA hardware.
+
+These boundaries prevent the server from drifting into plaintext handling, key-directory behavior or fake HSM claims.
