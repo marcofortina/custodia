@@ -5,12 +5,15 @@ from HSM/PKCS#11 dependencies while preserving mTLS.
 
 ## Current state
 
-Custodia already supports file-backed signing material through the signer key
-provider. A dedicated `vault-admin setup lite` helper is a future convenience
-block; until then, operators provide the CA, server certificate, client CA and
-CRL files explicitly in `config.lite.yaml`.
+Custodia supports file-backed signing material through the signer key provider and provides a Lite local bootstrap command:
 
-For development only, `scripts/dev-certs.sh` creates throwaway certificates:
+```bash
+vault-admin ca bootstrap-local --out-dir /etc/custodia --admin-client-id admin --server-name localhost --generate-ca-passphrase
+```
+
+The command writes a local self-signed CA, server certificate, initial admin client certificate, empty CRL and `config.lite.yaml`. It refuses to overwrite existing files.
+
+For development only, `scripts/dev-certs.sh` also creates throwaway certificates:
 
 ```bash
 ./scripts/dev-certs.sh ./.dev-certs
@@ -29,14 +32,13 @@ Do not use these generated development certificates for production Lite.
 
 ## Passphrase handling
 
-Phase 4 should add file-provider passphrase support with:
+The file-backed CA provider supports passphrase-protected CA keys through:
 
 ```text
 CUSTODIA_SIGNER_CA_KEY_PASSPHRASE_FILE=/etc/custodia/ca.pass
 ```
 
-A passphrase file is safer than placing a passphrase directly in an environment
-variable because it avoids process-list and shell-history leaks.
+A passphrase file is safer than placing a passphrase directly in an environment variable because it avoids process-list and shell-history leaks. The bootstrap command can generate `/etc/custodia/ca.pass` with `--generate-ca-passphrase`, or can read an existing file with `--ca-passphrase-file FILE`.
 
 ## FULL transition
 
