@@ -62,3 +62,7 @@ production-check:
 		exit 2; \
 	fi
 	$(GO) run ./cmd/vault-admin production check --env-file "$(CUSTODIA_PRODUCTION_ENV_FILE)"
+
+.PHONY: release-check
+release-check:
+	./scripts/release-check.sh
