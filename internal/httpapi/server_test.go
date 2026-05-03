@@ -1377,7 +1377,7 @@ func TestAdminCanReadOperationalStatus(t *testing.T) {
 		t.Fatalf("expected status 200, got %d: %s", res.Code, res.Body.String())
 	}
 	body := res.Body.String()
-	for _, token := range []string{`"status":"success"`, `"store":"ok"`, `"store_backend":"memory"`, `"rate_limiter":"ok"`, `"rate_limit_backend":"memory"`, `"max_envelopes_per_secret":100`, `"web_mfa_required":false`, `"web_passkey_enabled":false`, `"web_passkey_user_verification":"required"`, `"web_passkey_credential_key_storage":"opaque_cose"`, `"web_passkey_credential_key_parser":"cose_es256_rs256"`, `"deployment_mode":"multi-region"`, `"database_ha_target":"cockroachdb"`, `"audit_shipment_sink":"s3://audit/custodia"`} {
+	for _, token := range []string{`"status":"success"`, `"store":"ok"`, `"store_backend":"memory"`, `"rate_limiter":"ok"`, `"rate_limit_backend":"memory"`, `"max_envelopes_per_secret":100`, `"web_mfa_required":false`, `"web_passkey_enabled":false`, `"web_passkey_user_verification":"required"`, `"web_passkey_credential_key_storage":"opaque_cose"`, `"web_passkey_credential_key_parser":"cose_es256_rs256"`, `"web_passkey_assertion_verifier":"preverify_only"`, `"deployment_mode":"multi-region"`, `"database_ha_target":"cockroachdb"`, `"audit_shipment_sink":"s3://audit/custodia"`} {
 		if !strings.Contains(body, token) {
 			t.Fatalf("expected %s in status body: %s", token, body)
 		}
@@ -2585,4 +2585,22 @@ func writePasskeyAssertionVerifierScript(t *testing.T, content string) string {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 	return path
+}
+
+func TestStatusReportsExternalPasskeyAssertionVerifier(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100, WebPasskeyAssertionVerifyCommand: "/usr/local/bin/verify-passkey"})
+	req := mtlsRequest(http.MethodGet, "/v1/status", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("status = %d: %s", res.Code, res.Body.String())
+	}
+	if !strings.Contains(res.Body.String(), `"web_passkey_assertion_verifier":"external_command"`) {
+		t.Fatalf("missing external verifier status: %s", res.Body.String())
+	}
 }
