@@ -798,3 +798,25 @@ The repository still does not claim to implement physical HSM hardware, external
 
 - Added syntax checking for the k3s CockroachDB smoke script.
 - Added an opt-in `CUSTODIA_RUN_K3S_COCKROACHDB_SMOKE=true` release-check path.
+
+## Patch 452 - CRL revocation responder package
+
+- Added a CRL-backed revocation responder package that evaluates certificate serial numbers against a parsed CRL.
+- The responder returns deterministic `good` or `revoked` metadata without implementing binary OCSP.
+
+## Patch 454 - signer revocation serial status endpoint
+
+- Added signer endpoint `GET /v1/revocation/serial?serial_hex=<hex>`.
+- The endpoint reads the configured CRL file and audits success/failure outcomes.
+
+## Patch 456 - vault-admin revocation serial command
+
+- Added `vault-admin revocation check-serial` for operator revocation drills against `custodia-signer`.
+
+## Patch 458 - SDK revocation serial helpers
+
+- Added Go and Python helpers for the CRL-backed revocation serial status endpoint.
+
+## Patch 461 - revocation serial responder docs
+
+- Documented the responder as JSON/CRL-backed and explicitly not a full RFC 6960 OCSP responder.
