@@ -11,6 +11,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -2502,4 +2503,86 @@ func TestWebPasskeyRegisterVerifyRejectsInvalidCredentialKeyCOSE(t *testing.T) {
 	if verifyRes.Code != http.StatusBadRequest {
 		t.Fatalf("register verify status = %d, body = %s", verifyRes.Code, verifyRes.Body.String())
 	}
+}
+
+func TestWebPasskeyAuthenticateVerifyUsesExternalAssertionVerifier(t *testing.T) {
+	command := writePasskeyAssertionVerifierScript(t, `#!/usr/bin/env sh
+cat >/dev/null
+printf '{"valid":true}
+'
+`)
+	handler := newPasskeyAssertionVerifierTestHandler(t, command)
+	registerPasskeyCredentialWithAuthenticatorData(t, handler, "admin", "example.com", "credential-external", 7)
+
+	optionsReq := mtlsRequest(http.MethodGet, "/web/passkey/authenticate/options", "", "admin")
+	optionsReq.Host = "example.com"
+	optionsReq.Header.Set("X-Forwarded-Proto", "https")
+	optionsRes := httptest.NewRecorder()
+	handler.ServeHTTP(optionsRes, optionsReq)
+	if optionsRes.Code != http.StatusOK {
+		t.Fatalf("options status = %d, body = %s", optionsRes.Code, optionsRes.Body.String())
+	}
+	var options webauth.PasskeyOptions
+	if err := json.NewDecoder(optionsRes.Body).Decode(&options); err != nil {
+		t.Fatalf("decode options: %v", err)
+	}
+	clientData := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.get", Challenge: options.Challenge, Origin: "https://example.com"})
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/authenticate/verify", `{"client_data_json":"`+clientData+`","credential_id":"credential-external","authenticator_data":"`+passkeyAuthenticatorDataPayload(8)+`","signature":"c2lnbmF0dXJl"}`, "admin")
+	verifyReq.Host = "example.com"
+	verifyReq.Header.Set("X-Forwarded-Proto", "https")
+	verifyRes := httptest.NewRecorder()
+	handler.ServeHTTP(verifyRes, verifyReq)
+	if verifyRes.Code != http.StatusOK {
+		t.Fatalf("verify status = %d, body = %s", verifyRes.Code, verifyRes.Body.String())
+	}
+}
+
+func TestWebPasskeyAuthenticateVerifyRequiresSignatureWhenExternalVerifierConfigured(t *testing.T) {
+	command := writePasskeyAssertionVerifierScript(t, `#!/usr/bin/env sh
+cat >/dev/null
+printf '{"valid":true}
+'
+`)
+	handler := newPasskeyAssertionVerifierTestHandler(t, command)
+	registerPasskeyCredentialWithAuthenticatorData(t, handler, "admin", "example.com", "credential-no-signature", 7)
+
+	optionsReq := mtlsRequest(http.MethodGet, "/web/passkey/authenticate/options", "", "admin")
+	optionsReq.Host = "example.com"
+	optionsReq.Header.Set("X-Forwarded-Proto", "https")
+	optionsRes := httptest.NewRecorder()
+	handler.ServeHTTP(optionsRes, optionsReq)
+	var options webauth.PasskeyOptions
+	if err := json.NewDecoder(optionsRes.Body).Decode(&options); err != nil {
+		t.Fatalf("decode options: %v", err)
+	}
+	clientData := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.get", Challenge: options.Challenge, Origin: "https://example.com"})
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/authenticate/verify", `{"client_data_json":"`+clientData+`","credential_id":"credential-no-signature","authenticator_data":"`+passkeyAuthenticatorDataPayload(8)+`"}`, "admin")
+	verifyReq.Host = "example.com"
+	verifyReq.Header.Set("X-Forwarded-Proto", "https")
+	verifyRes := httptest.NewRecorder()
+	handler.ServeHTTP(verifyRes, verifyReq)
+	if verifyRes.Code != http.StatusUnauthorized {
+		t.Fatalf("verify status = %d, want %d: %s", verifyRes.Code, http.StatusUnauthorized, verifyRes.Body.String())
+	}
+	if !strings.Contains(verifyRes.Body.String(), "missing_assertion_signature_material") {
+		t.Fatalf("missing assertion signature error: %s", verifyRes.Body.String())
+	}
+}
+
+func newPasskeyAssertionVerifierTestHandler(t *testing.T, command string) http.Handler {
+	t.Helper()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(context.Background(), model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("CreateClient() error = %v", err)
+	}
+	return New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100, WebPasskeyEnabled: true, WebPasskeyRPID: "example.com", WebPasskeyRPName: "Custodia", WebPasskeyAssertionVerifyCommand: command})
+}
+
+func writePasskeyAssertionVerifierScript(t *testing.T, content string) string {
+	t.Helper()
+	path := t.TempDir() + "/verify-passkey"
+	if err := os.WriteFile(path, []byte(content), 0o700); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	return path
 }
