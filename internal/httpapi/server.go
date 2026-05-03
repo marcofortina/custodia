@@ -34,6 +34,7 @@ type contextKey string
 
 const (
 	clientIDContextKey           contextKey = "client_id"
+	requestIDContextKey          contextKey = "request_id"
 	DefaultMaxEnvelopesPerSecret            = 100
 )
 
@@ -85,7 +86,7 @@ func New(options Options) http.Handler {
 	mux.Handle("POST /v1/secrets/{secret_id}/access/{client_id}/activate", server.auth(http.HandlerFunc(server.handleActivateAccessGrant)))
 	mux.Handle("DELETE /v1/secrets/{secret_id}/access/{client_id}", server.auth(http.HandlerFunc(server.handleRevokeAccess)))
 	mux.Handle("POST /v1/secrets/{secret_id}/versions", server.auth(http.HandlerFunc(server.handleCreateSecretVersion)))
-	return securityHeaders(mux)
+	return requestIDs(securityHeaders(mux))
 }
 
 func securityHeaders(next http.Handler) http.Handler {

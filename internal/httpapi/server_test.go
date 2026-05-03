@@ -17,6 +17,20 @@ import (
 	"custodia/internal/store"
 )
 
+func TestAPIPropagatesRequestID(t *testing.T) {
+	memoryStore := store.NewMemoryStore()
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req.Header.Set("X-Request-ID", "operator-trace-1")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if got := res.Header().Get("X-Request-ID"); got != "operator-trace-1" {
+		t.Fatalf("expected request id to be propagated, got %q", got)
+	}
+}
+
 func TestAPISetsSecurityHeaders(t *testing.T) {
 	memoryStore := store.NewMemoryStore()
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
