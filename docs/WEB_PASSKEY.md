@@ -36,3 +36,31 @@ They return metadata-only JSON challenge options:
 ## Current implementation status
 
 TOTP web MFA is complete in the server. Passkey support is implemented up to challenge/options generation and web-console integration points. This closes the server-side phase-2 boundary without changing the vault cryptographic model; production deployments should keep TOTP enabled until assertion verification is completed and audited.
+
+## Challenge preverification endpoints
+
+Custodia now stores issued passkey challenges with TTL and consumes each challenge at most once. This closes replay gaps around the server-side challenge/options boundary.
+
+Registration challenge preverification:
+
+```text
+POST /web/passkey/register/verify
+```
+
+Authentication challenge preverification:
+
+```text
+POST /web/passkey/authenticate/verify
+```
+
+Request body:
+
+```json
+{
+  "client_data_json": "base64url(clientDataJSON)"
+}
+```
+
+The server validates the WebAuthn `clientDataJSON` fields that are safe to verify without credential storage: `type`, `challenge` and `origin`. A successful response is `verified_challenge` and consumes the challenge so it cannot be replayed.
+
+This is still not full WebAuthn assertion verification. Credential public-key storage, authenticatorData parsing, COSE/CBOR handling, signature verification and clone-counter checks remain the next production passkey milestone.
