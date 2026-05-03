@@ -65,6 +65,8 @@ func main() {
 		err = runRevocationFetchCRL(&cfg, args[2:])
 	case "production check":
 		err = runProductionCheck(args[2:])
+	case "production evidence-check":
+		err = runProductionEvidenceCheck(args[2:])
 	case "certificate sign":
 		err = runCertificateSign(&cfg, args[2:])
 	case "client whoami":
@@ -134,6 +136,31 @@ func runProductionCheck(args []string) error {
 	}
 	if productioncheck.HasCritical(findings) {
 		return fmt.Errorf("production readiness check failed")
+	}
+	return nil
+}
+
+func runProductionEvidenceCheck(args []string) error {
+	cmd := flag.NewFlagSet("production evidence-check", flag.ExitOnError)
+	envFile := cmd.String("env-file", "", "environment file containing external evidence paths")
+	_ = cmd.Parse(args)
+	if *envFile == "" {
+		return fmt.Errorf("--env-file is required")
+	}
+	env, err := readEnvFile(*envFile)
+	if err != nil {
+		return err
+	}
+	findings := productioncheck.CheckExternalEvidence(env)
+	if len(findings) == 0 {
+		fmt.Fprintln(os.Stdout, "production external evidence: ok")
+		return nil
+	}
+	for _, finding := range findings {
+		fmt.Fprintf(os.Stdout, "%s\t%s\t%s\n", finding.Severity, finding.Code, finding.Message)
+	}
+	if productioncheck.HasCritical(findings) {
+		return fmt.Errorf("production external evidence check failed")
 	}
 	return nil
 }
