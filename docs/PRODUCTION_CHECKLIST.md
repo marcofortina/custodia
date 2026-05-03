@@ -90,3 +90,9 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 - Passkey authentication preverification must include `authenticator_data` during production drills.
 - Non-increasing signature counters must be rejected before passkeys are considered beyond challenge-only preverification.
 - Full WebAuthn promotion still requires COSE public-key storage, authenticator signature verification and attestation/authenticatorData review with an audited WebAuthn library or reviewed verifier.
+
+## Passkey authenticator data gate
+
+- `CUSTODIA_WEB_PASSKEY_RP_ID` matches the browser-visible RP ID and the authenticator RP ID hash validation path is covered in release tests.
+- User verification remains required for passkey options and supplied authenticator data.
+- Do not promote passkeys as the only MFA factor until COSE public-key storage and authenticator signature verification are implemented.
