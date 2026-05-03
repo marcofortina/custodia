@@ -3,33 +3,51 @@ package httpapi
 import (
 	"custodia/internal/ratelimit"
 	"custodia/internal/store"
+	"custodia/internal/webauth"
 	"net/http"
 	"time"
 )
 
 type Server struct {
-	store                 store.Store
-	limiter               ratelimit.Limiter
-	adminClientIDs        map[string]bool
-	maxEnvelopesPerSecret int
-	clientRateLimit       int
-	globalRateLimit       int
-	ipRateLimit           int
-	storeBackend          string
-	rateLimitBackend      string
-	startedAt             time.Time
+	store                  store.Store
+	limiter                ratelimit.Limiter
+	adminClientIDs         map[string]bool
+	maxEnvelopesPerSecret  int
+	clientRateLimit        int
+	globalRateLimit        int
+	ipRateLimit            int
+	storeBackend           string
+	rateLimitBackend       string
+	startedAt              time.Time
+	webMFARequired         bool
+	webTOTPSecret          string
+	webSessionManager      *webauth.SessionManager
+	webSessionSecure       bool
+	webPasskeyEnabled      bool
+	webPasskeyRPID         string
+	webPasskeyRPName       string
+	webPasskeyChallengeTTL time.Duration
 }
 
 type Options struct {
-	Store                 store.Store
-	Limiter               ratelimit.Limiter
-	AdminClientIDs        map[string]bool
-	MaxEnvelopesPerSecret int
-	ClientRateLimit       int
-	GlobalRateLimit       int
-	IPRateLimit           int
-	StoreBackend          string
-	RateLimitBackend      string
+	Store                  store.Store
+	Limiter                ratelimit.Limiter
+	AdminClientIDs         map[string]bool
+	MaxEnvelopesPerSecret  int
+	ClientRateLimit        int
+	GlobalRateLimit        int
+	IPRateLimit            int
+	StoreBackend           string
+	RateLimitBackend       string
+	WebMFARequired         bool
+	WebTOTPSecret          string
+	WebSessionSecret       string
+	WebSessionTTL          time.Duration
+	WebSessionSecure       bool
+	WebPasskeyEnabled      bool
+	WebPasskeyRPID         string
+	WebPasskeyRPName       string
+	WebPasskeyChallengeTTL time.Duration
 }
 
 type contextKey string
@@ -45,17 +63,44 @@ func New(options Options) http.Handler {
 	if maxEnvelopesPerSecret <= 0 {
 		maxEnvelopesPerSecret = DefaultMaxEnvelopesPerSecret
 	}
+	var webSessionManager *webauth.SessionManager
+	if options.WebMFARequired {
+		manager, err := webauth.NewSessionManager(options.WebSessionSecret, options.WebSessionTTL)
+		if err == nil {
+			webSessionManager = manager
+		}
+	}
+	webPasskeyRPID := options.WebPasskeyRPID
+	if webPasskeyRPID == "" {
+		webPasskeyRPID = "localhost"
+	}
+	webPasskeyRPName := options.WebPasskeyRPName
+	if webPasskeyRPName == "" {
+		webPasskeyRPName = "Custodia"
+	}
+	webPasskeyChallengeTTL := options.WebPasskeyChallengeTTL
+	if webPasskeyChallengeTTL <= 0 {
+		webPasskeyChallengeTTL = 5 * time.Minute
+	}
 	server := &Server{
-		store:                 options.Store,
-		limiter:               options.Limiter,
-		adminClientIDs:        options.AdminClientIDs,
-		maxEnvelopesPerSecret: maxEnvelopesPerSecret,
-		clientRateLimit:       options.ClientRateLimit,
-		globalRateLimit:       options.GlobalRateLimit,
-		ipRateLimit:           options.IPRateLimit,
-		storeBackend:          options.StoreBackend,
-		rateLimitBackend:      options.RateLimitBackend,
-		startedAt:             time.Now().UTC(),
+		store:                  options.Store,
+		limiter:                options.Limiter,
+		adminClientIDs:         options.AdminClientIDs,
+		maxEnvelopesPerSecret:  maxEnvelopesPerSecret,
+		clientRateLimit:        options.ClientRateLimit,
+		globalRateLimit:        options.GlobalRateLimit,
+		ipRateLimit:            options.IPRateLimit,
+		storeBackend:           options.StoreBackend,
+		rateLimitBackend:       options.RateLimitBackend,
+		startedAt:              time.Now().UTC(),
+		webMFARequired:         options.WebMFARequired,
+		webTOTPSecret:          options.WebTOTPSecret,
+		webSessionManager:      webSessionManager,
+		webSessionSecure:       options.WebSessionSecure,
+		webPasskeyEnabled:      options.WebPasskeyEnabled,
+		webPasskeyRPID:         webPasskeyRPID,
+		webPasskeyRPName:       webPasskeyRPName,
+		webPasskeyChallengeTTL: webPasskeyChallengeTTL,
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", server.handleHealth)

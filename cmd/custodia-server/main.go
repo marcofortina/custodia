@@ -40,15 +40,24 @@ func main() {
 	}
 
 	handler := httpapi.New(httpapi.Options{
-		Store:                 vaultStore,
-		Limiter:               limiter,
-		AdminClientIDs:        cfg.AdminClientIDs,
-		MaxEnvelopesPerSecret: cfg.MaxEnvelopesPerSecret,
-		ClientRateLimit:       cfg.ClientRateLimitPerSecond,
-		GlobalRateLimit:       cfg.GlobalRateLimitPerSecond,
-		IPRateLimit:           cfg.IPRateLimitPerSecond,
-		StoreBackend:          storeBackend,
-		RateLimitBackend:      rateLimitBackend,
+		Store:                  vaultStore,
+		Limiter:                limiter,
+		AdminClientIDs:         cfg.AdminClientIDs,
+		MaxEnvelopesPerSecret:  cfg.MaxEnvelopesPerSecret,
+		ClientRateLimit:        cfg.ClientRateLimitPerSecond,
+		GlobalRateLimit:        cfg.GlobalRateLimitPerSecond,
+		IPRateLimit:            cfg.IPRateLimitPerSecond,
+		StoreBackend:           storeBackend,
+		RateLimitBackend:       rateLimitBackend,
+		WebMFARequired:         cfg.WebMFARequired,
+		WebTOTPSecret:          cfg.WebTOTPSecret,
+		WebSessionSecret:       cfg.WebSessionSecret,
+		WebSessionTTL:          time.Duration(cfg.WebSessionTTLSeconds) * time.Second,
+		WebSessionSecure:       !cfg.DevInsecureHTTP,
+		WebPasskeyEnabled:      cfg.WebPasskeyEnabled,
+		WebPasskeyRPID:         cfg.WebPasskeyRPID,
+		WebPasskeyRPName:       cfg.WebPasskeyRPName,
+		WebPasskeyChallengeTTL: time.Duration(cfg.WebPasskeyChallengeTTLSeconds) * time.Second,
 	})
 
 	server := &http.Server{
