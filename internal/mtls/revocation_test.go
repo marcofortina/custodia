@@ -167,3 +167,23 @@ func testRevocationListWithoutEntries(t *testing.T, caCert *x509.Certificate, ca
 	}
 	return pem.EncodeToMemory(&pem.Block{Type: "X509 CRL", Bytes: der})
 }
+
+func TestLoadClientCRLStatus(t *testing.T) {
+	caCert, caKey := testCertificateAuthority(t)
+	clientCert := testClientCertificate(t, caCert, caKey, big.NewInt(4242))
+	crlFile := filepath.Join(t.TempDir(), "clients.crl.pem")
+	if err := os.WriteFile(crlFile, testRevocationList(t, caCert, caKey, clientCert.SerialNumber), 0o600); err != nil {
+		t.Fatalf("write CRL: %v", err)
+	}
+
+	status, err := LoadClientCRLStatus(crlFile, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caCert.Raw}))
+	if err != nil {
+		t.Fatalf("LoadClientCRLStatus() error = %v", err)
+	}
+	if status.Source != crlFile || status.RevokedCount != 1 || status.Issuer == "" {
+		t.Fatalf("unexpected CRL status: %+v", status)
+	}
+	if status.ThisUpdate.IsZero() || status.NextUpdate.IsZero() || !status.NextUpdate.After(status.ThisUpdate) {
+		t.Fatalf("unexpected CRL update window: %+v", status)
+	}
+}
