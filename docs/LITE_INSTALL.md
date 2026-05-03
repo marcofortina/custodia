@@ -36,6 +36,20 @@ sudo install -d -o custodia -g custodia -m 0750 /etc/custodia /var/lib/custodia 
 Certificate material under `/etc/custodia` should be readable only by the
 `custodia` user. Prefer an offline CA or an encrypted local CA key where possible.
 
+## Bootstrap local CA material
+
+For a first Lite installation, generate local CA and certificate material with:
+
+```bash
+sudo -u custodia vault-admin ca bootstrap-local \
+  --out-dir /etc/custodia \
+  --admin-client-id admin \
+  --server-name localhost \
+  --generate-ca-passphrase
+```
+
+Use `--ca-passphrase-file FILE` when you already have a passphrase file managed by your secret-handling process.
+
 ## Configuration
 
 Start from the sample profile:
