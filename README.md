@@ -192,3 +192,5 @@ The command fails on unsafe development defaults and missing external production
 ### Revocation serial status
 
 `custodia-signer` exposes a CRL-backed JSON revocation responder at `/v1/revocation/serial`. Use `vault-admin revocation check-serial --serial-hex HEX` for operator drills. See `docs/CRL_OCSP_RUNBOOK.md`.
+
+- [Lite SQLite store](docs/LITE_SQLITE_STORE.md)
