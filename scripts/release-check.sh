@@ -15,3 +15,10 @@ if command -v tlc >/dev/null 2>&1; then
 else
   echo "TLC not found; skipping formal-check. Run make formal-check where TLC is installed." >&2
 fi
+
+if [ -n "${CUSTODIA_PRODUCTION_ENV_FILE:-}" ]; then
+  $GO run ./cmd/vault-admin production check --env-file "$CUSTODIA_PRODUCTION_ENV_FILE"
+  $GO run ./cmd/vault-admin production evidence-check --env-file "$CUSTODIA_PRODUCTION_ENV_FILE"
+else
+  echo "CUSTODIA_PRODUCTION_ENV_FILE not set; skipping production configuration and external evidence gates." >&2
+fi
