@@ -143,3 +143,20 @@ GET /v1/revocation/serial?serial_hex=<hex>
 ```
 
 The response is JSON and returns `good` or `revoked` plus CRL update metadata. This endpoint is an operational JSON responder backed by the configured CRL, not a binary OCSP responder.
+
+## Web passkey challenge preverification
+
+When passkeys are enabled, the metadata-only web console exposes challenge preverification endpoints:
+
+```text
+POST /web/passkey/register/verify
+POST /web/passkey/authenticate/verify
+```
+
+The request body contains base64url-encoded `clientDataJSON`:
+
+```json
+{"client_data_json":"..."}
+```
+
+The server checks `type`, `challenge`, `origin`, TTL and consume-once semantics. These endpoints do not replace full WebAuthn credential registration/assertion verification.
