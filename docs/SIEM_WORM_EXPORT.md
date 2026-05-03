@@ -16,8 +16,9 @@ Custodia writes an internal hash-chained audit log and can export JSONL with int
 2. Persist the body as immutable JSONL.
 3. Persist response headers next to the body.
 4. Recompute SHA-256 before upload to WORM storage.
-5. Forward the same JSONL to SIEM.
-6. Alert on audit chain verification failure or hash mismatch.
+5. Run `vault-admin audit verify-export` against the JSONL, `.sha256` and `.events` artifacts.
+6. Forward the same JSONL to SIEM.
+7. Alert on audit chain verification failure, hash mismatch or event-count mismatch.
 
 ## Security boundary
 
