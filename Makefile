@@ -95,3 +95,7 @@ k3s-cockroachdb-apply:
 .PHONY: k3s-cockroachdb-smoke
 k3s-cockroachdb-smoke:
 	./scripts/k3s-cockroachdb-smoke.sh
+
+.PHONY: passkey-assertion-verifier-template-check
+passkey-assertion-verifier-template-check:
+	@printf '{"credential_id":"fixture"}' | ./scripts/passkey-assertion-verify-command.sh | grep '"valid":false' >/dev/null
