@@ -206,3 +206,30 @@ func TestWriteAuditExportArtifacts(t *testing.T) {
 		t.Fatalf("unexpected events artifact: %q", string(events))
 	}
 }
+
+func TestRunAuditVerifyExport(t *testing.T) {
+	dir := t.TempDir()
+	body := []byte("{}\n{}\n")
+	digest := "3b00ba5361676a0a8152642a6edaf54a222bd409b5774b5b461ac8d1cee09cb4\n"
+	bodyPath := dir + "/audit.jsonl"
+	shaPath := dir + "/audit.sha256"
+	eventsPath := dir + "/audit.events"
+	if err := os.WriteFile(bodyPath, body, 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	if err := os.WriteFile(shaPath, []byte(digest), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	if err := os.WriteFile(eventsPath, []byte("2\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	if err := runAuditVerifyExport([]string{"--file", bodyPath, "--sha256-file", shaPath, "--events-file", eventsPath}); err != nil {
+		t.Fatalf("runAuditVerifyExport() error = %v", err)
+	}
+}
+
+func TestRunAuditVerifyExportRejectsMissingArgs(t *testing.T) {
+	if err := runAuditVerifyExport(nil); err == nil {
+		t.Fatal("expected missing args error")
+	}
+}
