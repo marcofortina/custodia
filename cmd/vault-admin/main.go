@@ -50,6 +50,8 @@ func main() {
 		err = requestJSON(&cfg, http.MethodGet, "/v1/status", nil, os.Stdout)
 	case "version server":
 		err = requestJSON(&cfg, http.MethodGet, "/v1/version", nil, os.Stdout)
+	case "diagnostics read":
+		err = requestJSON(&cfg, http.MethodGet, "/v1/diagnostics", nil, os.Stdout)
 	case "client whoami":
 		err = requestJSON(&cfg, http.MethodGet, "/v1/me", nil, os.Stdout)
 	case "client list":
