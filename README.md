@@ -162,3 +162,8 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 - [Audit shipment runbook](docs/AUDIT_SHIPMENT_RUNBOOK.md)
 - [Audit archive runbook](docs/AUDIT_ARCHIVE_RUNBOOK.md)
 - [Formal verification scope](docs/FORMAL_VERIFICATION.md)
+
+
+### Formal verification
+
+Server-side authorization invariants have executable Go model tests and a TLA+ model under `formal/`. Run `make formal-check` when TLC is installed.
