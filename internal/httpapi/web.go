@@ -154,7 +154,13 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 	if !ok {
 		return
 	}
-	requests, err := s.store.ListAccessGrantRequests(r.Context(), "")
+	secretID := strings.TrimSpace(r.URL.Query().Get("secret_id"))
+	if secretID != "" && !model.ValidUUIDID(secretID) {
+		s.auditFailure(r, "web.access_request_list", "secret", secretID, map[string]string{"reason": "invalid_secret_id_filter"})
+		writeError(w, http.StatusBadRequest, "invalid_secret_id_filter")
+		return
+	}
+	requests, err := s.store.ListAccessGrantRequests(r.Context(), secretID)
 	if err != nil {
 		s.auditStoreFailure(r, "web.access_request_list", "secret", "", err)
 		writeMappedError(w, err)
