@@ -150,6 +150,8 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 ### Operational runbooks
 
 - [Production checklist](docs/PRODUCTION_CHECKLIST.md)
+- [Phase 1 closure summary](docs/PHASE1_CLOSURE.md)
+- [Phase 2 closure summary](docs/PHASE2_CLOSURE.md)
 - [Phase 3 closure boundary](docs/PHASE3_CLOSURE.md)
 - [Disaster recovery runbook](docs/DR_RUNBOOK.md)
 - [Database HA runbook](docs/DATABASE_HA_RUNBOOK.md)
@@ -167,14 +169,13 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 - [Audit archive runbook](docs/AUDIT_ARCHIVE_RUNBOOK.md)
 - [Formal verification scope](docs/FORMAL_VERIFICATION.md)
 - [Release check](docs/RELEASE_CHECK.md)
+- [Production readiness gate](docs/PRODUCTION_READINESS_GATE.md)
+- [Production external evidence gate](docs/PRODUCTION_EVIDENCE.md)
 
 
 ### Formal verification
 
 Server-side authorization invariants have executable Go model tests and a TLA+ model under `formal/`. Run `make formal-check` when TLC is installed.
-
-- [Production readiness gate](docs/PRODUCTION_READINESS_GATE.md)
-- [Production external evidence gate](docs/PRODUCTION_EVIDENCE.md)
 
 ### Production readiness gate
 
