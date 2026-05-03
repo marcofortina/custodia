@@ -717,3 +717,21 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 416 - PKCS#11 SoftHSM documentation
 
 - Documented the PKCS#11 bridge protocol, SoftHSM workflow and production HSM evidence boundary.
+
+
+## Patch 422 - S3 Object Lock audit shipper
+
+- Added a SigV4 S3-compatible audit archive shipper that uploads verified bundles with Object Lock retention headers.
+- The implementation supports MinIO/Object Lock smoke testing and production S3-compatible WORM sinks.
+
+## Patch 424 - vault-admin S3 audit shipment command
+
+- Added `vault-admin audit ship-archive-s3` for verified S3/Object Lock archive shipment.
+
+## Patch 427 - MinIO Object Lock compose profile
+
+- Added a local MinIO profile that creates an Object Lock-enabled `custodia-audit` bucket for development smoke testing.
+
+## Patch 431 - S3 Object Lock audit shipment documentation
+
+- Documented MinIO/S3 Object Lock audit shipment, SigV4 headers and the external storage immutability boundary.
