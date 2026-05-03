@@ -92,3 +92,51 @@ func TestCheckEnvironmentRequiresPasskeyAssertionVerifierWhenPasskeysAreEnabled(
 	})
 	assertFinding(t, findings, "web_passkey_assertion_verify_command")
 }
+
+func TestCheckEnvironmentAcceptsLiteProfileConfig(t *testing.T) {
+	findings := CheckEnvironment(map[string]string{
+		"CUSTODIA_PROFILE":                       "lite",
+		"CUSTODIA_STORE_BACKEND":                 "sqlite",
+		"CUSTODIA_DATABASE_URL":                  "file:/var/lib/custodia/custodia.db",
+		"CUSTODIA_RATE_LIMIT_BACKEND":            "memory",
+		"CUSTODIA_TLS_CERT_FILE":                 "/etc/custodia/server.crt",
+		"CUSTODIA_TLS_KEY_FILE":                  "/etc/custodia/server.key",
+		"CUSTODIA_CLIENT_CA_FILE":                "/etc/custodia/client-ca.crt",
+		"CUSTODIA_CLIENT_CRL_FILE":               "/etc/custodia/client.crl.pem",
+		"CUSTODIA_ADMIN_CLIENT_IDS":              "admin",
+		"CUSTODIA_WEB_MFA_REQUIRED":              "true",
+		"CUSTODIA_WEB_TOTP_SECRET":               "JBSWY3DPEHPK3PXP",
+		"CUSTODIA_WEB_SESSION_SECRET":            "0123456789abcdef0123456789abcdef",
+		"CUSTODIA_SIGNER_KEY_PROVIDER":           "file",
+		"CUSTODIA_SIGNER_CA_CERT_FILE":           "/etc/custodia/ca.crt",
+		"CUSTODIA_SIGNER_CA_KEY_FILE":            "/etc/custodia/ca.key",
+		"CUSTODIA_SIGNER_CA_KEY_PASSPHRASE_FILE": "/etc/custodia/ca.pass",
+	})
+	if HasCritical(findings) {
+		t.Fatalf("expected no critical lite findings, got %#v", findings)
+	}
+}
+
+func TestCheckEnvironmentWarnsForLiteMissingCAPassphrase(t *testing.T) {
+	findings := CheckEnvironment(map[string]string{
+		"CUSTODIA_PROFILE":             "lite",
+		"CUSTODIA_STORE_BACKEND":       "sqlite",
+		"CUSTODIA_DATABASE_URL":        "file:/var/lib/custodia/custodia.db",
+		"CUSTODIA_RATE_LIMIT_BACKEND":  "memory",
+		"CUSTODIA_TLS_CERT_FILE":       "/etc/custodia/server.crt",
+		"CUSTODIA_TLS_KEY_FILE":        "/etc/custodia/server.key",
+		"CUSTODIA_CLIENT_CA_FILE":      "/etc/custodia/client-ca.crt",
+		"CUSTODIA_CLIENT_CRL_FILE":     "/etc/custodia/client.crl.pem",
+		"CUSTODIA_ADMIN_CLIENT_IDS":    "admin",
+		"CUSTODIA_WEB_MFA_REQUIRED":    "true",
+		"CUSTODIA_WEB_TOTP_SECRET":     "JBSWY3DPEHPK3PXP",
+		"CUSTODIA_WEB_SESSION_SECRET":  "0123456789abcdef0123456789abcdef",
+		"CUSTODIA_SIGNER_KEY_PROVIDER": "file",
+		"CUSTODIA_SIGNER_CA_CERT_FILE": "/etc/custodia/ca.crt",
+		"CUSTODIA_SIGNER_CA_KEY_FILE":  "/etc/custodia/ca.key",
+	})
+	if HasCritical(findings) {
+		t.Fatalf("expected only lite warning findings, got %#v", findings)
+	}
+	assertFinding(t, findings, "signer_ca_key_passphrase_file")
+}
