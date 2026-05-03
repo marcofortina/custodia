@@ -109,6 +109,8 @@ func New(options Options) http.Handler {
 	mux.Handle("GET /web/login", server.auth(server.adminOnly(http.HandlerFunc(server.handleWebLogin))))
 	mux.Handle("POST /web/login", server.auth(server.adminOnly(http.HandlerFunc(server.handleWebLogin))))
 	mux.Handle("POST /web/logout", server.auth(server.adminOnly(http.HandlerFunc(server.handleWebLogout))))
+	mux.Handle("GET /web/passkey/register/options", server.webAdmin(http.HandlerFunc(server.handleWebPasskeyRegisterOptions)))
+	mux.Handle("GET /web/passkey/authenticate/options", server.webAdmin(http.HandlerFunc(server.handleWebPasskeyAuthenticateOptions)))
 	mux.Handle("GET /web/", server.webAdmin(http.HandlerFunc(server.handleWeb)))
 	mux.Handle("GET /web/status", server.webAdmin(http.HandlerFunc(server.handleWebStatus)))
 	mux.Handle("GET /web/diagnostics", server.webAdmin(http.HandlerFunc(server.handleWebDiagnostics)))

@@ -95,6 +95,38 @@ func (s *Server) webOptionalLimit(w http.ResponseWriter, r *http.Request, action
 	return limit, true
 }
 
+func (s *Server) handleWebPasskeyRegisterOptions(w http.ResponseWriter, r *http.Request) {
+	if !s.webPasskeyEnabled {
+		writeError(w, http.StatusNotFound, "passkey_disabled")
+		return
+	}
+	clientID := clientIDFromContext(r)
+	options, err := webauth.NewPasskeyOptions(s.webPasskeyRPID, s.webPasskeyRPName, clientID, clientID, s.webPasskeyChallengeTTL, true)
+	if err != nil {
+		s.auditFailure(r, "web.passkey_register_options", "system", "", map[string]string{"reason": "invalid_passkey_config"})
+		writeError(w, http.StatusServiceUnavailable, "invalid_passkey_config")
+		return
+	}
+	s.audit(r, "web.passkey_register_options", "system", "", "success", nil)
+	writeJSON(w, http.StatusOK, options)
+}
+
+func (s *Server) handleWebPasskeyAuthenticateOptions(w http.ResponseWriter, r *http.Request) {
+	if !s.webPasskeyEnabled {
+		writeError(w, http.StatusNotFound, "passkey_disabled")
+		return
+	}
+	clientID := clientIDFromContext(r)
+	options, err := webauth.NewPasskeyOptions(s.webPasskeyRPID, s.webPasskeyRPName, clientID, clientID, s.webPasskeyChallengeTTL, false)
+	if err != nil {
+		s.auditFailure(r, "web.passkey_authenticate_options", "system", "", map[string]string{"reason": "invalid_passkey_config"})
+		writeError(w, http.StatusServiceUnavailable, "invalid_passkey_config")
+		return
+	}
+	s.audit(r, "web.passkey_authenticate_options", "system", "", "success", nil)
+	writeJSON(w, http.StatusOK, options)
+}
+
 func (s *Server) handleWebStatus(w http.ResponseWriter, r *http.Request) {
 	storeStatus := "ok"
 	if err := s.store.Health(r.Context()); err != nil {
