@@ -63,7 +63,7 @@ Request body:
 
 The server validates the WebAuthn `clientDataJSON` fields that are safe to verify without credential storage: `type`, `challenge` and `origin`. A successful response is `verified_challenge` and consumes the challenge so it cannot be replayed.
 
-This is still not full WebAuthn assertion verification. Credential public-key storage, authenticatorData parsing, COSE/CBOR handling, signature verification and clone-counter checks remain the next production passkey milestone.
+This is still not full WebAuthn assertion verification. Credential public-key storage, COSE/CBOR handling and signature verification remain the next production passkey milestone.
 
 ## Credential metadata store
 
@@ -80,3 +80,22 @@ server-side cryptographic boundary honest.
 This is still not full WebAuthn assertion verification. The remaining production
 work is COSE/CBOR parsing, authenticatorData validation, signature verification
 and signature-counter clone detection.
+
+
+## Authenticator data and sign counter scaffold
+
+Passkey preverification now accepts optional `authenticator_data` as base64url encoded WebAuthn authenticator data. The server parses the RP ID hash, flags and signature counter from the standard authenticator data header.
+
+Registration stores the parsed signature counter with credential metadata when authenticator data is supplied. Authentication rejects a non-increasing signature counter for known credentials, which provides a server-side clone-detection scaffold before full COSE signature verification is added.
+
+Request body with authenticator data:
+
+```json
+{
+  "client_data_json": "base64url(clientDataJSON)",
+  "credential_id": "credential-id",
+  "authenticator_data": "base64url(authenticatorData)"
+}
+```
+
+This is still not full WebAuthn assertion verification. Custodia now parses authenticator data and enforces stored counters when provided, but it still does not parse attestation objects, store COSE public keys or verify authenticator signatures.
