@@ -913,3 +913,20 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 513 - passkey credential-key metadata documentation
 
 - Documented that Custodia stores opaque COSE credential-key metadata without yet parsing CBOR/COSE or verifying authenticator signatures.
+
+## Patch 519 - passkey COSE credential-key parser
+
+- Added a minimal COSE_Key metadata parser for passkey credential-key blobs.
+- The parser accepts EC2/P-256/ES256 and RSA/RS256 metadata shapes and rejects malformed or unsupported COSE maps.
+
+## Patch 521 - passkey COSE parser enforcement
+
+- Registration preverification now rejects malformed or unsupported `credential_key_cose` values before credential metadata is registered.
+
+## Patch 523 - passkey COSE parser status
+
+- `/v1/status` now reports `web_passkey_credential_key_parser: cose_es256_rs256`.
+
+## Patch 525 - passkey COSE parser documentation
+
+- Documented the COSE parser boundary and clarified that authenticator signature verification remains the final full-WebAuthn boundary.
