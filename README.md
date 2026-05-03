@@ -19,6 +19,7 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 - Minimal admin CLI for metadata operations exposed by the API.
 - Minimal Go and Python client libraries that only transport ciphertext and opaque envelopes; the Go client includes access workflow helpers.
 - Docker, Compose and Helm skeletons.
+- Dedicated `custodia-signer` service for admin-only client CSR signing.
 
 ## What is deliberately not implemented server-side
 
@@ -103,7 +104,15 @@ vault-admin audit verify --limit 500
 vault-admin access activate --secret-id SECRET --client-id client_bob --envelope-file bob.envelope
 ```
 
-Client creation registers metadata only. Certificate issuance/signing remains outside the vault server and belongs to the dedicated CA/signing service described by the design.
+Client creation registers metadata only. Certificate issuance/signing remains outside the vault server and belongs to the dedicated `custodia-signer` service.
+
+Development signer example:
+
+```bash
+make run-signer-dev
+```
+
+Production signer mode requires mTLS and a dedicated CA material backend. See `docs/CA_SIGNING_SERVICE.md`.
 
 ## Web metadata console
 
