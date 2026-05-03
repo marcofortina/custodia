@@ -9,6 +9,7 @@ cd "$root_dir"
 $GO test -p=1 -timeout 60s ./...
 $GO build ./cmd/custodia-server ./cmd/vault-admin ./cmd/custodia-signer
 python3 -m py_compile clients/python/custodia_client/__init__.py
+bash -n scripts/check-formal.sh scripts/pkcs11-sign-command.sh scripts/softhsm-dev-token.sh
 
 if command -v tlc >/dev/null 2>&1; then
   ./scripts/check-formal.sh
