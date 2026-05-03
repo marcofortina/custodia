@@ -402,6 +402,21 @@ Implemented runbooks now cover production readiness, backup/restore, disaster re
 
 Phase 2 is now functionally closed for the server baseline: mTLS rotation lifecycle, strong-revocation versioning, Valkey-compatible rate limiting, Go/Python SDK helpers, metadata-only web console and TOTP MFA are implemented. Passkey support is present as server-side challenge/options integration and documented boundary; production deployments should keep TOTP enabled until full assertion verification is completed.
 
+## Patch 272 - signer request ID correlation
+
+- Added `X-Request-ID` propagation/generation to `custodia-signer`.
+
+## Patch 274 - signer audit recorder
+
+- Added JSONL signer audit recorder for certificate signing workflows.
+
+## Patch 277 - audited signer certificate requests
+
+- Signer certificate signing attempts now record success/failure audit events with actor, client id and request id.
+
+## Patch 280 - signer audit trail documentation
+
+- Documented signer JSONL audit trail and SIEM/WORM forwarding expectations.
 
 ## Completeness note
 
