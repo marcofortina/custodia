@@ -108,3 +108,9 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 - Registration preverification must reject malformed or unsupported `credential_key_cose` values.
 - `/v1/status` must report `web_passkey_credential_key_parser: cose_es256_rs256` before passkeys are considered beyond opaque credential-key storage.
 - Do not promote passkeys as standalone MFA until authenticator signature verification is implemented or delegated to an audited WebAuthn library.
+
+## Passkey assertion verifier gate
+
+- If `CUSTODIA_WEB_PASSKEY_ENABLED=true`, set `CUSTODIA_WEB_PASSKEY_ASSERTION_VERIFY_COMMAND` to an audited WebAuthn assertion verifier.
+- The fail-closed template `scripts/passkey-assertion-verify-command.sh` must never be used as a production verifier.
+- Capture verifier version, test output and audit evidence in `CUSTODIA_EVIDENCE_FORMAL_VERIFICATION_FILE` or the passkey-specific release evidence bundle.
