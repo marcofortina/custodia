@@ -40,3 +40,24 @@ CUSTODIA_DATABASE_HA_TARGET=patroni
 ## Boundary
 
 This runbook does not embed a database cluster into the Helm chart. Production DB HA belongs to CockroachDB, Patroni, a cloud managed PostgreSQL HA service or an equivalent external control plane.
+
+## k3s CockroachDB rehearsal profile
+
+For repository-level HA rehearsal, apply the k3s CockroachDB profile:
+
+```bash
+make k3s-cockroachdb-apply
+make k3s-cockroachdb-smoke
+```
+
+Then install Custodia with:
+
+```bash
+helm upgrade --install custodia deploy/helm/custodia \
+  --namespace custodia \
+  --values deploy/k3s/cockroachdb/custodia-values.example.yaml
+```
+
+This validates the PostgreSQL-compatible path against a three-node SQL topology.
+The sample intentionally uses CockroachDB insecure mode and must be hardened with
+TLS, credentials and backup/PITR before production.
