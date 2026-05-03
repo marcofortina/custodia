@@ -35,7 +35,7 @@ They return metadata-only JSON challenge options:
 
 ## Current implementation status
 
-TOTP web MFA is complete in the server. Passkey support is implemented up to challenge/options generation and web-console integration points. This closes the server-side phase-2 boundary without changing the vault cryptographic model; production deployments should keep TOTP enabled until assertion verification is completed and audited.
+TOTP web MFA is complete in the server. Passkey support now includes challenge/options generation, consume-once challenge preverification, credential metadata, authenticator-data validation, COSE credential-key metadata parsing and a fail-closed external assertion verifier adapter. This closes the repository-side phase-2 boundary without changing the vault cryptographic model; production deployments must configure an audited assertion verifier command before relying on passkeys as the primary web factor.
 
 ## Challenge preverification endpoints
 
@@ -63,23 +63,20 @@ Request body:
 
 The server validates the WebAuthn `clientDataJSON` fields that are safe to verify without credential storage: `type`, `challenge` and `origin`. A successful response is `verified_challenge` and consumes the challenge so it cannot be replayed.
 
-This is still not full WebAuthn assertion verification. Credential credential-key storage, COSE/CBOR handling and signature verification remain the next production passkey milestone.
+This is an early section of the passkey implementation history. Later patches add credential metadata, authenticator-data validation, COSE credential-key parsing and an external assertion verifier adapter.
 
 ## Credential metadata store
 
 Passkey registration preverification now records credential metadata after a valid
 challenge has been consumed. The stored metadata is intentionally limited to the
-credential id, owning client id and timestamps. It does not store COSE credential keys,
-authenticator data or attestation statements yet.
+credential id, owning client id and timestamps. Later patches add COSE credential-key metadata and authenticator-data validation. Attestation statements remain outside the repository verifier boundary.
 
 Authentication preverification requires the supplied credential id to exist for the
 calling client before the challenge can be accepted. This prevents unknown
 credential ids from being treated as valid passkey assertions while keeping the
 server-side cryptographic boundary honest.
 
-This is still not full WebAuthn assertion verification. The remaining production
-work is COSE/CBOR parsing, authenticatorData validation, signature verification
-and signature-counter clone detection.
+This section describes the metadata milestone. Later patches add authenticator-data parsing, RP ID/user verification checks, sign-counter handling, COSE credential-key parsing and external assertion verification delegation.
 
 
 ## Authenticator data and sign counter scaffold
@@ -98,7 +95,7 @@ Request body with authenticator data:
 }
 ```
 
-This is still not full WebAuthn assertion verification. Custodia now parses authenticator data and enforces stored counters when provided, but it still does not parse attestation objects, store COSE credential keys or verify authenticator signatures.
+Custodia now parses authenticator data and enforces stored counters when provided. Later patches add RP ID/user-verification checks, COSE credential-key parsing and fail-closed external assertion verification delegation.
 
 ## Authenticator data RP ID and user-verification enforcement
 
@@ -109,13 +106,13 @@ Passkey preverification now validates supplied `authenticator_data` when present
 - the user-verified flag must be set because generated passkey options require user verification;
 - the signature counter must increase for known credentials.
 
-This is still not full WebAuthn assertion verification. The server does not yet verify the authenticator signature over `authenticatorData || SHA256(clientDataJSON)` because credential credential-key COSE/CBOR parsing is still intentionally out of scope for this scaffold.
+The server validates RP ID and user-verification fields before the final assertion-signature boundary. Later patches add COSE credential-key parsing and an external assertion verifier adapter for the cryptographic signature check.
 
 ## Credential credential key metadata
 
 Registration preverification now requires `credential_key_cose`, a base64url-encoded opaque COSE credential key blob. Custodia stores this metadata with the credential id and client id, then requires the stored credential-key metadata before authentication preverification can succeed.
 
-This is still not signature verification. The server stores the COSE bytes as opaque metadata and does not yet parse CBOR/COSE or verify authenticator signatures against the stored key.
+This section describes the credential-key metadata milestone. Later patches parse supported COSE_Key metadata shapes and delegate final authenticator signature verification to an external audited command.
 
 ## COSE credential-key parser
 
@@ -126,7 +123,7 @@ Supported metadata forms:
 - EC2/P-256/ES256 COSE keys (`kty=2`, `alg=-7`, `crv=1`, 32-byte x/y coordinates)
 - RSA/RS256 COSE keys (`kty=3`, `alg=-257`, modulus and exponent byte strings)
 
-The parser validates the shape and supported algorithm metadata. It still does not perform authenticator signature verification; that remains the final WebAuthn production boundary.
+The parser validates the shape and supported algorithm metadata. Final authenticator signature verification is delegated to the external assertion verifier adapter when configured.
 
 ## External assertion verification command
 

@@ -175,21 +175,19 @@ challenge can be consumed successfully. When `authenticator_data` is present, th
 parsed signature counter must increase over the stored counter for that
 credential.
 
-This API remains a passkey preverification boundary. It parses authenticator data
-headers and enforces counters when supplied, but it does not verify COSE public
-keys, attestation objects or WebAuthn signatures.
+This API is part of the passkey verification boundary. It parses authenticator data headers, enforces counters when supplied, validates credential metadata and delegates final assertion signature verification to the configured external verifier command. Attestation objects remain outside the repository verifier boundary.
 
 ### Passkey authenticator data validation
 
 When `authenticator_data` is supplied to `/web/passkey/register/verify` or `/web/passkey/authenticate/verify`, the server validates the RP ID hash against the configured passkey RP ID, requires user presence and requires user verification. Authentication responses with non-increasing signature counters are rejected.
 
-This API remains a preverification scaffold and does not yet accept/store COSE credential keys or verify authenticator signatures.
+This API now accepts COSE credential-key metadata and, when configured, delegates authenticator signature verification to the external assertion verifier command.
 
 ### Passkey credential-key metadata
 
 `POST /web/passkey/register/verify` also requires `credential_key_cose`, a base64url-encoded opaque COSE credential-key blob. Custodia stores the blob with the credential metadata. `POST /web/passkey/authenticate/verify` requires the credential to have stored credential-key metadata before preverification can succeed.
 
-This remains a metadata/preverification API: the stored COSE key is not yet parsed for CBOR/COSE structure and authenticator signatures are not yet verified.
+The supplied COSE credential-key metadata is parsed for supported metadata shapes. Authenticator signatures are verified only by the configured external assertion verifier command.
 
 ### Passkey COSE credential-key parser
 

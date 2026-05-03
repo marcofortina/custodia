@@ -1,10 +1,10 @@
 # Implementation status
 
-## Current status after patch 404
+## Current status after patch 545
 
 - Phase 1 is closed at repository level.
-- Phase 2 is closed at repository level: mTLS lifecycle, strong-revocation versioning, Valkey-compatible rate limiting, Go/Python SDK helpers, metadata-only web console, TOTP MFA and passkey challenge/options boundaries are implemented.
-- Phase 3 is closed as a repository baseline: Helm/Kubernetes deployment metadata, HA/DR runbooks, diagnostics, audit export integrity, audit archive/shipment helpers, dedicated signer service, CRL distribution, formal verification artifacts, production readiness gates and external evidence gates are implemented.
+- Phase 2 is closed at repository level: mTLS lifecycle, strong-revocation versioning, Valkey-compatible rate limiting, Go/Python SDK helpers, metadata-only web console, TOTP MFA and the passkey/WebAuthn boundary through external assertion verification are implemented.
+- Phase 3 is closed as a repository baseline: Helm/Kubernetes deployment metadata, HA/DR runbooks, diagnostics, audit export integrity, audit archive/shipment helpers, S3/Object Lock shipment, k3s/CockroachDB rehearsal, dedicated signer service, PKCS#11/SoftHSM bridge, CRL distribution/revocation responder, formal verification artifacts, production readiness gates and external evidence gates are implemented.
 - The cryptographic boundary remains unchanged: Custodia stores and authorizes opaque ciphertext, crypto metadata and recipient envelopes, but never decrypts, unwraps keys or publishes client encryption credential keys.
 - Production Fort Knox completeness still depends on external evidence: real HSM/PKCS#11/TPM, WORM/object-lock storage, database HA, Valkey HA, zero-trust network controls, penetration testing, revocation drills and formal verification execution in the target environment.
 
@@ -44,7 +44,7 @@ The repository contains executable code, tests, runbooks, release gates and evid
 - CRL/OCSP revocation distribution drills in the target environment;
 - penetration-test evidence and release artifact evidence;
 - TLC/formal verification execution evidence in CI or a dedicated verification pipeline;
-- full WebAuthn assertion verification if passkeys are promoted beyond the current challenge/options boundary; TOTP-backed metadata-only web MFA is implemented.
+- a production audited WebAuthn assertion verifier command when passkeys are enabled; the repository provides the fail-closed adapter and pre-signature validation boundary, while the cryptographic verifier itself remains operator-provided evidence. TOTP-backed metadata-only web MFA is implemented.
 
 These are explicitly operational components in the analysis and cannot be truthfully completed as local source code only.
 
@@ -836,7 +836,7 @@ The repository still does not claim to implement physical HSM hardware, external
 
 ## Patch 472 - passkey preverification documentation
 
-- Documented the passkey challenge preverification boundary and clarified that full WebAuthn assertion verification still requires credential storage, authenticatorData parsing, COSE/CBOR parsing, signature verification and counter checks.
+- Documented the passkey challenge preverification boundary at that milestone. Later patch blocks add credential metadata, authenticatorData validation, COSE credential-key parsing and the external assertion verifier adapter.
 
 ## Patch 476 - passkey credential metadata store
 
@@ -959,3 +959,10 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 542 - passkey assertion verifier documentation
 
 - Documented the final WebAuthn boundary: the repository validates all pre-signature inputs and delegates cryptographic assertion verification to an external audited verifier.
+
+
+## Patch 546 - final post-545 documentation sync
+
+- Updated current implementation status from the stale post-404 wording to the post-545 repository baseline.
+- Clarified that WebAuthn/passkey support now includes challenge lifecycle, credential metadata, authenticator-data validation, COSE credential-key parsing and a fail-closed external assertion verifier adapter.
+- Kept the final production boundary honest: the audited WebAuthn verifier implementation and external infrastructure evidence remain operator-provided, not invented inside the vault server.

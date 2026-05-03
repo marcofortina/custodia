@@ -49,18 +49,18 @@ The HTTP `/web/` shell is currently protected by mTLS admin authorization until 
 
 The implemented server keeps the application cryptographic boundary intact, but the following Fort Knox items remain external or future work:
 
-- Full WebAuthn assertion verification for passkeys; TOTP MFA for admin mTLS web operators is implemented.
-- Dedicated CA signing service backed by TPM/HSM.
-- OCSP stapling and revocation distribution monitoring.
-- External WORM/SIEM archival pipeline.
-- Formal verification artifacts.
+- Audited external WebAuthn assertion verifier deployment evidence when passkeys are enabled; the repository provides the fail-closed adapter and pre-signature validation boundary.
+- Physical HSM/PKCS#11/TPM signing evidence for the CA key in the target environment.
+- OCSP stapling or revocation distribution monitoring evidence in the target environment.
+- External WORM/SIEM retention evidence.
+- Formal verification execution evidence from CI or a dedicated verification pipeline.
 
 These gaps must not be closed by moving client-side encryption keys, public-key trust directories or plaintext handling into the vault server.
 
 
 ## Web authentication boundary
 
-The metadata-only web console can require admin mTLS plus a TOTP-backed signed web session. Passkey challenge/options endpoints are available for WebAuthn integration, but TOTP must stay enabled in production until assertion verification is completed and independently reviewed. Web authentication never changes the vault cryptographic boundary: plaintext, ciphertext, envelopes and client-side key material are not rendered or processed by the web console.
+The metadata-only web console can require admin mTLS plus a TOTP-backed signed web session. Passkey challenge/options, metadata validation and external assertion-verifier delegation are available for WebAuthn integration. TOTP should stay enabled until the configured external verifier is deployed, tested and independently reviewed. Web authentication never changes the vault cryptographic boundary: plaintext, ciphertext, envelopes and client-side key material are not rendered or processed by the web console.
 
 
 ## Phase 3 closure boundary
