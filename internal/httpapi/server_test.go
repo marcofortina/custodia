@@ -1376,7 +1376,7 @@ func TestAdminCanReadOperationalStatus(t *testing.T) {
 		t.Fatalf("expected status 200, got %d: %s", res.Code, res.Body.String())
 	}
 	body := res.Body.String()
-	for _, token := range []string{`"status":"success"`, `"store":"ok"`, `"store_backend":"memory"`, `"rate_limiter":"ok"`, `"rate_limit_backend":"memory"`, `"max_envelopes_per_secret":100`, `"web_mfa_required":false`, `"web_passkey_enabled":false`, `"web_passkey_user_verification":"required"`, `"deployment_mode":"multi-region"`, `"database_ha_target":"cockroachdb"`, `"audit_shipment_sink":"s3://audit/custodia"`} {
+	for _, token := range []string{`"status":"success"`, `"store":"ok"`, `"store_backend":"memory"`, `"rate_limiter":"ok"`, `"rate_limit_backend":"memory"`, `"max_envelopes_per_secret":100`, `"web_mfa_required":false`, `"web_passkey_enabled":false`, `"web_passkey_user_verification":"required"`, `"web_passkey_public_key_storage":"opaque_cose"`, `"deployment_mode":"multi-region"`, `"database_ha_target":"cockroachdb"`, `"audit_shipment_sink":"s3://audit/custodia"`} {
 		if !strings.Contains(body, token) {
 			t.Fatalf("expected %s in status body: %s", token, body)
 		}
