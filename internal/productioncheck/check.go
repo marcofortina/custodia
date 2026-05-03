@@ -67,6 +67,9 @@ func CheckEnvironment(env map[string]string) []Finding {
 	if strings.ToLower(envValue(env, "CUSTODIA_SIGNER_KEY_PROVIDER")) != "pkcs11" {
 		add("signer_key_provider", SeverityCritical, "CUSTODIA_SIGNER_KEY_PROVIDER must be pkcs11 for production HSM boundary enforcement")
 	}
+	if envValue(env, "CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND") == "" {
+		add("signer_pkcs11_sign_command", SeverityCritical, "CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND is required when the pkcs11 signer provider is used")
+	}
 	for _, key := range []string{"CUSTODIA_SIGNER_TLS_CERT_FILE", "CUSTODIA_SIGNER_TLS_KEY_FILE", "CUSTODIA_SIGNER_CLIENT_CA_FILE", "CUSTODIA_SIGNER_ADMIN_SUBJECTS", "CUSTODIA_SIGNER_AUDIT_LOG_FILE", "CUSTODIA_SIGNER_CRL_FILE"} {
 		if envValue(env, key) == "" {
 			add(strings.ToLower(strings.TrimPrefix(key, "CUSTODIA_SIGNER_")), SeverityCritical, key+" is required in production")
