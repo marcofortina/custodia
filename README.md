@@ -45,7 +45,7 @@ Release builds can stamp version, commit and date into both server and CLI binar
 
 ## Audit export integrity
 
-Audit JSONL exports include SHA-256 and event-count headers for offline verification. See `docs/AUDIT_EXPORT_INTEGRITY.md`.
+Audit JSONL exports include SHA-256 and event-count headers for offline verification. `vault-admin audit verify-export` verifies exported body/digest/count artifacts. See `docs/AUDIT_EXPORT_INTEGRITY.md`.
 
 ## PostgreSQL store
 
