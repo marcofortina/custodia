@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"custodia/internal/auditartifact"
 	"custodia/internal/build"
 	"custodia/internal/certutil"
 	"custodia/internal/model"
@@ -74,6 +75,8 @@ func main() {
 		err = runAuditExport(&cfg, args[2:])
 	case "audit verify":
 		err = runAuditVerify(&cfg, args[2:])
+	case "audit verify-export":
+		err = runAuditVerifyExport(args[2:])
 	case "secret versions":
 		err = runSecretVersions(&cfg, args[2:])
 	case "access list":
@@ -329,6 +332,34 @@ func validateAuditFilterFlags(outcome, action, actorClientID, resourceType, reso
 		return fmt.Errorf("--resource-id is invalid")
 	}
 	return nil
+}
+
+func runAuditVerifyExport(args []string) error {
+	cmd := flag.NewFlagSet("audit verify-export", flag.ExitOnError)
+	bodyFile := cmd.String("file", "", "JSONL audit export file")
+	sha256File := cmd.String("sha256-file", "", "file containing expected SHA-256 digest")
+	eventsFile := cmd.String("events-file", "", "file containing expected exported event count")
+	_ = cmd.Parse(args)
+	if *bodyFile == "" || *sha256File == "" || *eventsFile == "" {
+		return fmt.Errorf("--file, --sha256-file and --events-file are required")
+	}
+	body, err := os.ReadFile(*bodyFile)
+	if err != nil {
+		return err
+	}
+	digest, err := os.ReadFile(*sha256File)
+	if err != nil {
+		return err
+	}
+	events, err := os.ReadFile(*eventsFile)
+	if err != nil {
+		return err
+	}
+	result, err := auditartifact.Verify(body, string(digest), string(events))
+	if encodeErr := json.NewEncoder(os.Stdout).Encode(result); encodeErr != nil {
+		return encodeErr
+	}
+	return err
 }
 
 func runAuditVerify(cfg *cliConfig, args []string) error {
