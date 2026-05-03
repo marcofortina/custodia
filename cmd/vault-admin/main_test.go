@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
@@ -422,5 +423,44 @@ func TestRunAuditShipArchiveS3UploadsBundle(t *testing.T) {
 func TestRunRevocationCheckSerialRejectsMissingSerial(t *testing.T) {
 	if err := runRevocationCheckSerial(&cliConfig{}, []string{}); err == nil {
 		t.Fatal("expected missing serial error")
+	}
+}
+
+func TestRunCABootstrapLocalWritesLiteArtifacts(t *testing.T) {
+	outDir := filepath.Join(t.TempDir(), "lite")
+	if err := runCABootstrapLocal([]string{"--out-dir", outDir, "--admin-client-id", "admin", "--server-name", "localhost", "--generate-ca-passphrase"}); err != nil {
+		t.Fatalf("runCABootstrapLocal() error = %v", err)
+	}
+	for _, name := range []string{"ca.crt", "ca.key", "ca.pass", "client-ca.crt", "client.crl.pem", "server.crt", "server.key", "admin.crt", "admin.key", "config.lite.yaml"} {
+		if _, err := os.Stat(filepath.Join(outDir, name)); err != nil {
+			t.Fatalf("missing generated %s: %v", name, err)
+		}
+	}
+	configPayload, err := os.ReadFile(filepath.Join(outDir, "config.lite.yaml"))
+	if err != nil {
+		t.Fatalf("ReadFile(config) error = %v", err)
+	}
+	if !bytes.Contains(configPayload, []byte("profile: lite")) || !bytes.Contains(configPayload, []byte("admin_client_ids: admin")) {
+		t.Fatalf("unexpected config payload: %s", string(configPayload))
+	}
+	caKeyPayload, err := os.ReadFile(filepath.Join(outDir, "ca.key"))
+	if err != nil {
+		t.Fatalf("ReadFile(ca.key) error = %v", err)
+	}
+	if !bytes.Contains(caKeyPayload, []byte("ENCRYPTED PRIVATE KEY")) {
+		t.Fatalf("expected encrypted ca key: %s", string(caKeyPayload))
+	}
+}
+
+func TestRunCABootstrapLocalRefusesOverwrite(t *testing.T) {
+	outDir := filepath.Join(t.TempDir(), "lite")
+	if err := os.MkdirAll(outDir, 0o700); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(outDir, "ca.crt"), []byte("existing"), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	if err := runCABootstrapLocal([]string{"--out-dir", outDir}); err == nil {
+		t.Fatal("expected overwrite refusal")
 	}
 }
