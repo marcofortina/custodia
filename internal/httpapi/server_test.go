@@ -2203,3 +2203,55 @@ func passkeyClientDataPayload(t *testing.T, data webauth.PasskeyClientData) stri
 	}
 	return base64.RawURLEncoding.EncodeToString(encoded)
 }
+
+func TestWebPasskeyRegisterVerifyRequiresCredentialID(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, ClientRateLimit: 100, GlobalRateLimit: 100, WebPasskeyEnabled: true, WebPasskeyRPID: "example.com", WebPasskeyRPName: "Custodia Vault", WebPasskeyChallengeTTL: time.Minute})
+	optionsReq := mtlsRequest(http.MethodGet, "/web/passkey/register/options", "", "admin")
+	optionsReq.Host = "example.com"
+	optionsRes := httptest.NewRecorder()
+	handler.ServeHTTP(optionsRes, optionsReq)
+	var options webauth.PasskeyOptions
+	if err := json.NewDecoder(optionsRes.Body).Decode(&options); err != nil {
+		t.Fatalf("decode options: %v", err)
+	}
+	payload := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.create", Challenge: options.Challenge, Origin: "https://example.com"})
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/register/verify", `{"client_data_json":"`+payload+`"}`, "admin")
+	verifyReq.Host = "example.com"
+	verifyReq.Header.Set("Content-Type", "application/json")
+	verifyRes := httptest.NewRecorder()
+	handler.ServeHTTP(verifyRes, verifyReq)
+	if verifyRes.Code != http.StatusBadRequest {
+		t.Fatalf("verify status = %d, want %d: %s", verifyRes.Code, http.StatusBadRequest, verifyRes.Body.String())
+	}
+}
+
+func TestWebPasskeyAuthenticateVerifyRejectsUnknownCredential(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, ClientRateLimit: 100, GlobalRateLimit: 100, WebPasskeyEnabled: true, WebPasskeyRPID: "example.com", WebPasskeyRPName: "Custodia Vault", WebPasskeyChallengeTTL: time.Minute})
+	optionsReq := mtlsRequest(http.MethodGet, "/web/passkey/authenticate/options", "", "admin")
+	optionsReq.Host = "example.com"
+	optionsRes := httptest.NewRecorder()
+	handler.ServeHTTP(optionsRes, optionsReq)
+	var options webauth.PasskeyOptions
+	if err := json.NewDecoder(optionsRes.Body).Decode(&options); err != nil {
+		t.Fatalf("decode options: %v", err)
+	}
+	payload := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.get", Challenge: options.Challenge, Origin: "https://example.com"})
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/authenticate/verify", `{"client_data_json":"`+payload+`","credential_id":"missing"}`, "admin")
+	verifyReq.Host = "example.com"
+	verifyReq.Header.Set("Content-Type", "application/json")
+	verifyRes := httptest.NewRecorder()
+	handler.ServeHTTP(verifyRes, verifyReq)
+	if verifyRes.Code != http.StatusUnauthorized {
+		t.Fatalf("verify status = %d, want %d: %s", verifyRes.Code, http.StatusUnauthorized, verifyRes.Body.String())
+	}
+}
