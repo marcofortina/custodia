@@ -311,3 +311,15 @@ Implemented runbooks now cover production readiness, backup/restore, disaster re
 - Added `/web/login` and `/web/logout`.
 - Protected metadata-only web pages can now require admin mTLS plus TOTP-backed web sessions.
 - Web MFA does not change the crypto boundary: no plaintext, ciphertext, envelopes or client-side key material are rendered.
+
+## Patch 262-268 - web passkey support boundary
+
+- Added passkey/WebAuthn challenge option generation helpers.
+- Added metadata-only passkey registration/authentication options endpoints.
+- Added tests that verify passkey endpoints require enablement and return only metadata challenge options.
+- Surfaced web MFA/passkey state through `/v1/status` and `/web/status`.
+- Full WebAuthn assertion verification remains a production hardening item; TOTP must remain enabled until that verifier is completed and audited.
+
+## Phase 2 status
+
+Phase 2 is now functionally closed for the server baseline: mTLS rotation lifecycle, strong-revocation versioning, Valkey-compatible rate limiting, Go/Python SDK helpers, metadata-only web console and TOTP MFA are implemented. Passkey support is present as server-side challenge/options integration and documented boundary; production deployments should keep TOTP enabled until full assertion verification is completed.
