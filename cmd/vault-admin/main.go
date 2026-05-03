@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"custodia/internal/build"
+	"custodia/internal/certutil"
 	"custodia/internal/model"
 	"custodia/internal/mtls"
 )
@@ -60,6 +61,8 @@ func main() {
 		err = runClientGet(&cfg, args[2:])
 	case "client create":
 		err = runClientCreate(&cfg, args[2:])
+	case "client csr":
+		err = runClientCSR(args[2:])
 	case "client revoke":
 		err = runClientRevoke(&cfg, args[2:])
 	case "audit list":
@@ -88,6 +91,39 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func runClientCSR(args []string) error {
+	cmd := flag.NewFlagSet("client csr", flag.ExitOnError)
+	clientID := cmd.String("client-id", "", "client id for the CSR subject")
+	privateKeyOut := cmd.String("private-key-out", "", "path for the generated private key PEM")
+	csrOut := cmd.String("csr-out", "", "path for the generated CSR PEM")
+	_ = cmd.Parse(args)
+	if *clientID == "" || *privateKeyOut == "" || *csrOut == "" {
+		return fmt.Errorf("--client-id, --private-key-out and --csr-out are required")
+	}
+	generated, err := certutil.GenerateClientCSR(*clientID)
+	if err != nil {
+		return err
+	}
+	if err := writeExclusive(*privateKeyOut, generated.PrivateKeyPEM, 0o600); err != nil {
+		return err
+	}
+	if err := writeExclusive(*csrOut, generated.CSRPem, 0o644); err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stdout, "wrote %s and %s\n", *privateKeyOut, *csrOut)
+	return nil
+}
+
+func writeExclusive(path string, data []byte, perm os.FileMode) error {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = file.Write(data)
+	return err
 }
 
 func runClientList(cfg *cliConfig, args []string) error {
