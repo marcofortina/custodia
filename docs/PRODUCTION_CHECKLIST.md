@@ -8,6 +8,7 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - `CUSTODIA_STORE_BACKEND=postgres` or a CockroachDB-compatible PostgreSQL endpoint is configured.
 - `CUSTODIA_RATE_LIMIT_BACKEND=valkey` is configured for shared rate limits.
 - `CUSTODIA_CLIENT_CRL_FILE` is mounted when local CRL enforcement is used.
+- `vault-admin revocation status` is monitored and alerts before CRL expiry.
 - `/ready` runs on a dedicated health listener that is not exposed outside the cluster.
 - Admin client IDs are explicitly configured; no wildcard admin mode exists.
 - Web console remains metadata-only and requires admin mTLS; enable TOTP MFA before production.
