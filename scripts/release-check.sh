@@ -9,12 +9,18 @@ cd "$root_dir"
 $GO test -p=1 -timeout 60s ./...
 $GO build ./cmd/custodia-server ./cmd/vault-admin ./cmd/custodia-signer
 python3 -m py_compile clients/python/custodia_client/__init__.py
-bash -n scripts/check-formal.sh scripts/pkcs11-sign-command.sh scripts/softhsm-dev-token.sh
+bash -n scripts/check-formal.sh scripts/pkcs11-sign-command.sh scripts/softhsm-dev-token.sh scripts/minio-object-lock-smoke.sh
 
 if command -v tlc >/dev/null 2>&1; then
   ./scripts/check-formal.sh
 else
   echo "TLC not found; skipping formal-check. Run make formal-check where TLC is installed." >&2
+fi
+
+if [ "${CUSTODIA_RUN_MINIO_SMOKE:-false}" = "true" ]; then
+  ./scripts/minio-object-lock-smoke.sh
+else
+  echo "CUSTODIA_RUN_MINIO_SMOKE not true; skipping MinIO Object Lock smoke check." >&2
 fi
 
 if [ -n "${CUSTODIA_PRODUCTION_ENV_FILE:-}" ]; then
