@@ -685,3 +685,35 @@ The repository still does not claim to implement physical HSM hardware, external
 - Updated the top-level implementation status from the stale post-271 wording to the current post-404 baseline.
 - Clarified that Phase 3 is closed as a repository baseline while real Fort Knox production still requires external evidence for HSM/PKCS#11/TPM, WORM/Object Lock, HA databases, Valkey HA, revocation drills, penetration testing and formal verification execution.
 - Replaced the older “not claimed as complete production implementation” wording with an explicit local-source-code versus production-evidence boundary.
+
+## Patch 406 - PKCS#11 command signer provider
+
+- Added a concrete `pkcs11` key-provider bridge that delegates certificate digest signing to `CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND`.
+- The signer keeps the CA private key outside the vault API process and outside Go memory when the external command is backed by an HSM/PKCS#11 module.
+- Missing command configuration still fails closed.
+
+## Patch 407 - PKCS#11 command signer tests
+
+- Added protocol tests for the command signer JSON request/response boundary.
+- Preserved fail-closed coverage for invalid command output.
+
+## Patch 408 - signer PKCS#11 command config
+
+- Wired `CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND` into `custodia-signer` configuration.
+
+## Patch 410 - production PKCS#11 command gate
+
+- Production readiness now requires the signer PKCS#11 command when `CUSTODIA_SIGNER_KEY_PROVIDER=pkcs11`.
+
+## Patch 412 - PKCS#11 signer bridge command
+
+- Added `scripts/pkcs11-sign-command.sh`, an external bridge for `pkcs11-tool`/SoftHSM/HSM-backed signing.
+
+## Patch 413 - SoftHSM development token helper
+
+- Added `scripts/softhsm-dev-token.sh` for local SoftHSM token bootstrap.
+- SoftHSM is explicitly development/test only and not production-grade.
+
+## Patch 416 - PKCS#11 SoftHSM documentation
+
+- Documented the PKCS#11 bridge protocol, SoftHSM workflow and production HSM evidence boundary.
