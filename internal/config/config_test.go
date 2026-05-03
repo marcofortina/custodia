@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 func TestLoadHTTPTimeoutsFromEnvironment(t *testing.T) {
 	t.Setenv("CUSTODIA_HTTP_READ_TIMEOUT_SECONDS", "21")
@@ -61,5 +64,66 @@ func TestLoadReadsDeploymentMetadata(t *testing.T) {
 	cfg := Load()
 	if cfg.DeploymentMode != "multi-region" || cfg.DatabaseHATarget != "cockroachdb" || cfg.AuditShipmentSink != "s3://audit-bucket/custodia" {
 		t.Fatalf("unexpected deployment metadata: %+v", cfg)
+	}
+}
+
+func TestLoadLiteProfileDefaults(t *testing.T) {
+	t.Setenv("CUSTODIA_PROFILE", "lite")
+	cfg := Load()
+	if cfg.Profile != ProfileLite || cfg.StoreBackend != "sqlite" || cfg.DatabaseURL != "file:/var/lib/custodia/custodia.db" {
+		t.Fatalf("unexpected lite store config: %+v", cfg)
+	}
+	if cfg.RateLimitBackend != "memory" || cfg.DeploymentMode != "lite-single-node" || cfg.DatabaseHATarget != "none" || !cfg.WebMFARequired || cfg.WebPasskeyEnabled {
+		t.Fatalf("unexpected lite defaults: %+v", cfg)
+	}
+}
+
+func TestLoadFullProfileDefaults(t *testing.T) {
+	t.Setenv("CUSTODIA_PROFILE", "full")
+	cfg := Load()
+	if cfg.Profile != ProfileFull || cfg.StoreBackend != "postgres" || cfg.RateLimitBackend != "valkey" || cfg.DeploymentMode != "production" || !cfg.WebMFARequired {
+		t.Fatalf("unexpected full defaults: %+v", cfg)
+	}
+}
+
+func TestLoadYAMLConfigWithEnvOverride(t *testing.T) {
+	path := t.TempDir() + "/custodia.yaml"
+	writeConfigTestFile(t, path, `profile: lite
+api_addr: ":9443"
+store_backend: sqlite
+database_url: file:/tmp/lite.db
+web_mfa_required: true
+web_passkey_enabled: false
+admin_client_ids: admin,ops
+`)
+	t.Setenv("CUSTODIA_STORE_BACKEND", "memory")
+	t.Setenv("CUSTODIA_WEB_PASSKEY_ENABLED", "true")
+	cfg, err := LoadWithArgs([]string{"--config", path})
+	if err != nil {
+		t.Fatalf("LoadWithArgs() error = %v", err)
+	}
+	if cfg.Profile != ProfileLite || cfg.APIAddr != ":9443" || cfg.DatabaseURL != "file:/tmp/lite.db" {
+		t.Fatalf("unexpected yaml config: %+v", cfg)
+	}
+	if cfg.StoreBackend != "memory" || !cfg.WebPasskeyEnabled {
+		t.Fatalf("expected env override after yaml, got %+v", cfg)
+	}
+	if !cfg.AdminClientIDs["admin"] || !cfg.AdminClientIDs["ops"] {
+		t.Fatalf("expected admin client ids from yaml: %+v", cfg.AdminClientIDs)
+	}
+}
+
+func TestLoadWithArgsRejectsUnsupportedYAML(t *testing.T) {
+	path := t.TempDir() + "/custodia.yaml"
+	writeConfigTestFile(t, path, "profile:\n  name: lite\n")
+	if _, err := LoadWithArgs([]string{"--config", path}); err == nil {
+		t.Fatal("expected unsupported nested yaml error")
+	}
+}
+
+func writeConfigTestFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
 	}
 }
