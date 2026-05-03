@@ -2275,3 +2275,107 @@ func TestStatusReportsPasskeyCredentialCount(t *testing.T) {
 		t.Fatalf("missing passkey credential count: %s", res.Body.String())
 	}
 }
+
+func TestWebPasskeyAuthenticateVerifyRejectsNonIncreasingSignCount(t *testing.T) {
+	handler := newPasskeyCounterTestHandler(t)
+	registerPasskeyCredentialWithAuthenticatorData(t, handler, "admin", "example.com", "credential-2", 7)
+
+	optionsReq := mtlsRequest(http.MethodGet, "/web/passkey/authenticate/options", "", "admin")
+	optionsReq.Host = "example.com"
+	optionsReq.Header.Set("X-Forwarded-Proto", "https")
+	optionsRes := httptest.NewRecorder()
+	handler.ServeHTTP(optionsRes, optionsReq)
+	if optionsRes.Code != http.StatusOK {
+		t.Fatalf("options status = %d, body = %s", optionsRes.Code, optionsRes.Body.String())
+	}
+	var options webauth.PasskeyOptions
+	if err := json.NewDecoder(optionsRes.Body).Decode(&options); err != nil {
+		t.Fatalf("decode options: %v", err)
+	}
+	clientData := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.get", Challenge: options.Challenge, Origin: "https://example.com"})
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/authenticate/verify", `{"client_data_json":"`+clientData+`","credential_id":"credential-2","authenticator_data":"`+passkeyAuthenticatorDataPayload(7)+`"}`, "admin")
+	verifyReq.Host = "example.com"
+	verifyReq.Header.Set("X-Forwarded-Proto", "https")
+	verifyRes := httptest.NewRecorder()
+	handler.ServeHTTP(verifyRes, verifyReq)
+	if verifyRes.Code != http.StatusUnauthorized {
+		t.Fatalf("verify status = %d, want %d: %s", verifyRes.Code, http.StatusUnauthorized, verifyRes.Body.String())
+	}
+	if !strings.Contains(verifyRes.Body.String(), "invalid_sign_count") {
+		t.Fatalf("missing sign count error: %s", verifyRes.Body.String())
+	}
+}
+
+func TestWebPasskeyAuthenticateVerifyAcceptsIncreasingSignCount(t *testing.T) {
+	handler := newPasskeyCounterTestHandler(t)
+	registerPasskeyCredentialWithAuthenticatorData(t, handler, "admin", "example.com", "credential-3", 7)
+
+	optionsReq := mtlsRequest(http.MethodGet, "/web/passkey/authenticate/options", "", "admin")
+	optionsReq.Host = "example.com"
+	optionsReq.Header.Set("X-Forwarded-Proto", "https")
+	optionsRes := httptest.NewRecorder()
+	handler.ServeHTTP(optionsRes, optionsReq)
+	if optionsRes.Code != http.StatusOK {
+		t.Fatalf("options status = %d, body = %s", optionsRes.Code, optionsRes.Body.String())
+	}
+	var options webauth.PasskeyOptions
+	if err := json.NewDecoder(optionsRes.Body).Decode(&options); err != nil {
+		t.Fatalf("decode options: %v", err)
+	}
+	clientData := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.get", Challenge: options.Challenge, Origin: "https://example.com"})
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/authenticate/verify", `{"client_data_json":"`+clientData+`","credential_id":"credential-3","authenticator_data":"`+passkeyAuthenticatorDataPayload(8)+`"}`, "admin")
+	verifyReq.Host = "example.com"
+	verifyReq.Header.Set("X-Forwarded-Proto", "https")
+	verifyRes := httptest.NewRecorder()
+	handler.ServeHTTP(verifyRes, verifyReq)
+	if verifyRes.Code != http.StatusOK {
+		t.Fatalf("verify status = %d, want %d: %s", verifyRes.Code, http.StatusOK, verifyRes.Body.String())
+	}
+	if !strings.Contains(verifyRes.Body.String(), `"sign_count":8`) {
+		t.Fatalf("missing sign count response: %s", verifyRes.Body.String())
+	}
+}
+
+func newPasskeyCounterTestHandler(t *testing.T) http.Handler {
+	t.Helper()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(context.Background(), model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("CreateClient() error = %v", err)
+	}
+	return New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100, WebPasskeyEnabled: true, WebPasskeyRPID: "example.com", WebPasskeyRPName: "Custodia"})
+}
+
+func registerPasskeyCredentialWithAuthenticatorData(t *testing.T, handler http.Handler, clientID, host, credentialID string, signCount uint32) {
+	t.Helper()
+	optionsReq := mtlsRequest(http.MethodGet, "/web/passkey/register/options", "", clientID)
+	optionsReq.Host = host
+	optionsReq.Header.Set("X-Forwarded-Proto", "https")
+	optionsRes := httptest.NewRecorder()
+	handler.ServeHTTP(optionsRes, optionsReq)
+	if optionsRes.Code != http.StatusOK {
+		t.Fatalf("register options status = %d, body = %s", optionsRes.Code, optionsRes.Body.String())
+	}
+	var options webauth.PasskeyOptions
+	if err := json.NewDecoder(optionsRes.Body).Decode(&options); err != nil {
+		t.Fatalf("decode register options: %v", err)
+	}
+	payload := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.create", Challenge: options.Challenge, Origin: "https://" + host})
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/register/verify", `{"client_data_json":"`+payload+`","credential_id":"`+credentialID+`","authenticator_data":"`+passkeyAuthenticatorDataPayload(signCount)+`"}`, clientID)
+	verifyReq.Host = host
+	verifyReq.Header.Set("X-Forwarded-Proto", "https")
+	verifyRes := httptest.NewRecorder()
+	handler.ServeHTTP(verifyRes, verifyReq)
+	if verifyRes.Code != http.StatusOK {
+		t.Fatalf("register verify status = %d, body = %s", verifyRes.Code, verifyRes.Body.String())
+	}
+}
+
+func passkeyAuthenticatorDataPayload(signCount uint32) string {
+	raw := make([]byte, 37)
+	raw[32] = 0x01
+	raw[33] = byte(signCount >> 24)
+	raw[34] = byte(signCount >> 16)
+	raw[35] = byte(signCount >> 8)
+	raw[36] = byte(signCount)
+	return base64.RawURLEncoding.EncodeToString(raw)
+}
