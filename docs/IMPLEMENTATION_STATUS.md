@@ -473,3 +473,17 @@ Any future implementation patch must update this file or an explicitly linked st
 ## Patch 297 - signer key provider boundary docs
 
 - Documented file-backed vs reserved PKCS#11 provider behavior and fail-closed production boundary.
+
+## Patch 301 - audit artifact verification package
+
+- Added verification for audit JSONL export body, SHA-256 digest sidecar and event-count sidecar.
+- The verifier checks the exact exported artifact instead of re-querying live audit state.
+
+## Patch 303 - vault-admin audit export verifier
+
+- Added `vault-admin audit verify-export` for local/offline audit export artifact verification.
+- The command emits a JSON verification result and returns an error on digest or event-count mismatch.
+
+## Patch 305 - audit export verifier documentation
+
+- Documented the `vault-admin audit verify-export` workflow for JSONL, `.sha256` and `.events` artifacts.
