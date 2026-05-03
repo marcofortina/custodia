@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cockroachdb
+  namespace: custodia-db
+  labels:
+    app.kubernetes.io/name: cockroachdb
+    app.kubernetes.io/component: database
+spec:
+  serviceName: cockroachdb
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cockroachdb
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cockroachdb
+        app.kubernetes.io/component: database
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: cockroachdb
+          image: cockroachdb/cockroach:v24.3.5
+          imagePullPolicy: IfNotPresent
+          args:
+            - start
+            - --insecure
+            - --advertise-host=$(HOSTNAME).cockroachdb.custodia-db.svc.cluster.local
+            - --join=cockroachdb-0.cockroachdb.custodia-db.svc.cluster.local,cockroachdb-1.cockroachdb.custodia-db.svc.cluster.local,cockroachdb-2.cockroachdb.custodia-db.svc.cluster.local
+            - --cache=256MiB
+            - --max-sql-memory=256MiB
+          ports:
+            - name: sql
+              containerPort: 26257
+            - name: gossip
+              containerPort: 26258
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /health?ready=1
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 6
+          volumeMounts:
+            - name: cockroachdb-data
+              mountPath: /cockroach/cockroach-data
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: cockroachdb-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
