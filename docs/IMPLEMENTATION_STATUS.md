@@ -455,3 +455,21 @@ Coverage from patch 1 through patch 271 is represented by these implemented surf
 - passkey/WebAuthn challenge/options endpoints without claiming full assertion verification.
 
 Any future implementation patch must update this file or an explicitly linked status/runbook document in the same patch series.
+
+## Patch 292 - signer key provider abstraction
+
+- Added explicit signer CA key provider abstraction.
+- File-backed CA keys remain the development/bootstrap provider.
+- PKCS#11 is reserved and fails closed instead of falling back silently.
+
+## Patch 294 - signer key provider config
+
+- `custodia-signer` now reads `CUSTODIA_SIGNER_KEY_PROVIDER` and routes signer initialization through the provider abstraction.
+
+## Patch 296 - signer key provider environment
+
+- Documented `CUSTODIA_SIGNER_KEY_PROVIDER=file` in `.env.example`.
+
+## Patch 297 - signer key provider boundary docs
+
+- Documented file-backed vs reserved PKCS#11 provider behavior and fail-closed production boundary.
