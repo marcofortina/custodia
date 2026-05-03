@@ -930,3 +930,32 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 525 - passkey COSE parser documentation
 
 - Documented the COSE parser boundary and clarified that authenticator signature verification remains the final full-WebAuthn boundary.
+
+## Patch 529 - passkey assertion external verifier command
+
+- Added an external command adapter for WebAuthn assertion verification.
+- The adapter sends credential id, client id, RP ID, origin, clientDataJSON, authenticatorData, signature, COSE credential-key metadata and sign count to an operator-provided verifier.
+
+## Patch 531 - passkey assertion verifier command config
+
+- Added `CUSTODIA_WEB_PASSKEY_ASSERTION_VERIFY_COMMAND` and wired it into the web passkey authentication verifier path.
+
+## Patch 533 - passkey external assertion enforcement
+
+- When configured, authentication preverification now requires authenticator data and signature material and fails closed on verifier command failure.
+
+## Patch 535 - passkey assertion verifier status
+
+- `/v1/status` now reports `web_passkey_assertion_verifier` as `preverify_only` or `external_command`.
+
+## Patch 537 - production check passkey assertion verifier
+
+- Production readiness now requires `CUSTODIA_WEB_PASSKEY_ASSERTION_VERIFY_COMMAND` when passkeys are enabled.
+
+## Patch 539 - passkey assertion verifier command template
+
+- Added a fail-closed command template documenting the expected stdin/stdout contract for the external audited verifier.
+
+## Patch 542 - passkey assertion verifier documentation
+
+- Documented the final WebAuthn boundary: the repository validates all pre-signature inputs and delegates cryptographic assertion verification to an external audited verifier.
