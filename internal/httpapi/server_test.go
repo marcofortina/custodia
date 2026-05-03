@@ -2008,3 +2008,58 @@ func TestWebTOTPLoginRejectsInvalidCode(t *testing.T) {
 		t.Fatalf("expected invalid TOTP 401, got %d: %s", res.Code, res.Body.String())
 	}
 }
+
+func TestWebPasskeyOptionsRequireEnablement(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/web/passkey/register/options", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusNotFound {
+		t.Fatalf("expected disabled passkey 404, got %d: %s", res.Code, res.Body.String())
+	}
+}
+
+func TestWebPasskeyOptionsReturnMetadataOnlyChallenges(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{
+		Store:                  memoryStore,
+		Limiter:                ratelimit.NewMemoryLimiter(),
+		AdminClientIDs:         map[string]bool{"admin": true},
+		ClientRateLimit:        100,
+		GlobalRateLimit:        100,
+		WebPasskeyEnabled:      true,
+		WebPasskeyRPID:         "vault.example.com",
+		WebPasskeyRPName:       "Custodia Vault",
+		WebPasskeyChallengeTTL: time.Minute,
+	})
+
+	for _, path := range []string{"/web/passkey/register/options", "/web/passkey/authenticate/options"} {
+		req := mtlsRequest(http.MethodGet, path, "", "admin")
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+		if res.Code != http.StatusOK {
+			t.Fatalf("%s expected 200, got %d: %s", path, res.Code, res.Body.String())
+		}
+		var payload webauth.PasskeyOptions
+		if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode passkey options: %v", err)
+		}
+		if payload.RPID != "vault.example.com" || payload.RPName != "Custodia Vault" || payload.UserID != "admin" || payload.Challenge == "" {
+			t.Fatalf("unexpected passkey payload: %+v", payload)
+		}
+		body := res.Body.String()
+		if strings.Contains(body, "ciphertext") || strings.Contains(body, "envelope") {
+			t.Fatalf("passkey options leaked secret payload wording: %s", body)
+		}
+	}
+}
