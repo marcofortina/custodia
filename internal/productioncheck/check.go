@@ -14,10 +14,66 @@ type Finding struct {
 }
 
 func CheckEnvironment(env map[string]string) []Finding {
-	var findings []Finding
-	add := func(code, severity, message string) {
-		findings = append(findings, Finding{Code: code, Severity: severity, Message: message})
+	findings := []Finding{}
+	profile := strings.ToLower(envValue(env, "CUSTODIA_PROFILE"))
+	if profile == "lite" {
+		checkLiteEnvironment(env, &findings)
+		return findings
 	}
+	checkFullEnvironment(env, &findings)
+	return findings
+}
+
+func checkLiteEnvironment(env map[string]string, findings *[]Finding) {
+	add := func(code, severity, message string) { addFinding(findings, code, severity, message) }
+	if truthy(envValue(env, "CUSTODIA_DEV_INSECURE_HTTP")) {
+		add("api_insecure_http", SeverityCritical, "CUSTODIA_DEV_INSECURE_HTTP must be false for Lite deployments outside local development")
+	}
+	if strings.ToLower(envValue(env, "CUSTODIA_STORE_BACKEND")) != "sqlite" {
+		add("store_backend", SeverityCritical, "CUSTODIA_STORE_BACKEND must be sqlite for the Lite profile")
+	}
+	if envValue(env, "CUSTODIA_DATABASE_URL") == "" {
+		add("database_url", SeverityCritical, "CUSTODIA_DATABASE_URL is required for the Lite SQLite database file")
+	}
+	if backend := strings.ToLower(envValue(env, "CUSTODIA_RATE_LIMIT_BACKEND")); backend != "" && backend != "memory" {
+		add("rate_limit_backend", SeverityWarning, "CUSTODIA_RATE_LIMIT_BACKEND should be memory for the Lite single-node profile")
+	}
+	for _, key := range []string{"CUSTODIA_TLS_CERT_FILE", "CUSTODIA_TLS_KEY_FILE", "CUSTODIA_CLIENT_CA_FILE", "CUSTODIA_CLIENT_CRL_FILE"} {
+		if envValue(env, key) == "" {
+			add(strings.ToLower(strings.TrimPrefix(key, "CUSTODIA_")), SeverityCritical, key+" is required for Lite mTLS")
+		}
+	}
+	if envValue(env, "CUSTODIA_ADMIN_CLIENT_IDS") == "" {
+		add("admin_client_ids", SeverityCritical, "CUSTODIA_ADMIN_CLIENT_IDS is required for Lite administration")
+	}
+	if !truthy(envValue(env, "CUSTODIA_WEB_MFA_REQUIRED")) {
+		add("web_mfa_required", SeverityCritical, "CUSTODIA_WEB_MFA_REQUIRED must be true for Lite")
+	}
+	if envValue(env, "CUSTODIA_WEB_TOTP_SECRET") == "" {
+		add("web_totp_secret", SeverityCritical, "CUSTODIA_WEB_TOTP_SECRET is required for Lite TOTP MFA")
+	}
+	if len(envValue(env, "CUSTODIA_WEB_SESSION_SECRET")) < 32 {
+		add("web_session_secret", SeverityCritical, "CUSTODIA_WEB_SESSION_SECRET must be at least 32 bytes")
+	}
+	if truthy(envValue(env, "CUSTODIA_WEB_PASSKEY_ENABLED")) && envValue(env, "CUSTODIA_WEB_PASSKEY_ASSERTION_VERIFY_COMMAND") == "" {
+		add("web_passkey_assertion_verify_command", SeverityWarning, "passkeys in Lite require an external assertion verifier command")
+	}
+	if provider := strings.ToLower(envValue(env, "CUSTODIA_SIGNER_KEY_PROVIDER")); provider != "" && provider != "file" {
+		add("signer_key_provider", SeverityWarning, "CUSTODIA_SIGNER_KEY_PROVIDER should be file for the Lite default profile")
+	}
+	if envValue(env, "CUSTODIA_SIGNER_CA_CERT_FILE") == "" {
+		add("signer_ca_cert_file", SeverityCritical, "CUSTODIA_SIGNER_CA_CERT_FILE is required for Lite local CA operations")
+	}
+	if envValue(env, "CUSTODIA_SIGNER_CA_KEY_FILE") == "" {
+		add("signer_ca_key_file", SeverityCritical, "CUSTODIA_SIGNER_CA_KEY_FILE is required for Lite local CA operations")
+	}
+	if envValue(env, "CUSTODIA_SIGNER_CA_KEY_PASSPHRASE_FILE") == "" {
+		add("signer_ca_key_passphrase_file", SeverityWarning, "CUSTODIA_SIGNER_CA_KEY_PASSPHRASE_FILE is recommended for Lite CA key protection")
+	}
+}
+
+func checkFullEnvironment(env map[string]string, findings *[]Finding) {
+	add := func(code, severity, message string) { addFinding(findings, code, severity, message) }
 	if truthy(envValue(env, "CUSTODIA_DEV_INSECURE_HTTP")) {
 		add("api_insecure_http", SeverityCritical, "CUSTODIA_DEV_INSECURE_HTTP must be false in production")
 	}
@@ -78,7 +134,10 @@ func CheckEnvironment(env map[string]string) []Finding {
 			add(strings.ToLower(strings.TrimPrefix(key, "CUSTODIA_SIGNER_")), SeverityCritical, key+" is required in production")
 		}
 	}
-	return findings
+}
+
+func addFinding(findings *[]Finding, code, severity, message string) {
+	*findings = append(*findings, Finding{Code: code, Severity: severity, Message: message})
 }
 
 func HasCritical(findings []Finding) bool {
