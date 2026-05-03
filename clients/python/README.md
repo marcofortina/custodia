@@ -32,3 +32,13 @@ metadata-only audit export workflows. It does not expose plaintext, ciphertext o
 recipient envelopes.
 
 Use `client.version()` to read server build metadata through the authenticated API.
+
+## Audit export metadata
+
+`CustodiaClient.export_audit_events_with_metadata(...)` returns a dictionary containing:
+
+- `body`: JSONL export text;
+- `sha256`: `X-Custodia-Audit-Export-SHA256` response header;
+- `event_count`: `X-Custodia-Audit-Export-Events` response header.
+
+Persist these values together when forwarding audit exports to offline storage, SIEM or WORM retention.
