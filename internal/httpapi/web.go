@@ -232,6 +232,9 @@ func decodePasskeyCredentialKeyCOSE(value string) ([]byte, error) {
 	if err != nil || len(decoded) == 0 || len(decoded) > 4096 {
 		return nil, webauth.ErrPasskeyCredentialCredentialKeyMissing
 	}
+	if _, err := webauth.ParsePasskeyCredentialKeyCOSE(decoded); err != nil {
+		return nil, err
+	}
 	return decoded, nil
 }
 

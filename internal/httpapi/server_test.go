@@ -2452,7 +2452,15 @@ func registerPasskeyCredentialWithAuthenticatorData(t *testing.T, handler http.H
 }
 
 func passkeyCredentialKeyCOSEPayload() string {
-	return base64.RawURLEncoding.EncodeToString([]byte{0xa5, 0x01, 0x02, 0x03})
+	key := []byte{0xa5, 0x01, 0x02, 0x03, 0x26, 0x20, 0x01, 0x21, 0x58, 0x20}
+	for i := 0; i < 32; i++ {
+		key = append(key, byte(i+1))
+	}
+	key = append(key, 0x22, 0x58, 0x20)
+	for i := 0; i < 32; i++ {
+		key = append(key, byte(i+33))
+	}
+	return base64.RawURLEncoding.EncodeToString(key)
 }
 
 func passkeyAuthenticatorDataPayload(signCount uint32) string {
