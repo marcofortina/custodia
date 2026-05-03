@@ -977,3 +977,38 @@ The repository still does not claim to implement physical HSM hardware, external
 
 - Linked `docs/PHASE1_CLOSURE.md` and `docs/PHASE2_CLOSURE.md` from the README operational runbook list.
 - Moved production readiness/evidence links into the runbook list instead of leaving them under the formal-verification section.
+
+## Patch 552 - profile-driven config loader
+
+- Added `CUSTODIA_PROFILE=lite|full|custom` defaults to the shared config loader.
+- Added flat YAML `--config` parsing support with environment-variable overrides.
+
+## Patch 554 - custodia-server config file loading
+
+- Wired `custodia-server --config PATH` into startup configuration loading.
+
+## Patch 555 - shared YAML signer config keys
+
+- Allowed the shared YAML file to carry signer-related configuration keys without introducing a second config vocabulary.
+
+## Patch 557 - profile-aware production checks
+
+- Made `vault-admin production check` profile-aware.
+- Lite checks now accept SQLite/memory/file-signer defaults while still enforcing mTLS, Web MFA and local CA material.
+- Full checks keep requiring production-grade PostgreSQL, Valkey, PKCS#11 and WORM/SIEM settings.
+
+## Patch 559 - Custodia Lite profile specification
+
+- Added the Custodia Lite Profile specification to the repository documentation.
+
+## Patch 560 - Lite and Full YAML examples
+
+- Added flat YAML config examples for Lite and Full profiles.
+
+## Patch 561 - Lite config guide
+
+- Added Lite configuration documentation and README links.
+
+## Patch 562 - Lite env example
+
+- Added a Lite `.env` example using the existing Custodia configuration vocabulary.
