@@ -292,3 +292,19 @@ func TestRunAuditShipArchiveCopiesBundle(t *testing.T) {
 		t.Fatalf("expected shipment manifest: %v", err)
 	}
 }
+
+func TestRunRevocationFetchCRLRejectsMissingOut(t *testing.T) {
+	if err := runRevocationFetchCRL(&cliConfig{}, nil); err == nil {
+		t.Fatal("expected missing output path error")
+	}
+}
+
+func TestRunRevocationFetchCRLRefusesExistingFile(t *testing.T) {
+	path := t.TempDir() + "/client.crl"
+	if err := os.WriteFile(path, []byte("existing"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	if err := runRevocationFetchCRL(&cliConfig{}, []string{"--out", path}); err == nil {
+		t.Fatal("expected exclusive output write error")
+	}
+}
