@@ -173,3 +173,19 @@ func TestSignerAuditsCertificateRequests(t *testing.T) {
 		t.Fatalf("unexpected audit payload: %s", string(payloadBytes))
 	}
 }
+
+func TestLoadConfigDefaultsSignerKeyProviderToFile(t *testing.T) {
+	t.Setenv("CUSTODIA_SIGNER_KEY_PROVIDER", "")
+	cfg := loadConfig()
+	if cfg.keyProvider != signing.KeyProviderFile {
+		t.Fatalf("keyProvider = %q, want %q", cfg.keyProvider, signing.KeyProviderFile)
+	}
+}
+
+func TestLoadConfigReadsSignerKeyProvider(t *testing.T) {
+	t.Setenv("CUSTODIA_SIGNER_KEY_PROVIDER", signing.KeyProviderPKCS11)
+	cfg := loadConfig()
+	if cfg.keyProvider != signing.KeyProviderPKCS11 {
+		t.Fatalf("keyProvider = %q, want %q", cfg.keyProvider, signing.KeyProviderPKCS11)
+	}
+}
