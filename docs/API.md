@@ -178,3 +178,9 @@ credential.
 This API remains a passkey preverification boundary. It parses authenticator data
 headers and enforces counters when supplied, but it does not verify COSE public
 keys, attestation objects or WebAuthn signatures.
+
+### Passkey authenticator data validation
+
+When `authenticator_data` is supplied to `/web/passkey/register/verify` or `/web/passkey/authenticate/verify`, the server validates the RP ID hash against the configured passkey RP ID, requires user presence and requires user verification. Authentication responses with non-increasing signature counters are rejected.
+
+This API remains a preverification scaffold and does not yet accept/store COSE public keys or verify authenticator signatures.
