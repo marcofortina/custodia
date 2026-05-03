@@ -153,6 +153,8 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 - [Phase 1 closure summary](docs/PHASE1_CLOSURE.md)
 - [Phase 2 closure summary](docs/PHASE2_CLOSURE.md)
 - [Phase 3 closure boundary](docs/PHASE3_CLOSURE.md)
+- [Custodia Lite profile](docs/CUSTODIA_LITE_PROFILE.md)
+- [Custodia Lite configuration](docs/LITE_CONFIG.md)
 - [Disaster recovery runbook](docs/DR_RUNBOOK.md)
 - [Database HA runbook](docs/DATABASE_HA_RUNBOOK.md)
 - [k3s CockroachDB HA profile](docs/K3S_COCKROACHDB_HA.md)
