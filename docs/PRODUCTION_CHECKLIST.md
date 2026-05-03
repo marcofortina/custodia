@@ -64,3 +64,9 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 
 - S3/Object Lock audit shipment is configured and verified with `vault-admin audit ship-archive-s3` or an equivalent WORM sink adapter.
 - `make minio-object-lock-smoke` passes in development if MinIO is used as the WORM-like test profile.
+
+## k3s CockroachDB rehearsal gate
+
+- Run `make k3s-cockroachdb-smoke` against the rehearsal cluster before relying on the CockroachDB HA profile.
+- Replace the example insecure SQL endpoint with TLS-enabled CockroachDB credentials before production.
+- Capture the smoke output as production evidence when `CUSTODIA_DATABASE_HA_TARGET=cockroachdb-k3s-3node` is used.
