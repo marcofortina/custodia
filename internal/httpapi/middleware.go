@@ -5,10 +5,12 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 	"unicode"
 
 	"custodia/internal/id"
 	"custodia/internal/mtls"
+	"custodia/internal/webauth"
 )
 
 func requestIDs(next http.Handler) http.Handler {
@@ -39,6 +41,37 @@ func validRequestID(value string) bool {
 		}
 	}
 	return true
+}
+
+func (s *Server) webAdmin(next http.Handler) http.Handler {
+	return s.auth(s.adminOnly(s.webMFA(next)))
+}
+
+func (s *Server) webMFA(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !s.webMFARequired {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if s.webSessionManager == nil {
+			s.auditFailure(r, "web.mfa", "system", "", map[string]string{"reason": "mfa_not_configured"})
+			writeError(w, http.StatusServiceUnavailable, "mfa_not_configured")
+			return
+		}
+		cookie, err := r.Cookie(webauth.SessionCookieName)
+		if err != nil {
+			s.auditFailure(r, "web.mfa", "system", "", map[string]string{"reason": "mfa_required"})
+			http.Redirect(w, r, "/web/login", http.StatusSeeOther)
+			return
+		}
+		sessionClientID, ok := s.webSessionManager.Verify(cookie.Value, time.Now().UTC())
+		if !ok || sessionClientID != clientIDFromContext(r) {
+			s.auditFailure(r, "web.mfa", "system", "", map[string]string{"reason": "invalid_session"})
+			http.Redirect(w, r, "/web/login", http.StatusSeeOther)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) auth(next http.Handler) http.Handler {
