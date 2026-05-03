@@ -579,3 +579,23 @@ Any future implementation patch must update this file or an explicitly linked st
 ## Patch 367 - formal verification scope update
 
 - Updated formal-verification documentation to distinguish implemented server-side artifacts from out-of-scope client cryptography and WebAuthn proof work.
+
+
+## Patch 371 - production readiness checker
+
+- Added a production readiness checker for the deployment environment contract.
+- The checker rejects unsafe development defaults and missing Fort Knox production dependencies.
+
+## Patch 373 - vault-admin production readiness command
+
+- Added `vault-admin production check --env-file FILE`.
+- The command fails on critical production-readiness findings.
+
+## Patch 375 - production readiness make target
+
+- Added `make production-check` with `CUSTODIA_PRODUCTION_ENV_FILE`.
+
+## Phase 3 closure status
+
+- Phase 3 is closed as a code, runbook and deployment-readiness baseline.
+- Production 101% still depends on external systems that cannot be proven inside this repository: real PKCS#11/HSM hardware, actual WORM/SIEM retention, and real HA database topology.
