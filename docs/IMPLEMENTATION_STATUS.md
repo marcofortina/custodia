@@ -502,3 +502,11 @@ Any future implementation patch must update this file or an explicitly linked st
 
 - Documented revocation status monitoring and production checklist expectations.
 - Kept OCSP as a remaining production gap rather than claiming it complete.
+
+## Patch 328 - audit archive production checklist
+
+- Production readiness now requires `vault-admin audit archive-export` before WORM/SIEM ingestion.
+
+## Patch 329 - backup restore audit archive manifest
+
+- Backup/restore guidance now requires checking the audit archive manifest produced by the verifier/archive workflow.
