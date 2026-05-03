@@ -185,3 +185,7 @@ vault-admin production check --env-file .env.production
 ```
 
 The command fails on unsafe development defaults and missing external production dependencies.
+
+### Revocation serial status
+
+`custodia-signer` exposes a CRL-backed JSON revocation responder at `/v1/revocation/serial`. Use `vault-admin revocation check-serial --serial-hex HEX` for operator drills. See `docs/CRL_OCSP_RUNBOOK.md`.
