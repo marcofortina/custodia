@@ -101,15 +101,17 @@ type passkeyVerifyRequest struct {
 	ClientDataJSON    string `json:"client_data_json"`
 	CredentialID      string `json:"credential_id"`
 	AuthenticatorData string `json:"authenticator_data"`
+	PublicKeyCOSE     string `json:"public_key_cose"`
 }
 
 type passkeyVerifyResponse struct {
-	Status       string `json:"status"`
-	Challenge    string `json:"challenge"`
-	Origin       string `json:"origin"`
-	Type         string `json:"type"`
-	CredentialID string `json:"credential_id,omitempty"`
-	SignCount    uint32 `json:"sign_count,omitempty"`
+	Status              string `json:"status"`
+	Challenge           string `json:"challenge"`
+	Origin              string `json:"origin"`
+	Type                string `json:"type"`
+	CredentialID        string `json:"credential_id,omitempty"`
+	SignCount           uint32 `json:"sign_count,omitempty"`
+	PublicKeyCOSEStored bool   `json:"public_key_cose_stored"`
 }
 
 func (s *Server) handleWebPasskeyRegisterVerify(w http.ResponseWriter, r *http.Request) {
@@ -174,13 +176,21 @@ func (s *Server) handleWebPasskeyVerify(w http.ResponseWriter, r *http.Request, 
 	if authenticatorData != nil {
 		signCount = authenticatorData.SignCount
 	}
+	publicKeyCOSEStored := false
 	if purpose == "register" {
 		if credentialID == "" {
 			s.auditFailure(r, action, "system", "", map[string]string{"reason": "missing_credential_id"})
 			writeError(w, http.StatusBadRequest, "missing_credential_id")
 			return
 		}
-		if !s.webPasskeyCredentials.Register(webauth.PasskeyCredentialRecord{CredentialID: credentialID, ClientID: clientID, CreatedAt: time.Now().UTC(), SignCount: signCount}) {
+		publicKeyCOSE, err := decodePasskeyPublicKeyCOSE(payload.PublicKeyCOSE)
+		if err != nil {
+			s.auditFailure(r, action, "system", "", map[string]string{"reason": "invalid_public_key_cose"})
+			writeError(w, http.StatusBadRequest, "invalid_public_key_cose")
+			return
+		}
+		publicKeyCOSEStored = true
+		if !s.webPasskeyCredentials.Register(webauth.PasskeyCredentialRecord{CredentialID: credentialID, ClientID: clientID, CreatedAt: time.Now().UTC(), SignCount: signCount, PublicKeyCOSE: publicKeyCOSE}) {
 			s.auditFailure(r, action, "system", "", map[string]string{"reason": "invalid_credential"})
 			writeError(w, http.StatusBadRequest, "invalid_credential")
 			return
@@ -191,6 +201,12 @@ func (s *Server) handleWebPasskeyVerify(w http.ResponseWriter, r *http.Request, 
 			writeError(w, http.StatusBadRequest, "missing_credential_id")
 			return
 		}
+		if err := s.webPasskeyCredentials.RequirePublicKeyCOSE(credentialID, clientID); err != nil {
+			s.auditFailure(r, action, "system", "", map[string]string{"reason": "missing_public_key_cose"})
+			writeError(w, http.StatusUnauthorized, "missing_public_key_cose")
+			return
+		}
+		publicKeyCOSEStored = true
 		if authenticatorData != nil {
 			if _, err := s.webPasskeyCredentials.TouchWithSignCount(credentialID, clientID, authenticatorData.SignCount, time.Now().UTC()); err != nil {
 				s.auditFailure(r, action, "system", "", map[string]string{"reason": "invalid_sign_count"})
@@ -204,7 +220,19 @@ func (s *Server) handleWebPasskeyVerify(w http.ResponseWriter, r *http.Request, 
 		}
 	}
 	s.audit(r, action, "system", "", "success", nil)
-	writeJSON(w, http.StatusOK, passkeyVerifyResponse{Status: "verified_challenge", Challenge: verified.Challenge, Origin: verified.Origin, Type: verified.Type, CredentialID: credentialID, SignCount: signCount})
+	writeJSON(w, http.StatusOK, passkeyVerifyResponse{Status: "verified_challenge", Challenge: verified.Challenge, Origin: verified.Origin, Type: verified.Type, CredentialID: credentialID, SignCount: signCount, PublicKeyCOSEStored: publicKeyCOSEStored})
+}
+
+func decodePasskeyPublicKeyCOSE(value string) ([]byte, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil, webauth.ErrPasskeyCredentialPublicKeyMissing
+	}
+	decoded, err := base64.RawURLEncoding.DecodeString(value)
+	if err != nil || len(decoded) == 0 || len(decoded) > 4096 {
+		return nil, webauth.ErrPasskeyCredentialPublicKeyMissing
+	}
+	return decoded, nil
 }
 
 func (s *Server) expectedPasskeyOrigin(r *http.Request) string {
