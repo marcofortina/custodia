@@ -77,3 +77,7 @@ TPM/HSM-backed signing, CA key unseal workflow, CRL publication automation and O
 - failure reason metadata when available.
 
 The signer audit file is intentionally separate from the vault API audit chain. Production deployments should forward signer JSONL to the same SIEM/WORM retention path used for vault audit exports.
+
+## CRL distribution
+
+When `CUSTODIA_SIGNER_CRL_FILE` is configured, the signer serves the PEM CRL at `/v1/crl.pem`. This lets internal clients and operators retrieve the same revocation artifact used by the vault API. OCSP remains a separate production hardening step.

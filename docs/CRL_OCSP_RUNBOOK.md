@@ -31,3 +31,19 @@ vault-admin revocation status
 The endpoint is backed by `GET /v1/revocation/status` and reports whether a client CRL is configured, valid, trusted by the configured client CA, how many entries it contains and when the CRL expires.
 
 This does not replace OCSP. It is a production guardrail for the currently implemented fail-closed CRL path.
+
+## Signer CRL distribution endpoint
+
+`custodia-signer` can publish the configured PEM CRL from:
+
+```text
+GET /v1/crl.pem
+```
+
+Configure it with:
+
+```bash
+CUSTODIA_SIGNER_CRL_FILE=/path/to/client.crl
+```
+
+The endpoint returns `application/pkix-crl` and includes `X-Custodia-CRL-Revoked-Count`. It is a CRL distribution helper, not a full OCSP responder.
