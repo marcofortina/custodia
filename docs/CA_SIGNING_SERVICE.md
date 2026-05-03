@@ -64,3 +64,16 @@ The issued certificate is client-auth only and carries the requested `client_id`
 ## Remaining production gap
 
 TPM/HSM-backed signing, CA key unseal workflow, CRL publication automation and OCSP responder integration are still separate hardening steps.
+
+## Audit trail
+
+`custodia-signer` can append JSONL audit events when `CUSTODIA_SIGNER_AUDIT_LOG_FILE` is set. Certificate signing attempts record:
+
+- action `certificate.sign`;
+- outcome `success` or `failure`;
+- admin actor subject;
+- target `client_id`;
+- request correlation id;
+- failure reason metadata when available.
+
+The signer audit file is intentionally separate from the vault API audit chain. Production deployments should forward signer JSONL to the same SIEM/WORM retention path used for vault audit exports.
