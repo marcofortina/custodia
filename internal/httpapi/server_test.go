@@ -2108,6 +2108,10 @@ func TestWebPasskeyAuthenticateVerifyConsumesChallengeOnce(t *testing.T) {
 		WebPasskeyChallengeTTL: time.Minute,
 	})
 
+	registerPasskeyCredential(t, handler, "admin", "example.com", "credential-1")
+
+	registerPasskeyCredential(t, handler, "admin", "example.com", "credential-1")
+
 	optionsReq := mtlsRequest(http.MethodGet, "/web/passkey/authenticate/options", "", "admin")
 	optionsReq.Host = "example.com"
 	optionsRes := httptest.NewRecorder()
@@ -2121,7 +2125,7 @@ func TestWebPasskeyAuthenticateVerifyConsumesChallengeOnce(t *testing.T) {
 	}
 	payload := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.get", Challenge: options.Challenge, Origin: "https://example.com"})
 
-	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/authenticate/verify", `{"client_data_json":"`+payload+`"}`, "admin")
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/authenticate/verify", `{"client_data_json":"`+payload+`","credential_id":"credential-1"}`, "admin")
 	verifyReq.Host = "example.com"
 	verifyReq.Header.Set("Content-Type", "application/json")
 	verifyRes := httptest.NewRecorder()
@@ -2130,7 +2134,7 @@ func TestWebPasskeyAuthenticateVerifyConsumesChallengeOnce(t *testing.T) {
 		t.Fatalf("verify status = %d: %s", verifyRes.Code, verifyRes.Body.String())
 	}
 
-	replayReq := mtlsRequest(http.MethodPost, "/web/passkey/authenticate/verify", `{"client_data_json":"`+payload+`"}`, "admin")
+	replayReq := mtlsRequest(http.MethodPost, "/web/passkey/authenticate/verify", `{"client_data_json":"`+payload+`","credential_id":"credential-1"}`, "admin")
 	replayReq.Host = "example.com"
 	replayReq.Header.Set("Content-Type", "application/json")
 	replayRes := httptest.NewRecorder()
@@ -2157,13 +2161,37 @@ func TestWebPasskeyAuthenticateVerifyRejectsWrongOrigin(t *testing.T) {
 		t.Fatalf("decode options: %v", err)
 	}
 	payload := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.get", Challenge: options.Challenge, Origin: "https://evil.example.com"})
-	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/authenticate/verify", `{"client_data_json":"`+payload+`"}`, "admin")
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/authenticate/verify", `{"client_data_json":"`+payload+`","credential_id":"credential-1"}`, "admin")
 	verifyReq.Host = "example.com"
 	verifyReq.Header.Set("Content-Type", "application/json")
 	verifyRes := httptest.NewRecorder()
 	handler.ServeHTTP(verifyRes, verifyReq)
 	if verifyRes.Code != http.StatusUnauthorized {
 		t.Fatalf("verify status = %d, want %d: %s", verifyRes.Code, http.StatusUnauthorized, verifyRes.Body.String())
+	}
+}
+
+func registerPasskeyCredential(t *testing.T, handler http.Handler, clientID, host, credentialID string) {
+	t.Helper()
+	optionsReq := mtlsRequest(http.MethodGet, "/web/passkey/register/options", "", clientID)
+	optionsReq.Host = host
+	optionsRes := httptest.NewRecorder()
+	handler.ServeHTTP(optionsRes, optionsReq)
+	if optionsRes.Code != http.StatusOK {
+		t.Fatalf("register options status = %d: %s", optionsRes.Code, optionsRes.Body.String())
+	}
+	var options webauth.PasskeyOptions
+	if err := json.NewDecoder(optionsRes.Body).Decode(&options); err != nil {
+		t.Fatalf("decode register options: %v", err)
+	}
+	payload := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.create", Challenge: options.Challenge, Origin: "https://" + host})
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/register/verify", `{"client_data_json":"`+payload+`","credential_id":"`+credentialID+`"}`, clientID)
+	verifyReq.Host = host
+	verifyReq.Header.Set("Content-Type", "application/json")
+	verifyRes := httptest.NewRecorder()
+	handler.ServeHTTP(verifyRes, verifyReq)
+	if verifyRes.Code != http.StatusOK {
+		t.Fatalf("register verify status = %d: %s", verifyRes.Code, verifyRes.Body.String())
 	}
 }
 

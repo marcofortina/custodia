@@ -30,6 +30,7 @@ type Server struct {
 	webPasskeyRPName       string
 	webPasskeyChallengeTTL time.Duration
 	webPasskeyChallenges   *webauth.PasskeyChallengeStore
+	webPasskeyCredentials  *webauth.PasskeyCredentialStore
 	deploymentMode         string
 	databaseHATarget       string
 	auditShipmentSink      string
@@ -115,6 +116,7 @@ func New(options Options) http.Handler {
 		webPasskeyRPName:       webPasskeyRPName,
 		webPasskeyChallengeTTL: webPasskeyChallengeTTL,
 		webPasskeyChallenges:   webauth.NewPasskeyChallengeStore(),
+		webPasskeyCredentials:  webauth.NewPasskeyCredentialStore(),
 		deploymentMode:         options.DeploymentMode,
 		databaseHATarget:       options.DatabaseHATarget,
 		auditShipmentSink:      options.AuditShipmentSink,

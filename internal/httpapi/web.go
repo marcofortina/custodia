@@ -99,13 +99,15 @@ func (s *Server) webOptionalLimit(w http.ResponseWriter, r *http.Request, action
 
 type passkeyVerifyRequest struct {
 	ClientDataJSON string `json:"client_data_json"`
+	CredentialID   string `json:"credential_id"`
 }
 
 type passkeyVerifyResponse struct {
-	Status    string `json:"status"`
-	Challenge string `json:"challenge"`
-	Origin    string `json:"origin"`
-	Type      string `json:"type"`
+	Status       string `json:"status"`
+	Challenge    string `json:"challenge"`
+	Origin       string `json:"origin"`
+	Type         string `json:"type"`
+	CredentialID string `json:"credential_id,omitempty"`
 }
 
 func (s *Server) handleWebPasskeyRegisterVerify(w http.ResponseWriter, r *http.Request) {
@@ -150,8 +152,32 @@ func (s *Server) handleWebPasskeyVerify(w http.ResponseWriter, r *http.Request, 
 		writeError(w, http.StatusUnauthorized, "invalid_client_data")
 		return
 	}
+	credentialID := strings.TrimSpace(payload.CredentialID)
+	if purpose == "register" {
+		if credentialID == "" {
+			s.auditFailure(r, action, "system", "", map[string]string{"reason": "missing_credential_id"})
+			writeError(w, http.StatusBadRequest, "missing_credential_id")
+			return
+		}
+		if !s.webPasskeyCredentials.Register(webauth.PasskeyCredentialRecord{CredentialID: credentialID, ClientID: clientID, CreatedAt: time.Now().UTC()}) {
+			s.auditFailure(r, action, "system", "", map[string]string{"reason": "invalid_credential"})
+			writeError(w, http.StatusBadRequest, "invalid_credential")
+			return
+		}
+	} else {
+		if credentialID == "" {
+			s.auditFailure(r, action, "system", "", map[string]string{"reason": "missing_credential_id"})
+			writeError(w, http.StatusBadRequest, "missing_credential_id")
+			return
+		}
+		if _, err := s.webPasskeyCredentials.Touch(credentialID, clientID, time.Now().UTC()); err != nil {
+			s.auditFailure(r, action, "system", "", map[string]string{"reason": "unknown_credential"})
+			writeError(w, http.StatusUnauthorized, "unknown_credential")
+			return
+		}
+	}
 	s.audit(r, action, "system", "", "success", nil)
-	writeJSON(w, http.StatusOK, passkeyVerifyResponse{Status: "verified_challenge", Challenge: verified.Challenge, Origin: verified.Origin, Type: verified.Type})
+	writeJSON(w, http.StatusOK, passkeyVerifyResponse{Status: "verified_challenge", Challenge: verified.Challenge, Origin: verified.Origin, Type: verified.Type, CredentialID: credentialID})
 }
 
 func (s *Server) expectedPasskeyOrigin(r *http.Request) string {
