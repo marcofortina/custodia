@@ -345,6 +345,30 @@ CUSTODIA_SIGNER_CRL_FILE=/certs/client.crl
 	}
 }
 
+func TestRunProductionEvidenceCheckRejectsMissingEvidence(t *testing.T) {
+	envFile := writeTestEnv(t, "CUSTODIA_EVIDENCE_HSM_ATTESTATION_FILE=/evidence/hsm.json\n")
+	if err := runProductionEvidenceCheck([]string{"--env-file", envFile}); err == nil {
+		t.Fatal("expected production evidence check error")
+	}
+}
+
+func TestRunProductionEvidenceCheckAcceptsCompleteEvidence(t *testing.T) {
+	envFile := writeTestEnv(t, `CUSTODIA_EVIDENCE_HSM_ATTESTATION_FILE=/evidence/hsm.json
+CUSTODIA_EVIDENCE_WORM_RETENTION_FILE=/evidence/worm.json
+CUSTODIA_EVIDENCE_DATABASE_HA_FILE=/evidence/database-ha.json
+CUSTODIA_EVIDENCE_VALKEY_CLUSTER_FILE=/evidence/valkey.json
+CUSTODIA_EVIDENCE_ZERO_TRUST_NETWORK_FILE=/evidence/network.json
+CUSTODIA_EVIDENCE_AIR_GAP_BACKUP_FILE=/evidence/backup.json
+CUSTODIA_EVIDENCE_PEN_TEST_FILE=/evidence/pentest.json
+CUSTODIA_EVIDENCE_FORMAL_VERIFICATION_FILE=/evidence/formal.json
+CUSTODIA_EVIDENCE_REVOCATION_DRILL_FILE=/evidence/revocation.json
+CUSTODIA_EVIDENCE_RELEASE_CHECK_FILE=/evidence/release.json
+`)
+	if err := runProductionEvidenceCheck([]string{"--env-file", envFile}); err != nil {
+		t.Fatalf("runProductionEvidenceCheck() error = %v", err)
+	}
+}
+
 func writeTestEnv(t *testing.T, content string) string {
 	t.Helper()
 	path := t.TempDir() + "/custodia.env"
