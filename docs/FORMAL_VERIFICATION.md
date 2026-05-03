@@ -1,33 +1,38 @@
 # Custodia formal verification scope
 
-The Fort Knox analysis calls out formal verification for the protocol. This document scopes what should be modeled without inventing server-side cryptography.
+Custodia now ships both an executable Go invariant model and a TLA+ access-control model. These artifacts cover server-side authorization state transitions, not client-side cryptography.
+
+## Implemented artifacts
+
+- `internal/formalmodel`: executable state-machine model with Go tests.
+- `formal/CustodiaAccess.tla`: TLA+ model for client activation, access grants, client revocation and strong secret-version revocation.
+- `formal/CustodiaAccess.cfg`: bounded TLC configuration.
+- `make formal-check`: wrapper for a local TLC installation.
 
 ## Model boundary
 
 The server model includes:
 
-- mTLS-authenticated client identity.
-- active/revoked client state.
-- `secret_access` authorization checks.
-- permission bits: read, write, share.
-- version superseding for strong revocation.
-- pending grant activation requiring an authorized sharer.
+- active/revoked client state;
+- `secret_access` read authorization;
+- version-aware strong revocation;
+- pending grant activation as a server-side authorization transition.
 
-The server model excludes:
+The model excludes:
 
-- plaintext secrets.
-- DEK wrapping/unwrapping.
-- encryption public-key discovery.
-- client-side key resolver behavior.
+- plaintext secrets;
+- DEK wrapping/unwrapping;
+- encryption public-key discovery;
+- browser/client cryptographic behavior;
+- passkey/WebAuthn cryptographic verification.
 
 ## Invariants
 
-- A client without active read access cannot read a secret version.
-- A revoked client cannot obtain new secret material from the vault.
-- Share activation cannot complete without a client that currently has share permission.
-- Creating a new strong-revocation version supersedes old active versions.
+- A revoked client cannot retain read access.
+- Strong revocation removes old secret versions from readable access.
+- Access entries must reference positive configured versions.
 - The server never derives plaintext from stored blobs.
 
-## Suggested next artifact
+## Production use
 
-A TLA+ spec should model state transitions for clients, secret versions, access grants and revocations. ProVerif should be reserved for a separate client-side cryptographic protocol, not for server storage logic.
+Formal artifacts are useful as regression gates during design changes. They are not a replacement for integration tests, mTLS tests, external WORM storage validation or PKCS#11/HSM certification.
