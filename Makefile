@@ -54,3 +54,11 @@ run-signer-dev:
 .PHONY: formal-check
 formal-check:
 	./scripts/check-formal.sh
+
+.PHONY: production-check
+production-check:
+	@if [ -z "$(CUSTODIA_PRODUCTION_ENV_FILE)" ]; then \
+		echo "CUSTODIA_PRODUCTION_ENV_FILE is required" >&2; \
+		exit 2; \
+	fi
+	$(GO) run ./cmd/vault-admin production check --env-file "$(CUSTODIA_PRODUCTION_ENV_FILE)"
