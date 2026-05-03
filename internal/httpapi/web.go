@@ -149,14 +149,18 @@ func (s *Server) handleWebAudit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request) {
+	limit, ok := s.webOptionalLimit(w, r, "web.access_request_list", "secret", "", 100)
+	if !ok {
+		return
+	}
 	requests, err := s.store.ListAccessGrantRequests(r.Context(), "")
 	if err != nil {
 		s.auditStoreFailure(r, "web.access_request_list", "secret", "", err)
 		writeMappedError(w, err)
 		return
 	}
-	if len(requests) > 100 {
-		requests = requests[:100]
+	if len(requests) > limit {
+		requests = requests[:limit]
 	}
 	rows := ""
 	for _, request := range requests {
