@@ -163,6 +163,16 @@ func buildStore(ctx context.Context, cfg config.Config) (store.Store, func(), er
 			return nil, func() {}, err
 		}
 		return postgresStore, postgresStore.Close, nil
+	case "sqlite":
+		sqliteStore, err := store.NewSQLiteStore(ctx, cfg.DatabaseURL)
+		if err != nil {
+			return nil, func() {}, err
+		}
+		if err := bootstrapClients(ctx, sqliteStore, cfg.BootstrapClients); err != nil {
+			sqliteStore.Close()
+			return nil, func() {}, err
+		}
+		return sqliteStore, sqliteStore.Close, nil
 	case "memory":
 		memoryStore := store.NewMemoryStore()
 		if err := bootstrapClients(ctx, memoryStore, cfg.BootstrapClients); err != nil {
