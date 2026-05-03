@@ -418,6 +418,22 @@ Phase 2 is now functionally closed for the server baseline: mTLS rotation lifecy
 
 - Documented signer JSONL audit trail and SIEM/WORM forwarding expectations.
 
+## Patch 282 - Go audit export metadata helper
+
+- Added Go client support for returning JSONL export body plus SHA-256 and event-count headers.
+
+## Patch 284 - Python audit export metadata helper
+
+- Added Python client support for returning JSONL export body plus SHA-256 and event-count headers.
+
+## Patch 287 - vault-admin audit export artifacts
+
+- `vault-admin audit export` can now write JSONL body, SHA-256 header and event-count header to separate files.
+
+## Patch 290 - audit artifact helper documentation
+
+- Documented SDK and CLI helpers for retaining audit export artifacts with integrity metadata.
+
 ## Completeness note
 
 This file is intentionally a functional ledger, not a one-section-per-patch changelog for all 271 patches. Early work is tracked patch-by-patch where useful, while high-volume later work may still be grouped by implemented capability. The Phase 2 web-authentication closure patches are listed individually because they define the MFA/passkey security boundary.
