@@ -43,12 +43,13 @@ func TestLoadWebAuthConfigFromEnvironment(t *testing.T) {
 	t.Setenv("CUSTODIA_WEB_PASSKEY_RP_ID", "vault.example.com")
 	t.Setenv("CUSTODIA_WEB_PASSKEY_RP_NAME", "Custodia Vault")
 	t.Setenv("CUSTODIA_WEB_PASSKEY_CHALLENGE_TTL_SECONDS", "180")
+	t.Setenv("CUSTODIA_WEB_PASSKEY_ASSERTION_VERIFY_COMMAND", "/usr/local/bin/verify-passkey")
 
 	cfg := Load()
 	if !cfg.WebMFARequired || cfg.WebTOTPSecret != "SECRET" || cfg.WebSessionSecret == "" || cfg.WebSessionTTLSeconds != 120 {
 		t.Fatalf("unexpected web MFA config: %+v", cfg)
 	}
-	if !cfg.WebPasskeyEnabled || cfg.WebPasskeyRPID != "vault.example.com" || cfg.WebPasskeyRPName != "Custodia Vault" || cfg.WebPasskeyChallengeTTLSeconds != 180 {
+	if !cfg.WebPasskeyEnabled || cfg.WebPasskeyRPID != "vault.example.com" || cfg.WebPasskeyRPName != "Custodia Vault" || cfg.WebPasskeyChallengeTTLSeconds != 180 || cfg.WebPasskeyAssertionVerifyCommand != "/usr/local/bin/verify-passkey" {
 		t.Fatalf("unexpected passkey config: %+v", cfg)
 	}
 }
