@@ -48,6 +48,9 @@ config:
   httpWriteTimeoutSeconds: 15
   httpIdleTimeoutSeconds: 60
   shutdownTimeoutSeconds: 10
+  deploymentMode: single-region
+  databaseHATarget: external
+  auditShipmentSink: ""
 
 mtls:
   enabled: true

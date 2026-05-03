@@ -19,3 +19,6 @@ data:
   CUSTODIA_HTTP_WRITE_TIMEOUT_SECONDS: {{ .Values.config.httpWriteTimeoutSeconds | quote }}
   CUSTODIA_HTTP_IDLE_TIMEOUT_SECONDS: {{ .Values.config.httpIdleTimeoutSeconds | quote }}
   CUSTODIA_SHUTDOWN_TIMEOUT_SECONDS: {{ .Values.config.shutdownTimeoutSeconds | quote }}
+  CUSTODIA_DEPLOYMENT_MODE: {{ .Values.config.deploymentMode | quote }}
+  CUSTODIA_DATABASE_HA_TARGET: {{ .Values.config.databaseHATarget | quote }}
+  CUSTODIA_AUDIT_SHIPMENT_SINK: {{ .Values.config.auditShipmentSink | quote }}
