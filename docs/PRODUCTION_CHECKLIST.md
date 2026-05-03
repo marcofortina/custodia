@@ -1,0 +1,21 @@
+# Custodia production checklist
+
+This checklist turns the Fort Knox analysis into deployable operator gates. It does not change the cryptographic boundary: Custodia stores and authorizes opaque ciphertext/envelope blobs only.
+
+## Required before production
+
+- API listener serves TLS 1.3 with `ClientAuth: RequireAndVerifyClientCert`.
+- `CUSTODIA_STORE_BACKEND=postgres` or a CockroachDB-compatible PostgreSQL endpoint is configured.
+- `CUSTODIA_RATE_LIMIT_BACKEND=valkey` is configured for shared rate limits.
+- `CUSTODIA_CLIENT_CRL_FILE` is mounted when local CRL enforcement is used.
+- `/ready` runs on a dedicated health listener that is not exposed outside the cluster.
+- Admin client IDs are explicitly configured; no wildcard admin mode exists.
+- Web console remains metadata-only until MFA/passkey authentication is implemented.
+- Audit export integrity headers are validated by downstream archival jobs.
+
+## Must remain false
+
+- Do not add a server-side public-key directory.
+- Do not add DEK, wrapped DEK or key unwrap logic to the server.
+- Do not render ciphertext/envelopes in web pages.
+- Do not use the memory store for production.
