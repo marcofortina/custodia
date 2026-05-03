@@ -487,3 +487,18 @@ Any future implementation patch must update this file or an explicitly linked st
 ## Patch 305 - audit export verifier documentation
 
 - Documented the `vault-admin audit verify-export` workflow for JSONL, `.sha256` and `.events` artifacts.
+
+## Patch 311 - client CRL status metadata
+
+- Added CRL status metadata parsing for trusted client CRLs.
+- Status includes issuer, update window and revoked entry count without exposing certificate private material.
+
+## Patch 313 - admin revocation status endpoint
+
+- Added admin-only `GET /v1/revocation/status` to monitor configured client CRL health.
+- Added `vault-admin revocation status` plus Go/Python SDK helpers.
+
+## Patch 318 - revocation monitoring documentation
+
+- Documented revocation status monitoring and production checklist expectations.
+- Kept OCSP as a remaining production gap rather than claiming it complete.
