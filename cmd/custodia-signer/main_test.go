@@ -277,3 +277,34 @@ func TestLoadConfigReadsPKCS11Command(t *testing.T) {
 		t.Fatalf("pkcs11SignCommand = %q", cfg.pkcs11SignCommand)
 	}
 }
+
+func TestSignerRevocationSerialStatus(t *testing.T) {
+	crlPath := t.TempDir() + "/client.crl"
+	if err := os.WriteFile(crlPath, testSignerCRL(t), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	handler := testSignerHandlerWithCRL(t, crlPath)
+	req := httptest.NewRequest(http.MethodGet, "/v1/revocation/serial?serial_hex=64", nil)
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", res.Code, res.Body.String())
+	}
+	if !bytes.Contains(res.Body.Bytes(), []byte(`"status":"revoked"`)) || !bytes.Contains(res.Body.Bytes(), []byte(`"serial_hex":"64"`)) {
+		t.Fatalf("unexpected revocation status: %s", res.Body.String())
+	}
+}
+
+func TestSignerRevocationSerialStatusRejectsInvalidSerial(t *testing.T) {
+	crlPath := t.TempDir() + "/client.crl"
+	if err := os.WriteFile(crlPath, testSignerCRL(t), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	handler := testSignerHandlerWithCRL(t, crlPath)
+	req := httptest.NewRequest(http.MethodGet, "/v1/revocation/serial?serial_hex=not-hex", nil)
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", res.Code, http.StatusBadRequest)
+	}
+}
