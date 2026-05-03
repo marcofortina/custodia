@@ -116,3 +116,14 @@ This is still not full WebAuthn assertion verification. The server does not yet 
 Registration preverification now requires `credential_key_cose`, a base64url-encoded opaque COSE credential key blob. Custodia stores this metadata with the credential id and client id, then requires the stored credential-key metadata before authentication preverification can succeed.
 
 This is still not signature verification. The server stores the COSE bytes as opaque metadata and does not yet parse CBOR/COSE or verify authenticator signatures against the stored key.
+
+## COSE credential-key parser
+
+Registration preverification now parses the supplied `credential_key_cose` as a COSE_Key CBOR map before storing it as opaque credential-key metadata.
+
+Supported metadata forms:
+
+- EC2/P-256/ES256 COSE keys (`kty=2`, `alg=-7`, `crv=1`, 32-byte x/y coordinates)
+- RSA/RS256 COSE keys (`kty=3`, `alg=-257`, modulus and exponent byte strings)
+
+The parser validates the shape and supported algorithm metadata. It still does not perform authenticator signature verification; that remains the final WebAuthn production boundary.
