@@ -895,3 +895,21 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 503 - passkey authenticator validation docs
 
 - Documented RP ID hash, user-present and user-verified enforcement and kept the COSE/signature verification boundary explicit.
+
+## Patch 507 - passkey credential public-key metadata store
+
+- Added opaque COSE public-key metadata storage to passkey credential records.
+- Credential records now defensively clone stored COSE bytes before returning them.
+
+## Patch 509 - passkey public-key metadata verifier
+
+- Registration preverification now requires `public_key_cose` and stores it with the credential metadata.
+- Authentication preverification now requires the credential to have stored public-key metadata before it can succeed.
+
+## Patch 511 - passkey public-key storage status
+
+- `/v1/status` now reports `web_passkey_public_key_storage: opaque_cose`.
+
+## Patch 513 - passkey public-key metadata documentation
+
+- Documented that Custodia stores opaque COSE public-key metadata without yet parsing CBOR/COSE or verifying authenticator signatures.
