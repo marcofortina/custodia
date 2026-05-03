@@ -109,3 +109,7 @@ build-sqlite:
 .PHONY: test-sqlite
 test-sqlite:
 	$(GO) test -tags sqlite -p=1 -timeout 60s ./internal/store ./cmd/custodia-server
+
+.PHONY: sqlite-backup
+sqlite-backup:
+	./scripts/sqlite-backup.sh
