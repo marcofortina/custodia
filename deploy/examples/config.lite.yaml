@@ -1,0 +1,24 @@
+profile: lite
+api_addr: ":8443"
+web_addr: ":9443"
+
+store_backend: sqlite
+database_url: file:/var/lib/custodia/custodia.db
+rate_limit_backend: memory
+
+deployment_mode: lite-single-node
+database_ha_target: none
+
+web_mfa_required: true
+web_passkey_enabled: false
+web_session_ttl_seconds: 900
+
+client_ca_file: /etc/custodia/client-ca.crt
+client_crl_file: /etc/custodia/client.crl.pem
+tls_cert_file: /etc/custodia/server.crt
+tls_key_file: /etc/custodia/server.key
+
+signer_key_provider: file
+signer_ca_cert_file: /etc/custodia/ca.crt
+signer_ca_key_file: /etc/custodia/ca.key
+signer_ca_key_passphrase_file: /etc/custodia/ca.pass
