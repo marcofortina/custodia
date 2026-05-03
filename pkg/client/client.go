@@ -290,6 +290,11 @@ func (c *Client) Diagnostics() (model.RuntimeDiagnostics, error) {
 	return response, c.doJSON(http.MethodGet, "/v1/diagnostics", nil, &response)
 }
 
+func (c *Client) RevocationStatus() (model.RevocationStatus, error) {
+	var response model.RevocationStatus
+	return response, c.doJSON(http.MethodGet, "/v1/revocation/status", nil, &response)
+}
+
 func (c *Client) ShareSecret(secretID string, req model.ShareSecretRequest) error {
 	return c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/share", req, nil)
 }

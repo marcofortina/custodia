@@ -10,7 +10,7 @@ import (
 )
 
 func TestClientAccessGrantMethodsUseDocumentedAPIPaths(t *testing.T) {
-	requests := make([]string, 0, 4)
+	requests := make([]string, 0, 5)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requests = append(requests, r.Method+" "+r.URL.EscapedPath())
 		switch r.URL.EscapedPath() {
@@ -96,6 +96,11 @@ func TestClientMetadataMethodsUseDocumentedAPIPaths(t *testing.T) {
 				t.Fatalf("unexpected diagnostics method: %s", r.Method)
 			}
 			_ = json.NewEncoder(w).Encode(model.RuntimeDiagnostics{Goroutines: 3})
+		case "/v1/revocation/status":
+			if r.Method != http.MethodGet {
+				t.Fatalf("unexpected revocation status method: %s", r.Method)
+			}
+			_ = json.NewEncoder(w).Encode(model.RevocationStatus{Configured: true, Valid: true, RevokedCount: 2})
 		default:
 			t.Fatalf("unexpected path: %s", r.URL.EscapedPath())
 		}
@@ -119,12 +124,17 @@ func TestClientMetadataMethodsUseDocumentedAPIPaths(t *testing.T) {
 	if err != nil || diagnostics.Goroutines != 3 {
 		t.Fatalf("unexpected diagnostics response: %+v err=%v", diagnostics, err)
 	}
+	revocation, err := custodiaClient.RevocationStatus()
+	if err != nil || !revocation.Valid || revocation.RevokedCount != 2 {
+		t.Fatalf("unexpected revocation status response: %+v err=%v", revocation, err)
+	}
 
 	expected := []string{
 		"GET /v1/secrets/secret%2Fid/versions",
 		"GET /v1/secrets/secret%2Fid/access",
 		"GET /v1/status",
 		"GET /v1/diagnostics",
+		"GET /v1/revocation/status",
 	}
 	if len(requests) != len(expected) {
 		t.Fatalf("expected %d requests, got %d: %+v", len(expected), len(requests), requests)
