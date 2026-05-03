@@ -22,19 +22,20 @@ import (
 )
 
 type signerConfig struct {
-	addr            string
-	tlsCertFile     string
-	tlsKeyFile      string
-	clientCAFile    string
-	caCertFile      string
-	caKeyFile       string
-	keyProvider     string
-	adminSubjects   map[string]bool
-	defaultTTLHours int
-	devInsecureHTTP bool
-	shutdownTimeout time.Duration
-	auditLogFile    string
-	crlFile         string
+	addr              string
+	tlsCertFile       string
+	tlsKeyFile        string
+	clientCAFile      string
+	caCertFile        string
+	caKeyFile         string
+	keyProvider       string
+	pkcs11SignCommand string
+	adminSubjects     map[string]bool
+	defaultTTLHours   int
+	devInsecureHTTP   bool
+	shutdownTimeout   time.Duration
+	auditLogFile      string
+	crlFile           string
 }
 
 type signerServer struct {
@@ -48,7 +49,7 @@ type signerServer struct {
 
 func main() {
 	cfg := loadConfig()
-	clientSigner, err := signing.LoadClientCertificateSigner(cfg.keyProvider, cfg.caCertFile, cfg.caKeyFile)
+	clientSigner, err := signing.LoadClientCertificateSignerWithPKCS11Command(cfg.keyProvider, cfg.caCertFile, cfg.caKeyFile, cfg.pkcs11SignCommand)
 	if err != nil {
 		log.Fatalf("signer init failed: %v", err)
 	}
@@ -278,19 +279,20 @@ func writeError(w http.ResponseWriter, status int, code string) {
 
 func loadConfig() signerConfig {
 	return signerConfig{
-		addr:            env("CUSTODIA_SIGNER_ADDR", ":9444"),
-		tlsCertFile:     os.Getenv("CUSTODIA_SIGNER_TLS_CERT_FILE"),
-		tlsKeyFile:      os.Getenv("CUSTODIA_SIGNER_TLS_KEY_FILE"),
-		clientCAFile:    os.Getenv("CUSTODIA_SIGNER_CLIENT_CA_FILE"),
-		caCertFile:      os.Getenv("CUSTODIA_SIGNER_CA_CERT_FILE"),
-		caKeyFile:       os.Getenv("CUSTODIA_SIGNER_CA_KEY_FILE"),
-		keyProvider:     env("CUSTODIA_SIGNER_KEY_PROVIDER", signing.KeyProviderFile),
-		adminSubjects:   envSet("CUSTODIA_SIGNER_ADMIN_SUBJECTS"),
-		defaultTTLHours: envInt("CUSTODIA_SIGNER_DEFAULT_TTL_HOURS", int(signing.DefaultClientCertificateTTL/time.Hour)),
-		devInsecureHTTP: envBool("CUSTODIA_SIGNER_DEV_INSECURE_HTTP", false),
-		shutdownTimeout: time.Duration(envInt("CUSTODIA_SIGNER_SHUTDOWN_TIMEOUT_SECONDS", 10)) * time.Second,
-		auditLogFile:    os.Getenv("CUSTODIA_SIGNER_AUDIT_LOG_FILE"),
-		crlFile:         os.Getenv("CUSTODIA_SIGNER_CRL_FILE"),
+		addr:              env("CUSTODIA_SIGNER_ADDR", ":9444"),
+		tlsCertFile:       os.Getenv("CUSTODIA_SIGNER_TLS_CERT_FILE"),
+		tlsKeyFile:        os.Getenv("CUSTODIA_SIGNER_TLS_KEY_FILE"),
+		clientCAFile:      os.Getenv("CUSTODIA_SIGNER_CLIENT_CA_FILE"),
+		caCertFile:        os.Getenv("CUSTODIA_SIGNER_CA_CERT_FILE"),
+		caKeyFile:         os.Getenv("CUSTODIA_SIGNER_CA_KEY_FILE"),
+		keyProvider:       env("CUSTODIA_SIGNER_KEY_PROVIDER", signing.KeyProviderFile),
+		pkcs11SignCommand: os.Getenv("CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND"),
+		adminSubjects:     envSet("CUSTODIA_SIGNER_ADMIN_SUBJECTS"),
+		defaultTTLHours:   envInt("CUSTODIA_SIGNER_DEFAULT_TTL_HOURS", int(signing.DefaultClientCertificateTTL/time.Hour)),
+		devInsecureHTTP:   envBool("CUSTODIA_SIGNER_DEV_INSECURE_HTTP", false),
+		shutdownTimeout:   time.Duration(envInt("CUSTODIA_SIGNER_SHUTDOWN_TIMEOUT_SECONDS", 10)) * time.Second,
+		auditLogFile:      os.Getenv("CUSTODIA_SIGNER_AUDIT_LOG_FILE"),
+		crlFile:           os.Getenv("CUSTODIA_SIGNER_CRL_FILE"),
 	}
 }
 
