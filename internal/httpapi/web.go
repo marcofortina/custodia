@@ -102,6 +102,7 @@ type passkeyVerifyRequest struct {
 	CredentialID      string `json:"credential_id"`
 	AuthenticatorData string `json:"authenticator_data"`
 	CredentialKeyCOSE string `json:"credential_key_cose"`
+	Signature         string `json:"signature"`
 }
 
 type passkeyVerifyResponse struct {
@@ -201,12 +202,41 @@ func (s *Server) handleWebPasskeyVerify(w http.ResponseWriter, r *http.Request, 
 			writeError(w, http.StatusBadRequest, "missing_credential_id")
 			return
 		}
-		if err := s.webPasskeyCredentials.RequireCredentialKeyCOSE(credentialID, clientID); err != nil {
+		record, err := s.webPasskeyCredentials.Get(credentialID, clientID)
+		if err != nil {
+			s.auditFailure(r, action, "system", "", map[string]string{"reason": "unknown_credential"})
+			writeError(w, http.StatusUnauthorized, "unknown_credential")
+			return
+		}
+		if len(record.CredentialKeyCOSE) == 0 {
 			s.auditFailure(r, action, "system", "", map[string]string{"reason": "missing_credential_key_cose"})
 			writeError(w, http.StatusUnauthorized, "missing_credential_key_cose")
 			return
 		}
 		credentialKeyCOSEStored = true
+		if strings.TrimSpace(s.webPasskeyAssertionVerifyCommand) != "" {
+			if authenticatorData == nil || strings.TrimSpace(payload.Signature) == "" {
+				s.auditFailure(r, action, "system", "", map[string]string{"reason": "missing_assertion_signature_material"})
+				writeError(w, http.StatusUnauthorized, "missing_assertion_signature_material")
+				return
+			}
+			if err := webauth.VerifyPasskeyAssertionWithCommand(r.Context(), s.webPasskeyAssertionVerifyCommand, webauth.PasskeyAssertionVerificationRequest{
+				CredentialID:      credentialID,
+				ClientID:          clientID,
+				RPID:              s.webPasskeyRPID,
+				Origin:            verified.Origin,
+				Type:              verified.Type,
+				ClientDataJSON:    strings.TrimSpace(payload.ClientDataJSON),
+				AuthenticatorData: strings.TrimSpace(payload.AuthenticatorData),
+				Signature:         strings.TrimSpace(payload.Signature),
+				CredentialKeyCOSE: base64.RawURLEncoding.EncodeToString(record.CredentialKeyCOSE),
+				SignCount:         signCount,
+			}); err != nil {
+				s.auditFailure(r, action, "system", "", map[string]string{"reason": "invalid_assertion_signature"})
+				writeError(w, http.StatusUnauthorized, "invalid_assertion_signature")
+				return
+			}
+		}
 		if authenticatorData != nil {
 			if _, err := s.webPasskeyCredentials.TouchWithSignCount(credentialID, clientID, authenticatorData.SignCount, time.Now().UTC()); err != nil {
 				s.auditFailure(r, action, "system", "", map[string]string{"reason": "invalid_sign_count"})
