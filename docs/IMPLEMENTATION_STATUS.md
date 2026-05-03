@@ -1,5 +1,13 @@
 # Implementation status
 
+## Current status after patch 271
+
+- Phase 1 is closed.
+- Phase 2 is closed for the server baseline: mTLS lifecycle, strong-revocation versioning, Valkey-compatible rate limiting, Go/Python SDK helpers, metadata-only web console, TOTP MFA and passkey challenge/options boundaries are implemented.
+- Phase 3 is partially implemented: Helm/Kubernetes deployment, HA/DR runbooks, diagnostics, audit export integrity and the dedicated signer service exist, but TPM/HSM/PKCS#11 signing, OCSP responder integration, external WORM/SIEM archival and formal verification artifacts remain production hardening work.
+- The cryptographic boundary remains unchanged: Custodia stores and authorizes opaque ciphertext, crypto metadata and recipient envelopes, but never decrypts, unwraps keys or publishes client encryption public keys.
+
+
 ## Implemented
 
 - Phase 1 REST vault primitives, including metadata-only secret listing.
@@ -28,12 +36,12 @@
 
 The repository contains an executable standard-library baseline and deployable building blocks. A real production implementation still needs environment-specific work:
 
-- real CA/signing service backed by TPM/HSM;
+- production CA/signing backend backed by TPM/HSM/PKCS#11; the dedicated signer service exists with file-backed CA material for development/bootstrap;
 - CRL distribution/refresh automation and OCSP stapling;
 - production PostgreSQL/CockroachDB topology, migrations automation and PostgreSQL integration tests against a live database;
 - Valkey cluster with mTLS;
 - load balancer TLS pass-through configuration;
-- web UI MFA/passkey implementation beyond the metadata-only admin console;
+- full WebAuthn assertion verification for passkeys; TOTP-backed metadata-only web MFA is implemented;
 - formal verification and WORM/SIEM integration.
 
 These are explicitly operational components in the analysis and cannot be truthfully completed as local source code only.
@@ -304,22 +312,115 @@ Implemented runbooks now cover production readiness, backup/restore, disaster re
 - Added an optional Compose signer profile for local development workflows.
 
 
-## Patch 252-261 - web TOTP MFA
+## Patch 252 - TOTP web authentication helper
 
-- Added RFC 6238-compatible TOTP generation and verification.
-- Added signed HttpOnly/SameSite web sessions.
-- Added `/web/login` and `/web/logout`.
-- Protected metadata-only web pages can now require admin mTLS plus TOTP-backed web sessions.
-- Web MFA does not change the crypto boundary: no plaintext, ciphertext, envelopes or client-side key material are rendered.
+- Added RFC 6238-compatible TOTP generation and verification helpers.
+- Kept TOTP handling scoped to web authentication metadata, not secret encryption or vault payload handling.
 
-## Patch 262-268 - web passkey support boundary
+## Patch 253 - TOTP web authentication tests
+
+- Added tests for valid TOTP codes, invalid codes and bounded verification windows.
+- Covered deterministic time-window behavior for web MFA validation.
+
+## Patch 254 - signed web session helper
+
+- Added signed web session token helpers for metadata-only web authentication.
+- Session material is integrity-protected and separate from vault secret payloads.
+
+## Patch 255 - signed web session tests
+
+- Added tests for valid sessions, tampered sessions and expired sessions.
+- Added guardrails for session signature and expiry handling.
+
+## Patch 256 - web MFA and passkey configuration
+
+- Added web authentication configuration for MFA/passkey enablement and session signing.
+- Documented environment-driven behavior without changing API crypto boundaries.
+
+## Patch 257 - web authentication option wiring
+
+- Wired web authentication options into the HTTP server configuration.
+- Kept default behavior explicit so deployments can require MFA before exposing metadata-only web pages.
+
+## Patch 258 - web TOTP login/logout handlers
+
+- Added `/web/login` and `/web/logout` handlers.
+- Login establishes a signed web session after admin mTLS plus valid TOTP.
+- Logout clears the signed web session cookie.
+
+## Patch 259 - require MFA session for web console
+
+- Protected metadata-only web console pages with the signed MFA session gate.
+- Preserved admin mTLS as the outer identity/authz boundary.
+
+## Patch 260 - web TOTP MFA session tests
+
+- Added tests for TOTP-backed login/session behavior.
+- Added regression coverage that protected web pages require a valid web session when MFA is enabled.
+
+## Patch 261 - web TOTP MFA documentation
+
+- Documented TOTP MFA setup, required environment variables and operational boundary.
+- Clarified that web MFA does not introduce plaintext, ciphertext, envelope or key-material rendering.
+
+## Patch 262 - passkey challenge options helper
 
 - Added passkey/WebAuthn challenge option generation helpers.
+- Kept the implementation to server-side challenge/options metadata, not assertion verification.
+
+## Patch 263 - passkey challenge options tests
+
+- Added tests for passkey challenge/options generation.
+- Covered bounded metadata output without storing or exposing secret material.
+
+## Patch 264 - web passkey options endpoints
+
 - Added metadata-only passkey registration/authentication options endpoints.
-- Added tests that verify passkey endpoints require enablement and return only metadata challenge options.
-- Surfaced web MFA/passkey state through `/v1/status` and `/web/status`.
-- Full WebAuthn assertion verification remains a production hardening item; TOTP must remain enabled until that verifier is completed and audited.
+- Endpoints return challenge/options metadata and stay behind the configured web auth boundary.
+
+## Patch 265 - web passkey options endpoint tests
+
+- Added endpoint tests for passkey options behavior.
+- Verified that disabled passkey support is rejected and enabled support emits only metadata challenge options.
+
+## Patch 266 - web MFA environment example
+
+- Documented web MFA/passkey environment variables in `.env.example`.
+- Kept production defaults explicit so operators do not accidentally expose unauthenticated metadata pages.
+
+## Patch 267 - web passkey support documentation
+
+- Documented the passkey/WebAuthn support boundary.
+- Explicitly stated that full assertion verification remains future hardening and TOTP must stay enabled until that verifier exists.
+
+## Patch 268 - web auth status metadata
+
+- Surfaced web MFA/passkey configuration state through status metadata.
+- Added status visibility without exposing secrets, envelopes, ciphertext or client-side key material.
 
 ## Phase 2 status
 
 Phase 2 is now functionally closed for the server baseline: mTLS rotation lifecycle, strong-revocation versioning, Valkey-compatible rate limiting, Go/Python SDK helpers, metadata-only web console and TOTP MFA are implemented. Passkey support is present as server-side challenge/options integration and documented boundary; production deployments should keep TOTP enabled until full assertion verification is completed.
+
+
+## Completeness note
+
+This file is intentionally a functional ledger, not a one-section-per-patch changelog for all 271 patches. Early work is tracked patch-by-patch where useful, while high-volume later work may still be grouped by implemented capability. The Phase 2 web-authentication closure patches are listed individually because they define the MFA/passkey security boundary.
+
+Coverage from patch 1 through patch 271 is represented by these implemented surfaces:
+
+- project bootstrap, Go module, standard-library HTTP server, model validation and in-memory store baseline;
+- mTLS identity extraction, client lifecycle, admin bootstrap and optional CRL enforcement;
+- opaque secret CRUD, metadata-only listing, access grants, pending grant activation and strong-revocation versioning;
+- strict JSON/base64/permission/body-size/timeout guardrails;
+- hash-chained audit, audit listing/filtering/verification/export and export integrity headers;
+- PostgreSQL schema contract and optional `postgres` build-tag store;
+- Valkey-compatible rate limiting and readiness checks;
+- `vault-admin` client/access/audit/status/version/diagnostics/CSR/certificate lifecycle helpers;
+- Go/Python SDK helpers for secrets, grants, audit, status, diagnostics and version reads;
+- Docker/Compose/Helm deployment scaffolding and production/DR/backup/security runbooks;
+- dedicated `custodia-signer` process plus client certificate lifecycle tooling;
+- metadata-only web console protected by admin mTLS and TOTP web sessions;
+- passkey/WebAuthn challenge/options endpoints without claiming full assertion verification.
+
+Any future implementation patch must update this file or an explicitly linked status/runbook document in the same patch series.
