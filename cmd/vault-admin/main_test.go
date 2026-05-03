@@ -1,7 +1,9 @@
 package main
 
 import (
+	"net/http"
 	"net/url"
+	"os"
 	"testing"
 )
 
@@ -168,5 +170,39 @@ func TestRunCertificateSignRejectsInvalidArgs(t *testing.T) {
 	}
 	if err := runCertificateSign(&cliConfig{}, []string{"--client-id", "client_alice", "--csr-file", "client.csr", "--ttl-hours", "-1"}); err == nil {
 		t.Fatal("expected invalid certificate sign ttl error")
+	}
+}
+
+func TestWriteAuditExportArtifacts(t *testing.T) {
+	dir := t.TempDir()
+	bodyPath := dir + "/audit.jsonl"
+	shaPath := dir + "/audit.sha256"
+	eventsPath := dir + "/audit.events"
+	headers := http.Header{}
+	headers.Set("X-Custodia-Audit-Export-SHA256", "abc123")
+	headers.Set("X-Custodia-Audit-Export-Events", "2")
+	if err := writeAuditExportArtifacts([]byte("{}\n{}\n"), headers, bodyPath, shaPath, eventsPath, nil); err != nil {
+		t.Fatalf("writeAuditExportArtifacts() error = %v", err)
+	}
+	body, err := os.ReadFile(bodyPath)
+	if err != nil {
+		t.Fatalf("read body: %v", err)
+	}
+	if string(body) != "{}\n{}\n" {
+		t.Fatalf("unexpected body artifact: %q", string(body))
+	}
+	sha, err := os.ReadFile(shaPath)
+	if err != nil {
+		t.Fatalf("read sha: %v", err)
+	}
+	if string(sha) != "abc123\n" {
+		t.Fatalf("unexpected sha artifact: %q", string(sha))
+	}
+	events, err := os.ReadFile(eventsPath)
+	if err != nil {
+		t.Fatalf("read events: %v", err)
+	}
+	if string(events) != "2\n" {
+		t.Fatalf("unexpected events artifact: %q", string(events))
 	}
 }
