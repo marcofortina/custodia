@@ -260,6 +260,9 @@ func runAuditExport(cfg *cliConfig, args []string) error {
 	actorClientID := cmd.String("actor-client-id", "", "optional actor client id filter")
 	resourceType := cmd.String("resource-type", "", "optional resource type filter")
 	resourceID := cmd.String("resource-id", "", "optional resource id filter")
+	outFile := cmd.String("out-file", "", "optional path to write JSONL export body")
+	sha256Out := cmd.String("sha256-out", "", "optional path to write export SHA-256 header")
+	eventsOut := cmd.String("events-out", "", "optional path to write exported event count header")
 	_ = cmd.Parse(args)
 	if *limit <= 0 || *limit > 500 {
 		return fmt.Errorf("--limit must be between 1 and 500")
@@ -274,7 +277,35 @@ func runAuditExport(cfg *cliConfig, args []string) error {
 	addQueryFilter(query, "actor_client_id", *actorClientID)
 	addQueryFilter(query, "resource_type", *resourceType)
 	addQueryFilter(query, "resource_id", *resourceID)
-	return requestJSON(cfg, http.MethodGet, "/v1/audit-events/export?"+query.Encode(), nil, os.Stdout)
+	var body bytes.Buffer
+	headers, err := requestRaw(cfg, http.MethodGet, "/v1/audit-events/export?"+query.Encode(), nil, &body)
+	if err != nil {
+		return err
+	}
+	return writeAuditExportArtifacts(body.Bytes(), headers, *outFile, *sha256Out, *eventsOut, os.Stdout)
+}
+
+func writeAuditExportArtifacts(body []byte, headers http.Header, outFile, sha256Out, eventsOut string, stdout io.Writer) error {
+	if outFile != "" {
+		if err := os.WriteFile(outFile, body, 0o644); err != nil {
+			return err
+		}
+	} else if stdout != nil {
+		if _, err := io.Copy(stdout, bytes.NewReader(body)); err != nil {
+			return err
+		}
+	}
+	if sha256Out != "" {
+		if err := os.WriteFile(sha256Out, []byte(headers.Get("X-Custodia-Audit-Export-SHA256")+"\n"), 0o644); err != nil {
+			return err
+		}
+	}
+	if eventsOut != "" {
+		if err := os.WriteFile(eventsOut, []byte(headers.Get("X-Custodia-Audit-Export-Events")+"\n"), 0o644); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func validateAuditFilterFlags(outcome, action, actorClientID, resourceType, resourceID string) error {
@@ -598,7 +629,7 @@ func usage() {
   vault-admin [global flags] client create --client-id ID --mtls-subject SUBJECT
   vault-admin [global flags] client revoke --client-id ID [--reason REASON]
   vault-admin [global flags] audit list [--limit N] [--outcome STATUS] [--action ACTION]
-  vault-admin [global flags] audit export [--limit N]
+  vault-admin [global flags] audit export [--limit N] [--out-file FILE] [--sha256-out FILE] [--events-out FILE]
   vault-admin [global flags] audit verify [--limit N]
   vault-admin [global flags] secret versions --secret-id ID
   vault-admin [global flags] access list --secret-id ID
