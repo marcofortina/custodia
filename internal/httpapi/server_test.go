@@ -2478,3 +2478,28 @@ func passkeyAuthenticatorDataPayloadForRPID(rpID string, flags byte, signCount u
 	raw[36] = byte(signCount)
 	return base64.RawURLEncoding.EncodeToString(raw)
 }
+
+func TestWebPasskeyRegisterVerifyRejectsInvalidCredentialKeyCOSE(t *testing.T) {
+	handler := newPasskeyCounterTestHandler(t)
+	optionsReq := mtlsRequest(http.MethodGet, "/web/passkey/register/options", "", "admin")
+	optionsReq.Host = "example.com"
+	optionsReq.Header.Set("X-Forwarded-Proto", "https")
+	optionsRes := httptest.NewRecorder()
+	handler.ServeHTTP(optionsRes, optionsReq)
+	if optionsRes.Code != http.StatusOK {
+		t.Fatalf("register options status = %d", optionsRes.Code)
+	}
+	var options webauth.PasskeyOptions
+	if err := json.NewDecoder(optionsRes.Body).Decode(&options); err != nil {
+		t.Fatalf("decode register options: %v", err)
+	}
+	payload := passkeyClientDataPayload(t, webauth.PasskeyClientData{Type: "webauthn.create", Challenge: options.Challenge, Origin: "https://example.com"})
+	verifyReq := mtlsRequest(http.MethodPost, "/web/passkey/register/verify", `{"client_data_json":"`+payload+`","credential_id":"credential-invalid-cose","credential_key_cose":"oA"}`, "admin")
+	verifyReq.Host = "example.com"
+	verifyReq.Header.Set("X-Forwarded-Proto", "https")
+	verifyRes := httptest.NewRecorder()
+	handler.ServeHTTP(verifyRes, verifyReq)
+	if verifyRes.Code != http.StatusBadRequest {
+		t.Fatalf("register verify status = %d, body = %s", verifyRes.Code, verifyRes.Body.String())
+	}
+}
