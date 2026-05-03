@@ -619,3 +619,42 @@ Any future implementation patch must update this file or an explicitly linked st
 ## Patch 387 - production env example docs
 
 - Documented how to use the production env example with `make production-check`.
+
+## Patch 391 - production external evidence checker
+
+- Added external evidence checks for HSM/PKCS#11, WORM retention, database HA, Valkey cluster, zero-trust networking, air-gapped backup, penetration testing, formal verification, revocation drills and release checks.
+- Kept the checker evidence-oriented: it verifies operator evidence references without pretending to validate confidential external systems inside the repo.
+
+## Patch 393 - vault-admin production evidence command
+
+- Added `vault-admin production evidence-check --env-file FILE`.
+- The command fails closed when any Fort Knox external evidence reference is missing.
+
+## Patch 395 - production evidence make target
+
+- Added `make production-evidence-check`.
+
+## Patch 397 - production evidence guide
+
+- Documented the external evidence gate and required evidence files.
+
+## Patch 398 - release check evidence gate
+
+- `scripts/release-check.sh` now runs production and external evidence gates when `CUSTODIA_PRODUCTION_ENV_FILE` is set.
+
+## Final design-gap check after patch 400
+
+The remaining Fort Knox items are no longer undocumented repository gaps. They are represented as external production evidence gates:
+
+- HSM/PKCS#11/TPM attestation for CA key custody;
+- WORM/object-lock retention proof for immutable audit storage;
+- database HA/failover evidence;
+- Valkey cluster evidence;
+- zero-trust network policy evidence;
+- air-gapped backup evidence;
+- penetration-test evidence;
+- formal verification execution evidence;
+- CRL/OCSP revocation drill evidence;
+- release-check evidence for the shipped commit/image.
+
+The repository still does not claim to implement physical HSM hardware, external WORM storage, managed database clusters or third-party penetration testing. Those are operator-controlled production artifacts by design.
