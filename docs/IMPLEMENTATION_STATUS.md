@@ -1038,3 +1038,41 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 573 - Lite SQLite store guide
 
 - Documented the SQLite Lite store scope, build tag, configuration, safety properties and backup guidance.
+
+## Patch 578 - Lite installation guide
+
+- Added `docs/LITE_INSTALL.md` with secure single-node installation guidance for the Lite profile.
+- The guide keeps mTLS, Web MFA, audit integrity and the opaque crypto boundary intact while reducing external dependencies.
+
+## Patch 579 - Lite local CA bootstrap guide
+
+- Added `docs/LITE_CA_BOOTSTRAP.md` documenting the local file-backed CA model for Lite.
+- Marked the future bootstrap helper and CA passphrase-file support as dedicated Phase 4 work instead of claiming they already exist.
+
+## Patch 580 - Lite backup and restore guide
+
+- Added `docs/LITE_BACKUP_RESTORE.md` with SQLite online backup and restore procedures.
+
+## Patch 581 - Lite to Full upgrade guide
+
+- Added `docs/LITE_TO_FULL_UPGRADE.md` covering the configuration and infrastructure path from Lite to Full.
+
+## Patch 582 - Lite systemd unit example
+
+- Added a hardened `custodia-lite.service` example using `custodia-server --config /etc/custodia/config.yaml`.
+
+## Patch 583 - Lite Docker Compose example
+
+- Added `deploy/docker-compose.lite.yml` for single-node Lite packaging with the SQLite build tag.
+
+## Patch 584 - SQLite Lite backup helper
+
+- Added `scripts/sqlite-backup.sh` using SQLite `.backup` for online Lite database backups.
+
+## Patch 585 - SQLite Lite backup make target
+
+- Added `make sqlite-backup`.
+
+## Patch 587 - Lite operations guide links
+
+- Linked Lite installation, CA bootstrap, backup/restore and upgrade guides from the README.
