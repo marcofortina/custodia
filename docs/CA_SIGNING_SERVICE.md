@@ -1,14 +1,57 @@
-# Custodia CA signing service design
+# Custodia CA signing service
 
-The vault server must not directly hold the CA private key. Certificate lifecycle belongs to a dedicated signing service backed by TPM/HSM or an offline CA workflow.
+The vault API process must not hold the client CA private key. Certificate lifecycle belongs to the dedicated `custodia-signer` process, backed by TPM/HSM/PKCS#11 or an isolated offline CA workflow.
 
-## Responsibilities
+## Implemented boundary
 
-- Accept authenticated administrative CSR signing requests.
-- Validate requested `client_id` and mTLS subject policy.
-- Sign client certificates using TPM/HSM/PKCS#11 or offline CA material.
-- Publish CRL updates through the revocation distribution channel.
-- Append signing/revocation events to an immutable audit destination.
+`custodia-signer` exposes a minimal admin-only API:
+
+- `GET /health`
+- `GET /live`
+- `POST /v1/certificates/sign`
+
+The signing request body is:
+
+```json
+{
+  "client_id": "client_alice",
+  "csr_pem": "-----BEGIN CERTIFICATE REQUEST-----\n...",
+  "ttl_hours": 24
+}
+```
+
+The response contains only the signed mTLS client certificate and validity window. The signer never receives, stores, publishes or validates client-side encryption keys.
+
+## Production authentication
+
+Production mode requires mTLS:
+
+- `CUSTODIA_SIGNER_TLS_CERT_FILE`
+- `CUSTODIA_SIGNER_TLS_KEY_FILE`
+- `CUSTODIA_SIGNER_CLIENT_CA_FILE`
+- `CUSTODIA_SIGNER_ADMIN_SUBJECTS`
+
+Only admin certificate subjects listed in `CUSTODIA_SIGNER_ADMIN_SUBJECTS` may submit CSR signing requests.
+
+## CA material
+
+Current implementation loads:
+
+- `CUSTODIA_SIGNER_CA_CERT_FILE`
+- `CUSTODIA_SIGNER_CA_KEY_FILE`
+
+This is acceptable for development, isolated bootstrap and tests. Production deployments should replace the file-backed private key with TPM/HSM/PKCS#11 integration before exposing signing in a live environment.
+
+## CSR policy
+
+The signer validates that:
+
+- `client_id` follows Custodia client-id rules;
+- the CSR signature is valid;
+- the CSR contains the same `client_id` in Common Name, DNS SAN or URI SAN;
+- the requested TTL is positive and does not exceed the signer maximum.
+
+The issued certificate is client-auth only and carries the requested `client_id` as CN and DNS SAN so the vault API can map it to the `clients.mtls_subject` metadata.
 
 ## Non-goals
 
@@ -16,11 +59,8 @@ The vault server must not directly hold the CA private key. Certificate lifecycl
 - No publication of recipient encryption public keys.
 - No decrypt/unwrap operation for secret payloads.
 - No CA private key in the Custodia API process.
+- No plaintext secret handling.
 
-## Suggested API boundary
+## Remaining production gap
 
-- `POST /ca/v1/csr/sign` for CSR signing.
-- `POST /ca/v1/certificates/revoke` for revocation.
-- `GET /ca/v1/crl.pem` for CRL distribution.
-
-The current Custodia API can consume the resulting client certificates and CRL file without changing the secret storage model.
+TPM/HSM-backed signing, CA key unseal workflow, CRL publication automation and OCSP responder integration are still separate hardening steps.
