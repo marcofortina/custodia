@@ -43,3 +43,13 @@ vault-admin production check --env-file .env.production
 ```
 
 Promotion must stop on any `critical` finding. Warnings require an explicit operator decision and should be resolved before declaring a Fort Knox production deployment complete.
+
+## External evidence gate
+
+Before declaring a Fort Knox production release complete, run:
+
+```bash
+CUSTODIA_PRODUCTION_ENV_FILE=.env.production make production-evidence-check
+```
+
+The environment file must reference evidence for HSM/PKCS#11, WORM retention, database HA, Valkey cluster, zero-trust networking, air-gapped backup, penetration testing, formal verification, revocation drills and release checks.

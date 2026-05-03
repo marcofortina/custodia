@@ -31,3 +31,8 @@ The repository cannot prove that external infrastructure exists or behaves corre
 3. `CUSTODIA_PRODUCTION_ENV_FILE=.env.production make production-check`
 4. verify audit archive shipment manifest against the target WORM/SIEM sink evidence
 5. verify database HA and signer HSM evidence outside the repo
+
+
+## External evidence gate
+
+The repository baseline is complete only together with operator evidence. Run `make production-evidence-check` with the production environment file to ensure every external Fort Knox proof is referenced before release sign-off.
