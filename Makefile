@@ -71,3 +71,11 @@ production-evidence-check:
 .PHONY: release-check
 release-check:
 	./scripts/release-check.sh
+
+.PHONY: softhsm-dev-token
+softhsm-dev-token:
+	./scripts/softhsm-dev-token.sh
+
+.PHONY: pkcs11-bridge-check
+pkcs11-bridge-check:
+	bash -n scripts/pkcs11-sign-command.sh scripts/softhsm-dev-token.sh
