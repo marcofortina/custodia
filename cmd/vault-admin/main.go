@@ -65,6 +65,8 @@ func main() {
 		err = requestJSON(&cfg, http.MethodGet, "/v1/revocation/status", nil, os.Stdout)
 	case "revocation fetch-crl":
 		err = runRevocationFetchCRL(&cfg, args[2:])
+	case "revocation check-serial":
+		err = runRevocationCheckSerial(&cfg, args[2:])
 	case "production check":
 		err = runProductionCheck(args[2:])
 	case "production evidence-check":
@@ -189,6 +191,17 @@ func readEnvFile(path string) (map[string]string, error) {
 		env[strings.TrimSpace(key)] = strings.Trim(strings.TrimSpace(value), `"'`)
 	}
 	return env, scanner.Err()
+}
+
+func runRevocationCheckSerial(cfg *cliConfig, args []string) error {
+	cmd := flag.NewFlagSet("revocation check-serial", flag.ExitOnError)
+	serialHex := cmd.String("serial-hex", "", "certificate serial number in hexadecimal")
+	_ = cmd.Parse(args)
+	if strings.TrimSpace(*serialHex) == "" {
+		return fmt.Errorf("--serial-hex is required")
+	}
+	path := "/v1/revocation/serial?serial_hex=" + url.QueryEscape(strings.TrimSpace(*serialHex))
+	return requestJSON(cfg, http.MethodGet, path, nil, os.Stdout)
 }
 
 func runRevocationFetchCRL(cfg *cliConfig, args []string) error {
