@@ -2063,3 +2063,28 @@ func TestWebPasskeyOptionsReturnMetadataOnlyChallenges(t *testing.T) {
 		}
 	}
 }
+
+func TestAdminCanReadUnconfiguredRevocationStatus(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/revocation/status", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var payload model.RevocationStatus
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode revocation status: %v", err)
+	}
+	if payload.Configured || !payload.Valid {
+		t.Fatalf("unexpected unconfigured revocation status: %+v", payload)
+	}
+	assertLastAudit(t, memoryStore, "revocation.status", "success", "")
+}
