@@ -53,3 +53,11 @@ CUSTODIA_PRODUCTION_ENV_FILE=.env.production make production-evidence-check
 ```
 
 The environment file must reference evidence for HSM/PKCS#11, WORM retention, database HA, Valkey cluster, zero-trust networking, air-gapped backup, penetration testing, formal verification, revocation drills and release checks.
+
+## PKCS#11 signer gate
+
+- `CUSTODIA_SIGNER_KEY_PROVIDER=pkcs11` is set.
+- `CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND` points to an audited HSM/PKCS#11 bridge.
+- SoftHSM is not used for production signing.
+- PKCS#11 token/key labels and PIN source are managed outside the repository.
+- HSM/TPM attestation is attached to the production evidence gate.
