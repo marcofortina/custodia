@@ -249,3 +249,5 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Added requester client filtering to the web access request page.
 
 - Request correlation is implemented through `X-Request-ID` response headers and audit metadata enrichment.
+
+- Runtime diagnostics are implemented through admin API `/v1/diagnostics`, web `/web/diagnostics`, Go/Python helpers and `vault-admin diagnostics read`.

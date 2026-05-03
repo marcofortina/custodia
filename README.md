@@ -131,3 +131,8 @@ The default test target is dependency-free. To verify the optional PostgreSQL st
 ```bash
 TEST_CUSTODIA_POSTGRES_URL=postgres://user:pass@localhost:5432/custodia_test?sslmode=disable make test-postgres
 ```
+
+
+### Runtime diagnostics
+
+Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS client to inspect runtime metadata. The diagnostics output is metadata-only and never includes secret payloads or client-side cryptographic material.
