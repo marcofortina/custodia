@@ -161,3 +161,12 @@ func TestRunClientCSRWritesFiles(t *testing.T) {
 		t.Fatal("expected exclusive write error for existing files")
 	}
 }
+
+func TestRunCertificateSignRejectsInvalidArgs(t *testing.T) {
+	if err := runCertificateSign(&cliConfig{}, []string{"--client-id", "client bad", "--csr-file", "client.csr"}); err == nil {
+		t.Fatal("expected invalid certificate sign client id error")
+	}
+	if err := runCertificateSign(&cliConfig{}, []string{"--client-id", "client_alice", "--csr-file", "client.csr", "--ttl-hours", "-1"}); err == nil {
+		t.Fatal("expected invalid certificate sign ttl error")
+	}
+}
