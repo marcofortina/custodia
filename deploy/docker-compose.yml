@@ -48,6 +48,29 @@ services:
       timeout: 3s
       retries: 3
 
+  custodia-signer:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        GO_BUILD_TAGS: "${CUSTODIA_GO_BUILD_TAGS:-}"
+        CUSTODIA_VERSION: "${CUSTODIA_VERSION:-dev}"
+        CUSTODIA_COMMIT: "${CUSTODIA_COMMIT:-unknown}"
+        CUSTODIA_DATE: "${CUSTODIA_DATE:-unknown}"
+    entrypoint: ["/usr/local/bin/custodia-signer"]
+    environment:
+      CUSTODIA_SIGNER_ADDR: ":9444"
+      CUSTODIA_SIGNER_DEV_INSECURE_HTTP: "true"
+      CUSTODIA_SIGNER_ADMIN_SUBJECTS: signer_admin
+      CUSTODIA_SIGNER_CA_CERT_FILE: /certs/vault-ca.pem
+      CUSTODIA_SIGNER_CA_KEY_FILE: /certs/vault-ca-key.pem
+    volumes:
+      - ../certs:/certs:ro
+    ports:
+      - "9444:9444"
+    profiles:
+      - signer
+
 volumes:
   postgres-data:
   valkey-data:
