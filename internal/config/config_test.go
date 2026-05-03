@@ -127,3 +127,38 @@ func writeConfigTestFile(t *testing.T, path, content string) {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 }
+
+func TestLoadYAMLReadsSharedSignerSettings(t *testing.T) {
+	path := t.TempDir() + "/custodia.yaml"
+	writeConfigTestFile(t, path, `profile: lite
+signer_key_provider: file
+signer_ca_cert_file: /etc/custodia/ca.crt
+signer_ca_key_file: /etc/custodia/ca.key
+signer_ca_key_passphrase_file: /etc/custodia/ca.pass
+signer_pkcs11_sign_command: /usr/local/bin/custodia-pkcs11-sign
+`)
+	cfg, err := LoadWithArgs([]string{"--config", path})
+	if err != nil {
+		t.Fatalf("LoadWithArgs() error = %v", err)
+	}
+	if cfg.SignerKeyProvider != "file" || cfg.SignerCACertFile != "/etc/custodia/ca.crt" || cfg.SignerCAKeyFile != "/etc/custodia/ca.key" || cfg.SignerCAKeyPassphraseFile != "/etc/custodia/ca.pass" || cfg.SignerPKCS11SignCommand != "/usr/local/bin/custodia-pkcs11-sign" {
+		t.Fatalf("unexpected signer settings: %+v", cfg)
+	}
+}
+
+func TestLoadSignerSettingsCanBeOverriddenByEnvironment(t *testing.T) {
+	path := t.TempDir() + "/custodia.yaml"
+	writeConfigTestFile(t, path, `profile: lite
+signer_key_provider: file
+signer_ca_cert_file: /etc/custodia/ca.crt
+`)
+	t.Setenv("CUSTODIA_SIGNER_KEY_PROVIDER", "pkcs11")
+	t.Setenv("CUSTODIA_SIGNER_CA_CERT_FILE", "/env/ca.crt")
+	cfg, err := LoadWithArgs([]string{"--config", path})
+	if err != nil {
+		t.Fatalf("LoadWithArgs() error = %v", err)
+	}
+	if cfg.SignerKeyProvider != "pkcs11" || cfg.SignerCACertFile != "/env/ca.crt" {
+		t.Fatalf("unexpected env override signer settings: %+v", cfg)
+	}
+}
