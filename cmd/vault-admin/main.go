@@ -15,6 +15,7 @@ import (
 
 	"custodia/internal/auditarchive"
 	"custodia/internal/auditartifact"
+	"custodia/internal/auditshipper"
 	"custodia/internal/build"
 	"custodia/internal/certutil"
 	"custodia/internal/model"
@@ -82,6 +83,8 @@ func main() {
 		err = runAuditVerifyExport(args[2:])
 	case "audit archive-export":
 		err = runAuditArchiveExport(args[2:])
+	case "audit ship-archive":
+		err = runAuditShipArchive(args[2:])
 	case "secret versions":
 		err = runSecretVersions(&cfg, args[2:])
 	case "access list":
@@ -337,6 +340,21 @@ func validateAuditFilterFlags(outcome, action, actorClientID, resourceType, reso
 		return fmt.Errorf("--resource-id is invalid")
 	}
 	return nil
+}
+
+func runAuditShipArchive(args []string) error {
+	cmd := flag.NewFlagSet("audit ship-archive", flag.ExitOnError)
+	archiveDir := cmd.String("archive-dir", "", "verified audit archive bundle directory")
+	sinkDir := cmd.String("sink-dir", "", "destination sink directory")
+	_ = cmd.Parse(args)
+	if *archiveDir == "" || *sinkDir == "" {
+		return fmt.Errorf("--archive-dir and --sink-dir are required")
+	}
+	result, err := auditshipper.ShipArchive(*archiveDir, *sinkDir, time.Now().UTC())
+	if encodeErr := json.NewEncoder(os.Stdout).Encode(result); encodeErr != nil {
+		return encodeErr
+	}
+	return err
 }
 
 func runAuditArchiveExport(args []string) error {
