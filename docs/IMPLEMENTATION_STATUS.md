@@ -528,3 +528,21 @@ Any future implementation patch must update this file or an explicitly linked st
 ## Patch 337 - SIEM/WORM shipment step
 
 - Updated SIEM/WORM guidance to require shipment manifests before external ingestion.
+
+
+## Patch 341 - deployment HA metadata config
+
+- Added deployment-mode, database HA target and audit shipment sink configuration.
+
+## Patch 342 - deployment HA status metadata
+
+- Surfaced deployment HA metadata in admin operational status for monitoring and runbook checks.
+
+## Patch 344 - Helm deployment HA metadata
+
+- Wired deployment HA metadata through the Helm ConfigMap and values.
+
+## Patch 347 - database HA runbook
+
+- Documented CockroachDB and PostgreSQL Patroni/managed HA deployment boundaries.
+- Clarified that DB HA is an external control-plane responsibility, not embedded in the vault API process.
