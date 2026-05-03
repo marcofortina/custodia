@@ -265,3 +265,15 @@ func testSignerCRL(t *testing.T) []byte {
 	}
 	return pem.EncodeToMemory(&pem.Block{Type: "X509 CRL", Bytes: der})
 }
+
+func TestLoadConfigReadsPKCS11Command(t *testing.T) {
+	t.Setenv("CUSTODIA_SIGNER_KEY_PROVIDER", "pkcs11")
+	t.Setenv("CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND", "/usr/local/bin/pkcs11-sign")
+	cfg := loadConfig()
+	if cfg.keyProvider != "pkcs11" {
+		t.Fatalf("keyProvider = %q", cfg.keyProvider)
+	}
+	if cfg.pkcs11SignCommand != "/usr/local/bin/pkcs11-sign" {
+		t.Fatalf("pkcs11SignCommand = %q", cfg.pkcs11SignCommand)
+	}
+}
