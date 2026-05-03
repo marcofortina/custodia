@@ -190,3 +190,7 @@ This API remains a preverification scaffold and does not yet accept/store COSE c
 `POST /web/passkey/register/verify` also requires `credential_key_cose`, a base64url-encoded opaque COSE credential-key blob. Custodia stores the blob with the credential metadata. `POST /web/passkey/authenticate/verify` requires the credential to have stored credential-key metadata before preverification can succeed.
 
 This remains a metadata/preverification API: the stored COSE key is not yet parsed for CBOR/COSE structure and authenticator signatures are not yet verified.
+
+### Passkey COSE credential-key parser
+
+`credential_key_cose` on `/web/passkey/register/verify` must be a base64url-encoded COSE_Key CBOR map with supported metadata. Custodia currently accepts EC2/P-256/ES256 and RSA/RS256 key metadata and stores the COSE blob as opaque passkey credential-key metadata. Unsupported or malformed COSE maps are rejected before credential metadata is registered.
