@@ -37,6 +37,15 @@ type AuditExportArtifact struct {
 	EventCount string
 }
 
+type RevocationSerialStatus struct {
+	SerialHex    string     `json:"serial_hex"`
+	Status       string     `json:"status"`
+	ThisUpdate   time.Time  `json:"this_update"`
+	NextUpdate   time.Time  `json:"next_update"`
+	RevokedAt    *time.Time `json:"revoked_at,omitempty"`
+	RevokedCount int        `json:"revoked_count"`
+}
+
 type AuditEventFilters struct {
 	Limit         int
 	Outcome       string
@@ -293,6 +302,12 @@ func (c *Client) Diagnostics() (model.RuntimeDiagnostics, error) {
 func (c *Client) RevocationStatus() (model.RevocationStatus, error) {
 	var response model.RevocationStatus
 	return response, c.doJSON(http.MethodGet, "/v1/revocation/status", nil, &response)
+}
+
+func (c *Client) RevocationSerialStatus(serialHex string) (RevocationSerialStatus, error) {
+	var response RevocationSerialStatus
+	path := "/v1/revocation/serial?serial_hex=" + url.QueryEscape(strings.TrimSpace(serialHex))
+	return response, c.doJSON(http.MethodGet, path, nil, &response)
 }
 
 func (c *Client) ShareSecret(secretID string, req model.ShareSecretRequest) error {
