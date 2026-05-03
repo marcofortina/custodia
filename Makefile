@@ -30,13 +30,23 @@ run-dev:
 build:
 	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-server
 	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/vault-admin
+	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-signer
 
 .PHONY: build-postgres
 build-postgres:
 	$(GO) build -tags postgres -ldflags "$(LDFLAGS)" ./cmd/custodia-server
 	$(GO) build -tags postgres -ldflags "$(LDFLAGS)" ./cmd/vault-admin
+	$(GO) build -tags postgres -ldflags "$(LDFLAGS)" ./cmd/custodia-signer
 
 .PHONY: test-postgres
 test-postgres:
 	@if [ -z "$(TEST_CUSTODIA_POSTGRES_URL)" ]; then 		echo "TEST_CUSTODIA_POSTGRES_URL is required" >&2; 		exit 2; 	fi
 	$(GO) test -tags postgres ./internal/store
+
+.PHONY: run-signer-dev
+run-signer-dev:
+	CUSTODIA_SIGNER_DEV_INSECURE_HTTP=true \
+	CUSTODIA_SIGNER_ADMIN_SUBJECTS=signer_admin \
+	CUSTODIA_SIGNER_CA_CERT_FILE=./certs/vault-ca.pem \
+	CUSTODIA_SIGNER_CA_KEY_FILE=./certs/vault-ca-key.pem \
+	$(GO) run ./cmd/custodia-signer
