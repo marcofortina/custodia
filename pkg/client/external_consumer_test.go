@@ -29,10 +29,33 @@ func TestExternalGoConsumerCanUsePublicTransportTypes(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(tmp, "main_test.go"), []byte(`package consumer
 
 import (
+    "bytes"
+    "context"
     "testing"
+    "time"
 
     custodia "custodia/pkg/client"
 )
+
+type resolver struct{}
+
+func (resolver) ResolveRecipientPublicKey(_ context.Context, clientID string) (custodia.RecipientPublicKey, error) {
+    return custodia.RecipientPublicKey{ClientID: clientID, Scheme: custodia.CryptoEnvelopeHPKEV1, PublicKey: []byte("public")}, nil
+}
+
+type privateKey struct{}
+
+func (privateKey) ClientID() string { return "client_alice" }
+func (privateKey) Scheme() string { return custodia.CryptoEnvelopeHPKEV1 }
+func (privateKey) OpenEnvelope(_ context.Context, envelope []byte, _ []byte) ([]byte, error) { return envelope, nil }
+
+type privateKeyProvider struct{}
+
+func (privateKeyProvider) CurrentPrivateKey(context.Context) (custodia.PrivateKeyHandle, error) { return privateKey{}, nil }
+
+type clock struct{}
+
+func (clock) Now() time.Time { return time.Unix(1, 0).UTC() }
 
 func TestPublicTypesCompile(t *testing.T) {
     _ = custodia.Config{ServerURL: "https://vault.example"}
@@ -47,6 +70,15 @@ func TestPublicTypesCompile(t *testing.T) {
     _ = custodia.RuntimeDiagnostics{Goroutines: 1}
     _ = custodia.RevocationStatus{Configured: true}
     _ = custodia.AuditEvent{Action: "secret.read", ResourceType: "secret", Outcome: "success"}
+    opts := custodia.CryptoOptions{
+        PublicKeyResolver: resolver{},
+        PrivateKeyProvider: privateKeyProvider{},
+        RandomSource: bytes.NewReader([]byte("random")),
+        Clock: clock{},
+    }
+    if err := opts.Validate(); err != nil {
+        t.Fatal(err)
+    }
 }
 
 func TestPublicMethodSignaturesCompile(t *testing.T) {
