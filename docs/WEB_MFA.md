@@ -13,6 +13,14 @@ CUSTODIA_WEB_SESSION_TTL_SECONDS=900
 
 `CUSTODIA_WEB_SESSION_SECRET` signs the HttpOnly web session cookie. Rotate it to invalidate all web sessions.
 
+For first-run setup, generate a valid TOTP secret with:
+
+```bash
+custodia-admin web totp generate --account admin
+```
+
+Use the printed `web_totp_secret` line in `config.yaml` or `CUSTODIA_WEB_TOTP_SECRET`. Store the provisioning URI or secret only in the operator's authenticator/password manager.
+
 ## Login flow
 
 1. Admin connects with an active mTLS certificate.

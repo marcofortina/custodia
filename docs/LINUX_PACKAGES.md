@@ -76,7 +76,7 @@ make package-linux
 
 ## First-run quickstart
 
-For a guided install on a clean Ubuntu or Fedora host, use [`docs/QUICKSTART.md`](QUICKSTART.md). The quickstart uses the package layout below and does not require a cloned source tree on the target host.
+For a guided install on a clean Debian, Ubuntu or Fedora host, use [`docs/QUICKSTART.md`](QUICKSTART.md). The quickstart uses the package layout below and does not require a cloned source tree on the target host.
 
 ## Server package layout
 

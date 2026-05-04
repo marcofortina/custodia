@@ -1,6 +1,6 @@
 # Custodia Lite installation guide
 
-For a first install on a clean Ubuntu or Fedora host, start with [`docs/QUICKSTART.md`](QUICKSTART.md). This document remains the lower-level Lite installation reference.
+For a first install on a clean Debian, Ubuntu or Fedora host, start with [`docs/QUICKSTART.md`](QUICKSTART.md). This document remains the lower-level Lite installation reference.
 
 Custodia Lite is a single-node profile of the same Custodia codebase. It removes
 mandatory external runtime services while preserving the security model: API

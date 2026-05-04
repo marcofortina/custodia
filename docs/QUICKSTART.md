@@ -2,14 +2,14 @@
 
 This guide is the first-run path for a clean Linux host. It covers two supported ways to start Custodia Lite:
 
-1. install the release package on Ubuntu or Fedora;
+1. install the release package on Debian, Ubuntu or Fedora;
 2. clone the GitHub repository, build from source and install a local Lite node.
 
 If you are not developing Custodia, use the package install path. The source install path is for contributors, packagers and local build testing.
 
 The quickstart intentionally uses the single-node Lite profile. Lite keeps the Custodia security model: API mTLS, client-side cryptography, opaque ciphertext/envelope storage, Web MFA and audit integrity. It only removes mandatory external services such as PostgreSQL, Valkey, HSM and WORM shipment.
 
-## 0. Choose an install path
+## 1. Choose an install path
 
 Use the package path for a normal machine install. Use the source path only when you are developing Custodia, testing patches or building packages yourself.
 
@@ -22,9 +22,9 @@ Recommended first run: install the package, complete the Lite bootstrap, verify 
 
 Both paths converge at [Prepare the Lite runtime directories](#4-prepare-the-lite-runtime-directories).
 
-## 1. Install prerequisites
+## 2. Install prerequisites
 
-### Ubuntu
+### Debian or Ubuntu
 
 ```bash
 sudo apt update
@@ -50,7 +50,11 @@ cargo --version
 
 Custodia currently supports Cargo/Rust `1.75` or newer.
 
-## 2A. Install from release packages
+## 3. Install Custodia
+
+Custodia can be installed either from release packages or from a source checkout. Pick one of the two paths below.
+
+### 3A. Install from release packages
 
 Package install does not require a cloned repository. Download the release artifacts from GitHub into one directory on the target host. Replace `0.1.0` and `1` with the release values you want to install:
 
@@ -61,7 +65,7 @@ VERSION=0.1.0
 REVISION=1
 BASE_URL="https://github.com/${OWNER}/${REPO}/releases/download/v${VERSION}"
 
-# Ubuntu package
+# Debian/Ubuntu package
 curl -fLO "${BASE_URL}/custodia-server_${VERSION}-${REVISION}_amd64.deb"
 
 # Fedora package
@@ -79,7 +83,7 @@ sha256sum --ignore-missing -c SHA256SUMS
 
 The package file you are about to install must report `OK`.
 
-### Ubuntu
+### Debian or Ubuntu
 
 Run the command from the directory that contains the downloaded `.deb` file:
 
@@ -110,7 +114,7 @@ The package installs:
 
 Continue with [Prepare the Lite runtime directories](#4-prepare-the-lite-runtime-directories).
 
-## 2B. Clone, build and install from source
+### 3B. Clone, build and install from source
 
 This is the advanced path. Use it when you want to build the binaries yourself or validate local changes before packaging.
 
@@ -170,7 +174,7 @@ VERSION=0.1.0 REVISION=1 make package-checksums
 cd dist/packages && sha256sum -c SHA256SUMS
 ```
 
-Then install the generated `.deb` or `.rpm` and follow [Install from release packages](#2a-install-from-release-packages). If you keep the direct `/usr/local` install, continue with the runtime setup below.
+Then install the generated `.deb` or `.rpm` and follow [Install from release packages](#3a-install-from-release-packages). If you keep the direct `/usr/local` install, continue with the runtime setup below.
 
 ## 4. Prepare the Lite runtime directories
 
@@ -219,15 +223,13 @@ Start from the generated Lite config:
 sudo install -m 0640 -o custodia -g custodia /etc/custodia/config.lite.yaml /etc/custodia/config.yaml
 ```
 
-Generate the two Web MFA secrets required by the default Lite profile:
+Generate the Web TOTP secret with `custodia-admin`, then append it to the runtime config:
 
 ```bash
-TOTP_SECRET="$(python3 - <<'PY'
-import base64
-import os
-print(base64.b32encode(os.urandom(20)).decode().rstrip('='))
-PY
-)"
+TOTP_OUTPUT="$(custodia-admin web totp generate --account admin --format json)"
+printf '%s\n' "${TOTP_OUTPUT}"
+
+TOTP_SECRET="$(printf '%s' "${TOTP_OUTPUT}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["totp_secret"])')"
 SESSION_SECRET="$(openssl rand -base64 48)"
 
 sudo tee -a /etc/custodia/config.yaml >/dev/null <<CONFIG
@@ -236,10 +238,10 @@ web_session_secret: "${SESSION_SECRET}"
 CONFIG
 
 printf 'Add this TOTP secret to your authenticator app: %s\n' "${TOTP_SECRET}"
-unset TOTP_SECRET SESSION_SECRET
+unset TOTP_OUTPUT TOTP_SECRET SESSION_SECRET
 ```
 
-Use manual entry in Google Authenticator, Aegis, 1Password, Bitwarden or another TOTP-compatible authenticator. Treat the TOTP secret like an admin credential.
+The JSON output also contains an `otpauth://` provisioning URI. Use manual entry in Google Authenticator, Aegis, 1Password, Bitwarden or another TOTP-compatible authenticator if your app cannot scan/import that URI directly. Treat the TOTP secret like an admin credential.
 
 ## 7. Start Custodia
 
@@ -333,7 +335,7 @@ The web console is metadata-only. It does not decrypt or display secret plaintex
 
 For a first local test on the same machine, no firewall rule is required. If remote clients must connect, expose only the required ports and prefer a private network or hardened reverse proxy.
 
-### Ubuntu with UFW
+### Debian or Ubuntu with UFW
 
 ```bash
 sudo ufw allow 8443/tcp

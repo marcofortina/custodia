@@ -35,6 +35,7 @@ import (
 	"custodia/internal/mtls"
 	"custodia/internal/productioncheck"
 	"custodia/internal/signing"
+	"custodia/internal/webauth"
 )
 
 // cliConfig keeps transport flags separate from command-specific flags so every
@@ -63,6 +64,13 @@ func main() {
 	if len(args) < 2 {
 		usage()
 		os.Exit(2)
+	}
+	if len(args) >= 3 && args[0] == "web" && args[1] == "totp" && args[2] == "generate" {
+		if err := runWebTOTPGenerate(args[3:], os.Stdout); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	var err error
@@ -132,6 +140,49 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+}
+
+// runWebTOTPGenerate creates a first-run TOTP secret without requiring operators
+// to hand-roll Base32 encoding in the quickstart.
+func runWebTOTPGenerate(args []string, out io.Writer) error {
+	cmd := flag.NewFlagSet("web totp generate", flag.ExitOnError)
+	issuer := cmd.String("issuer", "Custodia", "TOTP issuer label")
+	account := cmd.String("account", "admin", "TOTP account label")
+	format := cmd.String("format", "text", "output format: text, yaml or json")
+	_ = cmd.Parse(args)
+
+	secret, err := webauth.GenerateTOTPSecret()
+	if err != nil {
+		return err
+	}
+	uri, err := webauth.TOTPProvisioningURI(*issuer, *account, secret)
+	if err != nil {
+		return err
+	}
+
+	switch strings.ToLower(strings.TrimSpace(*format)) {
+	case "text":
+		_, err = fmt.Fprintf(out, "TOTP secret: %s\nProvisioning URI: %s\n\nAdd this to /etc/custodia/config.yaml:\nweb_totp_secret: \"%s\"\n", secret, uri, secret)
+		return err
+	case "yaml":
+		_, err = fmt.Fprintf(out, "web_totp_secret: \"%s\"\n", secret)
+		return err
+	case "json":
+		payload := map[string]string{
+			"account":          strings.TrimSpace(*account),
+			"issuer":           strings.TrimSpace(*issuer),
+			"provisioning_uri": uri,
+			"totp_secret":      secret,
+		}
+		encoded, err := json.MarshalIndent(payload, "", "  ")
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintf(out, "%s\n", encoded)
+		return err
+	default:
+		return fmt.Errorf("unsupported --format %q", *format)
 	}
 }
 
@@ -992,6 +1043,7 @@ func usage() {
   custodia-admin [global flags] access activate --secret-id ID --client-id ID --envelope-file FILE
   custodia-admin [global flags] access revoke --secret-id ID --client-id ID
   custodia-admin [global flags] lite upgrade-check --lite-env-file FILE --full-env-file FILE
+  custodia-admin web totp generate [--issuer NAME] [--account NAME] [--format text|yaml|json]
 
 global flags:
   --server-url URL

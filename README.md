@@ -5,6 +5,14 @@
 
 Custodia is a REST vault for encrypted secrets. The server authenticates clients with mTLS, authorizes access, stores opaque encrypted blobs and returns only the caller's opaque envelope. Encryption, decryption, key discovery, key rotation and key trust stay outside the server.
 
+## Start here
+
+New to Custodia? Start with the step-by-step quickstart:
+
+**[`docs/QUICKSTART.md` — install Custodia Lite from packages or from source](docs/QUICKSTART.md)**
+
+If you are not sure what to choose, use the package install path. It covers Debian/Ubuntu `.deb`, Fedora `.rpm`, Lite bootstrap, admin certificate setup, Web TOTP and the first API check.
+
 ## What is implemented
 
 - Go vault server with TLS 1.3 / mTLS support and optional client CRL rejection.
@@ -81,7 +89,7 @@ bitcoin:36jDV57roGb4o59TwK1CB7viPrXToQHGiP
 - Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
 - SDK release policy: [`docs/SDK_RELEASE_POLICY.md`](docs/SDK_RELEASE_POLICY.md)
 - Linux DEB/RPM packaging: [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md)
-- Fresh Lite quickstart for package or source installs: [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
+- Start here / Lite quickstart: [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
 - SBOM artifacts: [`docs/SBOM.md`](docs/SBOM.md)
 
 ## Linux packages
@@ -112,7 +120,7 @@ Generate a release SBOM:
 VERSION=0.1.0 make sbom
 ```
 
-For a clean machine first run, follow [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
+For a clean machine first run, start with **[`docs/QUICKSTART.md`](docs/QUICKSTART.md)**.
 
 The package split is:
 

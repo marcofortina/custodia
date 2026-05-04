@@ -11,16 +11,45 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"custodia/internal/auditarchive"
 )
+
+func TestRunWebTOTPGenerateOutputsJSON(t *testing.T) {
+	var out bytes.Buffer
+	if err := runWebTOTPGenerate([]string{"--issuer", "Custodia", "--account", "admin", "--format", "json"}, &out); err != nil {
+		t.Fatalf("runWebTOTPGenerate() error = %v", err)
+	}
+	var payload map[string]string
+	if err := json.Unmarshal(out.Bytes(), &payload); err != nil {
+		t.Fatalf("invalid json output: %v", err)
+	}
+	if payload["issuer"] != "Custodia" || payload["account"] != "admin" {
+		t.Fatalf("unexpected payload labels: %#v", payload)
+	}
+	if payload["totp_secret"] == "" {
+		t.Fatal("expected generated TOTP secret")
+	}
+	if !strings.HasPrefix(payload["provisioning_uri"], "otpauth://totp/Custodia:admin?") {
+		t.Fatalf("unexpected provisioning URI: %q", payload["provisioning_uri"])
+	}
+}
+
+func TestRunWebTOTPGenerateRejectsUnsupportedFormat(t *testing.T) {
+	if err := runWebTOTPGenerate([]string{"--format", "xml"}, io.Discard); err == nil {
+		t.Fatal("expected unsupported format error")
+	}
+}
 
 func TestVaultAdminPathEscapeProtectsDynamicSegments(t *testing.T) {
 	if got := pathEscape("tenant/client"); got != "tenant%2Fclient" {

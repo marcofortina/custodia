@@ -95,8 +95,8 @@ tls_cert_file: /etc/custodia/server.crt
 tls_key_file: /etc/custodia/server.key
 
 signer_key_provider: file
-signer_ca_cert_file: /etc/custodia/custodia-ca.pem
-signer_ca_key_file: /etc/custodia/custodia-ca-key.pem
+signer_ca_cert_file: /etc/custodia/ca.crt
+signer_ca_key_file: /etc/custodia/ca.key
 ```
 
 ## SQLite store
@@ -120,8 +120,8 @@ Lite uses a file-backed local CA by default:
 
 ```text
 CUSTODIA_SIGNER_KEY_PROVIDER=file
-CUSTODIA_SIGNER_CA_CERT_FILE=/etc/custodia/custodia-ca.pem
-CUSTODIA_SIGNER_CA_KEY_FILE=/etc/custodia/custodia-ca-key.pem
+CUSTODIA_SIGNER_CA_CERT_FILE=/etc/custodia/ca.crt
+CUSTODIA_SIGNER_CA_KEY_FILE=/etc/custodia/ca.key
 ```
 
 Recommended hardening:
