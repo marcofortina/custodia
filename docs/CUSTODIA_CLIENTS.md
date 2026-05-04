@@ -27,9 +27,21 @@ Principi comuni:
 | **Go** | Esistente | Transport SDK pubblico + primo crypto client high-level E2E | `pkg/client` nel monorepo, con payload/operational methods pubblici e crypto helpers senza esporre tipi `internal/*` nelle API. |
 | **Python** | Esistente | Transport client + primo crypto client high-level E2E | `clients/python` nel monorepo, con typed transport helpers e crypto wrapper basato sugli stessi vector. |
 | **Node.js / TypeScript** | Esistente | Transport client presente; crypto client presente | `clients/node` nel monorepo, con JavaScript runtime dependency-free, crypto high-level HPKE-v1/AES-GCM e dichiarazioni TypeScript. |
-| **Rust** | Esistente | Transport client presente | `clients/rust` nel monorepo, transport-only REST/mTLS per payload opachi; crypto high-level futura. |
+| **Rust** | Esistente | Transport client presente; crypto client presente | `clients/rust` nel monorepo, con transport REST/mTLS e crypto high-level HPKE-v1/AES-GCM basato sugli stessi vector. |
 | **Java** | Esistente | Transport client presente; crypto client presente | `clients/java` nel monorepo, basato su `java.net.http`, SSLContext/keystore Java e crypto high-level. |
 | **C++** | Esistente | Transport client presente; crypto client presente | `clients/cpp` nel monorepo, basato su libcurl per HTTPS/mTLS e OpenSSL per crypto high-level. |
+
+## 2.1 Matrice capacità SDK
+
+| Client | Transport REST/mTLS | Crypto high-level | Note |
+| --- | --- | --- | --- |
+| Go | Sì | Sì | Include metodi operational pubblici. |
+| Python | Sì | Sì | Typed transport + crypto wrapper. |
+| Node.js / TypeScript | Sì | Sì | Runtime JS + dichiarazioni TypeScript. |
+| Java | Sì | Sì | Transport `java.net.http` + crypto locale. |
+| C++ | Sì | Sì | libcurl + OpenSSL. |
+| Rust | Sì | Sì | reqwest/rustls + crypto locale. |
+| Bash | Sì | No | Helper shell transport-only, fuori dal set crypto SDK. |
 
 Una libreria diventa “ufficiale” solo quando ha:
 
@@ -294,15 +306,16 @@ Per la Fase 5 iniziale usare il monorepo:
 | Go | `pkg/client` | Da decidere. |
 | Python | `clients/python` | Da decidere. |
 | Node.js / TypeScript | `clients/node` | Monorepo private scaffold; nome pubblico da decidere. |
-| Rust | `clients/rust` | Monorepo transport scaffold; nome pubblico da decidere. |
+| Rust | `clients/rust` | Monorepo transport + crypto scaffold; nome pubblico da decidere. |
 | Java | `clients/java` | Monorepo transport + crypto scaffold; nome pubblico da decidere. |
 | C++ | `clients/cpp` | Monorepo transport + crypto scaffold; nome pubblico da decidere. |
+| Bash | `clients/bash` | Helper shell transport-only; non è un crypto SDK e non ha package pubblico. |
 
 Nomi come `github.com/custodia/go-client`, `@custodia/client`, `custodia-client` o `com.custodia:client` sono placeholder finché non vengono pubblicati davvero.
 
 ### 8.1 Stabilizzazione SDK Node.js / TypeScript transport
 
-`clients/node` esiste nel repository come transport client iniziale per payload opachi. È volutamente limitato al livello REST/mTLS e non implementa ancora il crypto client high-level.
+`clients/node` esiste nel repository come transport client per payload opachi. Il transport resta separato dal wrapper crypto high-level.
 
 Surface attuale:
 
@@ -403,9 +416,9 @@ clients/cpp crypto -> cifra/decifra localmente, risolve le chiavi pubbliche solo
 
 Il crypto client C++ usa gli stessi vector comuni di Go/Python/Node/Java; la dipendenza crypto esplicita è OpenSSL.
 
-### 8.5 Stabilizzazione SDK Rust transport
+### 8.5 Stabilizzazione SDK Rust transport e crypto
 
-`clients/rust` esiste nel repository come client Rust transport-only per payload opachi. Usa `reqwest` blocking con TLS rustls per HTTPS/mTLS e una piccola API basata su `serde_json::Value` per non imporre uno schema crypto lato transport.
+`clients/rust` esiste nel repository come client Rust per payload opachi e crypto client high-level. Usa `reqwest` blocking con TLS rustls per HTTPS/mTLS, `serde_json::Value` per il transport e primitive crypto Rust per canonical AAD, AES-256-GCM e HPKE-v1/X25519.
 
 Surface attuale:
 
@@ -413,15 +426,30 @@ Surface attuale:
 - `CustodiaClient` con metodi transport per secrets, grants, clients, status, diagnostics, revocation e audit export;
 - `CustodiaError::Http` tipizzato per status HTTP non 2xx;
 - `AuditExportArtifact` con body, digest SHA-256 e numero eventi;
-- `HttpTransport` trait per test e integrazioni custom.
+- `HttpTransport` trait per test e integrazioni custom;
+- `CryptoCustodiaClient` per create/read/share/version con cifratura locale;
+- `CryptoOptions`, `PublicKeyResolver`, `PrivateKeyProvider` e `RandomSource`;
+- primitive v1 per canonical AAD, AES-256-GCM e HPKE-v1/X25519.
 
 Criterio di confine:
 
 ```text
-clients/rust transport -> invia solo payload già opachi e non prova a cifrare, decifrare, loggare o interpretare ciphertext/envelope/crypto_metadata
+clients/rust crypto -> cifra/decifra localmente, risolve le chiavi pubbliche solo tramite resolver applicativo e invia al server solo ciphertext, crypto_metadata ed envelope opachi
 ```
 
-Il package resta `publish = false` finché nome pubblico e release process non sono decisi. Il crypto high-level Rust resta esplicitamente fuori da questa chiusura ed è vincolato ai vector comuni se aggiunto in futuro.
+Il package resta `publish = false` finché nome pubblico e release process non sono decisi.
+
+### 8.6 Bash transport helper fuori SDK crypto
+
+`clients/bash` esiste nel repository come helper shell transport-only per CI, smoke test e script operativi basati su `curl`. Non è un crypto SDK ufficiale e non implementa cifratura/decrittazione, HPKE, gestione DEK o risoluzione chiavi pubbliche.
+
+Criterio di confine:
+
+```text
+clients/bash -> helper REST/mTLS per payload già opachi; nessuna crypto applicativa in Bash
+```
+
+Questo evita di promuovere Bash a superficie crypto fragile per shell history, process list, escaping JSON/base64 e logging accidentale.
 
 ## 9. Note sulla sicurezza
 
@@ -443,13 +471,14 @@ Ordine consigliato:
 2. **Fase 5B**: stabilizzare `pkg/client` come SDK Go pubblico senza tipi `internal/*`, chiudere i metodi transport/operational pubblici e aggiungere il primo Go high-level crypto client.
 3. **Fase 5C**: Python high-level crypto client sopra `clients/python`.
 4. **Fase 5D**: Node.js/TypeScript transport client e high-level crypto wrapper sopra gli stessi vector comuni.
-5. **Fase 5E**: Rust transport client presente.
+5. **Fase 5E**: Rust transport client e high-level crypto wrapper presenti.
 6. **Fase 5F**: Java transport client e high-level crypto wrapper presenti.
 7. **Fase 5G**: C++ transport client e high-level crypto wrapper presenti.
+8. **Post-roadmap**: Bash transport helper per CI/smoke/ops, esplicitamente fuori dal set crypto SDK.
 
 Non implementare sei SDK in parallelo prima di avere crypto spec e test vectors comuni.
 
-Stato repository: la Fase 5 è chiusa a livello di monorepo con SDK transport Go/Python/Node/Java/C++/Rust, crypto high-level Go/Python/Node/Java/C++ e vector comuni. Rust crypto high-level, pubblicazione pacchetti e policy semver sono lavori futuri fuori da questa chiusura.
+Stato repository: la Fase 5 è chiusa a livello di monorepo con SDK transport Go/Python/Node/Java/C++/Rust, crypto high-level Go/Python/Node/Java/C++/Rust e vector comuni. Pubblicazione pacchetti e policy semver restano lavori futuri fuori da questa chiusura.
 
 ---
 

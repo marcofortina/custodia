@@ -35,7 +35,7 @@ String response = client.createSecretPayload("""
 
 ## Boundary
 
-This package is transport-only. It does not resolve recipient public keys, decrypt envelopes, decrypt ciphertext or contact the server for key material.
+Transport methods are opaque and do not inspect ciphertext, envelopes or `crypto_metadata`. High-level crypto methods encrypt/decrypt locally, use application-provided recipient public keys and never contact Custodia for key material.
 
 
 ## High-level crypto example

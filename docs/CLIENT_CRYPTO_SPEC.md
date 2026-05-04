@@ -1,6 +1,6 @@
 # Custodia client crypto specification
 
-This document defines the shared client-side crypto contract for future high-level Custodia crypto clients.
+This document defines the shared client-side crypto contract for Custodia high-level crypto clients. It is implemented by the repository Go, Python, Node.js/TypeScript, Java, C++ and Rust SDKs and remains the contract for future clients.
 
 The server remains metadata/ciphertext/envelope-only. It must never receive plaintext, DEK material, private keys or public-key directory state.
 

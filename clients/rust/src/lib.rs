@@ -1,10 +1,11 @@
 pub mod crypto;
 pub use crypto::*;
 
-//! Custodia Rust transport client for opaque REST/mTLS payloads.
+//! Custodia Rust client for opaque REST/mTLS payloads and local client-side crypto.
 //!
-//! The Phase 5 Rust client is transport-only. It does not encrypt, decrypt,
-//! resolve public keys or inspect ciphertext/envelopes.
+//! Transport methods keep payloads opaque. High-level crypto methods encrypt,
+//! decrypt and create HPKE-v1 recipient envelopes locally using application
+//! provided key resolvers; Custodia never becomes a public-key directory.
 
 use serde_json::{json, Value};
 use std::fmt;

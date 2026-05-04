@@ -1,8 +1,8 @@
 # Custodia C++ client
 
-This package contains the initial C++ transport client for Custodia. It is a raw REST/mTLS client: callers send and receive opaque payloads that already contain ciphertext, envelopes and crypto metadata produced by application-side crypto code.
+This package contains the C++ client for Custodia. It includes the raw REST/mTLS transport client and a high-level client-side crypto wrapper for AES-256-GCM content encryption plus HPKE-v1 recipient envelopes.
 
-The implementation uses libcurl for HTTPS and client certificate handling. It does not implement high-level encryption yet and must not log plaintext, ciphertext, envelopes, DEKs, private keys or passphrases.
+The implementation uses libcurl for HTTPS and client certificate handling, and OpenSSL for local high-level crypto. It must not log plaintext, ciphertext, envelopes, DEKs, private keys or passphrases.
 
 ## Build check
 
@@ -31,7 +31,7 @@ std::string response = client.create_secret_payload(
 
 ## Boundary
 
-This package is transport-only. It does not resolve recipient public keys, decrypt envelopes, decrypt ciphertext or contact the server for key material.
+Transport methods are opaque and do not inspect ciphertext, envelopes or `crypto_metadata`. High-level crypto methods encrypt/decrypt locally, use application-provided recipient public keys and never contact Custodia for key material.
 
 
 ## High-level crypto example

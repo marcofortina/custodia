@@ -30,16 +30,30 @@ Phase 5 tracks official client libraries and client-side cryptography.
 - C++ transport client added for opaque REST/mTLS payloads with a libcurl-backed C++ test target.
 - C++ high-level crypto client added for local create/read/share/version flows with OpenSSL-backed AES-GCM/X25519/HKDF primitives.
 - Rust transport client added for opaque REST/mTLS payloads with a focused test target.
+- Rust high-level crypto client added for local create/read/share/version flows.
+- Bash transport helper added for CI/smoke/ops raw REST/mTLS workflows without application crypto.
+
+## SDK capability matrix
+
+| Client | Transport REST/mTLS | High-level crypto | Notes |
+| --- | --- | --- | --- |
+| Go | Yes | Yes | Public transport/operational/crypto surface in `pkg/client`. |
+| Python | Yes | Yes | Typed transport helpers and crypto wrapper in `clients/python`. |
+| Node.js / TypeScript | Yes | Yes | Runtime JavaScript plus TypeScript declarations in `clients/node`. |
+| Java | Yes | Yes | `java.net.http` transport plus local crypto wrapper. |
+| C++ | Yes | Yes | libcurl transport plus OpenSSL-backed local crypto wrapper. |
+| Rust | Yes | Yes | reqwest/rustls transport plus local crypto wrapper. |
+| Bash | Yes | No | Shell transport helper only; not a crypto SDK. |
 
 ## Still open
 
 - None for the repository-level Phase 5 scope.
 
-Future work outside this closure: public package publishing, semver/release process hardening and optional Rust high-level crypto helpers against the existing shared vectors.
+Future work outside this closure: public package publishing and semver/release process hardening.
 
 ## Current boundary
 
-Go now has public transport, operational and high-level crypto SDK surfaces. Python now has typed transport helpers plus a high-level crypto wrapper. Node.js / TypeScript now has transport and high-level crypto clients for opaque REST payloads with TypeScript declarations. Java and C++ now have transport and high-level crypto clients. Rust now has a transport-only REST/mTLS SDK for opaque payloads. Go, Python, Node.js, Java and C++ high-level clients encrypt/decrypt locally, create HPKE-v1 recipient envelopes, share existing DEKs locally and send only opaque payloads to the server. Deterministic crypto fixtures cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.
+Go now has public transport, operational and high-level crypto SDK surfaces. Python now has typed transport helpers plus a high-level crypto wrapper. Node.js / TypeScript now has transport and high-level crypto clients for opaque REST payloads with TypeScript declarations. Java, C++, and Rust now have transport and high-level crypto clients. Go, Python, Node.js, Java, C++ and Rust high-level clients encrypt/decrypt locally, create HPKE-v1 recipient envelopes, share existing DEKs locally and send only opaque payloads to the server. Bash is a transport-only helper for CI/smoke/ops scripts, not a crypto SDK. Deterministic crypto fixtures cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.
 
 The server remains metadata/ciphertext/envelope-only. Custodia must not become a public-key directory.
 
@@ -58,6 +72,7 @@ npm test --prefix clients/node
 make test-java-client
 make test-cpp-client
 make test-rust-client
+make test-bash-client
 ```
 
-Phase 5 is complete at repository level for Go, Python, Node.js/TypeScript, Java, C++ and Rust transport. Rust high-level crypto, package publishing and release support policies are future work outside this closure.
+Phase 5 is complete at repository level for Go, Python, Node.js/TypeScript, Java, C++ and Rust transport plus high-level crypto. Bash is included as a post-roadmap transport helper. Package publishing and release support policies remain future work outside this closure.

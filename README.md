@@ -236,6 +236,7 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 - [Java client SDK](docs/JAVA_CLIENT_SDK.md)
 - [C++ client SDK](docs/CPP_CLIENT_SDK.md)
 - [Rust client SDK](docs/RUST_CLIENT_SDK.md)
+- [Bash transport helper](docs/BASH_TRANSPORT_HELPER.md)
 - [Phase 5 closure tracker](docs/PHASE5_CLOSURE.md)
 - [Web MFA](docs/WEB_MFA.md)
 - [Web passkey support](docs/WEB_PASSKEY.md)
