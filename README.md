@@ -31,6 +31,15 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 - No server-side application decryption.
 
 
+
+## License
+
+Custodia is licensed under the **GNU Affero General Public License v3.0 only** (`AGPL-3.0-only`). See [`LICENSE`](LICENSE).
+
+Custodia is open source, but the AGPL network-copyleft terms are intentional: if you modify Custodia and make that modified version available to users over a network, you must make the corresponding source code available under the AGPL.
+
+Commercial licensing, enterprise support and integration work may be available separately from the maintainer.
+
 ## Support the project
 
 Custodia is maintained as an open-source privacy-first age-assurance project. If this repository helps your lab, research, compliance work, or integration testing, sponsorship helps keep development, testing, documentation, and security hardening moving.
