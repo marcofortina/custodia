@@ -1,6 +1,6 @@
 {
   "case": "wrong_recipient_fails",
-  "status": "deterministic-aad-only-negative",
+  "status": "deterministic-crypto-negative",
   "crypto_metadata": {
     "version": "custodia.client-crypto.v1",
     "content_cipher": "aes-256-gcm",
@@ -12,6 +12,19 @@
   },
   "canonical_aad": "{\"version\":\"custodia.client-crypto.v1\",\"content_cipher\":\"aes-256-gcm\",\"envelope_scheme\":\"hpke-v1\",\"secret_id\":\"550e8400-e29b-41d4-a716-446655440000\",\"version_id\":\"660e8400-e29b-41d4-a716-446655440000\"}",
   "canonical_aad_sha256": "3f1147c381be968475eceb4cf2a7a2bf4e5416e4b1b84108e27f95d3ee70b96a",
+  "plaintext_b64": "ZXhpc3Rpbmcgc2VjcmV0IHBheWxvYWQ=",
+  "content_dek_b64": "U1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1M=",
+  "content_nonce_b64": "Y2NjY2NjY2NjY2Nj",
+  "ciphertext": "d+Ub720HWc3YmYcZyQPyyd3EK2QHKMg7iaKMgGg6Ir5RRRmfzoUe",
+  "envelope": {
+    "client_id": "client_alice",
+    "recipient_private_key_b64": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+    "recipient_public_key_b64": "BPXykWLDGo3voY5udCIk7oBvwXGKJ4voWbpWIEArjzo=",
+    "sender_ephemeral_private_key_b64": "Q0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0M=",
+    "sender_ephemeral_public_key_b64": "ze/YeDqRtEZkDi4flVmds15ISgBxvSGCs7YNCBLBDHA=",
+    "wrong_recipient_private_key_b64": "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI=",
+    "envelope": "ze/YeDqRtEZkDi4flVmds15ISgBxvSGCs7YNCBLBDHDZczDrK3IdDIfEWJA8JD3ERLLFg1eklPtBfJ2tbctFNV8yFiD0BrjltlAaV/RogLk="
+  },
   "failure": "recipient envelope cannot be opened by another client",
   "expected_error": "wrong_recipient"
 }
