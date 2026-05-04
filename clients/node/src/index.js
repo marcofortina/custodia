@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { request as httpsRequest } from "node:https";
 import { URL, URLSearchParams } from "node:url";
+import { CryptoCustodiaClient } from "./crypto.js";
 
 export const PermissionShare = 1;
 export const PermissionWrite = 2;
@@ -194,6 +195,11 @@ export class CustodiaClient {
     };
   }
 
+
+  withCrypto(options) {
+    return new CryptoCustodiaClient(this, options);
+  }
+
   async requestJSON(method, path, payload) {
     const response = await this.requestRaw(method, path, payload);
     if (!response.body) {
@@ -351,3 +357,5 @@ function validateOptionalLimit(limit) {
 function boundedToken(value, maxLength) {
   return Boolean(value) && String(value).length <= maxLength && AUDIT_TOKEN_RE.test(value);
 }
+
+export * from "./crypto.js";
