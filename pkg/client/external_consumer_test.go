@@ -70,6 +70,16 @@ func TestPublicTypesCompile(t *testing.T) {
     _ = custodia.RuntimeDiagnostics{Goroutines: 1}
     _ = custodia.RevocationStatus{Configured: true}
     _ = custodia.AuditEvent{Action: "secret.read", ResourceType: "secret", Outcome: "success"}
+    _ = custodia.CreateEncryptedSecretRequest{Name: "secret", Plaintext: []byte("value"), Recipients: []string{"client_alice"}, Permissions: custodia.PermissionRead}
+    _ = custodia.CreateEncryptedSecretVersionRequest{Plaintext: []byte("value"), Permissions: custodia.PermissionRead}
+    _ = custodia.ShareEncryptedSecretRequest{TargetClientID: "client_bob", Permissions: custodia.PermissionRead}
+    _ = custodia.DecryptedSecret{SecretID: "secret", VersionID: "version", Plaintext: []byte("value")}
+    if _, err := custodia.NewX25519PrivateKeyHandle("client_alice", bytes.Repeat([]byte("1"), 32)); err != nil {
+        t.Fatal(err)
+    }
+    if _, err := custodia.DeriveX25519RecipientPublicKey("client_alice", bytes.Repeat([]byte("1"), 32)); err != nil {
+        t.Fatal(err)
+    }
     opts := custodia.CryptoOptions{
         PublicKeyResolver: resolver{},
         PrivateKeyProvider: privateKeyProvider{},
@@ -94,6 +104,12 @@ func TestPublicMethodSignaturesCompile(t *testing.T) {
     var _ func(*custodia.Client, string) (custodia.RevocationSerialStatus, error) = (*custodia.Client).RevocationSerialStatusInfo
     var _ func(*custodia.Client, custodia.AuditEventFilters) ([]custodia.AuditEvent, error) = (*custodia.Client).ListAuditEventMetadata
     var _ func(*custodia.Client, custodia.AuditEventFilters) (custodia.AuditExportArtifact, error) = (*custodia.Client).ExportAuditEventArtifact
+    var _ func(*custodia.Client, custodia.CryptoOptions) (*custodia.CryptoClient, error) = custodia.NewCryptoClient
+    var _ func(*custodia.Client, custodia.CryptoOptions) (*custodia.CryptoClient, error) = (*custodia.Client).WithCrypto
+    var _ func(*custodia.CryptoClient, context.Context, custodia.CreateEncryptedSecretRequest) (custodia.SecretVersionRef, error) = (*custodia.CryptoClient).CreateEncryptedSecret
+    var _ func(*custodia.CryptoClient, context.Context, string, custodia.CreateEncryptedSecretVersionRequest) (custodia.SecretVersionRef, error) = (*custodia.CryptoClient).CreateEncryptedSecretVersion
+    var _ func(*custodia.CryptoClient, context.Context, string) (custodia.DecryptedSecret, error) = (*custodia.CryptoClient).ReadDecryptedSecret
+    var _ func(*custodia.CryptoClient, context.Context, string, custodia.ShareEncryptedSecretRequest) error = (*custodia.CryptoClient).ShareEncryptedSecret
 }
 `), 0o600); err != nil {
 		t.Fatalf("write consumer test: %v", err)
