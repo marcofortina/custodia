@@ -14,8 +14,12 @@ fmt:
 
 
 .PHONY: check
-check: test build
-	python3 -m py_compile clients/python/custodia_client/__init__.py
+check: test build test-python-client
+	python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py
+
+.PHONY: test-python-client
+test-python-client:
+	python3 -m unittest discover -s clients/python/tests
 
 .PHONY: run-dev
 run-dev:
