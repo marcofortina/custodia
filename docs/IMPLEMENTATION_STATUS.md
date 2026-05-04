@@ -1280,3 +1280,8 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 661 - client crypto validator docs
 
 - Documented the metadata validator boundary: it validates schema metadata but is not yet a high-level crypto client.
+
+## Patch 663 - Python client release check coverage
+
+- Added Python client typed helper unittest execution to `scripts/release-check.sh`.
+- Compiles both `custodia_client/__init__.py` and `custodia_client/types.py` during release checks.
