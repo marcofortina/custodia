@@ -1,0 +1,125 @@
+# Linux DEB/RPM packages
+
+Custodia can build local Linux installation packages without introducing an external packaging tool such as `fpm`.
+
+The repository produces two package families:
+
+| Package | Architecture | Contents | Intended use |
+| --- | --- | --- | --- |
+| `custodia-server` | host arch | `custodia-server`, `vault-admin`, `custodia-signer`, systemd unit, examples and server docs | Install and operate a Custodia node. |
+| `custodia-clients` | `all` / `noarch` | SDK source snapshots, shared crypto vectors, SDK docs and `/usr/bin/custodia-client` Bash helper | Developer/CI/ops client integration. |
+
+This split is intentional. Operating-system packages are good for deployable binaries and local source snapshots. Language SDK distribution should still use language-native channels when the project starts publishing real public packages:
+
+- Go module import path;
+- Python wheel/sdist;
+- npm package;
+- Maven/Gradle artifact;
+- CMake/vcpkg/conan package;
+- Cargo crate.
+
+Creating one `.deb`/`.rpm` per SDK language would add distro-package maintenance overhead before those registry workflows exist. The current `custodia-clients` package keeps the repository installable while avoiding premature package names that would look officially published.
+
+## Build DEB packages
+
+```bash
+VERSION=0.1.0 REVISION=1 make package-deb
+```
+
+Artifacts are written to:
+
+```text
+dist/packages/
+```
+
+Expected files:
+
+```text
+custodia-server_<version>-<revision>_<arch>.deb
+custodia-clients_<version>-<revision>_all.deb
+```
+
+## Build RPM packages
+
+`rpmbuild` is required:
+
+```bash
+VERSION=0.1.0 REVISION=1 make package-rpm
+```
+
+Expected files:
+
+```text
+custodia-server-<version>-<revision>.<arch>.rpm
+custodia-clients-<version>-<revision>.noarch.rpm
+```
+
+## Build both formats
+
+```bash
+VERSION=0.1.0 REVISION=1 make package-linux
+```
+
+## Build metadata
+
+The package script stamps Go binaries with the same metadata used by normal release builds:
+
+```bash
+VERSION=0.1.0 \
+REVISION=1 \
+COMMIT="$(git rev-parse --short=12 HEAD)" \
+DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+make package-linux
+```
+
+## Server package layout
+
+`custodia-server` installs:
+
+```text
+/usr/bin/custodia-server
+/usr/bin/vault-admin
+/usr/bin/custodia-signer
+/usr/lib/systemd/system/custodia.service
+/usr/share/custodia/examples/
+/usr/share/doc/custodia-server/
+/etc/custodia/
+/var/lib/custodia/
+/var/log/custodia/
+```
+
+Package install scripts create a system user/group named `custodia` when the package manager supports the usual `useradd`/`adduser` flow.
+
+The package does **not** install a live `/etc/custodia/config.yaml` by default, to avoid silently starting with unsafe local settings. Copy and review an example first:
+
+```bash
+sudo install -d -m 0750 -o root -g custodia /etc/custodia
+sudo cp /usr/share/custodia/examples/config.lite.yaml /etc/custodia/config.yaml
+sudo editor /etc/custodia/config.yaml
+sudo systemctl enable --now custodia
+```
+
+## Client package layout
+
+`custodia-clients` installs:
+
+```text
+/usr/bin/custodia-client
+/usr/share/custodia/clients/
+/usr/share/custodia/testdata/client-crypto/
+/usr/share/doc/custodia-clients/
+```
+
+`/usr/bin/custodia-client` is the Bash transport helper. It remains non-crypto natively. Encrypted shell flows require `CUSTODIA_CRYPTO_PROVIDER` and delegate all cryptography to that external provider over stdin/stdout JSON.
+
+## CI
+
+GitHub Actions runs:
+
+```bash
+make release-check
+make package-deb
+make package-rpm
+```
+
+The generated `.deb` and `.rpm` files are uploaded as workflow artifacts.

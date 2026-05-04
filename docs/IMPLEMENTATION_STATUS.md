@@ -1598,3 +1598,21 @@ Node high-level crypto wrapper is implemented in `clients/node` using Node built
 - Kept native Bash explicitly non-crypto: no shell-side plaintext encryption, HPKE, DEK management or key resolution.
 - Extended Bash tests with a fake provider to verify operation routing and raw REST payload submission.
 - Updated Bash and Phase 5 documentation to describe the provider protocol and security boundary.
+
+
+## Patch 744 - Linux DEB/RPM packaging
+
+- Added `scripts/package-linux.sh` and Make targets for `package-deb`, `package-rpm` and `package-linux`.
+- Added two installable package families: `custodia-server` for deployable binaries and `custodia-clients` for SDK source snapshots, shared vectors and the Bash helper.
+- Kept per-language registry publication as future release work instead of pretending distro packages are language-native SDK releases.
+
+## Patch 745 - CI release check and README badge
+
+- Expanded GitHub Actions to install required system dependencies, run `make release-check`, build DEB/RPM packages and upload artifacts.
+- Added the CI badge to `README.md`.
+- Fixed package metadata drift for Node and Rust SDK descriptors.
+
+## Patch 746 - Linux packaging documentation
+
+- Documented DEB/RPM package layout, build commands, installation boundary and package split rationale.
+- Updated release-check docs and README package pointers.

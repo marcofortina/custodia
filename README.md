@@ -72,6 +72,22 @@ bitcoin:36jDV57roGb4o59TwK1CB7viPrXToQHGiP
 - Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
 - Linux DEB/RPM packaging: [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md)
 
+## Linux packages
+
+Build local DEB/RPM packages with:
+
+```bash
+VERSION=0.1.0 REVISION=1 make package-deb
+VERSION=0.1.0 REVISION=1 make package-rpm
+```
+
+The package split is:
+
+- `custodia-server`: server, admin CLI, signer, systemd unit and deployment examples;
+- `custodia-clients`: SDK source snapshots, shared vectors, docs and the Bash transport helper.
+
+See [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md).
+
 ## Local development
 
 ```bash
