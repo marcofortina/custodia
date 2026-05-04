@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 func (c *Client) CurrentClientInfo() (ClientInfo, error) {
@@ -150,4 +151,58 @@ func (c *Client) ListAccessGrantMetadata(filters AccessGrantRequestFilters) ([]A
 	}
 	err := c.doJSON(http.MethodGet, path, nil, &response)
 	return response.AccessRequests, err
+}
+
+func (c *Client) StatusInfo() (OperationalStatus, error) {
+	var response OperationalStatus
+	return response, c.doJSON(http.MethodGet, "/v1/status", nil, &response)
+}
+
+func (c *Client) VersionInfo() (BuildInfo, error) {
+	var response BuildInfo
+	return response, c.doJSON(http.MethodGet, "/v1/version", nil, &response)
+}
+
+func (c *Client) DiagnosticsInfo() (RuntimeDiagnostics, error) {
+	var response RuntimeDiagnostics
+	return response, c.doJSON(http.MethodGet, "/v1/diagnostics", nil, &response)
+}
+
+func (c *Client) RevocationStatusInfo() (RevocationStatus, error) {
+	var response RevocationStatus
+	return response, c.doJSON(http.MethodGet, "/v1/revocation/status", nil, &response)
+}
+
+func (c *Client) RevocationSerialStatusInfo(serialHex string) (RevocationSerialStatus, error) {
+	var response RevocationSerialStatus
+	path := "/v1/revocation/serial?serial_hex=" + url.QueryEscape(strings.TrimSpace(serialHex))
+	return response, c.doJSON(http.MethodGet, path, nil, &response)
+}
+
+func (c *Client) ListAuditEventMetadata(filters AuditEventFilters) ([]AuditEvent, error) {
+	if err := validateAuditEventFilters(filters); err != nil {
+		return nil, err
+	}
+	query := url.Values{}
+	if filters.Limit > 0 {
+		query.Set("limit", fmt.Sprintf("%d", filters.Limit))
+	}
+	addQueryFilter(query, "outcome", filters.Outcome)
+	addQueryFilter(query, "action", filters.Action)
+	addQueryFilter(query, "actor_client_id", filters.ActorClientID)
+	addQueryFilter(query, "resource_type", filters.ResourceType)
+	addQueryFilter(query, "resource_id", filters.ResourceID)
+	path := "/v1/audit-events"
+	if encoded := query.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
+	var response struct {
+		AuditEvents []AuditEvent `json:"audit_events"`
+	}
+	err := c.doJSON(http.MethodGet, path, nil, &response)
+	return response.AuditEvents, err
+}
+
+func (c *Client) ExportAuditEventArtifact(filters AuditEventFilters) (AuditExportArtifact, error) {
+	return c.ExportAuditEventsWithMetadata(filters)
 }
