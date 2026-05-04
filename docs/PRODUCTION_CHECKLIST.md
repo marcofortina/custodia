@@ -13,7 +13,7 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - `/ready` runs on a dedicated health listener that is not exposed outside the cluster.
 - Admin client IDs are explicitly configured; no wildcard admin mode exists.
 - Web console remains metadata-only and requires admin mTLS; enable TOTP MFA before production.
-- Passkey challenge endpoints are available, but keep TOTP enabled until full assertion verification is completed and audited.
+- Passkey endpoints are available behind admin mTLS and Web MFA. Keep TOTP enabled unless an audited external assertion verifier is configured and evidenced.
 - Audit export integrity headers are validated by downstream archival jobs with `vault-admin audit verify-export`.
 - Audit export artifacts are bundled with `vault-admin audit archive-export` before WORM/SIEM ingestion.
 - Verified audit archive bundles are shipped with `vault-admin audit ship-archive` before SIEM/WORM ingestion.
@@ -73,44 +73,12 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 
 - Signer revocation serial status responder is exercised during certificate revocation drills.
 
-## Passkey challenge gate
+## Passkey/WebAuthn verification gate
 
 - Passkey challenges must be stored with TTL and consumed once.
 - `POST /web/passkey/*/verify` must reject replayed, expired or wrong-origin `clientDataJSON`.
-- Full WebAuthn production promotion still requires credential credential-key storage, authenticatorData parsing, COSE/CBOR parsing, signature verification and signature-counter checks.
-
-## Passkey credential metadata gate
-
-- Passkey registration preverification must record a credential id for the mTLS/web client before authentication preverification is enabled.
-- Passkey authentication preverification must reject unknown credential ids for the calling client.
-- Full WebAuthn production enablement still requires COSE/CBOR parsing, authenticatorData validation, signature verification and signature counter checks.
-
-## Passkey authenticator data gate
-
-- Passkey authentication preverification must include `authenticator_data` during production drills.
-- Non-increasing signature counters must be rejected before passkeys are considered beyond challenge-only preverification.
-- Full WebAuthn promotion still requires COSE credential-key storage, authenticator signature verification and attestation/authenticatorData review with an audited WebAuthn library or reviewed verifier.
-
-## Passkey authenticator data gate
-
-- `CUSTODIA_WEB_PASSKEY_RP_ID` matches the browser-visible RP ID and the authenticator RP ID hash validation path is covered in release tests.
-- User verification remains required for passkey options and supplied authenticator data.
-- Do not promote passkeys as the only MFA factor until COSE credential-key storage and authenticator signature verification are implemented.
-
-## Passkey credential-key metadata gate
-
-- Registration preverification must require `credential_key_cose` before passkeys are considered beyond challenge-only mode.
-- Authentication preverification must reject credentials without stored credential-key metadata.
-- Do not promote passkeys as a standalone MFA factor until CBOR/COSE parsing and authenticator signature verification are implemented.
-
-## Passkey COSE parser gate
-
-- Registration preverification must reject malformed or unsupported `credential_key_cose` values.
-- `/v1/status` must report `web_passkey_credential_key_parser: cose_es256_rs256` before passkeys are considered beyond opaque credential-key storage.
-- Do not promote passkeys as standalone MFA until authenticator signature verification is implemented or delegated to an audited WebAuthn library.
-
-## Passkey assertion verifier gate
-
-- If `CUSTODIA_WEB_PASSKEY_ENABLED=true`, set `CUSTODIA_WEB_PASSKEY_ASSERTION_VERIFY_COMMAND` to an audited WebAuthn assertion verifier.
+- Registration must store credential metadata and require supported `credential_key_cose` metadata.
+- Authentication must validate authenticator data, RP ID hash, user-present/user-verified flags and non-increasing signature counters.
+- `CUSTODIA_WEB_PASSKEY_ASSERTION_VERIFY_COMMAND` must point to an audited verifier before passkeys are promoted beyond pre-signature validation.
 - The fail-closed template `scripts/passkey-assertion-verify-command.sh` must never be used as a production verifier.
-- Capture verifier version, test output and audit evidence in `CUSTODIA_EVIDENCE_FORMAL_VERIFICATION_FILE` or the passkey-specific release evidence bundle.
+- Capture verifier version, negative tests and audit evidence in the release evidence bundle.
