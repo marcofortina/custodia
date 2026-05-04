@@ -295,8 +295,8 @@ Per la Fase 5 iniziale usare il monorepo:
 | Python | `clients/python` | Da decidere. |
 | Node.js / TypeScript | `clients/node` | Monorepo private scaffold; nome pubblico da decidere. |
 | Rust | `clients/rust` | Pianificato. |
-| Java | `clients/java` | Monorepo transport scaffold; nome pubblico da decidere. |
-| C++ | `clients/cpp` | Monorepo transport scaffold; nome pubblico da decidere. |
+| Java | `clients/java` | Monorepo transport + crypto scaffold; nome pubblico da decidere. |
+| C++ | `clients/cpp` | Monorepo transport + crypto scaffold; nome pubblico da decidere. |
 
 Nomi come `github.com/custodia/go-client`, `@custodia/client`, `custodia-client` o `com.custodia:client` sono placeholder finché non vengono pubblicati davvero.
 
@@ -361,43 +361,47 @@ un progetto Go esterno deve poter importare pkg/client e parlare con custodia-se
 
 Il package resta `private` finché nome pubblico e release process non sono decisi, ma la superficie API è verificata dai test Node e dai vector comuni.
 
-### 8.3 Stabilizzazione SDK Java transport
+### 8.3 Stabilizzazione SDK Java transport e crypto
 
-`clients/java` esiste nel repository come transport client iniziale per payload opachi. Usa solo librerie standard Java e accetta un `SSLContext` applicativo oppure keystore/truststore Java per mTLS.
+`clients/java` esiste nel repository come client Java iniziale per payload opachi e crypto client high-level. Usa solo librerie standard Java e accetta un `SSLContext` applicativo oppure keystore/truststore Java per mTLS.
 
 Surface attuale:
 
 - `CustodiaClientConfig` per server URL, timeout, user-agent e TLS material;
 - `CustodiaClient` con metodi transport per secrets, grants, clients, status, diagnostics, revocation e audit export;
 - `CustodiaHttpError` tipizzato per status HTTP non 2xx;
-- `CustodiaAuditExport` con body, digest SHA-256 e numero eventi.
+- `CustodiaAuditExport` con body, digest SHA-256 e numero eventi;
+- `CustodiaCrypto` con canonical AAD, AES-256-GCM, HPKE-v1/X25519 e resolver/provider applicativi;
+- `CryptoCustodiaClient` per create/read/share/version con cifratura locale.
 
 Criterio di confine:
 
 ```text
-clients/java transport -> invia solo JSON opaco già prodotto dall'applicazione e non prova a cifrare, decifrare o risolvere chiavi
+clients/java crypto -> cifra/decifra localmente, risolve le chiavi pubbliche solo tramite resolver applicativo e invia al server solo ciphertext, crypto_metadata ed envelope opachi
 ```
 
-Il crypto client Java resta pianificato e dovrà usare gli stessi vector comuni prima di essere dichiarato ufficiale.
+Il crypto client Java usa gli stessi vector comuni di Go/Python/Node.
 
-### 8.4 Stabilizzazione SDK C++ transport
+### 8.4 Stabilizzazione SDK C++ transport e crypto
 
-`clients/cpp` esiste nel repository come transport client iniziale per payload opachi. Usa libcurl per HTTPS/mTLS e una piccola API C++20 senza introdurre un framework di build dedicato.
+`clients/cpp` esiste nel repository come client C++ iniziale per payload opachi e crypto client high-level. Usa libcurl per HTTPS/mTLS, OpenSSL per AES-GCM/X25519/HKDF e una piccola API C++20 senza introdurre un framework di build dedicato.
 
 Surface attuale:
 
 - `custodia::Config` per server URL, timeout, user-agent e file TLS;
 - `custodia::Client` con metodi transport per secrets, grants, clients, status, diagnostics, revocation e audit export;
 - `custodia::HttpError` per status HTTP non 2xx;
-- `custodia::AuditExportArtifact` con body, digest SHA-256 e numero eventi.
+- `custodia::AuditExportArtifact` con body, digest SHA-256 e numero eventi;
+- primitive crypto v1 per canonical AAD, AES-256-GCM e HPKE-v1/X25519;
+- `custodia::CryptoClient` per create/read/share/version con cifratura locale.
 
 Criterio di confine:
 
 ```text
-clients/cpp transport -> invia solo payload opachi già prodotti dall'applicazione e non prova a cifrare, decifrare o risolvere chiavi
+clients/cpp crypto -> cifra/decifra localmente, risolve le chiavi pubbliche solo tramite resolver applicativo e invia al server solo ciphertext, crypto_metadata ed envelope opachi
 ```
 
-Il crypto client C++ resta pianificato e richiederà una scelta esplicita su dipendenze crypto/ABI prima di essere dichiarato ufficiale.
+Il crypto client C++ usa gli stessi vector comuni di Go/Python/Node/Java; la dipendenza crypto esplicita è OpenSSL.
 
 ## 9. Note sulla sicurezza
 
@@ -420,8 +424,8 @@ Ordine consigliato:
 3. **Fase 5C**: Python high-level crypto client sopra `clients/python`.
 4. **Fase 5D**: Node.js/TypeScript transport client e high-level crypto wrapper sopra gli stessi vector comuni.
 5. **Fase 5E**: Rust client.
-6. **Fase 5F**: Java transport client presente; crypto client pianificato.
-7. **Fase 5G**: C++ transport client presente; crypto client pianificato.
+6. **Fase 5F**: Java transport client e high-level crypto wrapper presenti.
+7. **Fase 5G**: C++ transport client e high-level crypto wrapper presenti.
 
 Non implementare sei SDK in parallelo prima di avere crypto spec e test vectors comuni.
 

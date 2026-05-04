@@ -1498,3 +1498,42 @@ Node high-level crypto wrapper is implemented in `clients/node` using Node built
 
 - Updated client-library docs and Phase 5 closure tracker after adding Java and C++ transport clients.
 - Java/C++ high-level crypto clients remain open and must use shared vectors before being marked official.
+
+
+## Patch 726 - Java crypto primitives
+
+- Added Java canonical AAD, AES-256-GCM and HPKE-v1/X25519 primitives matching the shared v1 vectors.
+- Added Java public resolver/provider contracts and X25519 key handles for local client-side crypto.
+
+## Patch 727 - Java high-level crypto client
+
+- Added `CryptoCustodiaClient` and `CustodiaClient.withCrypto(...)`.
+- Added local create/read/share/version flows that send only ciphertext, crypto metadata and opaque envelopes to the server.
+
+## Patch 728 - Java crypto client tests
+
+- Covered Java shared crypto vectors and high-level create/read flows with deterministic payloads.
+- Extended `make test-java-client` to run both transport and crypto tests.
+
+## Patch 729 - C++ crypto primitives
+
+- Added C++ canonical AAD, AES-256-GCM and HPKE-v1/X25519 primitives backed by OpenSSL.
+- Updated the C++ test target to link both libcurl and OpenSSL.
+
+## Patch 730 - C++ high-level crypto client
+
+- Added `custodia::CryptoClient` and `custodia::Client::with_crypto(...)`.
+- Added local create/read/share/version flows that keep plaintext, DEKs and private keys client-side.
+
+## Patch 731 - C++ crypto client tests
+
+- Covered C++ shared crypto vectors and high-level create/read flows with deterministic payloads.
+
+## Patch 732 - Java and C++ crypto client documentation
+
+- Documented Java and C++ high-level crypto usage and the resolver/key-provider boundary.
+
+## Patch 733 - Phase 5 Java/C++ crypto status
+
+- Updated client-library docs and Phase 5 closure tracker after closing Java and C++ high-level crypto wrappers.
+- Rust transport remains the only planned language still open in the broader roadmap.
