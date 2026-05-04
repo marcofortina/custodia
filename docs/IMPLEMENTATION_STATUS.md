@@ -29,7 +29,7 @@
 - Idempotent bootstrap client registration for all configured stores.
 - Valkey-compatible rate limiting with `/ready` health checks.
 - Minimal admin CLI for API-backed client metadata create/list/revoke and access revoke operations.
-- Go and Python clients with public transport helpers and high-level client-side crypto wrappers; Node.js / TypeScript has an initial transport-only client for opaque REST payloads.
+- Go, Python and Node.js / TypeScript clients with public transport helpers and high-level client-side crypto wrappers for opaque REST payloads.
 - Docker, Compose and Helm deployment skeletons.
 - Admin-protected metadata-only web console pages for status, clients, access requests and audit summaries.
 - Build metadata propagation through status API, web status and `vault-admin version`.
@@ -1456,3 +1456,8 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 704 - Phase 5 Python crypto client status
 
 - Updated README, client specification and Phase 5 closure tracker after closing the Python high-level crypto client.
+
+
+### Phase 5D Node.js / TypeScript high-level crypto status
+
+Node high-level crypto wrapper is implemented in `clients/node` using Node built-ins only. It shares the same deterministic AES-256-GCM, HPKE-v1 and canonical AAD vectors used by Go and Python, keeps plaintext/DEKs/private keys client-side and sends only opaque payloads through the transport client.

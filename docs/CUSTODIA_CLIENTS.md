@@ -26,7 +26,7 @@ Principi comuni:
 |------------|------------------|--------------|------|
 | **Go** | Esistente | Transport SDK pubblico + primo crypto client high-level E2E | `pkg/client` nel monorepo, con payload/operational methods pubblici e crypto helpers senza esporre tipi `internal/*` nelle API. |
 | **Python** | Esistente | Transport client + primo crypto client high-level E2E | `clients/python` nel monorepo, con typed transport helpers e crypto wrapper basato sugli stessi vector. |
-| **Node.js / TypeScript** | Esistente | Transport client presente; crypto client pianificato | `clients/node` nel monorepo, con JavaScript runtime dependency-free e dichiarazioni TypeScript. |
+| **Node.js / TypeScript** | Esistente | Transport client presente; crypto client presente | `clients/node` nel monorepo, con JavaScript runtime dependency-free, crypto high-level HPKE-v1/AES-GCM e dichiarazioni TypeScript. |
 | **Rust** | Non presente | Pianificato | Da aggiungere dopo Go/Python. |
 | **Java** | Non presente | Pianificato | Da aggiungere dopo stabilizzazione schema crypto. |
 | **C++** | Non presente | Pianificato | Da aggiungere per ultimo per complessità ABI/OpenSSL/packaging. |
@@ -348,6 +348,19 @@ un progetto Go esterno deve poter importare pkg/client e parlare con custodia-se
 
 ---
 
+
+### 8.2 Stabilizzazione SDK Node.js / TypeScript crypto
+
+`clients/node` espone anche un wrapper high-level crypto client che resta coerente con Go/Python:
+
+- AES-256-GCM per content encryption;
+- HPKE-v1 su X25519/HKDF-SHA256/AES-256-GCM per recipient envelope;
+- `CanonicalAADInputs` e `CryptoMetadata` compatibili con i vector comuni;
+- `PublicKeyResolver` e `PrivateKeyProvider` applicativi, senza directory di chiavi sul server;
+- nessun plaintext, DEK o chiave privata inviati al vault.
+
+Il package resta `private` finché nome pubblico e release process non sono decisi, ma la superficie API è verificata dai test Node e dai vector comuni.
+
 ## 9. Note sulla sicurezza
 
 - **Mai condividere la chiave privata**: ogni client mantiene la propria chiave privata o handle di decrittazione in locale.
@@ -367,7 +380,7 @@ Ordine consigliato:
 1. **Fase 5A**: riallineamento specifica client, `CLIENT_CRYPTO_SPEC.md`, test vectors.
 2. **Fase 5B**: stabilizzare `pkg/client` come SDK Go pubblico senza tipi `internal/*`, chiudere i metodi transport/operational pubblici e aggiungere il primo Go high-level crypto client.
 3. **Fase 5C**: Python high-level crypto client sopra `clients/python`.
-4. **Fase 5D**: Node.js/TypeScript transport client; high-level crypto wrapper pianificato dopo stabilizzazione del surface transport.
+4. **Fase 5D**: Node.js/TypeScript transport client e high-level crypto wrapper sopra gli stessi vector comuni.
 5. **Fase 5E**: Rust client.
 6. **Fase 5F**: Java client.
 7. **Fase 5G**: C++ client.

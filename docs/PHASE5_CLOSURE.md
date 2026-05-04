@@ -28,14 +28,14 @@ Phase 5 tracks official client libraries and client-side cryptography.
 
 ## Still open
 
-- Node.js/TypeScript transport client added for opaque REST payloads, with TypeScript declarations and Node test target.
+- Node.js/TypeScript transport and high-level crypto clients added for opaque REST payloads, with TypeScript declarations and Node test target.
 - Rust transport client.
 - Java transport client.
 - C++ transport client.
 
 ## Current boundary
 
-Go now has public transport, operational and high-level crypto SDK surfaces. Python now has typed transport helpers plus a high-level crypto wrapper. Node.js / TypeScript now has a transport-only client for opaque REST payloads with TypeScript declarations. Go and Python high-level clients encrypt/decrypt locally, create HPKE-v1 recipient envelopes, share existing DEKs locally and send only opaque payloads to the server. Deterministic crypto fixtures cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.
+Go now has public transport, operational and high-level crypto SDK surfaces. Python now has typed transport helpers plus a high-level crypto wrapper. Node.js / TypeScript now has transport and high-level crypto clients for opaque REST payloads with TypeScript declarations. Go, Python and Node.js high-level clients encrypt/decrypt locally, create HPKE-v1 recipient envelopes, share existing DEKs locally and send only opaque payloads to the server. Deterministic crypto fixtures cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.
 
 The server remains metadata/ciphertext/envelope-only. Custodia must not become a public-key directory.
 
@@ -53,4 +53,4 @@ node --check clients/node/src/index.js
 npm test --prefix clients/node
 ```
 
-Phase 5 core Go+Python is complete at repository level. Node.js / TypeScript now has the requested transport layer. The broader multi-language roadmap still has Node high-level crypto plus Rust, Java and C++ open.
+Phase 5 core Go+Python+Node is complete at repository level. The broader multi-language roadmap still has Rust, Java and C++ open.
