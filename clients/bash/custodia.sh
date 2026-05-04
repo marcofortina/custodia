@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Custodia Bash transport helper.
 #
-# This helper is intentionally transport-only. It never encrypts, decrypts,
-# opens envelopes, manages DEKs or resolves recipient public keys.
+# This helper is intentionally transport-first. Native Bash code never encrypts,
+# decrypts, opens envelopes, manages DEKs or resolves recipient public keys.
+# Optional encrypted flows are delegated to an external crypto provider.
 
 custodia_require_config() {
   : "${CUSTODIA_BASE_URL:?CUSTODIA_BASE_URL is required}"
@@ -17,6 +18,31 @@ custodia_base_url() {
 
 custodia_user_agent() {
   printf '%s' "${CUSTODIA_USER_AGENT:-custodia-bash-transport/0.0.0}"
+}
+
+
+custodia_require_crypto_provider() {
+  : "${CUSTODIA_CRYPTO_PROVIDER:?CUSTODIA_CRYPTO_PROVIDER is required for encrypted commands}"
+  if ! command -v "$CUSTODIA_CRYPTO_PROVIDER" >/dev/null 2>&1; then
+    echo "CUSTODIA_CRYPTO_PROVIDER is not executable or not found: $CUSTODIA_CRYPTO_PROVIDER" >&2
+    return 2
+  fi
+}
+
+custodia_crypto_provider() {
+  custodia_require_crypto_provider || return $?
+  if [ "$#" -ne 3 ]; then
+    echo "usage: custodia_crypto_provider OPERATION INPUT_JSON OUTPUT_JSON" >&2
+    return 2
+  fi
+
+  local operation="$1"
+  local input_file="$2"
+  local output_file="$3"
+
+  # The operation name is passed as argv. Secret material must travel through
+  # stdin/stdout JSON only, never as command-line arguments.
+  "$CUSTODIA_CRYPTO_PROVIDER" "$operation" < "$input_file" > "$output_file"
 }
 
 custodia_curl() {
@@ -107,6 +133,78 @@ custodia_create_secret_version_raw() {
   custodia_curl POST "/v1/secrets/$1/versions" "$2"
 }
 
+custodia_create_secret_encrypted() {
+  if [ "$#" -ne 1 ]; then
+    echo "usage: custodia_create_secret_encrypted REQUEST_JSON" >&2
+    return 2
+  fi
+
+  local payload_file
+  payload_file="$(mktemp)" || return 1
+  custodia_crypto_provider create-encrypted-secret "$1" "$payload_file" || {
+    rm -f "$payload_file"
+    return 1
+  }
+  custodia_create_secret_raw "$payload_file"
+  local status=$?
+  rm -f "$payload_file"
+  return "$status"
+}
+
+custodia_read_secret_decrypted() {
+  if [ "$#" -ne 1 ]; then
+    echo "usage: custodia_read_secret_decrypted SECRET_ID" >&2
+    return 2
+  fi
+
+  local raw_file
+  raw_file="$(mktemp)" || return 1
+  custodia_get_secret_raw "$1" > "$raw_file" || {
+    rm -f "$raw_file"
+    return 1
+  }
+  custodia_crypto_provider read-decrypted-secret "$raw_file" /dev/stdout
+  local status=$?
+  rm -f "$raw_file"
+  return "$status"
+}
+
+custodia_share_secret_encrypted() {
+  if [ "$#" -ne 2 ]; then
+    echo "usage: custodia_share_secret_encrypted SECRET_ID REQUEST_JSON" >&2
+    return 2
+  fi
+
+  local payload_file
+  payload_file="$(mktemp)" || return 1
+  custodia_crypto_provider share-encrypted-secret "$2" "$payload_file" || {
+    rm -f "$payload_file"
+    return 1
+  }
+  custodia_share_secret_raw "$1" "$payload_file"
+  local status=$?
+  rm -f "$payload_file"
+  return "$status"
+}
+
+custodia_create_secret_version_encrypted() {
+  if [ "$#" -ne 2 ]; then
+    echo "usage: custodia_create_secret_version_encrypted SECRET_ID REQUEST_JSON" >&2
+    return 2
+  fi
+
+  local payload_file
+  payload_file="$(mktemp)" || return 1
+  custodia_crypto_provider create-encrypted-secret-version "$2" "$payload_file" || {
+    rm -f "$payload_file"
+    return 1
+  }
+  custodia_create_secret_version_raw "$1" "$payload_file"
+  local status=$?
+  rm -f "$payload_file"
+  return "$status"
+}
+
 custodia_revoke_access() {
   if [ "$#" -ne 2 ]; then
     echo "usage: custodia_revoke_access SECRET_ID CLIENT_ID" >&2
@@ -129,6 +227,9 @@ Required environment:
   CUSTODIA_CLIENT_KEY    client private key PEM path
   CUSTODIA_CA_CERT       Custodia CA PEM path
 
+Optional encrypted-flow environment:
+  CUSTODIA_CRYPTO_PROVIDER  executable that implements the external provider protocol
+
 Commands:
   status
   version
@@ -140,11 +241,16 @@ Commands:
   get-secret-raw SECRET_ID
   share-secret-raw SECRET_ID PAYLOAD_JSON
   create-secret-version-raw SECRET_ID PAYLOAD_JSON
+  create-secret-encrypted REQUEST_JSON
+  read-secret-decrypted SECRET_ID
+  share-secret-encrypted SECRET_ID REQUEST_JSON
+  create-secret-version-encrypted SECRET_ID REQUEST_JSON
   revoke-access SECRET_ID CLIENT_ID
   audit-export
 
 Boundary:
-  Transport-only. No encryption, decryption, DEK handling or HPKE envelopes.
+  Native Bash remains transport-only. Encrypted commands require an external
+  crypto provider and never implement crypto in shell code.
 USAGE
 }
 
@@ -167,6 +273,10 @@ custodia_main() {
     get-secret-raw) custodia_get_secret_raw "$@" ;;
     share-secret-raw) custodia_share_secret_raw "$@" ;;
     create-secret-version-raw) custodia_create_secret_version_raw "$@" ;;
+    create-secret-encrypted) custodia_create_secret_encrypted "$@" ;;
+    read-secret-decrypted) custodia_read_secret_decrypted "$@" ;;
+    share-secret-encrypted) custodia_share_secret_encrypted "$@" ;;
+    create-secret-version-encrypted) custodia_create_secret_version_encrypted "$@" ;;
     revoke-access) custodia_revoke_access "$@" ;;
     audit-export) custodia_audit_export "$@" ;;
     help|-h|--help) custodia_usage ;;

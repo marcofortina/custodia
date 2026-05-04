@@ -1590,3 +1590,11 @@ Node high-level crypto wrapper is implemented in `clients/node` using Node built
 - Marked Bash as a transport helper rather than a crypto SDK.
 - Removed stale transport-only language from Java, C++, Rust and Phase 5 closure docs.
 - Kept package publishing and semver/release support policies as future work outside repository-level Phase 5.
+
+## Patch 743 - Bash external crypto-provider bridge
+
+- Added optional `CUSTODIA_CRYPTO_PROVIDER` support to the Bash helper.
+- Added encrypted Bash commands for create/read/share/version flows that delegate all cryptography to a provider executable over stdin/stdout JSON.
+- Kept native Bash explicitly non-crypto: no shell-side plaintext encryption, HPKE, DEK management or key resolution.
+- Extended Bash tests with a fake provider to verify operation routing and raw REST payload submission.
+- Updated Bash and Phase 5 documentation to describe the provider protocol and security boundary.

@@ -41,7 +41,7 @@ Principi comuni:
 | Java | Sì | Sì | Transport `java.net.http` + crypto locale. |
 | C++ | Sì | Sì | libcurl + OpenSSL. |
 | Rust | Sì | Sì | reqwest/rustls + crypto locale. |
-| Bash | Sì | No | Helper shell transport-only, fuori dal set crypto SDK. |
+| Bash | Sì | No native / external provider bridge | Helper shell: crypto solo tramite provider esterno verificabile, non implementata in Bash. |
 
 Una libreria diventa “ufficiale” solo quando ha:
 
@@ -309,7 +309,7 @@ Per la Fase 5 iniziale usare il monorepo:
 | Rust | `clients/rust` | Monorepo transport + crypto scaffold; nome pubblico da decidere. |
 | Java | `clients/java` | Monorepo transport + crypto scaffold; nome pubblico da decidere. |
 | C++ | `clients/cpp` | Monorepo transport + crypto scaffold; nome pubblico da decidere. |
-| Bash | `clients/bash` | Helper shell transport-only; non è un crypto SDK e non ha package pubblico. |
+| Bash | `clients/bash` | Helper shell con transport REST/mTLS e bridge opzionale a provider crypto esterno; non ha package pubblico. |
 
 Nomi come `github.com/custodia/go-client`, `@custodia/client`, `custodia-client` o `com.custodia:client` sono placeholder finché non vengono pubblicati davvero.
 
@@ -441,15 +441,15 @@ Il package resta `publish = false` finché nome pubblico e release process non s
 
 ### 8.6 Bash transport helper fuori SDK crypto
 
-`clients/bash` esiste nel repository come helper shell transport-only per CI, smoke test e script operativi basati su `curl`. Non è un crypto SDK ufficiale e non implementa cifratura/decrittazione, HPKE, gestione DEK o risoluzione chiavi pubbliche.
+`clients/bash` esiste nel repository come helper shell per CI, smoke test e script operativi basati su `curl`. Il codice Bash resta transport-only, ma può delegare flussi cifrati a un provider crypto esterno configurato con `CUSTODIA_CRYPTO_PROVIDER`.
 
 Criterio di confine:
 
 ```text
-clients/bash -> helper REST/mTLS per payload già opachi; nessuna crypto applicativa in Bash
+clients/bash -> helper REST/mTLS; crypto opzionale solo tramite provider esterno stdin/stdout, nessuna crypto applicativa implementata in Bash
 ```
 
-Questo evita di promuovere Bash a superficie crypto fragile per shell history, process list, escaping JSON/base64 e logging accidentale.
+Questo evita di promuovere Bash a superficie crypto nativa fragile per shell history, process list, escaping JSON/base64 e logging accidentale. Il provider esterno deve implementare canonical AAD, AES-256-GCM, HPKE-v1 e passare i vector comuni; Bash orchestri solo file JSON e payload opachi.
 
 ## 9. Note sulla sicurezza
 

@@ -43,7 +43,7 @@ Phase 5 tracks official client libraries and client-side cryptography.
 | Java | Yes | Yes | `java.net.http` transport plus local crypto wrapper. |
 | C++ | Yes | Yes | libcurl transport plus OpenSSL-backed local crypto wrapper. |
 | Rust | Yes | Yes | reqwest/rustls transport plus local crypto wrapper. |
-| Bash | Yes | No | Shell transport helper only; not a crypto SDK. |
+| Bash | Yes | No native / external provider bridge | Shell helper; encrypted flows require a separate provider executable. |
 
 ## Still open
 
@@ -53,7 +53,7 @@ Future work outside this closure: public package publishing and semver/release p
 
 ## Current boundary
 
-Go now has public transport, operational and high-level crypto SDK surfaces. Python now has typed transport helpers plus a high-level crypto wrapper. Node.js / TypeScript now has transport and high-level crypto clients for opaque REST payloads with TypeScript declarations. Java, C++, and Rust now have transport and high-level crypto clients. Go, Python, Node.js, Java, C++ and Rust high-level clients encrypt/decrypt locally, create HPKE-v1 recipient envelopes, share existing DEKs locally and send only opaque payloads to the server. Bash is a transport-only helper for CI/smoke/ops scripts, not a crypto SDK. Deterministic crypto fixtures cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.
+Go now has public transport, operational and high-level crypto SDK surfaces. Python now has typed transport helpers plus a high-level crypto wrapper. Node.js / TypeScript now has transport and high-level crypto clients for opaque REST payloads with TypeScript declarations. Java, C++, and Rust now have transport and high-level crypto clients. Go, Python, Node.js, Java, C++ and Rust high-level clients encrypt/decrypt locally, create HPKE-v1 recipient envelopes, share existing DEKs locally and send only opaque payloads to the server. Bash is a transport helper for CI/smoke/ops scripts. Native Bash remains non-crypto; encrypted commands are available only through an external crypto provider executable. Deterministic crypto fixtures cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.
 
 The server remains metadata/ciphertext/envelope-only. Custodia must not become a public-key directory.
 
@@ -75,4 +75,4 @@ make test-rust-client
 make test-bash-client
 ```
 
-Phase 5 is complete at repository level for Go, Python, Node.js/TypeScript, Java, C++ and Rust transport plus high-level crypto. Bash is included as a post-roadmap transport helper. Package publishing and release support policies remain future work outside this closure.
+Phase 5 is complete at repository level for Go, Python, Node.js/TypeScript, Java, C++ and Rust transport plus high-level crypto. Bash is included as a post-roadmap transport helper with an optional external crypto-provider bridge. Package publishing and release support policies remain future work outside this closure.
