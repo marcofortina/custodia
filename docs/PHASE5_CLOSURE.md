@@ -25,17 +25,18 @@ Phase 5 tracks official client libraries and client-side cryptography.
 - Python crypto vector tests added against the shared deterministic AES-256-GCM and HPKE-v1 fixtures.
 - External Go consumer compile guard extended to the high-level crypto client surface.
 - `make test-client-crypto` added for focused client-crypto fixture validation.
+- Java transport client added for opaque REST/mTLS payloads with a Java test target.
+- C++ transport client added for opaque REST/mTLS payloads with a libcurl-backed C++ test target.
 
 ## Still open
 
-- Node.js/TypeScript transport and high-level crypto clients added for opaque REST payloads, with TypeScript declarations and Node test target.
 - Rust transport client.
-- Java transport client.
-- C++ transport client.
+- Java high-level crypto client.
+- C++ high-level crypto client.
 
 ## Current boundary
 
-Go now has public transport, operational and high-level crypto SDK surfaces. Python now has typed transport helpers plus a high-level crypto wrapper. Node.js / TypeScript now has transport and high-level crypto clients for opaque REST payloads with TypeScript declarations. Go, Python and Node.js high-level clients encrypt/decrypt locally, create HPKE-v1 recipient envelopes, share existing DEKs locally and send only opaque payloads to the server. Deterministic crypto fixtures cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.
+Go now has public transport, operational and high-level crypto SDK surfaces. Python now has typed transport helpers plus a high-level crypto wrapper. Node.js / TypeScript now has transport and high-level crypto clients for opaque REST payloads with TypeScript declarations. Java and C++ now have initial transport clients for opaque REST/mTLS payloads, while their high-level crypto wrappers remain planned. Go, Python and Node.js high-level clients encrypt/decrypt locally, create HPKE-v1 recipient envelopes, share existing DEKs locally and send only opaque payloads to the server. Deterministic crypto fixtures cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.
 
 The server remains metadata/ciphertext/envelope-only. Custodia must not become a public-key directory.
 
@@ -51,6 +52,8 @@ python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/
 python3 -m unittest discover -s clients/python/tests
 node --check clients/node/src/index.js
 npm test --prefix clients/node
+make test-java-client
+make test-cpp-client
 ```
 
-Phase 5 core Go+Python+Node is complete at repository level. The broader multi-language roadmap still has Rust, Java and C++ open.
+Phase 5 core Go+Python+Node is complete at repository level. Java and C++ transport coverage is present. The broader multi-language roadmap still has Rust transport plus Java/C++ high-level crypto open.

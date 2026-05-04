@@ -28,8 +28,8 @@ Principi comuni:
 | **Python** | Esistente | Transport client + primo crypto client high-level E2E | `clients/python` nel monorepo, con typed transport helpers e crypto wrapper basato sugli stessi vector. |
 | **Node.js / TypeScript** | Esistente | Transport client presente; crypto client presente | `clients/node` nel monorepo, con JavaScript runtime dependency-free, crypto high-level HPKE-v1/AES-GCM e dichiarazioni TypeScript. |
 | **Rust** | Non presente | Pianificato | Da aggiungere dopo Go/Python. |
-| **Java** | Non presente | Pianificato | Da aggiungere dopo stabilizzazione schema crypto. |
-| **C++** | Non presente | Pianificato | Da aggiungere per ultimo per complessità ABI/OpenSSL/packaging. |
+| **Java** | Esistente | Transport client presente; crypto client pianificato | `clients/java` nel monorepo, basato su `java.net.http` e SSLContext/keystore Java. |
+| **C++** | Esistente | Transport client presente; crypto client pianificato | `clients/cpp` nel monorepo, basato su libcurl per HTTPS/mTLS. |
 
 Una libreria diventa “ufficiale” solo quando ha:
 
@@ -295,8 +295,8 @@ Per la Fase 5 iniziale usare il monorepo:
 | Python | `clients/python` | Da decidere. |
 | Node.js / TypeScript | `clients/node` | Monorepo private scaffold; nome pubblico da decidere. |
 | Rust | `clients/rust` | Pianificato. |
-| Java | `clients/java` | Pianificato. |
-| C++ | `clients/cpp` | Pianificato. |
+| Java | `clients/java` | Monorepo transport scaffold; nome pubblico da decidere. |
+| C++ | `clients/cpp` | Monorepo transport scaffold; nome pubblico da decidere. |
 
 Nomi come `github.com/custodia/go-client`, `@custodia/client`, `custodia-client` o `com.custodia:client` sono placeholder finché non vengono pubblicati davvero.
 
@@ -361,6 +361,44 @@ un progetto Go esterno deve poter importare pkg/client e parlare con custodia-se
 
 Il package resta `private` finché nome pubblico e release process non sono decisi, ma la superficie API è verificata dai test Node e dai vector comuni.
 
+### 8.3 Stabilizzazione SDK Java transport
+
+`clients/java` esiste nel repository come transport client iniziale per payload opachi. Usa solo librerie standard Java e accetta un `SSLContext` applicativo oppure keystore/truststore Java per mTLS.
+
+Surface attuale:
+
+- `CustodiaClientConfig` per server URL, timeout, user-agent e TLS material;
+- `CustodiaClient` con metodi transport per secrets, grants, clients, status, diagnostics, revocation e audit export;
+- `CustodiaHttpError` tipizzato per status HTTP non 2xx;
+- `CustodiaAuditExport` con body, digest SHA-256 e numero eventi.
+
+Criterio di confine:
+
+```text
+clients/java transport -> invia solo JSON opaco già prodotto dall'applicazione e non prova a cifrare, decifrare o risolvere chiavi
+```
+
+Il crypto client Java resta pianificato e dovrà usare gli stessi vector comuni prima di essere dichiarato ufficiale.
+
+### 8.4 Stabilizzazione SDK C++ transport
+
+`clients/cpp` esiste nel repository come transport client iniziale per payload opachi. Usa libcurl per HTTPS/mTLS e una piccola API C++20 senza introdurre un framework di build dedicato.
+
+Surface attuale:
+
+- `custodia::Config` per server URL, timeout, user-agent e file TLS;
+- `custodia::Client` con metodi transport per secrets, grants, clients, status, diagnostics, revocation e audit export;
+- `custodia::HttpError` per status HTTP non 2xx;
+- `custodia::AuditExportArtifact` con body, digest SHA-256 e numero eventi.
+
+Criterio di confine:
+
+```text
+clients/cpp transport -> invia solo payload opachi già prodotti dall'applicazione e non prova a cifrare, decifrare o risolvere chiavi
+```
+
+Il crypto client C++ resta pianificato e richiederà una scelta esplicita su dipendenze crypto/ABI prima di essere dichiarato ufficiale.
+
 ## 9. Note sulla sicurezza
 
 - **Mai condividere la chiave privata**: ogni client mantiene la propria chiave privata o handle di decrittazione in locale.
@@ -382,8 +420,8 @@ Ordine consigliato:
 3. **Fase 5C**: Python high-level crypto client sopra `clients/python`.
 4. **Fase 5D**: Node.js/TypeScript transport client e high-level crypto wrapper sopra gli stessi vector comuni.
 5. **Fase 5E**: Rust client.
-6. **Fase 5F**: Java client.
-7. **Fase 5G**: C++ client.
+6. **Fase 5F**: Java transport client presente; crypto client pianificato.
+7. **Fase 5G**: C++ transport client presente; crypto client pianificato.
 
 Non implementare sei SDK in parallelo prima di avere crypto spec e test vectors comuni.
 

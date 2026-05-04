@@ -18,6 +18,7 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 - Memory and Valkey-compatible rate limiter backends with readiness checks.
 - Minimal admin CLI for metadata operations exposed by the API.
 - Go, Python and Node.js / TypeScript client libraries with raw transport helpers; all three include high-level client-side crypto wrappers that keep plaintext, DEKs and private keys outside the server.
+- Java and C++ transport clients for opaque REST/mTLS payloads; high-level crypto wrappers remain future work for those languages.
 - Docker, Compose, Helm and Lite single-node deployment examples.
 - Dedicated `custodia-signer` service for admin-only client CSR signing.
 - Custodia Lite profile with YAML config, SQLite build-tag artifact, local CA bootstrap, backup helper and Lite-to-Full readiness checks.
@@ -64,6 +65,8 @@ bitcoin:36jDV57roGb4o59TwK1CB7viPrXToQHGiP
 - Go: [`docs/GO_CLIENT_SDK.md`](docs/GO_CLIENT_SDK.md)
 - Python: [`docs/PYTHON_CLIENT_SDK.md`](docs/PYTHON_CLIENT_SDK.md)
 - Node.js / TypeScript transport and crypto: [`docs/NODE_CLIENT_SDK.md`](docs/NODE_CLIENT_SDK.md)
+- Java transport: [`docs/JAVA_CLIENT_SDK.md`](docs/JAVA_CLIENT_SDK.md)
+- C++ transport: [`docs/CPP_CLIENT_SDK.md`](docs/CPP_CLIENT_SDK.md)
 - Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
 
 ## Local development
@@ -229,6 +232,9 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 - [Client crypto specification](docs/CLIENT_CRYPTO_SPEC.md)
 - [Go client SDK](docs/GO_CLIENT_SDK.md)
 - [Python client SDK](docs/PYTHON_CLIENT_SDK.md)
+- [Node.js / TypeScript client SDK](docs/NODE_CLIENT_SDK.md)
+- [Java client SDK](docs/JAVA_CLIENT_SDK.md)
+- [C++ client SDK](docs/CPP_CLIENT_SDK.md)
 - [Phase 5 closure tracker](docs/PHASE5_CLOSURE.md)
 - [Web MFA](docs/WEB_MFA.md)
 - [Web passkey support](docs/WEB_PASSKEY.md)

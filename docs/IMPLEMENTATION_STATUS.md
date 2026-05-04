@@ -1461,3 +1461,40 @@ The repository still does not claim to implement physical HSM hardware, external
 ### Phase 5D Node.js / TypeScript high-level crypto status
 
 Node high-level crypto wrapper is implemented in `clients/node` using Node built-ins only. It shares the same deterministic AES-256-GCM, HPKE-v1 and canonical AAD vectors used by Go and Python, keeps plaintext/DEKs/private keys client-side and sends only opaque payloads through the transport client.
+
+## Patch 718 - Java transport client package scaffold
+
+- Added `clients/java` documentation for the raw REST/mTLS Java transport SDK boundary.
+
+## Patch 719 - Java transport client implementation
+
+- Added Java transport client configuration, HTTP error type, audit export artifact type and opaque REST method coverage using `java.net.http`.
+- Kept the Java SDK transport-only; it does not encrypt, decrypt or resolve recipient keys.
+
+## Patch 720 - Java transport client tests
+
+- Added a no-framework Java test target with injectable transport coverage for routing, headers, encoded paths, HTTP errors and audit export metadata.
+- Included `make test-java-client` in standard checks.
+
+## Patch 721 - C++ transport client package scaffold
+
+- Added `clients/cpp` documentation for the raw REST/mTLS C++ transport SDK boundary.
+
+## Patch 722 - C++ transport client implementation
+
+- Added a C++20 transport client API backed by libcurl for HTTPS/mTLS and opaque REST payloads.
+- Kept the C++ SDK transport-only; it does not encrypt, decrypt or resolve recipient keys.
+
+## Patch 723 - C++ transport client tests
+
+- Added injectable C++ transport tests for routing, headers, encoded paths, HTTP errors and audit export metadata.
+- Included `make test-cpp-client` in standard checks.
+
+## Patch 724 - Java and C++ transport SDK documentation
+
+- Added Java and C++ SDK guides and README links.
+
+## Patch 725 - Phase 5 Java/C++ transport status
+
+- Updated client-library docs and Phase 5 closure tracker after adding Java and C++ transport clients.
+- Java/C++ high-level crypto clients remain open and must use shared vectors before being marked official.
