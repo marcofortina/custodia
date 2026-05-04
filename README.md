@@ -81,6 +81,7 @@ bitcoin:36jDV57roGb4o59TwK1CB7viPrXToQHGiP
 - Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
 - SDK release policy: [`docs/SDK_RELEASE_POLICY.md`](docs/SDK_RELEASE_POLICY.md)
 - Linux DEB/RPM packaging: [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md)
+- Fresh Lite quickstart for package or source installs: [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
 - SBOM artifacts: [`docs/SBOM.md`](docs/SBOM.md)
 
 ## Linux packages
@@ -110,6 +111,8 @@ Generate a release SBOM:
 ```bash
 VERSION=0.1.0 make sbom
 ```
+
+For a clean machine first run, follow [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
 
 The package split is:
 
@@ -274,6 +277,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 
 **Lite deployment and upgrade path**
 
+- [Custodia quickstart for Lite installs](docs/QUICKSTART.md)
 - [Custodia Lite profile](docs/LITE_PROFILE.md)
 - [Custodia Lite configuration](docs/LITE_CONFIG.md)
 - [Lite installation guide](docs/LITE_INSTALL.md)

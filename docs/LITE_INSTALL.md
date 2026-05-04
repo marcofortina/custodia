@@ -1,5 +1,7 @@
 # Custodia Lite installation guide
 
+For a first install on a clean Ubuntu or Fedora host, start with [`docs/QUICKSTART.md`](QUICKSTART.md). This document remains the lower-level Lite installation reference.
+
 Custodia Lite is a single-node profile of the same Custodia codebase. It removes
 mandatory external runtime services while preserving the security model: API
 mTLS, opaque ciphertext/envelope handling, authorization grants, Web MFA and
@@ -55,7 +57,7 @@ Use `--ca-passphrase-file FILE` when you already have a passphrase file managed 
 Start from the sample profile:
 
 ```bash
-sudo cp deploy/examples/config.lite.yaml /etc/custodia/config.yaml
+sudo cp /usr/share/custodia/examples/config.lite.yaml /etc/custodia/config.yaml
 sudo chown custodia:custodia /etc/custodia/config.yaml
 sudo chmod 0640 /etc/custodia/config.yaml
 ```

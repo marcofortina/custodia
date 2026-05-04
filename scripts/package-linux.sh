@@ -142,7 +142,7 @@ stage_server() {
   install -m 0755 "$WORK_DIR/bin/custodia-admin" "$stage/usr/bin/custodia-admin"
   install -m 0755 "$WORK_DIR/bin/custodia-signer" "$stage/usr/bin/custodia-signer"
   install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia-server/"
-  install -m 0644 docs/LITE_PROFILE.md docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md "$stage/usr/share/doc/custodia-server/"
+  install -m 0644 docs/QUICKSTART.md docs/LITE_PROFILE.md docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md "$stage/usr/share/doc/custodia-server/"
   install -m 0644 deploy/examples/config.lite.yaml deploy/examples/config.full.yaml deploy/examples/lite.env.example deploy/examples/production.env.example "$stage/usr/share/custodia/examples/"
 
   cat > "$stage/usr/lib/systemd/system/custodia.service" <<'SERVICE'
