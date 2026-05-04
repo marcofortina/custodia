@@ -20,9 +20,11 @@ var (
 )
 
 type Metadata struct {
-	Version        string `json:"version"`
-	ContentCipher  string `json:"content_cipher"`
-	EnvelopeScheme string `json:"envelope_scheme"`
+	Version        string              `json:"version"`
+	ContentCipher  string              `json:"content_cipher"`
+	EnvelopeScheme string              `json:"envelope_scheme"`
+	ContentNonce   string              `json:"content_nonce_b64,omitempty"`
+	AAD            *CanonicalAADInputs `json:"aad,omitempty"`
 }
 
 func ParseMetadata(payload []byte) (Metadata, error) {
@@ -50,4 +52,22 @@ func ValidateMetadata(metadata Metadata) error {
 		return ErrUnsupportedEnvelopeScheme
 	}
 	return nil
+}
+
+func MetadataV1(aad CanonicalAADInputs, contentNonce string) Metadata {
+	aadCopy := aad
+	return Metadata{
+		Version:        VersionV1,
+		ContentCipher:  ContentCipherV1,
+		EnvelopeScheme: EnvelopeHPKEV1,
+		ContentNonce:   contentNonce,
+		AAD:            &aadCopy,
+	}
+}
+
+func (metadata Metadata) CanonicalAADInputs(defaultInputs CanonicalAADInputs) CanonicalAADInputs {
+	if metadata.AAD != nil {
+		return *metadata.AAD
+	}
+	return defaultInputs
 }
