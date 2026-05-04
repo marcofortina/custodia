@@ -53,6 +53,14 @@ sanitize_rpm_version() {
   printf '%s' "$1" | tr '+-' '__' | tr -cd 'A-Za-z0-9._~'
 }
 
+rpm_changelog_date() {
+  local epoch="${SOURCE_DATE_EPOCH:-}"
+  if [ -z "$epoch" ]; then
+    epoch="$(date -u +%s)"
+  fi
+  date -u -d "@$epoch" '+%a %b %e %Y'
+}
+
 server_build_tags_include() {
   case " $SERVER_BUILD_TAGS " in
     *" $1 "*) return 0 ;;
@@ -96,9 +104,10 @@ build_server_binaries() {
   if server_build_tags_include sqlite; then
     build_root="$WORK_DIR/build-src"
     prepare_server_build_source "$build_root"
-    # Resolve SQLite transitive checksums in the temporary package build tree.
-    # This keeps package builds reproducible without mutating the caller's go.sum.
-    (cd "$build_root" && "$GO" mod tidy)
+    # Resolve only the package build graph in the temporary tree.
+    # Do not run `go mod tidy` here: it scans optional packages too and may
+    # resolve unrelated backends to newer toolchains than this repository targets.
+    (cd "$build_root" && "$GO" list -deps -mod=mod "${tags[@]}" ./cmd/custodia-server ./cmd/vault-admin ./cmd/custodia-signer >/dev/null)
     mod_args=(-mod=mod)
   else
     ensure_server_build_dependencies
@@ -275,8 +284,9 @@ build_rpm() {
   local pkg="$1"
   local stage="$2"
   local arch="$3"
-  local rpm_version
+  local rpm_version changelog_date
   rpm_version="$(sanitize_rpm_version "$VERSION")"
+  changelog_date="$(rpm_changelog_date)"
   local top="$WORK_DIR/rpmbuild/$pkg"
   local spec="$WORK_DIR/$pkg.spec"
   rm -rf "$top"
@@ -329,7 +339,7 @@ Requires: curl"
     printf '\n%%postun\n%s\n' "$postun"
     printf '\n%%files\n%%defattr(-,root,root,-)\n'
     rpm_file_list "$stage"
-    printf '\n%%changelog\n* Thu Jan 01 1970 Custodia maintainers <maintainers@example.invalid> - %s-%s\n- Generated package.\n' "$rpm_version" "$REVISION"
+    printf '\n%%changelog\n* %s Custodia maintainers <maintainers@example.invalid> - %s-%s\n- Generated package.\n' "$changelog_date" "$rpm_version" "$REVISION"
   } > "$spec"
 
   log "building RPM for $pkg"
