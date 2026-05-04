@@ -45,19 +45,19 @@ jobs:
       REVISION: ${{ inputs.revision }}
       COMMIT: ${{ github.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: '1.22.x'
           cache: true
           cache-dependency-path: go.mod
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: npm
@@ -116,7 +116,7 @@ jobs:
           COMMIT="${COMMIT::12}" \
           make sbom
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: custodia-release-artifacts-${{ inputs.version }}-${{ inputs.revision }}
           path: |
