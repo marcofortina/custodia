@@ -49,7 +49,7 @@ Public operational types include `OperationalStatus`, `BuildInfo`, `RuntimeDiagn
 
 ## Legacy methods
 
-Older methods such as `CreateSecret`, `GetSecret`, `ShareSecret`, `Me`, `ListSecrets` and `ListClients` remain for compatibility inside the monorepo, but they expose internal model types and are documented as legacy helpers. New external consumers should use the public Phase 5 transport methods.
+Older methods such as `CreateSecret`, `GetSecret`, `ShareSecret`, `Me`, `ListSecrets`, `ListClients`, `Status`, `Version`, `Diagnostics`, `RevocationStatus` and `ListAuditEvents` remain for compatibility inside the monorepo, but several expose internal model types and are documented as legacy helpers. New external consumers should use the public Phase 5 transport and operational methods.
 
 ## External consumer contract
 

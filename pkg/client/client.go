@@ -119,6 +119,7 @@ func (c *Client) RevokeClient(req model.RevokeClientRequest) error {
 	return c.doJSON(http.MethodPost, "/v1/clients/revoke", req, nil)
 }
 
+// ListAuditEvents is a legacy monorepo helper that returns internal model types. External consumers should use ListAuditEventMetadata.
 func (c *Client) ListAuditEvents(filters AuditEventFilters) ([]model.AuditEvent, error) {
 	if err := validateAuditEventFilters(filters); err != nil {
 		return nil, err
@@ -143,6 +144,7 @@ func (c *Client) ListAuditEvents(filters AuditEventFilters) ([]model.AuditEvent,
 	return response.AuditEvents, err
 }
 
+// ExportAuditEvents is a legacy compatibility helper. External consumers should use ExportAuditEventArtifact when they need export metadata.
 func (c *Client) ExportAuditEvents(filters AuditEventFilters) ([]byte, error) {
 	artifact, err := c.ExportAuditEventsWithMetadata(filters)
 	if err != nil {
@@ -151,6 +153,7 @@ func (c *Client) ExportAuditEvents(filters AuditEventFilters) ([]byte, error) {
 	return artifact.Body, nil
 }
 
+// ExportAuditEventsWithMetadata is a legacy compatibility helper. External consumers should use ExportAuditEventArtifact.
 func (c *Client) ExportAuditEventsWithMetadata(filters AuditEventFilters) (AuditExportArtifact, error) {
 	if err := validateAuditEventFilters(filters); err != nil {
 		return AuditExportArtifact{}, err
@@ -285,26 +288,31 @@ func (c *Client) ListSecretAccessWithLimit(secretID string, limit int) ([]model.
 	return response.Access, err
 }
 
+// Status is a legacy monorepo helper that returns internal model types. External consumers should use StatusInfo.
 func (c *Client) Status() (model.OperationalStatus, error) {
 	var response model.OperationalStatus
 	return response, c.doJSON(http.MethodGet, "/v1/status", nil, &response)
 }
 
+// Version is a legacy monorepo helper that returns internal model types. External consumers should use VersionInfo.
 func (c *Client) Version() (model.BuildInfo, error) {
 	var response model.BuildInfo
 	return response, c.doJSON(http.MethodGet, "/v1/version", nil, &response)
 }
 
+// Diagnostics is a legacy monorepo helper that returns internal model types. External consumers should use DiagnosticsInfo.
 func (c *Client) Diagnostics() (model.RuntimeDiagnostics, error) {
 	var response model.RuntimeDiagnostics
 	return response, c.doJSON(http.MethodGet, "/v1/diagnostics", nil, &response)
 }
 
+// RevocationStatus is a legacy monorepo helper that returns internal model types. External consumers should use RevocationStatusInfo.
 func (c *Client) RevocationStatus() (model.RevocationStatus, error) {
 	var response model.RevocationStatus
 	return response, c.doJSON(http.MethodGet, "/v1/revocation/status", nil, &response)
 }
 
+// RevocationSerialStatus is a legacy compatibility helper. External consumers should use RevocationSerialStatusInfo.
 func (c *Client) RevocationSerialStatus(serialHex string) (RevocationSerialStatus, error) {
 	var response RevocationSerialStatus
 	path := "/v1/revocation/serial?serial_hex=" + url.QueryEscape(strings.TrimSpace(serialHex))
