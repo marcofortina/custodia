@@ -55,6 +55,13 @@ class CustodiaClient:
     def revoke_client(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("POST", "/v1/clients/revoke", json=payload)
 
+
+    def create_client_payload(self, payload: CreateClientPayload) -> dict[str, Any]:
+        return self.create_client(payload.to_dict())
+
+    def revoke_client_payload(self, payload: RevokeClientPayload) -> dict[str, Any]:
+        return self.revoke_client(payload.to_dict())
+
     def list_audit_events(
         self,
         limit: int | None = None,
@@ -158,6 +165,10 @@ class CustodiaClient:
     def create_secret(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("POST", "/v1/secrets", json=payload)
 
+
+    def create_secret_payload(self, payload: CreateSecretPayload) -> dict[str, Any]:
+        return self.create_secret(payload.to_dict())
+
     def list_secrets(self, limit: int | None = None) -> dict[str, Any]:
         _validate_optional_limit(limit)
         query = _query_params(limit=str(limit) if limit is not None else None)
@@ -206,8 +217,16 @@ class CustodiaClient:
     def share_secret(self, secret_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("POST", f"/v1/secrets/{_path_escape(secret_id)}/share", json=payload)
 
+
+    def share_secret_payload(self, secret_id: str, payload: ShareSecretPayload) -> dict[str, Any]:
+        return self.share_secret(secret_id, payload.to_dict())
+
     def request_access_grant(self, secret_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("POST", f"/v1/secrets/{_path_escape(secret_id)}/access-requests", json=payload)
+
+
+    def request_access_grant_payload(self, secret_id: str, payload: AccessGrantPayload) -> dict[str, Any]:
+        return self.request_access_grant(secret_id, payload.to_dict())
 
     def activate_access_grant(self, secret_id: str, client_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request(
@@ -216,11 +235,19 @@ class CustodiaClient:
             json=payload,
         )
 
+
+    def activate_access_grant_payload(self, secret_id: str, client_id: str, payload: ActivateAccessPayload) -> dict[str, Any]:
+        return self.activate_access_grant(secret_id, client_id, payload.to_dict())
+
     def revoke_access(self, secret_id: str, client_id: str) -> dict[str, Any]:
         return self._request("DELETE", f"/v1/secrets/{_path_escape(secret_id)}/access/{_path_escape(client_id)}")
 
     def create_secret_version(self, secret_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("POST", f"/v1/secrets/{_path_escape(secret_id)}/versions", json=payload)
+
+
+    def create_secret_version_payload(self, secret_id: str, payload: CreateSecretVersionPayload) -> dict[str, Any]:
+        return self.create_secret_version(secret_id, payload.to_dict())
 
     def delete_secret(self, secret_id: str) -> dict[str, Any]:
         return self._request("DELETE", f"/v1/secrets/{_path_escape(secret_id)}")
