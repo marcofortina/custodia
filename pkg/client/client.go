@@ -31,21 +31,6 @@ type ClientListFilters struct {
 	Active *bool
 }
 
-type AuditExportArtifact struct {
-	Body       []byte
-	SHA256     string
-	EventCount string
-}
-
-type RevocationSerialStatus struct {
-	SerialHex    string     `json:"serial_hex"`
-	Status       string     `json:"status"`
-	ThisUpdate   time.Time  `json:"this_update"`
-	NextUpdate   time.Time  `json:"next_update"`
-	RevokedAt    *time.Time `json:"revoked_at,omitempty"`
-	RevokedCount int        `json:"revoked_count"`
-}
-
 type AuditEventFilters struct {
 	Limit         int
 	Outcome       string
