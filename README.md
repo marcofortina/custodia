@@ -198,3 +198,5 @@ The command fails on unsafe development defaults and missing external production
 - [Lite local CA bootstrap](docs/LITE_CA_BOOTSTRAP.md)
 - [Lite backup and restore](docs/LITE_BACKUP_RESTORE.md)
 - [Lite to Full upgrade path](docs/LITE_TO_FULL_UPGRADE.md)
+- [Phase 4 closure summary](docs/PHASE4_CLOSURE.md)
+- [Lite migration readiness](docs/LITE_MIGRATION_READINESS.md)
