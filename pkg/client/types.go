@@ -3,8 +3,6 @@ package client
 import (
 	"encoding/json"
 	"time"
-
-	"custodia/internal/model"
 )
 
 // Permission bits mirror the server-side authorization model without requiring external SDK users to import internal packages.
@@ -133,44 +131,4 @@ type SecretReadResponse struct {
 	Permissions     int             `json:"permissions"`
 	GrantedAt       time.Time       `json:"granted_at"`
 	AccessExpiresAt *time.Time      `json:"access_expires_at,omitempty"`
-}
-
-func toModelEnvelopes(envelopes []RecipientEnvelope) []model.RecipientEnvelope {
-	converted := make([]model.RecipientEnvelope, 0, len(envelopes))
-	for _, envelope := range envelopes {
-		converted = append(converted, model.RecipientEnvelope{ClientID: envelope.ClientID, Envelope: envelope.Envelope})
-	}
-	return converted
-}
-
-func fromModelClient(value model.Client) ClientInfo {
-	return ClientInfo(value)
-}
-
-func fromModelSecretRef(value model.SecretVersionRef) SecretVersionRef {
-	return SecretVersionRef(value)
-}
-
-func fromModelAccessGrantRef(value model.AccessGrantRef) AccessGrantRef {
-	return AccessGrantRef(value)
-}
-
-func fromModelSecretMetadata(value model.SecretMetadata) SecretMetadata {
-	return SecretMetadata(value)
-}
-
-func fromModelSecretVersionMetadata(value model.SecretVersionMetadata) SecretVersionMetadata {
-	return SecretVersionMetadata(value)
-}
-
-func fromModelSecretAccessMetadata(value model.SecretAccessMetadata) SecretAccessMetadata {
-	return SecretAccessMetadata(value)
-}
-
-func fromModelAccessGrantMetadata(value model.AccessGrantMetadata) AccessGrantMetadata {
-	return AccessGrantMetadata(value)
-}
-
-func fromModelSecretReadResponse(value model.SecretReadResponse) SecretReadResponse {
-	return SecretReadResponse(value)
 }
