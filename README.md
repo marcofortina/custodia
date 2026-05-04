@@ -98,6 +98,12 @@ Smoke-test package contents without installing them into the host system:
 make package-smoke
 ```
 
+Generate a release SBOM:
+
+```bash
+VERSION=0.1.0 make sbom
+```
+
 The package split is:
 
 - `custodia-server`: server, admin CLI, signer, systemd unit and deployment examples;

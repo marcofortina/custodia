@@ -136,6 +136,10 @@ package-checksums:
 package-smoke:
 	./scripts/package-smoke.sh
 
+.PHONY: sbom
+sbom:
+	./scripts/generate-sbom.sh
+
 .PHONY: softhsm-dev-token
 softhsm-dev-token:
 	./scripts/softhsm-dev-token.sh
