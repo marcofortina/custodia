@@ -1,5 +1,5 @@
 {
-  "case": "tamper_ciphertext_fails",
+  "case": "wrong_recipient_fails",
   "status": "deterministic-aad-only-negative",
   "crypto_metadata": {
     "version": "custodia.client-crypto.v1",
@@ -12,6 +12,6 @@
   },
   "canonical_aad": "{\"version\":\"custodia.client-crypto.v1\",\"content_cipher\":\"aes-256-gcm\",\"envelope_scheme\":\"hpke-v1\",\"secret_id\":\"550e8400-e29b-41d4-a716-446655440000\",\"version_id\":\"660e8400-e29b-41d4-a716-446655440000\"}",
   "canonical_aad_sha256": "3f1147c381be968475eceb4cf2a7a2bf4e5416e4b1b84108e27f95d3ee70b96a",
-  "failure": "ciphertext authentication failure",
-  "expected_error": "ciphertext_authentication_failed"
+  "failure": "recipient envelope cannot be opened by another client",
+  "expected_error": "wrong_recipient"
 }
