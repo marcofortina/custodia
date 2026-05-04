@@ -43,6 +43,10 @@ public final class CustodiaClient {
         return new CustodiaClient(config, transport);
     }
 
+    public CryptoCustodiaClient withCrypto(CustodiaCrypto.CryptoOptions options) {
+        return new CryptoCustodiaClient(this, options);
+    }
+
     public String currentClientInfo() throws IOException, InterruptedException, CustodiaHttpError {
         return requestJson("GET", "/v1/me", null);
     }
