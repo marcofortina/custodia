@@ -128,6 +128,10 @@ package-rpm:
 package-linux:
 	PACKAGE_FORMATS="deb rpm" ./scripts/package-linux.sh
 
+.PHONY: package-checksums
+package-checksums:
+	./scripts/package-checksums.sh
+
 .PHONY: softhsm-dev-token
 softhsm-dev-token:
 	./scripts/softhsm-dev-token.sh

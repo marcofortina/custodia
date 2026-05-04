@@ -84,6 +84,13 @@ VERSION=0.1.0 REVISION=1 make package-deb
 VERSION=0.1.0 REVISION=1 make package-rpm
 ```
 
+Generate release verification files:
+
+```bash
+VERSION=0.1.0 REVISION=1 make package-checksums
+cd dist/packages && sha256sum -c SHA256SUMS
+```
+
 The package split is:
 
 - `custodia-server`: server, admin CLI, signer, systemd unit and deployment examples;

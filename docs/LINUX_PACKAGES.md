@@ -125,3 +125,26 @@ make package-rpm
 ```
 
 The generated `.deb` and `.rpm` files are uploaded as workflow artifacts.
+
+## Release checksums and manifest
+
+After building packages, generate release verification files:
+
+```bash
+VERSION=0.1.0 REVISION=1 make package-linux
+VERSION=0.1.0 REVISION=1 make package-checksums
+```
+
+This writes:
+
+- `dist/packages/SHA256SUMS` with SHA-256 digests for every `.deb` and `.rpm` artifact.
+- `dist/packages/artifacts-manifest.json` with artifact names, package types, byte sizes, SHA-256 digests, version, revision, source commit and generation time.
+
+Operators should verify downloaded artifacts before installation:
+
+```bash
+cd dist/packages
+sha256sum -c SHA256SUMS
+```
+
+The manifest is intentionally metadata-only and does not include package contents.
