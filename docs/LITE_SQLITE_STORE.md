@@ -12,8 +12,7 @@ make build-sqlite
 make test-sqlite
 ```
 
-The tagged build requires a SQLite driver dependency compatible with the `database/sql` driver name `sqlite`.
-Release builds for the Lite profile should include this dependency and build with `-tags sqlite`.
+The tagged build uses the `modernc.org/sqlite` driver dependency and the `database/sql` driver name `sqlite`. Release builds for the Lite profile must build with `-tags sqlite`.
 
 ## Configuration
 

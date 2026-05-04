@@ -21,7 +21,7 @@ La differenza principale è operativa: Lite usa default più semplici e disabili
 2. **Un solo vocabolario config**: niente `CUSTODIA_DB_TYPE`, `CUSTODIA_LISTEN_API`, `CUSTODIA_MFA_ENABLED` o alias paralleli. Lite e FULL usano le variabili già presenti o nuove variabili coerenti con esse.
 3. **Lite è un profilo di default, non un prodotto diverso**.
 4. **Nessuna regressione sicurezza**: Lite non disattiva versioning logico, audit integrity, crypto boundary, mTLS o Web UI/MFA già implementati.
-5. **SQLite solo in Lite**: `sqlite` è uno store da aggiungere per installazioni single-node e non è target FULL/HA.
+5. **SQLite solo in Lite**: `sqlite` è uno store repository-level per installazioni single-node, disponibile negli artifact Lite buildati con tag `sqlite`, e non è target FULL/HA.
 6. **YAML `--config` per Lite e FULL**: il file YAML popola la stessa struttura di configurazione usata dalle variabili d'ambiente; le variabili env restano utili per override e secret injection.
 
 ## 3. Profili di deployment
@@ -115,7 +115,7 @@ Profilo esplicito per installazioni intermedie, ad esempio:
 
 ## 4. Configurazione YAML comune a Lite e FULL
 
-`custodia-server` deve supportare:
+`custodia-server` supporta:
 
 ```bash
 custodia-server --config /etc/custodia/config.yaml
@@ -184,7 +184,7 @@ signer_pkcs11_sign_command: /usr/local/bin/custodia-pkcs11-sign
 
 ## 5. SQLite store solo Lite
 
-SQLite va aggiunto come store reale ma limitato al profilo Lite/single-node.
+SQLite è implementato come store Lite/custom single-node, dietro build tag `sqlite`.
 
 Configurazione proposta:
 
@@ -268,13 +268,7 @@ SoftHSM resta profilo dev/test. In produzione il gate deve richiedere evidenza H
 
 ### 8.1 Utility CA locale per Lite
 
-Fase 4 deve prevedere una utility esplicita per bootstrap Lite, senza reintrodurre comandi fittizi nella documentazione. Nome proposto:
-
-```text
-vault-admin setup lite
-```
-
-oppure, se si preferisce separare il bootstrap CA dai file di configurazione:
+Fase 4 ha introdotto una utility esplicita per bootstrap Lite, senza reintrodurre comandi fittizi nella documentazione:
 
 ```text
 vault-admin ca bootstrap-local
@@ -292,7 +286,7 @@ La utility deve generare almeno:
 
 ### 8.2 Passphrase CA opzionale
 
-La passphrase della chiave CA locale deve essere supportata come opzione Fase 4, non promessa come feature già esistente finché non viene implementata nel file provider.
+La passphrase della chiave CA locale è supportata tramite file nel provider file-backed CA.
 
 Regola proposta:
 
@@ -323,7 +317,7 @@ vault-admin secret decrypt
 vault-admin export --format sqlite
 ```
 
-finché non vengono implementati.
+salvo future patch dedicate che li implementino esplicitamente.
 
 Per Fase 4 si può aggiungere in seguito un helper:
 
@@ -369,14 +363,14 @@ La migrazione deve essere principalmente configurativa:
 
 1. `profile: lite` -> `profile: custom` o `profile: full`;
 2. `store_backend: sqlite` -> `postgres`;
-3. migrazione dati SQLite -> PostgreSQL/Cockroach con tool dedicato da implementare;
+3. migrazione dati SQLite -> PostgreSQL/Cockroach con tool dedicato futuro;
 4. `rate_limit_backend: memory` -> `valkey`;
 5. `signer_key_provider: file` -> `pkcs11`;
 6. `web_passkey_enabled: false` -> `true`;
 7. audit local -> S3 Object Lock/WORM shipment;
 8. production/evidence gates obbligatori.
 
-La migrazione SQLite -> PostgreSQL richiede un tool dedicato futuro. Non usare `sqlite3 .dump` come procedura consigliata production.
+La migrazione SQLite -> PostgreSQL richiede ancora un tool dati dedicato futuro. Il repository oggi fornisce readiness checks e runbook, non una migrazione dati automatica. Non usare `sqlite3 .dump` come procedura consigliata production.
 
 ## 13. Fase 4 proposta
 
@@ -450,17 +444,20 @@ FULL è modulare, ma non arbitrario.
 | k3s/Cockroach rehearsal | Sì | È rehearsal, non production obbligatoria. |
 | MinIO Object Lock | Sì | È dev/test o S3-compatible target, non requisito universale. |
 
-## 15. Documentazione Lite da produrre
+## 15. Documentazione Lite prodotta
 
-Fase 4 deve produrre documentazione operativa dedicata, non solo questa specifica:
+Fase 4 ha prodotto documentazione operativa dedicata, oltre a questa specifica:
 
 - `docs/LITE_INSTALL.md`: installazione sicura single-node;
 - `docs/LITE_CONFIG.md`: mapping YAML/env dei profili `lite`, `full`, `custom`;
+- `docs/LITE_SQLITE_STORE.md`: store SQLite Lite, build tag e backup;
 - `docs/LITE_CA_BOOTSTRAP.md`: CA locale, passphrase opzionale, backup/offline e rotazione manuale;
 - `docs/LITE_BACKUP_RESTORE.md`: backup SQLite, audit export e restore;
-- `docs/LITE_TO_FULL_UPGRADE.md`: percorso SQLite -> PostgreSQL/Cockroach, file signer -> PKCS#11, audit local -> WORM/SIEM.
+- `docs/LITE_TO_FULL_UPGRADE.md`: percorso SQLite -> PostgreSQL/Cockroach, file signer -> PKCS#11, audit local -> WORM/SIEM;
+- `docs/LITE_MIGRATION_READINESS.md`: readiness check Lite -> FULL;
+- `docs/PHASE4_CLOSURE.md`: closure Fase 4.
 
-La documentazione deve indicare chiaramente cosa è default, cosa è consigliato e cosa è richiesto solo in FULL production.
+La documentazione distingue default, raccomandazioni e requisiti solo FULL production.
 
 ## 16. Conclusione
 

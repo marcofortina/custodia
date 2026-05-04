@@ -7,7 +7,7 @@ Phase 4 closes the Custodia Lite profile at repository level.
 - `CUSTODIA_PROFILE=lite|full|custom` profile defaults.
 - `custodia-server --config PATH` flat YAML loading.
 - Environment overrides after YAML.
-- SQLite Lite store contract and build-tagged implementation.
+- SQLite Lite store contract and build-tagged implementation with declared SQLite driver dependency.
 - Fail-closed SQLite standard build guard.
 - Lite installation, configuration, backup and restore documentation.
 - Lite systemd and Docker Compose examples.
