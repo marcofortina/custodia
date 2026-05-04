@@ -13,5 +13,17 @@ if [ -z "${full_env}" ]; then
   exit 2
 fi
 
-vault_admin_bin="${CUSTODIA_VAULT_ADMIN_BIN:-vault-admin}"
-exec "${vault_admin_bin}" lite upgrade-check --lite-env-file "${lite_env}" --full-env-file "${full_env}"
+if [ -n "${CUSTODIA_VAULT_ADMIN_BIN:-}" ]; then
+  exec "${CUSTODIA_VAULT_ADMIN_BIN}" lite upgrade-check --lite-env-file "${lite_env}" --full-env-file "${full_env}"
+fi
+
+if command -v vault-admin >/dev/null 2>&1; then
+  exec vault-admin lite upgrade-check --lite-env-file "${lite_env}" --full-env-file "${full_env}"
+fi
+
+if [ -f "go.mod" ] && [ -d "cmd/vault-admin" ]; then
+  exec go run ./cmd/vault-admin lite upgrade-check --lite-env-file "${lite_env}" --full-env-file "${full_env}"
+fi
+
+echo "vault-admin was not found; set CUSTODIA_VAULT_ADMIN_BIN or run from the repository root" >&2
+exit 127
