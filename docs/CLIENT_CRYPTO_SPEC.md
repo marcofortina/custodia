@@ -100,3 +100,16 @@ testdata/client-crypto/v1/
 ```
 
 Until deterministic vectors are produced, the repository ships schema fixtures that define expected fields and failure cases. Language clients must not be declared high-level crypto clients until deterministic cryptographic vectors are present and passing.
+
+
+## Repository validator
+
+The repository includes a small metadata validator in `internal/clientcrypto` for the shared v1 constants:
+
+```text
+version = custodia.client-crypto.v1
+content_cipher = aes-256-gcm
+envelope_scheme = hpke-v1
+```
+
+This validator is not a high-level crypto client. It only keeps metadata parsing, error names and schema fixtures aligned before deterministic cryptographic vectors are added.
