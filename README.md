@@ -217,6 +217,7 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 - [CA signing service design](docs/CA_SIGNING_SERVICE.md)
 - [PKCS#11 and SoftHSM signer bridge](docs/PKCS11_SOFTHSM.md)
 - [Client certificate lifecycle](docs/CLIENT_CERTIFICATE_LIFECYCLE.md)
+- [Custodia client libraries specification](docs/CUSTODIA_CLIENTS.md)
 - [Web MFA](docs/WEB_MFA.md)
 - [Web passkey support](docs/WEB_PASSKEY.md)
 - [CRL and OCSP operations](docs/CRL_OCSP_RUNBOOK.md)
