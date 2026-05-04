@@ -48,3 +48,68 @@ func TestPublicGoTransportMethodsAvoidInternalTypes(t *testing.T) {
 		t.Fatalf("ShareSecretPayload() error = %v", err)
 	}
 }
+
+func TestPublicGoOperationalMethodsAvoidInternalTypes(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method + " " + r.URL.EscapedPath() {
+		case "GET /v1/status":
+			_ = json.NewEncoder(w).Encode(OperationalStatus{Status: "ok", StoreBackend: "memory", Build: BuildInfo{Version: "1.2.3"}})
+		case "GET /v1/version":
+			_ = json.NewEncoder(w).Encode(BuildInfo{Version: "1.2.3", Commit: "abc"})
+		case "GET /v1/diagnostics":
+			_ = json.NewEncoder(w).Encode(RuntimeDiagnostics{Goroutines: 3})
+		case "GET /v1/revocation/status":
+			_ = json.NewEncoder(w).Encode(RevocationStatus{Configured: true, Valid: true, RevokedCount: 2})
+		case "GET /v1/revocation/serial":
+			if got := r.URL.Query().Get("serial_hex"); got != "0xCAFE" {
+				t.Fatalf("serial_hex = %q", got)
+			}
+			_ = json.NewEncoder(w).Encode(RevocationSerialStatus{SerialHex: "cafe", Status: "good"})
+		case "GET /v1/audit-events":
+			if got := r.URL.Query().Get("action"); got != "secret.read" {
+				t.Fatalf("action = %q", got)
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"audit_events": []AuditEvent{{Action: "secret.read", ActorClientID: "client_alice"}}})
+		case "GET /v1/audit-events/export":
+			if got := r.URL.Query().Get("outcome"); got != "failure" {
+				t.Fatalf("outcome = %q", got)
+			}
+			w.Header().Set("X-Custodia-Audit-Export-SHA256", "abc123")
+			w.Header().Set("X-Custodia-Audit-Export-Events", "1")
+			_, _ = w.Write([]byte("{\"event_id\":\"event-1\"}\n"))
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
+		}
+	}))
+	defer server.Close()
+
+	custodiaClient := &Client{baseURL: server.URL, http: server.Client()}
+	status, err := custodiaClient.StatusInfo()
+	if err != nil || status.Status != "ok" || status.Build.Version != "1.2.3" {
+		t.Fatalf("StatusInfo() = %+v err=%v", status, err)
+	}
+	version, err := custodiaClient.VersionInfo()
+	if err != nil || version.Version != "1.2.3" || version.Commit != "abc" {
+		t.Fatalf("VersionInfo() = %+v err=%v", version, err)
+	}
+	diagnostics, err := custodiaClient.DiagnosticsInfo()
+	if err != nil || diagnostics.Goroutines != 3 {
+		t.Fatalf("DiagnosticsInfo() = %+v err=%v", diagnostics, err)
+	}
+	revocation, err := custodiaClient.RevocationStatusInfo()
+	if err != nil || !revocation.Configured || !revocation.Valid || revocation.RevokedCount != 2 {
+		t.Fatalf("RevocationStatusInfo() = %+v err=%v", revocation, err)
+	}
+	serial, err := custodiaClient.RevocationSerialStatusInfo(" 0xCAFE ")
+	if err != nil || serial.SerialHex != "cafe" || serial.Status != "good" {
+		t.Fatalf("RevocationSerialStatusInfo() = %+v err=%v", serial, err)
+	}
+	events, err := custodiaClient.ListAuditEventMetadata(AuditEventFilters{Limit: 25, ActorClientID: "client_alice", Action: "secret.read"})
+	if err != nil || len(events) != 1 || events[0].Action != "secret.read" {
+		t.Fatalf("ListAuditEventMetadata() = %+v err=%v", events, err)
+	}
+	artifact, err := custodiaClient.ExportAuditEventArtifact(AuditEventFilters{Limit: 10, Outcome: "failure"})
+	if err != nil || string(artifact.Body) != "{\"event_id\":\"event-1\"}\n" || artifact.SHA256 != "abc123" || artifact.EventCount != "1" {
+		t.Fatalf("ExportAuditEventArtifact() = %+v err=%v", artifact, err)
+	}
+}

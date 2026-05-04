@@ -43,6 +43,10 @@ func TestPublicTypesCompile(t *testing.T) {
         Permissions: custodia.PermissionRead,
     }
     _ = custodia.SecretReadResponse{SecretID: "secret", VersionID: "version"}
+    _ = custodia.OperationalStatus{Status: "ok", Build: custodia.BuildInfo{Version: "dev"}}
+    _ = custodia.RuntimeDiagnostics{Goroutines: 1}
+    _ = custodia.RevocationStatus{Configured: true}
+    _ = custodia.AuditEvent{Action: "secret.read", ResourceType: "secret", Outcome: "success"}
 }
 
 func TestPublicMethodSignaturesCompile(t *testing.T) {
@@ -51,6 +55,13 @@ func TestPublicMethodSignaturesCompile(t *testing.T) {
     var _ func(*custodia.Client, string) (custodia.SecretReadResponse, error) = (*custodia.Client).GetSecretPayload
     var _ func(*custodia.Client, custodia.CreateSecretPayload) (custodia.SecretVersionRef, error) = (*custodia.Client).CreateSecretPayload
     var _ func(*custodia.Client, string, custodia.ShareSecretPayload) error = (*custodia.Client).ShareSecretPayload
+    var _ func(*custodia.Client) (custodia.OperationalStatus, error) = (*custodia.Client).StatusInfo
+    var _ func(*custodia.Client) (custodia.BuildInfo, error) = (*custodia.Client).VersionInfo
+    var _ func(*custodia.Client) (custodia.RuntimeDiagnostics, error) = (*custodia.Client).DiagnosticsInfo
+    var _ func(*custodia.Client) (custodia.RevocationStatus, error) = (*custodia.Client).RevocationStatusInfo
+    var _ func(*custodia.Client, string) (custodia.RevocationSerialStatus, error) = (*custodia.Client).RevocationSerialStatusInfo
+    var _ func(*custodia.Client, custodia.AuditEventFilters) ([]custodia.AuditEvent, error) = (*custodia.Client).ListAuditEventMetadata
+    var _ func(*custodia.Client, custodia.AuditEventFilters) (custodia.AuditExportArtifact, error) = (*custodia.Client).ExportAuditEventArtifact
 }
 `), 0o600); err != nil {
 		t.Fatalf("write consumer test: %v", err)
