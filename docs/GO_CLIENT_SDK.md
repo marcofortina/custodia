@@ -30,6 +30,23 @@ created, err := c.CreateSecretPayload(client.CreateSecretPayload{
 
 These types and methods are SDK-facing transport APIs. `pkg/client/types.go` and `pkg/client/public_transport.go` deliberately avoid importing or exposing `custodia/internal/*`.
 
+
+## Public operational methods
+
+The Go transport SDK also exposes public operational response types and methods that avoid `custodia/internal/*` return types:
+
+```go
+status, err := c.StatusInfo()
+version, err := c.VersionInfo()
+diagnostics, err := c.DiagnosticsInfo()
+revocation, err := c.RevocationStatusInfo()
+serial, err := c.RevocationSerialStatusInfo("0xCAFE")
+events, err := c.ListAuditEventMetadata(client.AuditEventFilters{Limit: 25})
+artifact, err := c.ExportAuditEventArtifact(client.AuditEventFilters{Outcome: "failure"})
+```
+
+Public operational types include `OperationalStatus`, `BuildInfo`, `RuntimeDiagnostics`, `RevocationStatus`, `RevocationSerialStatus`, `AuditEvent` and `AuditExportArtifact`. These methods are metadata/operations-only helpers; they do not expose secret plaintext, ciphertext or envelopes in logs.
+
 ## Legacy methods
 
 Older methods such as `CreateSecret`, `GetSecret`, `ShareSecret`, `Me`, `ListSecrets` and `ListClients` remain for compatibility inside the monorepo, but they expose internal model types and are documented as legacy helpers. New external consumers should use the public Phase 5 transport methods.
