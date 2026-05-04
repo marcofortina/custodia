@@ -158,7 +158,7 @@ passkey-assertion-verifier-template-check:
 
 .PHONY: sqlite-driver-download
 sqlite-driver-download:
-	$(GO) mod download modernc.org/sqlite
+	$(GO) mod download
 
 .PHONY: build-sqlite
 build-sqlite: sqlite-driver-download

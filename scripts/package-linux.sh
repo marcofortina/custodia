@@ -74,15 +74,39 @@ ensure_server_build_dependencies() {
   fi
 }
 
+prepare_server_build_source() {
+  local build_src="$1"
+  rm -rf "$build_src"
+  mkdir -p "$build_src"
+  tar \
+    --exclude='./.git' \
+    --exclude='./dist' \
+    --exclude='./clients/rust/target' \
+    -cf - . | tar -xf - -C "$build_src"
+}
+
 build_server_binaries() {
   mkdir -p "$WORK_DIR/bin"
   log "building Go server binaries with SERVER_BUILD_TAGS=${SERVER_BUILD_TAGS:-<none>}"
-  ensure_server_build_dependencies
   local tags
   mapfile -t tags < <(build_tags_args)
-  "$GO" build -buildvcs=false "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-server" ./cmd/custodia-server
-  "$GO" build -buildvcs=false "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/vault-admin" ./cmd/vault-admin
-  "$GO" build -buildvcs=false "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-signer" ./cmd/custodia-signer
+
+  local build_root="$root_dir"
+  local mod_args=()
+  if server_build_tags_include sqlite; then
+    build_root="$WORK_DIR/build-src"
+    prepare_server_build_source "$build_root"
+    # Resolve SQLite transitive checksums in the temporary package build tree.
+    # This keeps package builds reproducible without mutating the caller's go.sum.
+    (cd "$build_root" && "$GO" mod tidy)
+    mod_args=(-mod=mod)
+  else
+    ensure_server_build_dependencies
+  fi
+
+  (cd "$build_root" && "$GO" build -buildvcs=false "${mod_args[@]}" "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-server" ./cmd/custodia-server)
+  (cd "$build_root" && "$GO" build -buildvcs=false "${mod_args[@]}" "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/vault-admin" ./cmd/vault-admin)
+  (cd "$build_root" && "$GO" build -buildvcs=false "${mod_args[@]}" "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-signer" ./cmd/custodia-signer)
 }
 
 stage_server() {
