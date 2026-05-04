@@ -1,0 +1,111 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
+name: CodeQL
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  schedule:
+    - cron: '37 3 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  analyze:
+    name: Analyze ${{ matrix.language }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: go
+            build: go
+          - language: python
+            build: none
+          - language: javascript-typescript
+            build: none
+          - language: java-kotlin
+            build: java
+          - language: c-cpp
+            build: cpp
+          - language: rust
+            build: rust
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        if: ${{ matrix.build == 'go' }}
+        with:
+          go-version: '1.22.x'
+          cache: true
+          cache-dependency-path: go.mod
+
+      - uses: actions/setup-python@v6
+        if: ${{ matrix.build == 'none' || matrix.build == 'python' }}
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v6
+        if: ${{ matrix.build == 'none' }}
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: clients/node/package.json
+
+      - name: Install compiled-language dependencies
+        if: ${{ matrix.build == 'java' || matrix.build == 'cpp' || matrix.build == 'rust' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            default-jdk-headless \
+            g++ \
+            libcurl4-openssl-dev \
+            libssl-dev \
+            pkg-config
+
+      - name: Install Rust toolchain
+        if: ${{ matrix.build == 'rust' }}
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+
+      - name: Build Go extraction target
+        if: ${{ matrix.build == 'go' }}
+        run: go build ./...
+
+      - name: Build Java extraction target
+        if: ${{ matrix.build == 'java' }}
+        run: make test-java-client
+
+      - name: Build C++ extraction target
+        if: ${{ matrix.build == 'cpp' }}
+        run: make test-cpp-client
+
+      - name: Build Rust extraction target
+        if: ${{ matrix.build == 'rust' }}
+        run: make test-rust-client
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}
