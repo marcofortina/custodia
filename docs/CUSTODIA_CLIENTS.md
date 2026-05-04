@@ -27,9 +27,9 @@ Principi comuni:
 | **Go** | Esistente | Transport SDK pubblico + primo crypto client high-level E2E | `pkg/client` nel monorepo, con payload/operational methods pubblici e crypto helpers senza esporre tipi `internal/*` nelle API. |
 | **Python** | Esistente | Transport client + primo crypto client high-level E2E | `clients/python` nel monorepo, con typed transport helpers e crypto wrapper basato sugli stessi vector. |
 | **Node.js / TypeScript** | Esistente | Transport client presente; crypto client presente | `clients/node` nel monorepo, con JavaScript runtime dependency-free, crypto high-level HPKE-v1/AES-GCM e dichiarazioni TypeScript. |
-| **Rust** | Non presente | Pianificato | Da aggiungere dopo Go/Python. |
-| **Java** | Esistente | Transport client presente; crypto client pianificato | `clients/java` nel monorepo, basato su `java.net.http` e SSLContext/keystore Java. |
-| **C++** | Esistente | Transport client presente; crypto client pianificato | `clients/cpp` nel monorepo, basato su libcurl per HTTPS/mTLS. |
+| **Rust** | Esistente | Transport client presente | `clients/rust` nel monorepo, transport-only REST/mTLS per payload opachi; crypto high-level futura. |
+| **Java** | Esistente | Transport client presente; crypto client presente | `clients/java` nel monorepo, basato su `java.net.http`, SSLContext/keystore Java e crypto high-level. |
+| **C++** | Esistente | Transport client presente; crypto client presente | `clients/cpp` nel monorepo, basato su libcurl per HTTPS/mTLS e OpenSSL per crypto high-level. |
 
 Una libreria diventa “ufficiale” solo quando ha:
 
@@ -294,7 +294,7 @@ Per la Fase 5 iniziale usare il monorepo:
 | Go | `pkg/client` | Da decidere. |
 | Python | `clients/python` | Da decidere. |
 | Node.js / TypeScript | `clients/node` | Monorepo private scaffold; nome pubblico da decidere. |
-| Rust | `clients/rust` | Pianificato. |
+| Rust | `clients/rust` | Monorepo transport scaffold; nome pubblico da decidere. |
 | Java | `clients/java` | Monorepo transport + crypto scaffold; nome pubblico da decidere. |
 | C++ | `clients/cpp` | Monorepo transport + crypto scaffold; nome pubblico da decidere. |
 
@@ -403,6 +403,26 @@ clients/cpp crypto -> cifra/decifra localmente, risolve le chiavi pubbliche solo
 
 Il crypto client C++ usa gli stessi vector comuni di Go/Python/Node/Java; la dipendenza crypto esplicita è OpenSSL.
 
+### 8.5 Stabilizzazione SDK Rust transport
+
+`clients/rust` esiste nel repository come client Rust transport-only per payload opachi. Usa `reqwest` blocking con TLS rustls per HTTPS/mTLS e una piccola API basata su `serde_json::Value` per non imporre uno schema crypto lato transport.
+
+Surface attuale:
+
+- `CustodiaClientConfig` per server URL, timeout, user-agent e file TLS;
+- `CustodiaClient` con metodi transport per secrets, grants, clients, status, diagnostics, revocation e audit export;
+- `CustodiaError::Http` tipizzato per status HTTP non 2xx;
+- `AuditExportArtifact` con body, digest SHA-256 e numero eventi;
+- `HttpTransport` trait per test e integrazioni custom.
+
+Criterio di confine:
+
+```text
+clients/rust transport -> invia solo payload già opachi e non prova a cifrare, decifrare, loggare o interpretare ciphertext/envelope/crypto_metadata
+```
+
+Il package resta `publish = false` finché nome pubblico e release process non sono decisi. Il crypto high-level Rust resta esplicitamente fuori da questa chiusura ed è vincolato ai vector comuni se aggiunto in futuro.
+
 ## 9. Note sulla sicurezza
 
 - **Mai condividere la chiave privata**: ogni client mantiene la propria chiave privata o handle di decrittazione in locale.
@@ -423,7 +443,7 @@ Ordine consigliato:
 2. **Fase 5B**: stabilizzare `pkg/client` come SDK Go pubblico senza tipi `internal/*`, chiudere i metodi transport/operational pubblici e aggiungere il primo Go high-level crypto client.
 3. **Fase 5C**: Python high-level crypto client sopra `clients/python`.
 4. **Fase 5D**: Node.js/TypeScript transport client e high-level crypto wrapper sopra gli stessi vector comuni.
-5. **Fase 5E**: Rust client.
+5. **Fase 5E**: Rust transport client presente.
 6. **Fase 5F**: Java transport client e high-level crypto wrapper presenti.
 7. **Fase 5G**: C++ transport client e high-level crypto wrapper presenti.
 
