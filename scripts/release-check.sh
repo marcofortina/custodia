@@ -8,7 +8,8 @@ cd "$root_dir"
 
 $GO test -p=1 -timeout 60s ./...
 $GO build ./cmd/custodia-server ./cmd/vault-admin ./cmd/custodia-signer
-python3 -m py_compile clients/python/custodia_client/__init__.py
+python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py
+python3 -m unittest discover -s clients/python/tests
 bash -n scripts/check-formal.sh scripts/pkcs11-sign-command.sh scripts/softhsm-dev-token.sh scripts/minio-object-lock-smoke.sh scripts/k3s-cockroachdb-smoke.sh scripts/passkey-assertion-verify-command.sh scripts/sqlite-backup.sh scripts/lite-upgrade-check.sh
 
 if command -v tlc >/dev/null 2>&1; then
