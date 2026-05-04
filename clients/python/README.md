@@ -42,3 +42,14 @@ Use `client.version()` to read server build metadata through the authenticated A
 - `event_count`: `X-Custodia-Audit-Export-Events` response header.
 
 Persist these values together when forwarding audit exports to offline storage, SIEM or WORM retention.
+
+
+## Typed transport payloads
+
+Phase 5 adds typed payload dataclasses such as `CreateSecretPayload`, `RecipientEnvelope`, `ShareSecretPayload`, `AccessGrantPayload` and `CreateSecretVersionPayload`. These helpers only build transport JSON for opaque ciphertext/envelope values; they do not encrypt plaintext or resolve recipient keys.
+
+Run the Python client tests with:
+
+```bash
+make test-python-client
+```

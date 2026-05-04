@@ -1,6 +1,6 @@
 # Custodia Python client SDK
 
-`clients/python/custodia_client` is the repository Python transport client for Custodia.
+`clients/python/custodia_client` is the repository Python transport client for Custodia. Phase 5 adds typed transport payload helpers while keeping the server payloads opaque.
 
 ## Current scope
 
@@ -19,7 +19,36 @@ High-level crypto helpers are planned after the shared client crypto specificati
 pip install ./clients/python
 ```
 
-## Example
+## Typed transport payloads
+
+For new code, prefer the typed payload helpers. They still transport opaque ciphertext and envelope strings; they do not perform local encryption or decryption.
+
+```python
+from custodia_client import (
+    CustodiaClient,
+    CreateSecretPayload,
+    PermissionRead,
+    RecipientEnvelope,
+)
+
+client = CustodiaClient(
+    server_url="https://vault.example:8443",
+    cert_file="client.crt",
+    key_file="client.key",
+    ca_file="ca.crt",
+)
+
+created = client.create_secret_payload(
+    CreateSecretPayload(
+        name="database-password",
+        ciphertext="base64-opaque-ciphertext",
+        envelopes=[RecipientEnvelope("client_alice", "base64-opaque-envelope")],
+        permissions=PermissionRead,
+    )
+)
+```
+
+## Raw dictionary example
 
 ```python
 from custodia_client import CustodiaClient
@@ -42,3 +71,12 @@ created = client.create_secret({
 ```
 
 Do not pass plaintext or client key material to the transport client.
+
+## Verification
+
+Run:
+
+```bash
+make test-python-client
+python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py
+```
