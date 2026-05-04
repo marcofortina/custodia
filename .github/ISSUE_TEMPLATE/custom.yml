@@ -1,0 +1,45 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
+name: Custom issue
+description: Use this for documentation, packaging, CI or maintenance topics that are not bugs or features.
+title: "chore: "
+labels: [needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not use this template for vulnerabilities or sensitive reports. Use SECURITY.md instead.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - documentation
+        - packaging
+        - CI / release
+        - tests
+        - examples
+        - maintenance
+        - question
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Suggested resolution or acceptance criteria

@@ -1,0 +1,63 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
+name: Feature request
+description: Propose a new capability or improvement.
+title: "feat: "
+labels: [enhancement, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature requests must preserve Custodia's security boundary: plaintext, DEKs, private keys and key trust remain outside the server.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What user, operator or integrator problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior, API, CLI, package or documentation change.
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - server
+        - signer
+        - custodia-admin
+        - SDK
+        - packaging
+        - deployment
+        - CI / release
+        - documentation
+        - other
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Security boundary acknowledgement
+      options:
+        - label: This proposal does not require server-side plaintext handling.
+          required: true
+        - label: This proposal does not require server-side DEK/private-key handling or server-managed public-key trust.
+          required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: textarea
+    id: tests
+    attributes:
+      label: Suggested tests or acceptance criteria

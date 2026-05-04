@@ -31,3 +31,18 @@ Contributions must not add:
 - weakened mTLS, Web MFA, audit integrity or authorization checks.
 
 Prefer small, reviewable patches with tests and documentation updates.
+
+## Pull requests
+
+Use the pull request template and keep changes focused. Security-sensitive changes should include tests or a clear explanation of why automated coverage is not practical.
+
+Before opening a pull request, run the relevant checks when possible:
+
+```bash
+make license-check
+./scripts/release-check.sh
+```
+
+## Issues
+
+Use the GitHub issue templates for bugs, features and maintenance requests. Do not use public issues for vulnerabilities or sensitive reports; follow `SECURITY.md`.

@@ -35,9 +35,12 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 - No server-side cryptographic key resolution.
 - No server-side application decryption.
 
-## Contributing
+## Community and security
 
-Contributions are welcome, but they must preserve Custodia's metadata-only security boundary. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for contribution and licensing terms.
+- Contributions are welcome, but they must preserve Custodia's metadata-only security boundary. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
+- All participants are expected to follow the [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
+- Do not open public issues for vulnerabilities or sensitive disclosures; follow [`SECURITY.md`](SECURITY.md).
+
 
 ## License
 
