@@ -1242,3 +1242,41 @@ The repository still does not claim to implement physical HSM hardware, external
 
 - Updated `docs/PHASE5_CLOSURE.md` to reflect that Go public transport files no longer import `custodia/internal/*`.
 - Documented the legacy internal-model helpers as monorepo compatibility helpers.
+
+
+## Patch 653 - Python public transport payload types
+
+- Added typed Python transport payload dataclasses for clients, secrets, sharing, grants and versions.
+- Exported permission constants and payload helpers from `custodia_client`.
+
+## Patch 654 - Python typed transport helpers
+
+- Added typed Python helper methods that convert public payload dataclasses into the existing REST transport calls.
+
+## Patch 655 - Python typed transport tests
+
+- Added unittest coverage for typed payload serialization and helper routing.
+
+## Patch 656 - Python client test target
+
+- Added `make test-python-client` and included it in the standard `check` target.
+
+## Patch 657 - Python typed transport documentation
+
+- Documented typed Python transport payload helpers in the SDK docs and client README.
+
+## Patch 658 - client crypto metadata validator
+
+- Added `internal/clientcrypto` constants and metadata validation for the shared v1 crypto scaffold.
+
+## Patch 659 - client crypto metadata validator tests
+
+- Covered accepted and rejected client crypto metadata combinations.
+
+## Patch 660 - client crypto vector parser tests
+
+- Routed schema fixture validation through the shared metadata parser.
+
+## Patch 661 - client crypto validator docs
+
+- Documented the metadata validator boundary: it validates schema metadata but is not yet a high-level crypto client.

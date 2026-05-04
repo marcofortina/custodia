@@ -13,10 +13,12 @@ Phase 5 tracks official client libraries and client-side cryptography.
 - Legacy Go helpers that expose internal model types are documented as monorepo compatibility helpers.
 - External Go consumer compile guard added for public transport types and methods.
 - Go and Python transport SDK guides added.
+- Python typed transport payload helpers and tests added.
+- Client crypto metadata validator added for the v1 scaffold.
 
 ## Still open
 
-- Deterministic cryptographic test vectors.
+- Deterministic cryptographic test vectors beyond schema fixtures.
 - Go high-level crypto client.
 - Python high-level crypto client.
 - Node.js/TypeScript transport client.
@@ -26,7 +28,7 @@ Phase 5 tracks official client libraries and client-side cryptography.
 
 ## Current boundary
 
-Go and Python are transport clients. They speak REST/mTLS and move opaque payloads. They do not yet encrypt plaintext, unwrap envelopes, decrypt ciphertext or resolve recipient public keys.
+Go and Python are transport clients. They speak REST/mTLS and move opaque payloads. Python now has typed transport payload helpers; Go has a public transport SDK surface. They do not yet encrypt plaintext, unwrap envelopes, decrypt ciphertext or resolve recipient public keys.
 
 The server remains metadata/ciphertext/envelope-only. Custodia must not become a public-key directory.
 
