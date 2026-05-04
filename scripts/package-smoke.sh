@@ -36,7 +36,7 @@ smoke_extracted_tree() {
       require_executable "$root" usr/bin/custodia-server
       require_executable "$root" usr/bin/custodia-admin
       require_executable "$root" usr/bin/custodia-signer
-      require_file "$root" usr/lib/systemd/system/custodia-server.service
+      require_file "$root" usr/lib/systemd/system/custodia.service
       require_file "$root" usr/share/custodia/examples/config.lite.yaml
       require_file "$root" usr/share/custodia/examples/config.full.yaml
       require_file "$root" usr/share/doc/custodia-server/README.md
@@ -110,6 +110,20 @@ fi
 mapfile -t artifacts < <(find "$PACKAGE_DIR" -maxdepth 1 -type f \( -name '*.deb' -o -name '*.rpm' \) | sort)
 if [ "${#artifacts[@]}" -eq 0 ]; then
   fail "no .deb or .rpm artifacts found in $PACKAGE_DIR"
+fi
+
+# Package directories often contain artifacts from earlier local runs. If release
+# artifacts are present, ignore dev artifacts so smoke checks validate the current
+# release output instead of stale files. Dev-only directories are still supported.
+release_artifacts=()
+for artifact in "${artifacts[@]}"; do
+  case "$(basename "$artifact")" in
+    *0.0.0_dev*|*0.0.0-dev*) ;;
+    *) release_artifacts+=("$artifact") ;;
+  esac
+done
+if [ "${#release_artifacts[@]}" -gt 0 ]; then
+  artifacts=("${release_artifacts[@]}")
 fi
 
 for artifact in "${artifacts[@]}"; do
