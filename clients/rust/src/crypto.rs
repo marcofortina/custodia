@@ -20,7 +20,7 @@ use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use base64::Engine as _;
 use hmac::{Hmac, Mac};
 use rand::rngs::OsRng;
-use rand::RngCore;
+use rand::TryRngCore;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -182,7 +182,9 @@ pub struct OsRandomSource;
 impl RandomSource for OsRandomSource {
     fn random(&self, length: usize) -> CryptoResult<Vec<u8>> {
         let mut value = vec![0_u8; length];
-        OsRng.fill_bytes(&mut value);
+        OsRng
+            .try_fill_bytes(&mut value)
+            .map_err(|err| CryptoError::RandomSource(err.to_string()))?;
         Ok(value)
     }
 }
