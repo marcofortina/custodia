@@ -1170,3 +1170,42 @@ The repository still does not claim to implement physical HSM hardware, external
 
 - Marked the Lite specification implementation blocks as completed repository work.
 - Kept the data-migration tool as the remaining explicit future item rather than implying it already exists.
+
+## Patch 632 - phase 5 client library specification
+
+- Added `docs/CUSTODIA_CLIENTS.md` as the Phase 5 client-library specification.
+- Clarified that Go and Python are existing transport clients while crypto clients and additional languages remain planned.
+
+## Patch 633 - client crypto specification
+
+- Added `docs/CLIENT_CRYPTO_SPEC.md` defining the shared, versioned client-side crypto contract.
+- Reaffirmed that Custodia server remains metadata/ciphertext/envelope-only and never becomes a public-key directory.
+
+## Patch 634 - client crypto vector scaffold
+
+- Added `testdata/client-crypto/v1/` schema fixtures for future deterministic crypto vectors.
+
+## Patch 636 - Go public transport types
+
+- Added public SDK-facing Go transport types under `pkg/client` so external consumers can avoid importing `custodia/internal/*` model types.
+
+## Patch 637 - Go public transport methods
+
+- Added public Go transport methods that wrap the legacy internal-model methods for opaque payload operations.
+
+## Patch 639 - external Go consumer compile guard
+
+- Added a compile test that creates a temporary external Go module and imports `custodia/pkg/client` public transport types without importing internal packages.
+
+## Patch 640 - Go client SDK guide
+
+- Added `docs/GO_CLIENT_SDK.md` and README links for the Go transport SDK boundary.
+
+## Patch 641 - Python client SDK guide
+
+- Added `docs/PYTHON_CLIENT_SDK.md` and README links for the Python transport SDK boundary.
+
+## Patch 642 - Phase 5 closure tracker
+
+- Added `docs/PHASE5_CLOSURE.md` to track closed and open Phase 5 work.
+- Phase 5 is not complete yet: deterministic crypto vectors and high-level crypto clients remain open.
