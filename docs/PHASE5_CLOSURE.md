@@ -29,14 +29,17 @@ Phase 5 tracks official client libraries and client-side cryptography.
 - Java high-level crypto client added for local create/read/share/version flows.
 - C++ transport client added for opaque REST/mTLS payloads with a libcurl-backed C++ test target.
 - C++ high-level crypto client added for local create/read/share/version flows with OpenSSL-backed AES-GCM/X25519/HKDF primitives.
+- Rust transport client added for opaque REST/mTLS payloads with a focused test target.
 
 ## Still open
 
-- Rust transport client.
+- None for the repository-level Phase 5 scope.
+
+Future work outside this closure: public package publishing, semver/release process hardening and optional Rust high-level crypto helpers against the existing shared vectors.
 
 ## Current boundary
 
-Go now has public transport, operational and high-level crypto SDK surfaces. Python now has typed transport helpers plus a high-level crypto wrapper. Node.js / TypeScript now has transport and high-level crypto clients for opaque REST payloads with TypeScript declarations. Java and C++ now have transport and high-level crypto clients. Go, Python, Node.js, Java and C++ high-level clients encrypt/decrypt locally, create HPKE-v1 recipient envelopes, share existing DEKs locally and send only opaque payloads to the server. Deterministic crypto fixtures cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.
+Go now has public transport, operational and high-level crypto SDK surfaces. Python now has typed transport helpers plus a high-level crypto wrapper. Node.js / TypeScript now has transport and high-level crypto clients for opaque REST payloads with TypeScript declarations. Java and C++ now have transport and high-level crypto clients. Rust now has a transport-only REST/mTLS SDK for opaque payloads. Go, Python, Node.js, Java and C++ high-level clients encrypt/decrypt locally, create HPKE-v1 recipient envelopes, share existing DEKs locally and send only opaque payloads to the server. Deterministic crypto fixtures cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.
 
 The server remains metadata/ciphertext/envelope-only. Custodia must not become a public-key directory.
 
@@ -54,6 +57,7 @@ node --check clients/node/src/index.js
 npm test --prefix clients/node
 make test-java-client
 make test-cpp-client
+make test-rust-client
 ```
 
-Phase 5 is complete for Go, Python, Node.js/TypeScript, Java and C++ at repository level. The only planned language still open in the broader roadmap is Rust transport.
+Phase 5 is complete at repository level for Go, Python, Node.js/TypeScript, Java, C++ and Rust transport. Rust high-level crypto, package publishing and release support policies are future work outside this closure.

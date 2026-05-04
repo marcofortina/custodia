@@ -449,6 +449,8 @@ Ordine consigliato:
 
 Non implementare sei SDK in parallelo prima di avere crypto spec e test vectors comuni.
 
+Stato repository: la Fase 5 è chiusa a livello di monorepo con SDK transport Go/Python/Node/Java/C++/Rust, crypto high-level Go/Python/Node/Java/C++ e vector comuni. Rust crypto high-level, pubblicazione pacchetti e policy semver sono lavori futuri fuori da questa chiusura.
+
 ---
 
 ## 11. Criteri di accettazione

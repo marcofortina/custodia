@@ -1537,3 +1537,30 @@ Node high-level crypto wrapper is implemented in `clients/node` using Node built
 
 - Updated client-library docs and Phase 5 closure tracker after closing Java and C++ high-level crypto wrappers.
 - Rust transport remains the only planned language still open in the broader roadmap.
+
+## Patch 734 - Rust transport client package scaffold
+
+- Added `clients/rust` with Cargo package metadata, README and initial public transport SDK types.
+- Kept the Rust client boundary transport-only for opaque REST/mTLS payloads.
+
+## Patch 735 - Rust transport client implementation
+
+- Added `CustodiaClient` transport methods for secrets, access grants, client metadata, operational status, revocation and audit export.
+- Added reqwest/rustls-backed mTLS transport while preserving a testable `HttpTransport` trait.
+- Added typed HTTP error mapping without logging or interpreting opaque crypto payloads.
+
+## Patch 736 - Rust transport client tests
+
+- Added fake-transport Rust tests for opaque secret payloads, operational paths, audit export headers and HTTP errors.
+- Added `make test-rust-client` and wired it into repository checks with a clear skip when Cargo is unavailable.
+
+## Patch 737 - Rust transport SDK documentation
+
+- Added `docs/RUST_CLIENT_SDK.md` and linked it from the README.
+- Updated the client-library specification to mark Rust transport as present and transport-only.
+
+## Patch 738 - Phase 5 final closure
+
+- Updated the Phase 5 closure tracker after adding Rust transport.
+- Marked repository-level Phase 5 complete for Go, Python, Node.js/TypeScript, Java, C++ and Rust transport.
+- Documented remaining work as future scope outside this Phase 5 closure: package publishing, semver policies and optional Rust high-level crypto.
