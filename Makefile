@@ -18,12 +18,17 @@ fmt:
 
 
 .PHONY: check
-check: test build test-python-client
+check: test build test-python-client test-node-client
 	python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py clients/python/custodia_client/crypto.py
+	node --check clients/node/src/index.js
 
 .PHONY: test-python-client
 test-python-client:
 	python3 -m unittest discover -s clients/python/tests
+
+.PHONY: test-node-client
+test-node-client:
+	npm test --prefix clients/node
 
 .PHONY: run-dev
 run-dev:
