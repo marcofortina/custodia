@@ -1,11 +1,11 @@
-pub mod crypto;
-pub use crypto::*;
-
 //! Custodia Rust client for opaque REST/mTLS payloads and local client-side crypto.
 //!
 //! Transport methods keep payloads opaque. High-level crypto methods encrypt,
 //! decrypt and create HPKE-v1 recipient envelopes locally using application
 //! provided key resolvers; Custodia never becomes a public-key directory.
+
+pub mod crypto;
+pub use crypto::*;
 
 use serde_json::{json, Value};
 use std::fmt;
