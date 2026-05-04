@@ -23,6 +23,10 @@ var (
 	ErrAADMismatch               = errors.New("aad mismatch")
 	ErrCiphertextAuthFailed      = errors.New("ciphertext authentication failed")
 	ErrUnsupportedCryptoVersion  = errors.New("unsupported crypto version")
+	ErrUnsupportedContentCipher  = errors.New("unsupported content cipher")
+	ErrUnsupportedEnvelopeScheme = errors.New("unsupported envelope scheme")
+	ErrMalformedCryptoMetadata   = errors.New("malformed crypto metadata")
+	ErrRandomSourceFailed        = errors.New("random source failed")
 )
 
 type RecipientPublicKey struct {
