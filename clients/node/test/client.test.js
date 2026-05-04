@@ -1,0 +1,174 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  CustodiaClient,
+  CustodiaHttpError,
+  PermissionAll,
+  PermissionRead,
+} from "../src/index.js";
+
+function clientWithTransport(handler) {
+  const calls = [];
+  const client = new CustodiaClient({
+    serverUrl: "https://vault.example:8443/api/",
+    certFile: "client.crt",
+    keyFile: "client.key",
+    caFile: "ca.crt",
+    transport: async (request) => {
+      calls.push(request);
+      return handler(request);
+    },
+  });
+  return { client, calls };
+}
+
+test("sends opaque create secret payloads without interpreting crypto fields", async () => {
+  const { client, calls } = clientWithTransport(async () => ({
+    status: 200,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ secret_id: "secret-1", version_id: "version-1" }),
+  }));
+
+  const result = await client.createSecretPayload({
+    name: "db_password",
+    ciphertext: "base64-ciphertext",
+    envelopes: [{ client_id: "client_alice", envelope: "base64-envelope" }],
+    permissions: PermissionAll,
+    crypto_metadata: { version: "custodia.client-crypto.v1" },
+  });
+
+  assert.deepEqual(result, { secret_id: "secret-1", version_id: "version-1" });
+  assert.equal(calls[0].method, "POST");
+  assert.equal(new URL(calls[0].url).pathname, "/v1/secrets");
+  assert.deepEqual(JSON.parse(calls[0].body), {
+    name: "db_password",
+    ciphertext: "base64-ciphertext",
+    envelopes: [{ client_id: "client_alice", envelope: "base64-envelope" }],
+    permissions: PermissionAll,
+    crypto_metadata: { version: "custodia.client-crypto.v1" },
+  });
+});
+
+test("builds metadata list filters and escaped paths", async () => {
+  const { client, calls } = clientWithTransport(async () => ({ status: 200, headers: {}, body: "{}" }));
+
+  await client.listClientInfos({ limit: 25, active: true });
+  await client.getSecretPayload("secret/with space");
+  await client.listAuditEventMetadata({
+    limit: 10,
+    outcome: "success",
+    action: "secret.read",
+    actor_client_id: "client_alice",
+    resource_type: "secret",
+    resource_id: "secret-1",
+  });
+
+  assert.equal(new URL(calls[0].url).pathname, "/v1/clients");
+  assert.equal(new URL(calls[0].url).search, "?limit=25&active=true");
+  assert.equal(new URL(calls[1].url).pathname, "/v1/secrets/secret%2Fwith%20space");
+  assert.equal(new URL(calls[2].url).pathname, "/v1/audit-events");
+  assert.equal(
+    new URL(calls[2].url).search,
+    "?limit=10&outcome=success&action=secret.read&actor_client_id=client_alice&resource_type=secret&resource_id=secret-1",
+  );
+});
+
+test("covers operational endpoints and export metadata", async () => {
+  const { client, calls } = clientWithTransport(async (request) => {
+    if (new URL(request.url).pathname === "/v1/audit-events/export") {
+      return {
+        status: 200,
+        headers: {
+          "x-custodia-audit-export-sha256": "abc123",
+          "x-custodia-audit-export-events": "2",
+        },
+        body: '{"event":1}\n',
+      };
+    }
+    return { status: 200, headers: {}, body: "{}" };
+  });
+
+  await client.statusInfo();
+  await client.versionInfo();
+  await client.diagnosticsInfo();
+  await client.revocationStatusInfo();
+  await client.revocationSerialStatusInfo("01AB");
+  const artifact = await client.exportAuditEventArtifact({ limit: 2 });
+
+  assert.deepEqual(
+    calls.map((call) => new URL(call.url).pathname),
+    [
+      "/v1/status",
+      "/v1/version",
+      "/v1/diagnostics",
+      "/v1/revocation/status",
+      "/v1/revocation/serial",
+      "/v1/audit-events/export",
+    ],
+  );
+  assert.equal(new URL(calls[4].url).search, "?serial_hex=01AB");
+  assert.deepEqual(artifact, { body: '{"event":1}\n', sha256: "abc123", eventCount: "2" });
+});
+
+test("covers share, grant activation, revoke and new-version transport paths", async () => {
+  const { client, calls } = clientWithTransport(async () => ({ status: 200, headers: {}, body: "{}" }));
+
+  await client.shareSecretPayload("secret-1", {
+    version_id: "version-1",
+    target_client_id: "client_bob",
+    envelope: "base64-envelope",
+    permissions: PermissionRead,
+  });
+  await client.createAccessGrant("secret-1", { target_client_id: "client_bob", permissions: PermissionRead });
+  await client.activateAccessGrantPayload("secret-1", "client_bob", { envelope: "base64-envelope" });
+  await client.revokeAccess("secret-1", "client_bob");
+  await client.createSecretVersionPayload("secret-1", {
+    ciphertext: "base64-ciphertext-v2",
+    envelopes: [{ client_id: "client_alice", envelope: "base64-envelope-v2" }],
+  });
+
+  assert.deepEqual(
+    calls.map((call) => `${call.method} ${new URL(call.url).pathname}`),
+    [
+      "POST /v1/secrets/secret-1/share",
+      "POST /v1/secrets/secret-1/access-requests",
+      "POST /v1/secrets/secret-1/access-requests/client_bob/activate",
+      "DELETE /v1/secrets/secret-1/access/client_bob",
+      "POST /v1/secrets/secret-1/versions",
+    ],
+  );
+});
+
+test("validates bounded filters before sending requests", async () => {
+  const { client, calls } = clientWithTransport(async () => ({ status: 200, headers: {}, body: "{}" }));
+
+  assert.throws(() => client.listSecretMetadata(0), /limit must be between 1 and 500/);
+  assert.throws(() => client.listAuditEventMetadata({ outcome: "ok" }), /outcome must be success/);
+  assert.throws(() => client.listAccessGrantMetadata({ status: "done" }), /status filter is invalid/);
+  assert.throws(() => client.revocationSerialStatusInfo("   "), /serialHex is required/);
+  assert.equal(calls.length, 0);
+});
+
+test("raises typed HTTP errors without exposing request payloads in the message", async () => {
+  const { client } = clientWithTransport(async () => ({
+    status: 403,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ error: "forbidden" }),
+  }));
+
+  await assert.rejects(
+    () => client.createSecretPayload({
+      name: "secret",
+      ciphertext: "sensitive-ciphertext",
+      envelopes: [{ client_id: "client_alice", envelope: "sensitive-envelope" }],
+    }),
+    (error) => {
+      assert.ok(error instanceof CustodiaHttpError);
+      assert.equal(error.status, 403);
+      assert.match(error.message, /HTTP 403/);
+      assert.doesNotMatch(error.message, /sensitive-ciphertext|sensitive-envelope/);
+      return true;
+    },
+  );
+});
