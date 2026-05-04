@@ -1,6 +1,9 @@
 #pragma once
 
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -64,6 +67,82 @@ class Transport {
   virtual ~Transport() = default;
   virtual Response send(const Request& request) = 0;
 };
+
+struct AADInputs {
+  std::string secret_id;
+  std::string secret_name;
+  std::string version_id;
+};
+
+struct CryptoMetadata {
+  std::string version{"custodia.client-crypto.v1"};
+  std::string content_cipher{"aes-256-gcm"};
+  std::string envelope_scheme{"hpke-v1"};
+  std::string content_nonce_b64;
+  std::optional<AADInputs> aad;
+
+  AADInputs canonical_aad_inputs(const AADInputs& fallback) const;
+};
+
+struct RecipientPublicKey {
+  std::string client_id;
+  std::string scheme{"hpke-v1"};
+  std::vector<std::uint8_t> public_key;
+  std::string fingerprint;
+};
+
+class CryptoError : public std::runtime_error {
+ public:
+  using std::runtime_error::runtime_error;
+};
+
+class X25519PrivateKeyHandle final {
+ public:
+  X25519PrivateKeyHandle(std::string client_id, std::vector<std::uint8_t> private_key);
+
+  const std::string& client_id() const noexcept;
+  std::string scheme() const;
+  std::vector<std::uint8_t> open_envelope(const std::vector<std::uint8_t>& envelope, const std::vector<std::uint8_t>& aad) const;
+  const std::vector<std::uint8_t>& private_key() const noexcept;
+
+ private:
+  std::string client_id_;
+  std::vector<std::uint8_t> private_key_;
+};
+
+struct CryptoOptions {
+  std::function<RecipientPublicKey(const std::string&)> public_key_resolver;
+  X25519PrivateKeyHandle private_key;
+  std::function<std::vector<std::uint8_t>(std::size_t)> random_source;
+};
+
+std::vector<std::uint8_t> build_canonical_aad(const CryptoMetadata& metadata, const AADInputs& inputs);
+std::string canonical_aad_sha256(const std::vector<std::uint8_t>& aad);
+CryptoMetadata metadata_v1(const AADInputs& aad, const std::vector<std::uint8_t>& content_nonce);
+std::vector<std::uint8_t> seal_content_aes_256_gcm(
+    const std::vector<std::uint8_t>& key,
+    const std::vector<std::uint8_t>& nonce,
+    const std::vector<std::uint8_t>& plaintext,
+    const std::vector<std::uint8_t>& aad);
+std::vector<std::uint8_t> open_content_aes_256_gcm(
+    const std::vector<std::uint8_t>& key,
+    const std::vector<std::uint8_t>& nonce,
+    const std::vector<std::uint8_t>& ciphertext,
+    const std::vector<std::uint8_t>& aad);
+std::vector<std::uint8_t> derive_x25519_public_key(const std::vector<std::uint8_t>& private_key);
+std::vector<std::uint8_t> seal_hpke_v1_envelope(
+    const std::vector<std::uint8_t>& recipient_public_key,
+    const std::vector<std::uint8_t>& sender_ephemeral_private_key,
+    const std::vector<std::uint8_t>& dek,
+    const std::vector<std::uint8_t>& aad);
+std::vector<std::uint8_t> open_hpke_v1_envelope(
+    const std::vector<std::uint8_t>& recipient_private_key,
+    const std::vector<std::uint8_t>& envelope,
+    const std::vector<std::uint8_t>& aad);
+RecipientPublicKey derive_x25519_recipient_public_key(const std::string& client_id, const std::vector<std::uint8_t>& private_key);
+std::string base64_encode(const std::vector<std::uint8_t>& value);
+std::vector<std::uint8_t> base64_decode(const std::string& value);
+std::string metadata_json(const CryptoMetadata& metadata);
 
 class Client final {
  public:

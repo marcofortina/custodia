@@ -41,11 +41,11 @@ test-java-client:
 
 .PHONY: test-cpp-client
 test-cpp-client:
-	@if ! pkg-config --exists libcurl; then \
-		echo "libcurl development package is required for test-cpp-client" >&2; \
+	@if ! pkg-config --exists libcurl openssl; then \
+		echo "libcurl and OpenSSL development packages are required for test-cpp-client" >&2; \
 		exit 2; \
 	fi
-	g++ -std=c++20 -Wall -Wextra -Werror -Iclients/cpp/include clients/cpp/src/client.cpp clients/cpp/test/client_test.cpp $$(pkg-config --cflags --libs libcurl) -o /tmp/custodia-cpp-client-test
+	g++ -std=c++20 -Wall -Wextra -Werror -Iclients/cpp/include clients/cpp/src/client.cpp clients/cpp/src/crypto.cpp clients/cpp/test/client_test.cpp $$(pkg-config --cflags --libs libcurl openssl) -o /tmp/custodia-cpp-client-test
 	/tmp/custodia-cpp-client-test
 
 .PHONY: run-dev
