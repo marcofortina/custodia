@@ -79,19 +79,23 @@ func New(cfg Config) (*Client, error) {
 	}, nil
 }
 
+// Me is a legacy monorepo helper that returns internal model types. External consumers should use CurrentClientInfo.
 func (c *Client) Me() (model.Client, error) {
 	var response model.Client
 	return response, c.doJSON(http.MethodGet, "/v1/me", nil, &response)
 }
 
+// ListClients is a legacy monorepo helper that returns internal model types. External consumers should use ListClientInfos.
 func (c *Client) ListClients() ([]model.Client, error) {
 	return c.ListClientsFiltered(ClientListFilters{})
 }
 
+// ListClientsWithLimit is a legacy monorepo helper that returns internal model types. External consumers should use ListClientInfos.
 func (c *Client) ListClientsWithLimit(limit int) ([]model.Client, error) {
 	return c.ListClientsFiltered(ClientListFilters{Limit: limit})
 }
 
+// ListClientsFiltered is a legacy monorepo helper that returns internal model types. External consumers should use ListClientInfos.
 func (c *Client) ListClientsFiltered(filters ClientListFilters) ([]model.Client, error) {
 	if err := validateOptionalLimit(filters.Limit); err != nil {
 		return nil, err
@@ -114,15 +118,18 @@ func (c *Client) ListClientsFiltered(filters ClientListFilters) ([]model.Client,
 	return response.Clients, err
 }
 
+// GetClient is a legacy monorepo helper that returns internal model types. External consumers should use GetClientInfo.
 func (c *Client) GetClient(clientID string) (model.Client, error) {
 	var response model.Client
 	return response, c.doJSON(http.MethodGet, "/v1/clients/"+pathEscape(clientID), nil, &response)
 }
 
+// CreateClient is a legacy monorepo helper that accepts internal model types. External consumers should use CreateClientInfo.
 func (c *Client) CreateClient(req model.CreateClientRequest) error {
 	return c.doJSON(http.MethodPost, "/v1/clients", req, nil)
 }
 
+// RevokeClient is a legacy monorepo helper that accepts internal model types. External consumers should use RevokeClientInfo.
 func (c *Client) RevokeClient(req model.RevokeClientRequest) error {
 	return c.doJSON(http.MethodPost, "/v1/clients/revoke", req, nil)
 }
@@ -188,6 +195,7 @@ func (c *Client) ExportAuditEventsWithMetadata(filters AuditEventFilters) (Audit
 	}, nil
 }
 
+// ListAccessGrantRequests is a legacy monorepo helper that returns internal model types. External consumers should use ListAccessGrantMetadata.
 func (c *Client) ListAccessGrantRequests(filters AccessGrantRequestFilters) ([]model.AccessGrantMetadata, error) {
 	if err := validateAccessGrantRequestFilters(filters); err != nil {
 		return nil, err
@@ -211,15 +219,18 @@ func (c *Client) ListAccessGrantRequests(filters AccessGrantRequestFilters) ([]m
 	return response.AccessRequests, err
 }
 
+// CreateSecret is a legacy monorepo helper that accepts internal model types. External consumers should use CreateSecretPayload.
 func (c *Client) CreateSecret(req model.CreateSecretRequest) (model.SecretVersionRef, error) {
 	var ref model.SecretVersionRef
 	return ref, c.doJSON(http.MethodPost, "/v1/secrets", req, &ref)
 }
 
+// ListSecrets is a legacy monorepo helper that returns internal model types. External consumers should use ListSecretMetadata.
 func (c *Client) ListSecrets() ([]model.SecretMetadata, error) {
 	return c.ListSecretsWithLimit(0)
 }
 
+// ListSecretsWithLimit is a legacy monorepo helper that returns internal model types. External consumers should use ListSecretMetadata.
 func (c *Client) ListSecretsWithLimit(limit int) ([]model.SecretMetadata, error) {
 	if err := validateOptionalLimit(limit); err != nil {
 		return nil, err
@@ -237,15 +248,18 @@ func (c *Client) ListSecretsWithLimit(limit int) ([]model.SecretMetadata, error)
 	return response.Secrets, err
 }
 
+// GetSecret is a legacy monorepo helper that returns internal model types. External consumers should use GetSecretPayload.
 func (c *Client) GetSecret(secretID string) (model.SecretReadResponse, error) {
 	var response model.SecretReadResponse
 	return response, c.doJSON(http.MethodGet, "/v1/secrets/"+pathEscape(secretID), nil, &response)
 }
 
+// ListSecretVersions is a legacy monorepo helper that returns internal model types. External consumers should use ListSecretVersionMetadata.
 func (c *Client) ListSecretVersions(secretID string) ([]model.SecretVersionMetadata, error) {
 	return c.ListSecretVersionsWithLimit(secretID, 0)
 }
 
+// ListSecretVersionsWithLimit is a legacy monorepo helper that returns internal model types. External consumers should use ListSecretVersionMetadata.
 func (c *Client) ListSecretVersionsWithLimit(secretID string, limit int) ([]model.SecretVersionMetadata, error) {
 	if err := validateOptionalLimit(limit); err != nil {
 		return nil, err
@@ -263,10 +277,12 @@ func (c *Client) ListSecretVersionsWithLimit(secretID string, limit int) ([]mode
 	return response.Versions, err
 }
 
+// ListSecretAccess is a legacy monorepo helper that returns internal model types. External consumers should use ListSecretAccessMetadata.
 func (c *Client) ListSecretAccess(secretID string) ([]model.SecretAccessMetadata, error) {
 	return c.ListSecretAccessWithLimit(secretID, 0)
 }
 
+// ListSecretAccessWithLimit is a legacy monorepo helper that returns internal model types. External consumers should use ListSecretAccessMetadata.
 func (c *Client) ListSecretAccessWithLimit(secretID string, limit int) ([]model.SecretAccessMetadata, error) {
 	if err := validateOptionalLimit(limit); err != nil {
 		return nil, err
@@ -310,15 +326,18 @@ func (c *Client) RevocationSerialStatus(serialHex string) (RevocationSerialStatu
 	return response, c.doJSON(http.MethodGet, path, nil, &response)
 }
 
+// ShareSecret is a legacy monorepo helper that accepts internal model types. External consumers should use ShareSecretPayload.
 func (c *Client) ShareSecret(secretID string, req model.ShareSecretRequest) error {
 	return c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/share", req, nil)
 }
 
+// RequestAccessGrant is a legacy monorepo helper that accepts internal model types. External consumers should use CreateAccessGrant.
 func (c *Client) RequestAccessGrant(secretID string, req model.AccessGrantRequest) (model.AccessGrantRef, error) {
 	var ref model.AccessGrantRef
 	return ref, c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/access-requests", req, &ref)
 }
 
+// ActivateAccessGrant is a legacy monorepo helper that accepts internal model types. External consumers should use ActivateAccessGrantPayload.
 func (c *Client) ActivateAccessGrant(secretID, targetClientID string, req model.ActivateAccessRequest) error {
 	path := "/v1/secrets/" + pathEscape(secretID) + "/access/" + pathEscape(targetClientID) + "/activate"
 	return c.doJSON(http.MethodPost, path, req, nil)
@@ -329,6 +348,7 @@ func (c *Client) RevokeAccess(secretID, targetClientID string) error {
 	return c.doJSON(http.MethodDelete, path, nil, nil)
 }
 
+// CreateSecretVersion is a legacy monorepo helper that accepts internal model types. External consumers should use CreateSecretVersionPayload.
 func (c *Client) CreateSecretVersion(secretID string, req model.CreateSecretVersionRequest) (model.SecretVersionRef, error) {
 	var ref model.SecretVersionRef
 	return ref, c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/versions", req, &ref)
