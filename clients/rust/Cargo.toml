@@ -32,7 +32,7 @@ reqwest = { version = "=0.11.27", default-features = false, features = ["blockin
 url = "=2.5.0"
 # reqwest 0.11 accepts indexmap 2.x transitively through url/idna dependencies.
 # Pin indexmap below releases that pull hashbrown 0.17, which requires Cargo Edition 2024 support.
-indexmap = "=2.2.6"
+indexmap = "=2.14.0"
 # Keep a direct Cargo-1.75-compatible hashbrown pin so local lockfile generation
 # cannot resolve the Edition 2024 hashbrown 0.17 line through newer indexes.
 hashbrown = "=0.14.5"
