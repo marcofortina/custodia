@@ -48,7 +48,7 @@ rustc --version
 cargo --version
 ```
 
-Custodia currently supports Cargo/Rust `1.75` or newer.
+Custodia currently supports Cargo/Rust `1.86` or newer.
 
 ## 3. Install Custodia
 
