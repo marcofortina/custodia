@@ -4,14 +4,12 @@
 
 ## Current scope
 
-The Go client is a transport client:
+The Go client has two layers:
 
-- it uses mTLS;
-- it speaks the documented `/v1/*` REST API;
-- it sends and receives opaque ciphertext/envelope payloads;
-- it does not encrypt plaintext, decrypt ciphertext or resolve recipient keys.
+- transport methods that use mTLS and speak the documented `/v1/*` REST API;
+- high-level crypto helpers that encrypt plaintext, create recipient envelopes, decrypt authorized payloads and share existing DEKs locally before calling the transport layer.
 
-High-level E2E crypto helpers are planned after `docs/CLIENT_CRYPTO_SPEC.md` and deterministic test vectors are complete. The package now exposes the public crypto dependency interfaces that future helpers must use, but it still does not encrypt plaintext or decrypt ciphertext for callers.
+The server still receives only opaque ciphertext, crypto metadata and recipient envelopes. Recipient public keys come from the caller-provided resolver, not from Custodia server. Private keys remain behind the caller-provided private-key provider or the local X25519 helper.
 
 ## Public transport methods
 
@@ -47,6 +45,41 @@ artifact, err := c.ExportAuditEventArtifact(client.AuditEventFilters{Outcome: "f
 
 Public operational types include `OperationalStatus`, `BuildInfo`, `RuntimeDiagnostics`, `RevocationStatus`, `RevocationSerialStatus`, `AuditEvent` and `AuditExportArtifact`. These methods are metadata/operations-only helpers; they do not expose secret plaintext, ciphertext or envelopes in logs.
 
+
+## High-level crypto client
+
+Use `NewCryptoClient` or `Client.WithCrypto` to enable local encryption/decryption on top of the transport SDK:
+
+```go
+cryptoClient, err := client.NewCryptoClient(c, client.CryptoOptions{
+    PublicKeyResolver:  resolver,
+    PrivateKeyProvider: privateKeys,
+    RandomSource:       cryptoRandReader,
+    Clock:              client.SystemClock{},
+})
+if err != nil {
+    return err
+}
+
+created, err := cryptoClient.CreateEncryptedSecret(ctx, client.CreateEncryptedSecretRequest{
+    Name:        "database-password",
+    Plaintext:   []byte("correct horse battery staple"),
+    Recipients:  []string{"client_bob"},
+    Permissions: client.PermissionAll,
+})
+
+secret, err := cryptoClient.ReadDecryptedSecret(ctx, created.SecretID)
+
+err = cryptoClient.ShareEncryptedSecret(ctx, created.SecretID, client.ShareEncryptedSecretRequest{
+    TargetClientID: "client_charlie",
+    Permissions:    client.PermissionRead,
+})
+```
+
+`CreateEncryptedSecret` automatically includes the current private-key provider client id as a recipient so the creator can read the secret later. `CreateEncryptedSecretVersion` encrypts a new version locally and posts only opaque payloads. `ShareEncryptedSecret` opens the caller's existing envelope locally to recover the DEK, creates a new envelope for the target recipient, and sends only that envelope to the server.
+
+Crypto metadata persists the content nonce and canonical AAD binding used by the client. This avoids relying on server-side plaintext names during read paths and keeps decryption deterministic across create/read/share/version operations.
+
 ## Public crypto interface contracts
 
 Future high-level Go crypto helpers must depend on explicit caller-provided crypto dependencies instead of resolving trust through Custodia server:
@@ -81,4 +114,4 @@ The repository enforces two guardrails:
 - `pkg/client/types.go` and `pkg/client/public_transport.go` must not import `custodia/internal/*`;
 - an external temporary Go module must compile against the public transport types and methods.
 
-These guardrails keep the transport SDK usable before high-level crypto clients are implemented.
+These guardrails keep the transport and high-level crypto SDK usable by external consumers without requiring imports from `custodia/internal/*`.

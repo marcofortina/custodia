@@ -29,7 +29,7 @@ Recommended v1 content encryption:
 - authentication tag included with ciphertext encoding;
 - AAD bound to stable Custodia metadata.
 
-The server stores only the encoded ciphertext and metadata.
+The server stores only the encoded ciphertext and metadata. The v1 metadata may also carry the base64 content nonce and the canonical AAD binding chosen by the client. The nonce is not secret, but it is required to decrypt AES-GCM ciphertext.
 
 ## Envelope encryption
 
@@ -62,7 +62,7 @@ High-level clients must bind encryption to stable metadata. At minimum, v1 AAD m
 - secret name or secret id when available;
 - version id when creating a new version after the server returns it, or a documented pre-commit AAD value before persistence.
 
-The exact canonical AAD serialization is deterministic JSON produced by `internal/clientcrypto.BuildCanonicalAAD` and covered by fixtures. The current canonical object order is `version`, `content_cipher`, `envelope_scheme`, then optional resource bindings `secret_id`, `secret_name`, `version_id`.
+The exact canonical AAD serialization is deterministic JSON produced by `internal/clientcrypto.BuildCanonicalAAD` and covered by fixtures. The current canonical object order is `version`, `content_cipher`, `envelope_scheme`, then optional resource bindings `secret_id`, `secret_name`, `version_id`. High-level clients persist the selected AAD binding in `crypto_metadata.aad` so read/share/version paths can reproduce the same AAD without asking the server to expose extra plaintext metadata.
 
 ## Error model
 
@@ -114,4 +114,4 @@ content_cipher = aes-256-gcm
 envelope_scheme = hpke-v1
 ```
 
-This validator is not a high-level crypto client. It keeps metadata parsing, canonical AAD, AES-256-GCM payload vectors, HPKE-v1 envelope vectors and error names aligned before public high-level crypto clients are added.
+This validator also backs the first Go high-level crypto client implementation. It keeps metadata parsing, canonical AAD, AES-256-GCM payload vectors, HPKE-v1 envelope vectors and error names aligned across client implementations.
