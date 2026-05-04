@@ -464,3 +464,51 @@ func TestRunCABootstrapLocalRefusesOverwrite(t *testing.T) {
 		t.Fatal("expected overwrite refusal")
 	}
 }
+
+func TestRunLiteUpgradeCheckAcceptsPlannedEnvironment(t *testing.T) {
+	dir := t.TempDir()
+	liteEnv := filepath.Join(dir, "lite.env")
+	fullEnv := filepath.Join(dir, "full.env")
+	if err := os.WriteFile(liteEnv, []byte(`CUSTODIA_PROFILE=lite
+CUSTODIA_STORE_BACKEND=sqlite
+CUSTODIA_DATABASE_URL=file:/var/lib/custodia/custodia.db
+CUSTODIA_SIGNER_KEY_PROVIDER=file
+`), 0o600); err != nil {
+		t.Fatalf("write lite env: %v", err)
+	}
+	if err := os.WriteFile(fullEnv, []byte(`CUSTODIA_PROFILE=full
+CUSTODIA_STORE_BACKEND=postgres
+CUSTODIA_DATABASE_URL=postgres://custodia@db/custodia
+CUSTODIA_RATE_LIMIT_BACKEND=valkey
+CUSTODIA_VALKEY_URL=rediss://valkey:6379/0
+CUSTODIA_SIGNER_KEY_PROVIDER=pkcs11
+CUSTODIA_AUDIT_SHIPMENT_SINK=s3-object-lock://custodia-audit
+CUSTODIA_DATABASE_HA_TARGET=cockroachdb-multi-region
+`), 0o600); err != nil {
+		t.Fatalf("write full env: %v", err)
+	}
+	if err := runLiteUpgradeCheck([]string{"--lite-env-file", liteEnv, "--full-env-file", fullEnv}); err != nil {
+		t.Fatalf("runLiteUpgradeCheck() error = %v", err)
+	}
+}
+
+func TestRunLiteUpgradeCheckRejectsInvalidTarget(t *testing.T) {
+	dir := t.TempDir()
+	liteEnv := filepath.Join(dir, "lite.env")
+	fullEnv := filepath.Join(dir, "full.env")
+	if err := os.WriteFile(liteEnv, []byte(`CUSTODIA_PROFILE=lite
+CUSTODIA_STORE_BACKEND=sqlite
+CUSTODIA_DATABASE_URL=file:/var/lib/custodia/custodia.db
+CUSTODIA_SIGNER_KEY_PROVIDER=file
+`), 0o600); err != nil {
+		t.Fatalf("write lite env: %v", err)
+	}
+	if err := os.WriteFile(fullEnv, []byte(`CUSTODIA_PROFILE=lite
+CUSTODIA_STORE_BACKEND=sqlite
+`), 0o600); err != nil {
+		t.Fatalf("write full env: %v", err)
+	}
+	if err := runLiteUpgradeCheck([]string{"--lite-env-file", liteEnv, "--full-env-file", fullEnv}); err == nil {
+		t.Fatal("expected invalid full target error")
+	}
+}
