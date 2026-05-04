@@ -14,6 +14,7 @@ cd "$root_dir"
 : "${OUT_DIR:=$root_dir/dist/packages}"
 : "${WORK_DIR:=$root_dir/dist/package-work}"
 : "${ARCH:=$(uname -m)}"
+: "${SERVER_BUILD_TAGS:=sqlite}"
 
 ldflags="-X custodia/internal/build.Version=$VERSION -X custodia/internal/build.Commit=$COMMIT -X custodia/internal/build.Date=$DATE"
 
@@ -52,12 +53,36 @@ sanitize_rpm_version() {
   printf '%s' "$1" | tr '+-' '__' | tr -cd 'A-Za-z0-9._~'
 }
 
+server_build_tags_include() {
+  case " $SERVER_BUILD_TAGS " in
+    *" $1 "*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+build_tags_args() {
+  if [ -n "$SERVER_BUILD_TAGS" ]; then
+    printf '%s\n' -tags
+    printf '%s\n' "$SERVER_BUILD_TAGS"
+  fi
+}
+
+ensure_server_build_dependencies() {
+  if server_build_tags_include sqlite; then
+    log "ensuring SQLite driver module is available for Lite-capable server package"
+    "$GO" mod download modernc.org/sqlite
+  fi
+}
+
 build_server_binaries() {
   mkdir -p "$WORK_DIR/bin"
-  log "building Go server binaries"
-  "$GO" build -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-server" ./cmd/custodia-server
-  "$GO" build -ldflags "$ldflags" -o "$WORK_DIR/bin/vault-admin" ./cmd/vault-admin
-  "$GO" build -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-signer" ./cmd/custodia-signer
+  log "building Go server binaries with SERVER_BUILD_TAGS=${SERVER_BUILD_TAGS:-<none>}"
+  ensure_server_build_dependencies
+  local tags
+  mapfile -t tags < <(build_tags_args)
+  "$GO" build "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-server" ./cmd/custodia-server
+  "$GO" build "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/vault-admin" ./cmd/vault-admin
+  "$GO" build "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-signer" ./cmd/custodia-signer
 }
 
 stage_server() {
@@ -109,8 +134,10 @@ copy_client_tree() {
   local stage="$1"
   install -d "$stage/usr/share/custodia/clients" "$stage/usr/share/custodia/testdata" "$stage/usr/share/doc/custodia-clients" "$stage/usr/bin"
   cp -R clients/bash clients/python clients/node clients/java clients/cpp clients/rust "$stage/usr/share/custodia/clients/"
-  install -d "$stage/usr/share/custodia/clients/go/pkg"
+  install -d "$stage/usr/share/custodia/clients/go/pkg" "$stage/usr/share/custodia/clients/go/internal"
+  install -m 0644 go.mod "$stage/usr/share/custodia/clients/go/"
   cp -R pkg/client "$stage/usr/share/custodia/clients/go/pkg/"
+  cp -R internal/clientcrypto "$stage/usr/share/custodia/clients/go/internal/"
   cp -R testdata/client-crypto "$stage/usr/share/custodia/testdata/"
   find "$stage/usr/share/custodia/clients" -type d \( -name __pycache__ -o -name .pytest_cache -o -name node_modules -o -name target \) -prune -exec rm -rf {} +
   find "$stage/usr/share/custodia/clients" -type f \( -name '*.pyc' -o -name '*.class' \) -delete
@@ -194,14 +221,27 @@ build_deb() {
   dpkg-deb --root-owner-group --build "$root" "$out" >/dev/null
 }
 
+rpm_should_own_dir() {
+  case "$1" in
+    /etc/custodia|/var/lib/custodia|/var/log/custodia|/usr/share/custodia|/usr/share/custodia/*|/usr/share/doc/custodia-*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 rpm_file_list() {
   local stage="$1"
   find "$stage" -type d | sort | while read -r path; do
     local rel="${path#$stage}"
     [ -z "$rel" ] && continue
-    printf '%%dir %s\n' "$rel"
+    if rpm_should_own_dir "$rel"; then
+      printf '%%dir %s\n' "$rel"
+    fi
   done
-  find "$stage" -type f -o -type l | sort | while read -r path; do
+  find "$stage" \( -type f -o -type l \) | sort | while read -r path; do
     local rel="${path#$stage}"
     printf '%s\n' "$rel"
   done
