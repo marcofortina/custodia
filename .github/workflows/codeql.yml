@@ -91,7 +91,9 @@ jobs:
 
       - name: Build Go extraction target
         if: ${{ matrix.build == 'go' }}
-        run: go build ./...
+        run: |
+          go build -tags sqlite ./...
+          go test -run '^$' -tags sqlite ./...
 
       - name: Build Java extraction target
         if: ${{ matrix.build == 'java' }}
