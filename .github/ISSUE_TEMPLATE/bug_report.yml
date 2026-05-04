@@ -81,7 +81,7 @@ body:
     attributes:
       label: Environment
       description: OS, architecture, Go/Python/Node/Rust versions, package type and deployment mode.
-      placeholder: "Ubuntu 24.04, amd64, Go 1.22, Lite profile, .deb package"
+      placeholder: "Ubuntu 24.04, amd64, Go 1.26, Lite profile, .deb package"
   - type: textarea
     id: logs
     attributes:
