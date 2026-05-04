@@ -1129,3 +1129,17 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 612 - Phase 4 closure
 
 - Added `docs/PHASE4_CLOSURE.md` summarizing the repository-level closure of Custodia Lite.
+
+## Patch 615 - Lite upgrade helper source fallback
+
+- Fixed `scripts/lite-upgrade-check.sh` so source checkouts can run the readiness helper through `go run ./cmd/vault-admin` when `vault-admin` is not installed in `PATH`.
+
+## Patch 616 - SQLite Lite driver dependency
+
+- Declared the `modernc.org/sqlite` module dependency required by the build-tagged SQLite Lite artifact.
+- Standard builds remain unaffected because the SQLite implementation is behind the `sqlite` build tag.
+
+## Patch 617 - Lite specification final sync
+
+- Updated `docs/CUSTODIA_LITE_PROFILE.md` from planning language to the post-Fase-4 implementation baseline.
+- Clarified that SQLite, local CA bootstrap, CA passphrase file support and Lite operational docs are implemented at repository level, while data migration remains a future dedicated tool.
