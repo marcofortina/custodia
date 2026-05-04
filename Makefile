@@ -37,6 +37,7 @@ test-java-client:
 	mkdir -p /tmp/custodia-java-client-classes
 	javac -d /tmp/custodia-java-client-classes $$(find clients/java/src/main/java clients/java/src/test/java -name '*.java' | sort)
 	java -cp /tmp/custodia-java-client-classes dev.custodia.client.CustodiaClientTest
+	java -cp /tmp/custodia-java-client-classes dev.custodia.client.CustodiaCryptoClientTest
 
 .PHONY: test-cpp-client
 test-cpp-client:
