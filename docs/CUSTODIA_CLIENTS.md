@@ -24,7 +24,7 @@ Principi comuni:
 
 | Linguaggio | Stato repository | Stato Fase 5 | Note |
 |------------|------------------|--------------|------|
-| **Go** | Esistente | Transport SDK pubblico transport in stabilizzazione; crypto client pianificato | `pkg/client` nel monorepo, con tipi/metodi pubblici senza `internal/*`. |
+| **Go** | Esistente | Transport SDK pubblico solido; crypto client pianificato | `pkg/client` nel monorepo, con payload e operational methods pubblici senza tipi `internal/*` nelle nuove API. |
 | **Python** | Esistente | Transport client presente; crypto client pianificato | `clients/python` nel monorepo. |
 | **Node.js / TypeScript** | Non presente | Pianificato | Da aggiungere dopo spec crypto e test vectors. |
 | **Rust** | Non presente | Pianificato | Da aggiungere dopo Go/Python. |

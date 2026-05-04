@@ -1319,3 +1319,28 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 672 - Phase 5 deterministic AAD status
 
 - Updated the Phase 5 closure tracker after deterministic metadata/AAD fixture validation.
+
+## Patch 674 - Go client public operational response types
+
+- Added public Go SDK response types for operational status, build info, diagnostics, revocation status and audit events.
+- Moved audit export and revocation serial response types into the public type surface.
+
+## Patch 675 - Go client public operational methods
+
+- Added public Go SDK operational methods for status, version, diagnostics, revocation status, revocation serial status, audit metadata listing and audit export artifacts.
+
+## Patch 676 - Go client public operational method tests
+
+- Covered public operational method routing and external consumer compile signatures.
+
+## Patch 677 - Go public operational SDK documentation
+
+- Documented the public Go operational SDK methods and response types.
+
+## Patch 678 - Go operational legacy boundary docs
+
+- Marked older operational helpers that return internal model types as monorepo compatibility helpers.
+
+## Patch 679 - Phase 5 Go operational SDK status
+
+- Updated Phase 5 status after closing the public Go operational SDK surface.
