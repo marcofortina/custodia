@@ -26,7 +26,7 @@ Principi comuni:
 |------------|------------------|--------------|------|
 | **Go** | Esistente | Transport SDK pubblico + primo crypto client high-level E2E | `pkg/client` nel monorepo, con payload/operational methods pubblici e crypto helpers senza esporre tipi `internal/*` nelle API. |
 | **Python** | Esistente | Transport client + primo crypto client high-level E2E | `clients/python` nel monorepo, con typed transport helpers e crypto wrapper basato sugli stessi vector. |
-| **Node.js / TypeScript** | Non presente | Pianificato | Da aggiungere dopo spec crypto e test vectors. |
+| **Node.js / TypeScript** | Esistente | Transport client presente; crypto client pianificato | `clients/node` nel monorepo, con JavaScript runtime dependency-free e dichiarazioni TypeScript. |
 | **Rust** | Non presente | Pianificato | Da aggiungere dopo Go/Python. |
 | **Java** | Non presente | Pianificato | Da aggiungere dopo stabilizzazione schema crypto. |
 | **C++** | Non presente | Pianificato | Da aggiungere per ultimo per complessità ABI/OpenSSL/packaging. |
@@ -223,7 +223,31 @@ resp.raise_for_status()
 print(resp.json())
 ```
 
-Gli esempi Node.js, Rust, Java e C++ devono essere aggiunti solo quando i rispettivi client sono presenti o quando sono chiaramente marcati come esempi raw HTTP non ufficiali.
+### 6.3 Node.js / TypeScript – raw transport example
+
+```js
+import { CustodiaClient, PermissionAll } from "@custodia/client";
+
+const client = new CustodiaClient({
+    serverUrl: "https://vault:8443",
+    certFile: "client.crt",
+    keyFile: "client.key",
+    caFile: "ca.crt",
+});
+
+const created = await client.createSecretPayload({
+    name: "test",
+    ciphertext: "base64cipher",
+    envelopes: [
+        { client_id: "self", envelope: "base64env" },
+    ],
+    permissions: PermissionAll,
+});
+
+console.log(created);
+```
+
+Gli esempi Rust, Java e C++ devono essere aggiunti solo quando i rispettivi client sono presenti o quando sono chiaramente marcati come esempi raw HTTP non ufficiali.
 
 ---
 
@@ -269,14 +293,36 @@ Per la Fase 5 iniziale usare il monorepo:
 |------------|--------------------|--------------------|
 | Go | `pkg/client` | Da decidere. |
 | Python | `clients/python` | Da decidere. |
-| Node.js / TypeScript | `clients/node` | Pianificato. |
+| Node.js / TypeScript | `clients/node` | Monorepo private scaffold; nome pubblico da decidere. |
 | Rust | `clients/rust` | Pianificato. |
 | Java | `clients/java` | Pianificato. |
 | C++ | `clients/cpp` | Pianificato. |
 
 Nomi come `github.com/custodia/go-client`, `@custodia/client`, `custodia-client` o `com.custodia:client` sono placeholder finché non vengono pubblicati davvero.
 
-### 8.1 Stabilizzazione SDK Go pubblico
+### 8.1 Stabilizzazione SDK Node.js / TypeScript transport
+
+`clients/node` esiste nel repository come transport client iniziale per payload opachi. È volutamente limitato al livello REST/mTLS e non implementa ancora il crypto client high-level.
+
+Surface attuale:
+
+- runtime JavaScript ESM senza dipendenze npm runtime;
+- dichiarazioni TypeScript in `src/index.d.ts`;
+- configurazione mTLS tramite `certFile`, `keyFile`, `caFile`;
+- timeout configurabile;
+- user-agent configurabile;
+- errore tipizzato `CustodiaHttpError`;
+- metodi transport per secret, access grants, client metadata, operational status, revocation e audit export.
+
+Criterio di confine:
+
+```text
+clients/node transport -> invia solo payload già opachi e non prova a cifrare, decifrare, loggare o interpretare ciphertext/envelope/crypto_metadata
+```
+
+Il package resta `private` finché non vengono definiti nome pubblico, release process e support policy.
+
+### 8.2 Stabilizzazione SDK Go pubblico
 
 `pkg/client` esiste nel repository ed è utilizzabile come transport client interno/al modulo, ma prima di dichiararlo SDK Go pubblico stabile deve smettere di esporre tipi da package `internal/*` nelle API pubbliche.
 
@@ -321,7 +367,7 @@ Ordine consigliato:
 1. **Fase 5A**: riallineamento specifica client, `CLIENT_CRYPTO_SPEC.md`, test vectors.
 2. **Fase 5B**: stabilizzare `pkg/client` come SDK Go pubblico senza tipi `internal/*`, chiudere i metodi transport/operational pubblici e aggiungere il primo Go high-level crypto client.
 3. **Fase 5C**: Python high-level crypto client sopra `clients/python`.
-4. **Fase 5D**: Node.js/TypeScript client.
+4. **Fase 5D**: Node.js/TypeScript transport client; high-level crypto wrapper pianificato dopo stabilizzazione del surface transport.
 5. **Fase 5E**: Rust client.
 6. **Fase 5F**: Java client.
 7. **Fase 5G**: C++ client.
