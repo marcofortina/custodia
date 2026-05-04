@@ -1,6 +1,6 @@
 # Python client
 
-This client only transports already encrypted ciphertext and opaque envelopes. It does not fetch public keys from Custodia and does not ask the server to decrypt anything.
+This client provides both the raw transport helpers and the Phase 5 high-level crypto wrapper. The crypto wrapper encrypts/decrypts locally and still does not fetch public keys from Custodia or ask the server to decrypt anything.
 
 Implemented helpers:
 
@@ -23,7 +23,57 @@ Implemented helpers:
 - `create_secret_version(secret_id, payload)`
 - `delete_secret(secret_id)`
 
-Dynamic path segments are URL-escaped. Payloads remain caller-defined JSON with base64 ciphertext/envelope strings; the Python client does not perform key discovery or server-side crypto.
+Dynamic path segments are URL-escaped. Raw transport payloads remain caller-defined JSON with base64 ciphertext/envelope strings. The high-level crypto wrapper requires an application-provided public-key resolver and local private-key provider; Custodia never acts as a public-key directory.
+
+## High-level crypto wrapper
+
+The high-level wrapper is available through `client.with_crypto(...)` or
+`CryptoCustodiaClient(...)`. It uses AES-256-GCM content encryption and HPKE-v1
+recipient envelopes, matching the shared deterministic test vectors under
+`testdata/client-crypto/v1/`.
+
+```python
+from custodia_client import (
+    CryptoOptions,
+    CustodiaClient,
+    StaticPrivateKeyProvider,
+    StaticPublicKeyResolver,
+    X25519PrivateKeyHandle,
+    derive_x25519_recipient_public_key,
+)
+
+alice_private = b"...32 bytes from local key storage..."
+bob_private_for_example_only = b"...32 bytes from bob/out-of-band fixture..."
+
+client = CustodiaClient(
+    server_url="https://vault.example:8443",
+    cert_file="client.crt",
+    key_file="client.key",
+    ca_file="ca.crt",
+)
+
+crypto = client.with_crypto(CryptoOptions(
+    public_key_resolver=StaticPublicKeyResolver({
+        "client_alice": derive_x25519_recipient_public_key("client_alice", alice_private),
+        "client_bob": derive_x25519_recipient_public_key("client_bob", bob_private_for_example_only),
+    }),
+    private_key_provider=StaticPrivateKeyProvider(
+        X25519PrivateKeyHandle("client_alice", alice_private),
+    ),
+))
+
+created = crypto.create_encrypted_secret(
+    name="database-password",
+    plaintext=b"correct horse battery staple",
+    recipients=["client_bob"],
+)
+
+secret = crypto.read_decrypted_secret(created["secret_id"])
+```
+
+The static resolver above is only a minimal example. Production applications
+should resolve recipient public keys from local pinned files, KMS, enterprise
+directory, provisioning or another trusted channel outside Custodia.
 
 ## Audit export
 

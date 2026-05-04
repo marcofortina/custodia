@@ -1,17 +1,15 @@
 # Custodia Python client SDK
 
-`clients/python/custodia_client` is the repository Python transport client for Custodia. Phase 5 adds typed transport payload helpers while keeping the server payloads opaque.
+`clients/python/custodia_client` is the repository Python client for Custodia. Phase 5 adds typed transport payload helpers and a high-level crypto wrapper while keeping the server payloads opaque.
 
 ## Current scope
 
-The Python client is importable and speaks the Custodia REST API over mTLS. It is still a transport client:
+The Python client is importable and speaks the Custodia REST API over mTLS. It now has two layers:
 
-- callers provide already-opaque ciphertext and envelopes;
-- the client sends JSON payloads to `/v1/*`;
-- the client returns server JSON responses;
-- the client does not encrypt plaintext, unwrap envelopes or resolve recipient public keys.
+- raw transport helpers for callers that already provide opaque ciphertext and envelopes;
+- a high-level crypto wrapper that encrypts/decrypts locally, creates HPKE-v1 envelopes and uses application-provided key resolvers.
 
-High-level crypto helpers are planned after the shared client crypto specification and deterministic test vectors are completed.
+The server still receives only ciphertext, `crypto_metadata` and recipient envelopes. It never receives plaintext, DEK material or private keys.
 
 ## Install from the monorepo
 
@@ -48,6 +46,51 @@ created = client.create_secret_payload(
 )
 ```
 
+## High-level crypto wrapper
+
+Use `CustodiaClient.with_crypto(CryptoOptions(...))` when the application wants
+the SDK to encrypt/decrypt locally. The wrapper supports:
+
+- `create_encrypted_secret(...)`;
+- `read_decrypted_secret(...)`;
+- `share_encrypted_secret(...)`;
+- `create_encrypted_secret_version(...)`.
+
+```python
+from custodia_client import (
+    CryptoOptions,
+    CustodiaClient,
+    StaticPrivateKeyProvider,
+    StaticPublicKeyResolver,
+    X25519PrivateKeyHandle,
+    derive_x25519_recipient_public_key,
+)
+
+alice_private = load_alice_private_key_from_local_storage()
+bob_public = load_bob_public_key_from_pinned_directory()
+
+client = CustodiaClient("https://vault.example:8443", "client.crt", "client.key", "ca.crt")
+crypto = client.with_crypto(CryptoOptions(
+    public_key_resolver=StaticPublicKeyResolver({
+        "client_bob": bob_public,
+        "client_alice": derive_x25519_recipient_public_key("client_alice", alice_private),
+    }),
+    private_key_provider=StaticPrivateKeyProvider(
+        X25519PrivateKeyHandle("client_alice", alice_private),
+    ),
+))
+
+created = crypto.create_encrypted_secret(
+    name="database-password",
+    plaintext=b"correct horse battery staple",
+    recipients=["client_bob"],
+)
+```
+
+`StaticPublicKeyResolver` is a small helper for pinned/local maps and tests.
+Production code should plug in a resolver backed by trusted local provisioning,
+KMS or an enterprise directory outside Custodia.
+
 ## Raw dictionary example
 
 ```python
@@ -78,5 +121,5 @@ Run:
 
 ```bash
 make test-python-client
-python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py
+python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py clients/python/custodia_client/crypto.py
 ```
