@@ -17,7 +17,7 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 - Hash-chained audit event model with admin audit listing and verification API/CLI.
 - Memory and Valkey-compatible rate limiter backends with readiness checks.
 - Minimal admin CLI for metadata operations exposed by the API.
-- Go and Python client libraries with raw transport helpers; both include high-level client-side crypto wrappers that keep plaintext, DEKs and private keys outside the server.
+- Go and Python client libraries with raw transport helpers; both include high-level client-side crypto wrappers that keep plaintext, DEKs and private keys outside the server. Node.js / TypeScript has an initial transport-only client for opaque REST payloads.
 - Docker, Compose, Helm and Lite single-node deployment examples.
 - Dedicated `custodia-signer` service for admin-only client CSR signing.
 - Custodia Lite profile with YAML config, SQLite build-tag artifact, local CA bootstrap, backup helper and Lite-to-Full readiness checks.
@@ -57,6 +57,14 @@ Bitcoin URI:
 ```text
 bitcoin:36jDV57roGb4o59TwK1CB7viPrXToQHGiP
 ```
+
+
+## Client SDKs
+
+- Go: [`docs/GO_CLIENT_SDK.md`](docs/GO_CLIENT_SDK.md)
+- Python: [`docs/PYTHON_CLIENT_SDK.md`](docs/PYTHON_CLIENT_SDK.md)
+- Node.js / TypeScript transport: [`docs/NODE_CLIENT_SDK.md`](docs/NODE_CLIENT_SDK.md)
+- Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
 
 ## Local development
 
