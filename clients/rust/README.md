@@ -55,3 +55,9 @@ make test-rust-client
 ```
 
 The repository target runs `cargo test` when Cargo is installed and skips with a clear message otherwise.
+
+## Dependency lockfile
+
+`clients/rust/Cargo.lock` is intentionally committed after it is generated on a Rust-enabled workstation. The lockfile keeps the Rust client reproducible on the documented minimum toolchain, Cargo/Rust 1.75, and prevents dependency drift toward crates that require Edition 2024.
+
+`clients/rust/target/` is local build output and must not be committed.

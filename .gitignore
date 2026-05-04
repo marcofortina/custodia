@@ -3,6 +3,7 @@
 # Build outputs
 bin/
 dist/
+clients/rust/target/
 
 # Go
 *.test
