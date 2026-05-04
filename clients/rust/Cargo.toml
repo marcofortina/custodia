@@ -30,12 +30,10 @@ reqwest = { version = "0.12.28", default-features = false, features = ["blocking
 # reqwest 0.12 pulls the newer rustls-webpki/idna security baseline. Keep url
 # explicit so lockfile regeneration cannot drift back to the vulnerable idna 0.5 line.
 url = "2.5.8"
-# reqwest 0.11 accepts indexmap 2.x transitively through url/idna dependencies.
-# Pin indexmap below releases that pull hashbrown 0.17, which requires Cargo Edition 2024 support.
-indexmap = "=2.14.0"
-# Keep a direct Cargo-1.75-compatible hashbrown pin so local lockfile generation
-# cannot resolve the Edition 2024 hashbrown 0.17 line through newer indexes.
-hashbrown = "=0.17.0"
+# Keep these direct dependency lines aligned with the Dependabot security baseline.
+# They intentionally require the newer Rust MSRV documented for this SDK.
+indexmap = "2.14"
+hashbrown = "0.17"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 urlencoding = "2.1"
