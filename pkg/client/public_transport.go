@@ -1,151 +1,153 @@
 package client
 
-import "custodia/internal/model"
+import (
+	"fmt"
+	"net/http"
+	"net/url"
+)
 
 func (c *Client) CurrentClientInfo() (ClientInfo, error) {
-	value, err := c.Me()
-	if err != nil {
-		return ClientInfo{}, err
-	}
-	return fromModelClient(value), nil
+	var response ClientInfo
+	return response, c.doJSON(http.MethodGet, "/v1/me", nil, &response)
 }
 
 func (c *Client) ListClientInfos(filters ClientListFilters) ([]ClientInfo, error) {
-	values, err := c.ListClientsFiltered(filters)
-	if err != nil {
+	if err := validateOptionalLimit(filters.Limit); err != nil {
 		return nil, err
 	}
-	converted := make([]ClientInfo, 0, len(values))
-	for _, value := range values {
-		converted = append(converted, fromModelClient(value))
+	query := url.Values{}
+	if filters.Limit > 0 {
+		query.Set("limit", fmt.Sprintf("%d", filters.Limit))
 	}
-	return converted, nil
+	if filters.Active != nil {
+		query.Set("active", fmt.Sprintf("%t", *filters.Active))
+	}
+	path := "/v1/clients"
+	if encoded := query.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
+	var response struct {
+		Clients []ClientInfo `json:"clients"`
+	}
+	err := c.doJSON(http.MethodGet, path, nil, &response)
+	return response.Clients, err
 }
 
 func (c *Client) GetClientInfo(clientID string) (ClientInfo, error) {
-	value, err := c.GetClient(clientID)
-	if err != nil {
-		return ClientInfo{}, err
-	}
-	return fromModelClient(value), nil
+	var response ClientInfo
+	return response, c.doJSON(http.MethodGet, "/v1/clients/"+pathEscape(clientID), nil, &response)
 }
 
 func (c *Client) CreateClientInfo(req CreateClientPayload) error {
-	return c.CreateClient(model.CreateClientRequest{ClientID: req.ClientID, MTLSSubject: req.MTLSSubject})
+	return c.doJSON(http.MethodPost, "/v1/clients", req, nil)
 }
 
 func (c *Client) RevokeClientInfo(req RevokeClientPayload) error {
-	return c.RevokeClient(model.RevokeClientRequest{ClientID: req.ClientID, Reason: req.Reason})
+	return c.doJSON(http.MethodPost, "/v1/clients/revoke", req, nil)
 }
 
 func (c *Client) CreateSecretPayload(req CreateSecretPayload) (SecretVersionRef, error) {
-	ref, err := c.CreateSecret(model.CreateSecretRequest{
-		Name:           req.Name,
-		Ciphertext:     req.Ciphertext,
-		CryptoMetadata: req.CryptoMetadata,
-		Envelopes:      toModelEnvelopes(req.Envelopes),
-		Permissions:    req.Permissions,
-		ExpiresAt:      req.ExpiresAt,
-	})
-	if err != nil {
-		return SecretVersionRef{}, err
-	}
-	return fromModelSecretRef(ref), nil
+	var ref SecretVersionRef
+	return ref, c.doJSON(http.MethodPost, "/v1/secrets", req, &ref)
 }
 
 func (c *Client) GetSecretPayload(secretID string) (SecretReadResponse, error) {
-	value, err := c.GetSecret(secretID)
-	if err != nil {
-		return SecretReadResponse{}, err
-	}
-	return fromModelSecretReadResponse(value), nil
+	var response SecretReadResponse
+	return response, c.doJSON(http.MethodGet, "/v1/secrets/"+pathEscape(secretID), nil, &response)
 }
 
 func (c *Client) ListSecretMetadataPublic(limit int) ([]SecretMetadata, error) {
-	values, err := c.ListSecretsWithLimit(limit)
-	if err != nil {
+	return c.ListSecretMetadata(limit)
+}
+
+func (c *Client) ListSecretMetadata(limit int) ([]SecretMetadata, error) {
+	if err := validateOptionalLimit(limit); err != nil {
 		return nil, err
 	}
-	converted := make([]SecretMetadata, 0, len(values))
-	for _, value := range values {
-		converted = append(converted, fromModelSecretMetadata(value))
+	path := "/v1/secrets"
+	if limit > 0 {
+		query := url.Values{}
+		query.Set("limit", fmt.Sprintf("%d", limit))
+		path += "?" + query.Encode()
 	}
-	return converted, nil
+	var response struct {
+		Secrets []SecretMetadata `json:"secrets"`
+	}
+	err := c.doJSON(http.MethodGet, path, nil, &response)
+	return response.Secrets, err
 }
 
 func (c *Client) ListSecretVersionMetadata(secretID string, limit int) ([]SecretVersionMetadata, error) {
-	values, err := c.ListSecretVersionsWithLimit(secretID, limit)
-	if err != nil {
+	if err := validateOptionalLimit(limit); err != nil {
 		return nil, err
 	}
-	converted := make([]SecretVersionMetadata, 0, len(values))
-	for _, value := range values {
-		converted = append(converted, fromModelSecretVersionMetadata(value))
+	path := "/v1/secrets/" + pathEscape(secretID) + "/versions"
+	if limit > 0 {
+		query := url.Values{}
+		query.Set("limit", fmt.Sprintf("%d", limit))
+		path += "?" + query.Encode()
 	}
-	return converted, nil
+	var response struct {
+		Versions []SecretVersionMetadata `json:"versions"`
+	}
+	err := c.doJSON(http.MethodGet, path, nil, &response)
+	return response.Versions, err
 }
 
 func (c *Client) ListSecretAccessMetadata(secretID string, limit int) ([]SecretAccessMetadata, error) {
-	values, err := c.ListSecretAccessWithLimit(secretID, limit)
-	if err != nil {
+	if err := validateOptionalLimit(limit); err != nil {
 		return nil, err
 	}
-	converted := make([]SecretAccessMetadata, 0, len(values))
-	for _, value := range values {
-		converted = append(converted, fromModelSecretAccessMetadata(value))
+	path := "/v1/secrets/" + pathEscape(secretID) + "/access"
+	if limit > 0 {
+		query := url.Values{}
+		query.Set("limit", fmt.Sprintf("%d", limit))
+		path += "?" + query.Encode()
 	}
-	return converted, nil
+	var response struct {
+		Access []SecretAccessMetadata `json:"access"`
+	}
+	err := c.doJSON(http.MethodGet, path, nil, &response)
+	return response.Access, err
 }
 
 func (c *Client) ShareSecretPayload(secretID string, req ShareSecretPayload) error {
-	return c.ShareSecret(secretID, model.ShareSecretRequest{
-		VersionID:      req.VersionID,
-		TargetClientID: req.TargetClientID,
-		Envelope:       req.Envelope,
-		Permissions:    req.Permissions,
-		ExpiresAt:      req.ExpiresAt,
-	})
+	return c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/share", req, nil)
 }
 
 func (c *Client) CreateAccessGrant(secretID string, req AccessGrantPayload) (AccessGrantRef, error) {
-	ref, err := c.RequestAccessGrant(secretID, model.AccessGrantRequest{
-		VersionID:      req.VersionID,
-		TargetClientID: req.TargetClientID,
-		Permissions:    req.Permissions,
-		ExpiresAt:      req.ExpiresAt,
-	})
-	if err != nil {
-		return AccessGrantRef{}, err
-	}
-	return fromModelAccessGrantRef(ref), nil
+	var ref AccessGrantRef
+	return ref, c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/access-requests", req, &ref)
 }
 
 func (c *Client) ActivateAccessGrantPayload(secretID, targetClientID string, req ActivateAccessPayload) error {
-	return c.ActivateAccessGrant(secretID, targetClientID, model.ActivateAccessRequest{Envelope: req.Envelope})
+	return c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/access-requests/"+pathEscape(targetClientID)+"/activate", req, nil)
 }
 
 func (c *Client) CreateSecretVersionPayload(secretID string, req CreateSecretVersionPayload) (SecretVersionRef, error) {
-	ref, err := c.CreateSecretVersion(secretID, model.CreateSecretVersionRequest{
-		Ciphertext:     req.Ciphertext,
-		CryptoMetadata: req.CryptoMetadata,
-		Envelopes:      toModelEnvelopes(req.Envelopes),
-		Permissions:    req.Permissions,
-		ExpiresAt:      req.ExpiresAt,
-	})
-	if err != nil {
-		return SecretVersionRef{}, err
-	}
-	return fromModelSecretRef(ref), nil
+	var ref SecretVersionRef
+	return ref, c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/versions", req, &ref)
 }
 
 func (c *Client) ListAccessGrantMetadata(filters AccessGrantRequestFilters) ([]AccessGrantMetadata, error) {
-	values, err := c.ListAccessGrantRequests(filters)
-	if err != nil {
+	if err := validateAccessGrantRequestFilters(filters); err != nil {
 		return nil, err
 	}
-	converted := make([]AccessGrantMetadata, 0, len(values))
-	for _, value := range values {
-		converted = append(converted, fromModelAccessGrantMetadata(value))
+	query := url.Values{}
+	if filters.Limit > 0 {
+		query.Set("limit", fmt.Sprintf("%d", filters.Limit))
 	}
-	return converted, nil
+	addQueryFilter(query, "secret_id", filters.SecretID)
+	addQueryFilter(query, "status", filters.Status)
+	addQueryFilter(query, "client_id", filters.ClientID)
+	addQueryFilter(query, "requested_by_client_id", filters.RequestedByClientID)
+	path := "/v1/access-requests"
+	if encoded := query.Encode(); encoded != "" {
+		path += "?" + encoded
+	}
+	var response struct {
+		AccessRequests []AccessGrantMetadata `json:"access_requests"`
+	}
+	err := c.doJSON(http.MethodGet, path, nil, &response)
+	return response.AccessRequests, err
 }
