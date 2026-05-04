@@ -18,7 +18,7 @@ fmt:
 
 
 .PHONY: check
-check: test build test-python-client test-node-client test-java-client
+check: test build test-python-client test-node-client test-java-client test-cpp-client
 	python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py clients/python/custodia_client/crypto.py
 	node --check clients/node/src/index.js
 	node --check clients/node/src/crypto.js
@@ -37,6 +37,15 @@ test-java-client:
 	mkdir -p /tmp/custodia-java-client-classes
 	javac -d /tmp/custodia-java-client-classes $$(find clients/java/src/main/java clients/java/src/test/java -name '*.java' | sort)
 	java -cp /tmp/custodia-java-client-classes dev.custodia.client.CustodiaClientTest
+
+.PHONY: test-cpp-client
+test-cpp-client:
+	@if ! pkg-config --exists libcurl; then \
+		echo "libcurl development package is required for test-cpp-client" >&2; \
+		exit 2; \
+	fi
+	g++ -std=c++20 -Wall -Wextra -Werror -Iclients/cpp/include clients/cpp/src/client.cpp clients/cpp/test/client_test.cpp $$(pkg-config --cflags --libs libcurl) -o /tmp/custodia-cpp-client-test
+	/tmp/custodia-cpp-client-test
 
 .PHONY: run-dev
 run-dev:
