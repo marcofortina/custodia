@@ -1,12 +1,13 @@
 # Implementation status
 
-## Current status after patch 545
+## Current status after patch 625
 
 - Phase 1 is closed at repository level.
 - Phase 2 is closed at repository level: mTLS lifecycle, strong-revocation versioning, Valkey-compatible rate limiting, Go/Python SDK helpers, metadata-only web console, TOTP MFA and the passkey/WebAuthn boundary through external assertion verification are implemented.
 - Phase 3 is closed as a repository baseline: Helm/Kubernetes deployment metadata, HA/DR runbooks, diagnostics, audit export integrity, audit archive/shipment helpers, S3/Object Lock shipment, k3s/CockroachDB rehearsal, dedicated signer service, PKCS#11/SoftHSM bridge, CRL distribution/revocation responder, formal verification artifacts, production readiness gates and external evidence gates are implemented.
 - The cryptographic boundary remains unchanged: Custodia stores and authorizes opaque ciphertext, crypto metadata and recipient envelopes, but never decrypts, unwraps keys or publishes client encryption credential keys.
-- Production Fort Knox completeness still depends on external evidence: real HSM/PKCS#11/TPM, WORM/object-lock storage, database HA, Valkey HA, zero-trust network controls, penetration testing, revocation drills and formal verification execution in the target environment.
+- Phase 4 is closed at repository level: Lite/full/custom profiles, shared YAML config, build-tagged SQLite Lite store, Lite packaging, local CA bootstrap/passphrase support, SQLite backup, Lite-to-Full readiness checks and Phase 4 closure documentation are implemented.
+- Production Fort Knox completeness still depends on external evidence: real HSM/PKCS#11/TPM, WORM/object-lock storage, database HA, Valkey HA, zero-trust network controls, penetration testing, revocation drills, audited WebAuthn verifier deployment and formal verification execution in the target environment.
 
 
 ## Implemented
@@ -32,6 +33,7 @@
 - Docker, Compose and Helm deployment skeletons.
 - Admin-protected metadata-only web console pages for status, clients, access requests and audit summaries.
 - Build metadata propagation through status API, web status and `vault-admin version`.
+- Custodia Lite profile with shared YAML config, SQLite build-tag store, local CA bootstrap, CA passphrase file support, backup helper and Lite-to-Full readiness checks.
 
 ## Not claimed as local-only source-code guarantees
 
@@ -1152,3 +1154,19 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 621 - SQLite build target driver download
 
 - Added an explicit `sqlite-driver-download` Make target and made `build-sqlite`/`test-sqlite` depend on it so connected environments materialize the declared SQLite driver module before building tagged Lite artifacts.
+
+
+## Patch 623 - README Lite closure cleanup
+
+- Moved Lite runbook links into the README operational runbook list instead of leaving them as orphan links after the revocation section.
+- Added a concise Custodia Lite / SQLite store README section and updated the implemented-features summary.
+
+## Patch 624 - passkey production checklist sync
+
+- Collapsed stale incremental passkey checklist sections into the final WebAuthn verification gate.
+- Clarified that passkey promotion requires an audited external assertion verifier and retained TOTP as the conservative production baseline.
+
+## Patch 625 - Lite specification phase 4 completion sync
+
+- Marked the Lite specification implementation blocks as completed repository work.
+- Kept the data-migration tool as the remaining explicit future item rather than implying it already exists.
