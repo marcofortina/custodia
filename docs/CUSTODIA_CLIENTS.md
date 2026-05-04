@@ -24,7 +24,7 @@ Principi comuni:
 
 | Linguaggio | Stato repository | Stato Fase 5 | Note |
 |------------|------------------|--------------|------|
-| **Go** | Esistente | Transport client presente; crypto client pianificato | `pkg/client` nel monorepo. |
+| **Go** | Esistente | Transport SDK pubblico transport in stabilizzazione; crypto client pianificato | `pkg/client` nel monorepo, con tipi/metodi pubblici senza `internal/*`. |
 | **Python** | Esistente | Transport client presente; crypto client pianificato | `clients/python` nel monorepo. |
 | **Node.js / TypeScript** | Non presente | Pianificato | Da aggiungere dopo spec crypto e test vectors. |
 | **Rust** | Non presente | Pianificato | Da aggiungere dopo Go/Python. |
@@ -319,7 +319,7 @@ un progetto Go esterno deve poter importare pkg/client e parlare con custodia-se
 Ordine consigliato:
 
 1. **Fase 5A**: riallineamento specifica client, `CLIENT_CRYPTO_SPEC.md`, test vectors.
-2. **Fase 5B**: stabilizzare `pkg/client` come SDK Go pubblico senza tipi `internal/*`, poi aggiungere Go high-level crypto client.
+2. **Fase 5B**: stabilizzare `pkg/client` come SDK Go pubblico senza tipi `internal/*`, chiudere i metodi transport pubblici e poi aggiungere Go high-level crypto client.
 3. **Fase 5C**: Python high-level crypto client sopra `clients/python`.
 4. **Fase 5D**: Node.js/TypeScript client.
 5. **Fase 5E**: Rust client.

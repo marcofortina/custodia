@@ -1,6 +1,6 @@
 # Custodia Go client SDK
 
-`pkg/client` is the repository Go transport client for Custodia. Phase 5 starts stabilizing it as a public SDK surface by adding public transport types that do not require external users to import `custodia/internal/*` packages.
+`pkg/client` is the repository Go transport client for Custodia. Phase 5 stabilizes the transport SDK surface by adding public transport types and methods that do not require external users to import `custodia/internal/*` packages.
 
 ## Current scope
 
@@ -28,12 +28,22 @@ created, err := c.CreateSecretPayload(client.CreateSecretPayload{
 })
 ```
 
-These types are stable SDK-facing types. They deliberately avoid exposing `internal/model`.
+These types and methods are SDK-facing transport APIs. `pkg/client/types.go` and `pkg/client/public_transport.go` deliberately avoid importing or exposing `custodia/internal/*`.
 
 ## Legacy methods
 
-Older methods such as `CreateSecret`, `GetSecret`, `ShareSecret` and `Me` remain for compatibility inside the monorepo, but they expose internal model types and should not be the public SDK surface for new external consumers.
+Older methods such as `CreateSecret`, `GetSecret`, `ShareSecret`, `Me`, `ListSecrets` and `ListClients` remain for compatibility inside the monorepo, but they expose internal model types and are documented as legacy helpers. New external consumers should use the public Phase 5 transport methods.
 
 ## External consumer contract
 
 The repository includes a compile test that creates a temporary external Go module, imports `custodia/pkg/client`, and verifies that the public Phase 5 SDK types compile without importing `custodia/internal/*`.
+
+
+## Public surface guardrails
+
+The repository enforces two guardrails:
+
+- `pkg/client/types.go` and `pkg/client/public_transport.go` must not import `custodia/internal/*`;
+- an external temporary Go module must compile against the public transport types and methods.
+
+These guardrails keep the transport SDK usable before high-level crypto clients are implemented.
