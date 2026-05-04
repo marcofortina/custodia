@@ -1,0 +1,17 @@
+[package]
+name = "custodia-client"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "MIT"
+description = "Custodia Rust transport client for opaque REST/mTLS payloads"
+
+[lib]
+name = "custodia_client"
+path = "src/lib.rs"
+
+[dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+urlencoding = "2.1"
