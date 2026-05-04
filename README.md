@@ -220,6 +220,7 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 - [Custodia client libraries specification](docs/CUSTODIA_CLIENTS.md)
 - [Go client SDK](docs/GO_CLIENT_SDK.md)
 - [Python client SDK](docs/PYTHON_CLIENT_SDK.md)
+- [Phase 5 closure tracker](docs/PHASE5_CLOSURE.md)
 - [Web MFA](docs/WEB_MFA.md)
 - [Web passkey support](docs/WEB_PASSKEY.md)
 - [CRL and OCSP operations](docs/CRL_OCSP_RUNBOOK.md)
