@@ -11,7 +11,7 @@ The Go client is a transport client:
 - it sends and receives opaque ciphertext/envelope payloads;
 - it does not encrypt plaintext, decrypt ciphertext or resolve recipient keys.
 
-High-level E2E crypto helpers are planned after `docs/CLIENT_CRYPTO_SPEC.md` and deterministic test vectors are complete.
+High-level E2E crypto helpers are planned after `docs/CLIENT_CRYPTO_SPEC.md` and deterministic test vectors are complete. The package now exposes the public crypto dependency interfaces that future helpers must use, but it still does not encrypt plaintext or decrypt ciphertext for callers.
 
 ## Public transport methods
 
@@ -46,6 +46,24 @@ artifact, err := c.ExportAuditEventArtifact(client.AuditEventFilters{Outcome: "f
 ```
 
 Public operational types include `OperationalStatus`, `BuildInfo`, `RuntimeDiagnostics`, `RevocationStatus`, `RevocationSerialStatus`, `AuditEvent` and `AuditExportArtifact`. These methods are metadata/operations-only helpers; they do not expose secret plaintext, ciphertext or envelopes in logs.
+
+## Public crypto interface contracts
+
+Future high-level Go crypto helpers must depend on explicit caller-provided crypto dependencies instead of resolving trust through Custodia server:
+
+```go
+opts := client.CryptoOptions{
+    PublicKeyResolver: resolver,
+    PrivateKeyProvider: privateKeys,
+    RandomSource: cryptoRandReader,
+    Clock: client.SystemClock{},
+}
+if err := opts.Validate(); err != nil {
+    return err
+}
+```
+
+`PublicKeyResolver` resolves recipient encryption keys outside Custodia. `PrivateKeyProvider` returns a local decrypter handle. `RandomSource` is caller-provided CSPRNG input and `Clock` exists for deterministic metadata/tests. These contracts keep the server out of public-key discovery and private-key handling.
 
 ## Legacy methods
 
