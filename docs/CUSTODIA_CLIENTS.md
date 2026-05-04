@@ -151,7 +151,7 @@ Test vectors minimi:
 | `aad_mismatch_fails.json` | AAD non coerente deve fallire. |
 | `unsupported_crypto_version_fails.json` | Versione non supportata deve fallire chiaramente. |
 
-Senza test vectors comuni, gli SDK non devono essere dichiarati ufficiali.
+Senza test vectors comuni, gli SDK non devono essere dichiarati ufficiali. La baseline attuale include solo fixture deterministiche per metadata/AAD (`canonical_aad`, `canonical_aad_sha256`, `expected_error`); i vector ciphertext/envelope completi restano un blocco successivo.
 
 ---
 

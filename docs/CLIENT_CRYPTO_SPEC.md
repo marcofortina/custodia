@@ -62,7 +62,7 @@ High-level clients must bind encryption to stable metadata. At minimum, v1 AAD m
 - secret name or secret id when available;
 - version id when creating a new version after the server returns it, or a documented pre-commit AAD value before persistence.
 
-The exact canonical AAD serialization must be covered by test vectors before crypto clients are marked official.
+The exact canonical AAD serialization is deterministic JSON produced by `internal/clientcrypto.BuildCanonicalAAD` and covered by fixtures. The current canonical object order is `version`, `content_cipher`, `envelope_scheme`, then optional resource bindings `secret_id`, `secret_name`, `version_id`.
 
 ## Error model
 
@@ -99,7 +99,7 @@ All official crypto clients must pass vectors under:
 testdata/client-crypto/v1/
 ```
 
-Until deterministic vectors are produced, the repository ships schema fixtures that define expected fields and failure cases. Language clients must not be declared high-level crypto clients until deterministic cryptographic vectors are present and passing.
+The repository currently ships deterministic metadata/AAD fixtures. Each non-schema fixture includes `aad_inputs`, `canonical_aad`, `canonical_aad_sha256` and `expected_error`. These are not full ciphertext/envelope cryptographic vectors yet; language clients must not be declared high-level crypto clients until deterministic ciphertext/envelope vectors are present and passing.
 
 
 ## Repository validator
@@ -112,4 +112,4 @@ content_cipher = aes-256-gcm
 envelope_scheme = hpke-v1
 ```
 
-This validator is not a high-level crypto client. It only keeps metadata parsing, error names and schema fixtures aligned before deterministic cryptographic vectors are added.
+This validator is not a high-level crypto client. It keeps metadata parsing, canonical AAD, error names and deterministic-AAD fixtures aligned before full deterministic cryptographic vectors are added.
