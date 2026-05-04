@@ -257,26 +257,57 @@ Use `custodia-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTL
 
 ### Operational runbooks
 
+The operational documentation is grouped by the workflow it supports, rather than by the order in which the documents were added.
+
+**Release readiness and closure**
+
 - [Production checklist](docs/PRODUCTION_CHECKLIST.md)
+- [Production readiness gate](docs/PRODUCTION_READINESS_GATE.md)
+- [Production external evidence gate](docs/PRODUCTION_EVIDENCE.md)
+- [Release check](docs/RELEASE_CHECK.md)
+- [Formal verification scope](docs/FORMAL_VERIFICATION.md)
 - [Phase 1 closure summary](docs/PHASE1_CLOSURE.md)
 - [Phase 2 closure summary](docs/PHASE2_CLOSURE.md)
 - [Phase 3 closure boundary](docs/PHASE3_CLOSURE.md)
+- [Phase 4 closure summary](docs/PHASE4_CLOSURE.md)
+- [Phase 5 closure tracker](docs/PHASE5_CLOSURE.md)
+
+**Lite deployment and upgrade path**
+
 - [Custodia Lite profile](docs/LITE_PROFILE.md)
 - [Custodia Lite configuration](docs/LITE_CONFIG.md)
-- [Lite SQLite store](docs/LITE_SQLITE_STORE.md)
 - [Lite installation guide](docs/LITE_INSTALL.md)
+- [Lite SQLite store](docs/LITE_SQLITE_STORE.md)
 - [Lite local CA bootstrap](docs/LITE_CA_BOOTSTRAP.md)
 - [Lite backup and restore](docs/LITE_BACKUP_RESTORE.md)
-- [Lite to Full upgrade path](docs/LITE_TO_FULL_UPGRADE.md)
 - [Lite migration readiness](docs/LITE_MIGRATION_READINESS.md)
-- [Phase 4 closure summary](docs/PHASE4_CLOSURE.md)
+- [Lite to Full upgrade path](docs/LITE_TO_FULL_UPGRADE.md)
+
+**High availability, backup and disaster recovery**
+
+- [Backup and restore runbook](docs/BACKUP_RESTORE_RUNBOOK.md)
 - [Disaster recovery runbook](docs/DR_RUNBOOK.md)
 - [Database HA runbook](docs/DATABASE_HA_RUNBOOK.md)
 - [k3s CockroachDB HA profile](docs/K3S_COCKROACHDB_HA.md)
-- [Backup and restore runbook](docs/BACKUP_RESTORE_RUNBOOK.md)
+
+**Identity, certificates and web authentication**
+
 - [CA signing service design](docs/CA_SIGNING_SERVICE.md)
-- [PKCS#11 and SoftHSM signer bridge](docs/PKCS11_SOFTHSM.md)
 - [Client certificate lifecycle](docs/CLIENT_CERTIFICATE_LIFECYCLE.md)
+- [CRL and OCSP operations](docs/CRL_OCSP_RUNBOOK.md)
+- [PKCS#11 and SoftHSM signer bridge](docs/PKCS11_SOFTHSM.md)
+- [Web MFA](docs/WEB_MFA.md)
+- [Web passkey support](docs/WEB_PASSKEY.md)
+
+**Audit, evidence and shipment**
+
+- [Audit archive runbook](docs/AUDIT_ARCHIVE_RUNBOOK.md)
+- [Audit shipment runbook](docs/AUDIT_SHIPMENT_RUNBOOK.md)
+- [S3 Object Lock audit shipment](docs/S3_OBJECT_LOCK_AUDIT_SHIPMENT.md)
+- [SIEM and WORM audit export](docs/SIEM_WORM_EXPORT.md)
+
+**Client SDKs and crypto contracts**
+
 - [Custodia client libraries specification](docs/CLIENT_LIBRARIES.md)
 - [Client crypto specification](docs/CLIENT_CRYPTO_SPEC.md)
 - [Go client SDK](docs/GO_CLIENT_SDK.md)
@@ -286,18 +317,6 @@ Use `custodia-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTL
 - [C++ client SDK](docs/CPP_CLIENT_SDK.md)
 - [Rust client SDK](docs/RUST_CLIENT_SDK.md)
 - [Bash transport helper](docs/BASH_TRANSPORT_HELPER.md)
-- [Phase 5 closure tracker](docs/PHASE5_CLOSURE.md)
-- [Web MFA](docs/WEB_MFA.md)
-- [Web passkey support](docs/WEB_PASSKEY.md)
-- [CRL and OCSP operations](docs/CRL_OCSP_RUNBOOK.md)
-- [SIEM and WORM audit export](docs/SIEM_WORM_EXPORT.md)
-- [S3 Object Lock audit shipment](docs/S3_OBJECT_LOCK_AUDIT_SHIPMENT.md)
-- [Audit shipment runbook](docs/AUDIT_SHIPMENT_RUNBOOK.md)
-- [Audit archive runbook](docs/AUDIT_ARCHIVE_RUNBOOK.md)
-- [Formal verification scope](docs/FORMAL_VERIFICATION.md)
-- [Release check](docs/RELEASE_CHECK.md)
-- [Production readiness gate](docs/PRODUCTION_READINESS_GATE.md)
-- [Production external evidence gate](docs/PRODUCTION_EVIDENCE.md)
 
 
 ### Formal verification
