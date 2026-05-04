@@ -74,7 +74,9 @@ bitcoin:36jDV57roGb4o59TwK1CB7viPrXToQHGiP
 - Rust transport and crypto: [`docs/RUST_CLIENT_SDK.md`](docs/RUST_CLIENT_SDK.md)
 - Bash transport helper: [`docs/BASH_TRANSPORT_HELPER.md`](docs/BASH_TRANSPORT_HELPER.md)
 - Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
+- SDK release policy: [`docs/SDK_RELEASE_POLICY.md`](docs/SDK_RELEASE_POLICY.md)
 - Linux DEB/RPM packaging: [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md)
+- SBOM artifacts: [`docs/SBOM.md`](docs/SBOM.md)
 
 ## Linux packages
 

@@ -76,3 +76,7 @@ make test-bash-client
 ```
 
 Phase 5 is complete at repository level for Go, Python, Node.js/TypeScript, Java, C++ and Rust transport plus high-level crypto. Bash is included as a post-roadmap transport helper with an optional external crypto-provider bridge. Package publishing and release support policies remain future work outside this closure.
+
+## Post-closure release policy
+
+SDK release, versioning and publication rules are tracked in [`SDK_RELEASE_POLICY.md`](SDK_RELEASE_POLICY.md). Fase 5 closes repository-level SDK implementation and verification; public registry publication is a release-management step, not a server crypto-boundary change.

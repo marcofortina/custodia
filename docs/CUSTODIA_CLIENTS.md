@@ -494,3 +494,9 @@ Una libreria client può essere marcata ufficiale solo se:
 - non logga materiale sensibile;
 - espone API coerenti con gli altri linguaggi;
 - mantiene compatibilità con `Vault-REST.md`.
+
+## SDK release policy
+
+SDK publication and versioning rules are defined in [`SDK_RELEASE_POLICY.md`](SDK_RELEASE_POLICY.md).
+
+The Linux `custodia-clients` package is a source snapshot and Bash helper distribution. Native registry publication remains separate and must follow each ecosystem's release process.
