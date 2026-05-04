@@ -18,7 +18,7 @@ fmt:
 
 
 .PHONY: check
-check: test build test-python-client test-node-client
+check: test build test-python-client test-node-client test-java-client
 	python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py clients/python/custodia_client/crypto.py
 	node --check clients/node/src/index.js
 	node --check clients/node/src/crypto.js
@@ -30,6 +30,13 @@ test-python-client:
 .PHONY: test-node-client
 test-node-client:
 	npm test --prefix clients/node
+
+.PHONY: test-java-client
+test-java-client:
+	rm -rf /tmp/custodia-java-client-classes
+	mkdir -p /tmp/custodia-java-client-classes
+	javac -d /tmp/custodia-java-client-classes $$(find clients/java/src/main/java clients/java/src/test/java -name '*.java' | sort)
+	java -cp /tmp/custodia-java-client-classes dev.custodia.client.CustodiaClientTest
 
 .PHONY: run-dev
 run-dev:
