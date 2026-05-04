@@ -317,9 +317,12 @@ func runRevocationFetchCRL(cfg *cliConfig, args []string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-	_, err = requestRaw(cfg, http.MethodGet, "/v1/crl.pem", nil, file)
-	return err
+	_, requestErr := requestRaw(cfg, http.MethodGet, "/v1/crl.pem", nil, file)
+	closeErr := file.Close()
+	if requestErr != nil {
+		return requestErr
+	}
+	return closeErr
 }
 
 func runCABootstrapLocal(args []string) error {
@@ -443,9 +446,12 @@ func writeExclusive(path string, data []byte, perm os.FileMode) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-	_, err = file.Write(data)
-	return err
+	_, writeErr := file.Write(data)
+	closeErr := file.Close()
+	if writeErr != nil {
+		return writeErr
+	}
+	return closeErr
 }
 
 func runClientList(cfg *cliConfig, args []string) error {

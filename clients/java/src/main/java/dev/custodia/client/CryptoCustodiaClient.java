@@ -319,7 +319,14 @@ public final class CryptoCustodiaClient {
         while (end < json.length() && Character.isDigit(json.charAt(end))) {
             end++;
         }
-        return end == start ? 0 : Integer.parseInt(json.substring(start, end));
+        if (end == start) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(json.substring(start, end));
+        } catch (NumberFormatException err) {
+            throw new IllegalArgumentException("integer field is out of range: " + field, err);
+        }
     }
 
     private static String objectField(String json, String field) {

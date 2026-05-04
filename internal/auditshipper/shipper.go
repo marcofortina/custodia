@@ -125,10 +125,14 @@ func copyFile(source, dest string, perm os.FileMode) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer output.Close()
 	hasher := sha256.New()
-	if _, err := io.Copy(io.MultiWriter(output, hasher), input); err != nil {
-		return "", err
+	_, copyErr := io.Copy(io.MultiWriter(output, hasher), input)
+	closeErr := output.Close()
+	if copyErr != nil {
+		return "", copyErr
+	}
+	if closeErr != nil {
+		return "", closeErr
 	}
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }

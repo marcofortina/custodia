@@ -272,7 +272,12 @@ public final class CustodiaClient {
             return;
         }
         if (filters.containsKey("limit")) {
-            int limit = Integer.parseInt(filters.get("limit"));
+            int limit;
+            try {
+                limit = Integer.parseInt(filters.get("limit"));
+            } catch (NumberFormatException err) {
+                throw new IllegalArgumentException("limit must be an integer", err);
+            }
             validateOptionalLimit(limit);
         }
     }

@@ -369,9 +369,16 @@ public final class CustodiaCrypto {
     }
 
     private static byte[] hex(String value) {
+        if (value.length() % 2 != 0) {
+            throw new IllegalArgumentException("hex value must have an even length");
+        }
         byte[] out = new byte[value.length() / 2];
-        for (int i = 0; i < out.length; i++) {
-            out[i] = (byte) Integer.parseInt(value.substring(i * 2, i * 2 + 2), 16);
+        try {
+            for (int i = 0; i < out.length; i++) {
+                out[i] = (byte) Integer.parseInt(value.substring(i * 2, i * 2 + 2), 16);
+            }
+        } catch (NumberFormatException err) {
+            throw new IllegalArgumentException("hex value must contain only hexadecimal characters", err);
         }
         return out;
     }

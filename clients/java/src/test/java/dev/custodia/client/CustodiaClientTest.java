@@ -22,6 +22,7 @@ public final class CustodiaClientTest {
         routesOpaqueSecretPayloads();
         validatesHttpErrors();
         exportsAuditMetadataHeaders();
+        rejectsInvalidFilterLimit();
         validatesRequiredConfig();
     }
 
@@ -81,6 +82,18 @@ public final class CustodiaClientTest {
         assertEquals("abc123", export.sha256(), "sha256");
         assertEquals("1", export.eventCount(), "event count");
         assertEquals("event_id,action\n1,read\n", new String(export.body(), StandardCharsets.UTF_8), "export body");
+    }
+
+    private static void rejectsInvalidFilterLimit() throws Exception {
+        CustodiaClient client = CustodiaClient.withTransport(testConfig(), new CapturingTransport(200, "{}"));
+        Map<String, String> filters = new LinkedHashMap<>();
+        filters.put("limit", "not-a-number");
+        try {
+            client.exportAuditEventArtifact(filters);
+            throw new AssertionError("expected invalid limit error");
+        } catch (IllegalArgumentException err) {
+            assertEquals("limit must be an integer", err.getMessage(), "limit error");
+        }
     }
 
     private static void validatesRequiredConfig() {
