@@ -42,7 +42,7 @@ When `CUSTODIA_CLIENT_CRL_FILE` is configured, the mTLS verifier fails closed on
 
 ## Web user metadata boundary
 
-The HTTP `/web/` shell is currently protected by mTLS admin authorization until dedicated MFA/passkey web sessions are implemented. The PostgreSQL schema includes `web_users` and `web_user_mappings` for the metadata-only admin console described by the design document. These tables store authentication and role metadata only. They do not store plaintext secrets, client encryption keys, public-key directories or decryptable envelopes. Web operators can only be mapped to existing `client_id` subjects; access activation still requires an opaque envelope produced outside the vault by a subject with `share` permission.
+The HTTP `/web/` shell is protected by admin mTLS authorization and can require a TOTP-backed signed web session. Passkey/WebAuthn challenge, credential metadata and external assertion-verifier delegation are available for deployments that enable passkeys. The PostgreSQL schema includes `web_users` and `web_user_mappings` for the metadata-only admin console described by the design document. These tables store authentication and role metadata only. They do not store plaintext secrets, client encryption keys, public-key directories or decryptable envelopes. Web operators can only be mapped to existing `client_id` subjects; access activation still requires an opaque envelope produced outside the vault by a subject with `share` permission.
 
 
 ## Explicit remaining security gaps

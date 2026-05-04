@@ -122,7 +122,7 @@ Create, share, new-version and pending grant request payloads may include `expir
 
 `GET /web/`
 
-The current web console shell is protected by the same mTLS admin guard as admin APIs until the dedicated username/password + MFA/passkey web authentication flow is implemented. It is metadata-only and must not expose plaintext, ciphertext reads, envelopes or client-side key material.
+The current web console shell is protected by the same admin mTLS guard as admin APIs and can require a TOTP-backed signed web session. Passkey/WebAuthn challenge and external assertion-verifier delegation are available when configured. The console remains metadata-only and must not expose plaintext, ciphertext reads, envelopes or client-side key material.
 
 
 ## Request correlation

@@ -19,7 +19,7 @@ The Custodia web console is an admin-only, metadata-only surface.
 - `/web/audit` — latest audit metadata.
 - `/web/audit/verify` — audit hash-chain verification summary.
 
-The API remains the source of truth for automation; the web console is intentionally small until MFA/passkey support is implemented.
+The API remains the source of truth for automation; the web console is intentionally small and metadata-only even when TOTP/passkey web authentication is enabled.
 
 ## Query filters
 
