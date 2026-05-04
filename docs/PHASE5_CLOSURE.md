@@ -9,7 +9,9 @@ Phase 5 tracks official client libraries and client-side cryptography.
 - Client crypto test-vector scaffold added.
 - Go transport client public SDK types added so external consumers do not need to import `custodia/internal/*`.
 - Go transport public methods added for opaque payload operations.
-- External Go consumer compile guard added.
+- Public Go transport files no longer import `custodia/internal/*`.
+- Legacy Go helpers that expose internal model types are documented as monorepo compatibility helpers.
+- External Go consumer compile guard added for public transport types and methods.
 - Go and Python transport SDK guides added.
 
 ## Still open
