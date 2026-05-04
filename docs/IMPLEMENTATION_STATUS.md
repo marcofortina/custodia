@@ -1237,3 +1237,8 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 649 - Go client SDK boundary docs
 
 - Updated Go SDK and client-library docs after the public transport cleanup.
+
+## Patch 651 - Phase 5 closure tracker Go transport cleanup sync
+
+- Updated `docs/PHASE5_CLOSURE.md` to reflect that Go public transport files no longer import `custodia/internal/*`.
+- Documented the legacy internal-model helpers as monorepo compatibility helpers.
