@@ -18,7 +18,7 @@ RUN go build -tags="${GO_BUILD_TAGS}" -trimpath -ldflags="-s -w -X custodia/inte
  && go build -tags="${GO_BUILD_TAGS}" -trimpath -ldflags="-s -w -X custodia/internal/build.Version=${CUSTODIA_VERSION} -X custodia/internal/build.Commit=${CUSTODIA_COMMIT} -X custodia/internal/build.Date=${CUSTODIA_DATE}" -o /out/custodia-admin ./cmd/custodia-admin \
  && go build -tags="${GO_BUILD_TAGS}" -trimpath -ldflags="-s -w -X custodia/internal/build.Version=${CUSTODIA_VERSION} -X custodia/internal/build.Commit=${CUSTODIA_COMMIT} -X custodia/internal/build.Date=${CUSTODIA_DATE}" -o /out/custodia-signer ./cmd/custodia-signer
 
-FROM alpine:3.21
+FROM alpine:3.23
 RUN addgroup -S custodia && adduser -S -G custodia custodia
 WORKDIR /app
 COPY --from=builder /out/custodia-server /usr/local/bin/custodia-server
