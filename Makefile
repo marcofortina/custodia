@@ -113,3 +113,7 @@ test-sqlite:
 .PHONY: sqlite-backup
 sqlite-backup:
 	./scripts/sqlite-backup.sh
+
+.PHONY: lite-upgrade-check
+lite-upgrade-check:
+	./scripts/lite-upgrade-check.sh
