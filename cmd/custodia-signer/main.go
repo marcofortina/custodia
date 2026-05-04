@@ -47,6 +47,8 @@ type signerConfig struct {
 	crlFile             string
 }
 
+// signerServer owns only certificate lifecycle operations. It never participates
+// in application-secret encryption, which remains entirely client-side.
 type signerServer struct {
 	signer          *signing.ClientCertificateSigner
 	adminSubjects   map[string]bool
@@ -115,6 +117,8 @@ type contextKey string
 
 const requestIDContextKey contextKey = "request_id"
 
+// newSignerServer exposes a deliberately small API surface: health, CRL/status,
+// and CSR signing. Narrow routing reduces CA-key exposure in production.
 func newSignerServer(clientSigner *signing.ClientCertificateSigner, adminSubjects map[string]bool, defaultTTLHours int, devInsecureHTTP bool, auditRecorder signeraudit.Recorder, crlFile string) http.Handler {
 	if auditRecorder == nil {
 		auditRecorder = signeraudit.NopRecorder{}
@@ -139,6 +143,8 @@ func newSignerServer(clientSigner *signing.ClientCertificateSigner, adminSubject
 	return requestIDs(securityHeaders(mux))
 }
 
+// requestIDs accepts a safe upstream request id when present and otherwise
+// generates one, so signer audit records can be correlated without trusting input.
 func requestIDs(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestID := strings.TrimSpace(r.Header.Get("X-Request-ID"))
@@ -221,6 +227,8 @@ func (s *signerServer) handleRevocationSerialStatus(w http.ResponseWriter, r *ht
 	writeJSON(w, http.StatusOK, status)
 }
 
+// handleSignClientCertificate is the CA boundary: caller identity is mTLS admin
+// subject, while the CSR subject is validated separately by the signer package.
 func (s *signerServer) handleSignClientCertificate(w http.ResponseWriter, r *http.Request) {
 	actor := s.actor(r)
 	if !s.authorized(r) {

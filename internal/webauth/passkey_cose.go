@@ -21,6 +21,8 @@ type PasskeyCredentialKeyMetadata struct {
 	Type      string `json:"type"`
 }
 
+// ParsePasskeyCredentialKeyCOSE accepts only the credential-key shapes Custodia
+// can safely describe and hand to the external assertion verifier.
 func ParsePasskeyCredentialKeyCOSE(raw []byte) (PasskeyCredentialKeyMetadata, error) {
 	if len(raw) == 0 || len(raw) > 4096 {
 		return PasskeyCredentialKeyMetadata{}, ErrInvalidPasskeyCredentialKeyCOSE

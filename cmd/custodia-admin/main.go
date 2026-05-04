@@ -37,6 +37,8 @@ import (
 	"custodia/internal/signing"
 )
 
+// cliConfig keeps transport flags separate from command-specific flags so every
+// admin command inherits the same mTLS boundary and timeout behavior.
 type cliConfig struct {
 	serverURL string
 	certFile  string
@@ -133,6 +135,8 @@ func main() {
 	}
 }
 
+// runProductionCheck intentionally validates environment files offline.
+// Production readiness must be reproducible without contacting the running vault.
 func runProductionCheck(args []string) error {
 	cmd := flag.NewFlagSet("production check", flag.ExitOnError)
 	envFile := cmd.String("env-file", "", "environment file to validate")
@@ -158,6 +162,8 @@ func runProductionCheck(args []string) error {
 	return nil
 }
 
+// runProductionEvidenceCheck verifies operator-supplied evidence paths instead of
+// trusting configuration flags that merely claim external controls are enabled.
 func runProductionEvidenceCheck(args []string) error {
 	cmd := flag.NewFlagSet("production evidence-check", flag.ExitOnError)
 	envFile := cmd.String("env-file", "", "environment file containing external evidence paths")
@@ -649,6 +655,8 @@ func runAuditArchiveExport(args []string) error {
 	return err
 }
 
+// runAuditVerifyExport binds the exported body to the digest and event-count
+// headers returned by the API. This catches truncated or swapped audit artifacts.
 func runAuditVerifyExport(args []string) error {
 	cmd := flag.NewFlagSet("audit verify-export", flag.ExitOnError)
 	bodyFile := cmd.String("file", "", "JSONL audit export file")

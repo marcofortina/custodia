@@ -28,6 +28,8 @@ type SessionManager struct {
 	ttl time.Duration
 }
 
+// NewSessionManager requires an operator-provided secret rather than deriving one
+// from process state, keeping web sessions stable across stateless replicas.
 func NewSessionManager(secret string, ttl time.Duration) (*SessionManager, error) {
 	secret = strings.TrimSpace(secret)
 	if len(secret) < 32 {
@@ -55,6 +57,8 @@ func (m *SessionManager) Issue(subject string, now time.Time) (string, time.Time
 	return base64.RawURLEncoding.EncodeToString([]byte(payload)) + "." + signature, expires
 }
 
+// Verify compares the HMAC before parsing trusted fields, so tampered payloads
+// never influence subject or expiry handling.
 func (m *SessionManager) Verify(token string, now time.Time) (string, bool) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 2 {

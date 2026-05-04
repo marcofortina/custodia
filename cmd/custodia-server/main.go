@@ -26,6 +26,8 @@ import (
 	"custodia/internal/store"
 )
 
+// main wires the runtime boundary: opaque secret storage, mTLS identity,
+// rate limiting, and web MFA all terminate in the HTTP API layer below.
 func main() {
 	cfg, err := config.LoadWithArgs(os.Args[1:])
 	if err != nil {
@@ -136,6 +138,8 @@ func main() {
 	shutdownServer(shutdownCtx, healthServer)
 }
 
+// resolvedStoreBackend preserves the historical convenience where DATABASE_URL
+// selects Postgres unless an explicit backend/profile has already made a choice.
 func resolvedStoreBackend(cfg config.Config) string {
 	backend := strings.ToLower(strings.TrimSpace(cfg.StoreBackend))
 	if backend == "" {
@@ -158,6 +162,8 @@ func resolvedRateLimitBackend(cfg config.Config) string {
 	return backend
 }
 
+// buildStore is the only place where deployment profile storage becomes runtime
+// storage. Keeping it centralized prevents Lite/FULL drift in HTTP handlers.
 func buildStore(ctx context.Context, cfg config.Config) (store.Store, func(), error) {
 	switch resolvedStoreBackend(cfg) {
 	case "postgres":
@@ -200,6 +206,8 @@ func validateAdminClientIDs(adminClientIDs map[string]bool) error {
 	return nil
 }
 
+// bootstrapClients is idempotent by design so package examples and single-node
+// Lite deployments can restart without recreating initial client identities.
 func bootstrapClients(ctx context.Context, vaultStore store.Store, clients map[string]string) error {
 	for clientID, subject := range clients {
 		if !model.ValidClientID(clientID) || !model.ValidMTLSSubject(subject) {

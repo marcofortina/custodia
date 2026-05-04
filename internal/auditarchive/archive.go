@@ -35,6 +35,8 @@ type ArchiveResult struct {
 	Verification auditartifact.Verification `json:"verification"`
 }
 
+// Archive verifies the export before writing any archive files. The archive is an
+// evidence bundle, not merely a copy of API output.
 func Archive(exportBody []byte, sha256Value string, eventsValue string, archiveDir string, now time.Time) (ArchiveResult, error) {
 	archiveDir = strings.TrimSpace(archiveDir)
 	if archiveDir == "" {

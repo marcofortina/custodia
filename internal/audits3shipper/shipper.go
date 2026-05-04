@@ -61,6 +61,8 @@ type ShipmentResult struct {
 	Verification auditartifact.Verification `json:"verification"`
 }
 
+// ShipArchive requires Object Lock metadata before uploading. A successful PUT
+// without retention would not satisfy the immutable-audit production boundary.
 func ShipArchive(ctx context.Context, archiveDir string, cfg Config) (ShipmentResult, error) {
 	if err := cfg.validate(); err != nil {
 		return ShipmentResult{}, err
@@ -182,6 +184,8 @@ func (cfg Config) putObject(ctx context.Context, key string, body []byte) (int, 
 	return res.StatusCode, digestHex, nil
 }
 
+// signRequest implements the narrow SigV4 subset needed for S3-compatible Object
+// Lock uploads. Keep canonicalization local and deterministic for smoke tests.
 func signRequest(req *http.Request, cfg Config, payloadHash string, now time.Time) {
 	date := now.Format("20060102")
 	credentialScope := date + "/" + cfg.Region + "/s3/aws4_request"

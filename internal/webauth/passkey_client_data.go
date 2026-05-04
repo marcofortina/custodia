@@ -22,6 +22,8 @@ type PasskeyClientData struct {
 	Origin    string `json:"origin"`
 }
 
+// VerifyPasskeyClientDataJSON checks the browser-supplied ceremony metadata before
+// signature verification, binding type, challenge, and origin to this session.
 func VerifyPasskeyClientDataJSON(raw []byte, expectedType, expectedChallenge, expectedOrigin string) (*PasskeyClientData, error) {
 	var data PasskeyClientData
 	if err := json.Unmarshal(raw, &data); err != nil {

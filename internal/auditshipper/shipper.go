@@ -37,6 +37,8 @@ type ShipmentResult struct {
 	Files           map[string]string `json:"files"`
 }
 
+// ShipArchive re-verifies the archive before shipment and records per-file hashes
+// so offline sinks can be audited without trusting filesystem timestamps.
 func ShipArchive(sourceDir string, sinkRoot string, now time.Time) (ShipmentResult, error) {
 	sourceDir = strings.TrimSpace(sourceDir)
 	sinkRoot = strings.TrimSpace(sinkRoot)

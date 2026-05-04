@@ -35,6 +35,8 @@ func NewPasskeyCredentialStore() *PasskeyCredentialStore {
 	return &PasskeyCredentialStore{credentials: map[string]PasskeyCredentialRecord{}}
 }
 
+// Register clones credential key material on ingress so callers cannot mutate the
+// in-memory credential after registration.
 func (s *PasskeyCredentialStore) Register(record PasskeyCredentialRecord) bool {
 	if s == nil || strings.TrimSpace(record.CredentialID) == "" || strings.TrimSpace(record.ClientID) == "" || record.CreatedAt.IsZero() {
 		return false
@@ -89,6 +91,8 @@ func (s *PasskeyCredentialStore) Touch(credentialID, clientID string, now time.T
 	return record, nil
 }
 
+// TouchWithSignCount updates last-used metadata only after counter validation, so
+// a replayed assertion cannot refresh a credential.
 func (s *PasskeyCredentialStore) TouchWithSignCount(credentialID, clientID string, signCount uint32, now time.Time) (PasskeyCredentialRecord, error) {
 	if s == nil || now.IsZero() {
 		return PasskeyCredentialRecord{}, ErrPasskeyCredentialNotFound

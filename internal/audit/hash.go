@@ -14,6 +14,8 @@ import (
 	"custodia/internal/model"
 )
 
+// hashableEvent is the canonical audit hash payload. Only stable, intentional
+// fields are included so verification stays reproducible across stores/exporters.
 type hashableEvent struct {
 	EventID       string          `json:"event_id"`
 	OccurredAt    string          `json:"occurred_at"`
@@ -26,6 +28,8 @@ type hashableEvent struct {
 	PreviousHash  []byte          `json:"previous_hash,omitempty"`
 }
 
+// ComputeHash links each event to the previous event hash. The timestamp format is
+// fixed to nanosecond UTC to avoid locale or database-driver drift.
 func ComputeHash(previous []byte, event model.AuditEvent) []byte {
 	payload := hashableEvent{
 		EventID:       event.EventID,

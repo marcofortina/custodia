@@ -48,6 +48,8 @@ func TOTPCode(secret string, now time.Time) (string, error) {
 	return hotp(key, counter), nil
 }
 
+// VerifyTOTP allows a small caller-selected time window for clock drift while
+// still comparing candidate codes in constant time.
 func VerifyTOTP(secret, code string, now time.Time, window int) bool {
 	code = strings.TrimSpace(code)
 	if !validTOTPCodeFormat(code) || window < 0 {

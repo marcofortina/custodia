@@ -33,6 +33,8 @@ type Verification struct {
 	Valid          bool   `json:"valid"`
 }
 
+// Verify binds the artifact body to both digest and event-count metadata. The
+// count check catches empty/truncated JSONL exports with a valid-looking checksum.
 func Verify(body []byte, expectedSHA256 string, expectedEvents string) (Verification, error) {
 	expectedSHA256 = strings.TrimSpace(expectedSHA256)
 	if len(expectedSHA256) != sha256.Size*2 {

@@ -20,6 +20,8 @@ type Finding struct {
 	Message  string `json:"message"`
 }
 
+// CheckEnvironment is intentionally policy-only: it classifies configuration
+// readiness but does not mutate env files or silently downgrade production goals.
 func CheckEnvironment(env map[string]string) []Finding {
 	findings := []Finding{}
 	profile := strings.ToLower(envValue(env, "CUSTODIA_PROFILE"))
@@ -31,6 +33,8 @@ func CheckEnvironment(env map[string]string) []Finding {
 	return findings
 }
 
+// checkLiteEnvironment keeps Lite simple without weakening the security model:
+// mTLS, MFA, audit integrity, and opaque crypto boundaries remain mandatory.
 func checkLiteEnvironment(env map[string]string, findings *[]Finding) {
 	add := func(code, severity, message string) { addFinding(findings, code, severity, message) }
 	if truthy(envValue(env, "CUSTODIA_DEV_INSECURE_HTTP")) {
@@ -79,6 +83,8 @@ func checkLiteEnvironment(env map[string]string, findings *[]Finding) {
 	}
 }
 
+// checkFullEnvironment treats FULL production as evidence-driven. Warnings are
+// reserved for topology quality; missing security boundaries are critical.
 func checkFullEnvironment(env map[string]string, findings *[]Finding) {
 	add := func(code, severity, message string) { addFinding(findings, code, severity, message) }
 	if truthy(envValue(env, "CUSTODIA_DEV_INSECURE_HTTP")) {

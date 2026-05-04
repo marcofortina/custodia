@@ -37,6 +37,8 @@ type passkeyAssertionVerificationResponse struct {
 	Error string `json:"error,omitempty"`
 }
 
+// VerifyPasskeyAssertionWithCommand delegates full signature verification to an
+// external verifier so the server keeps a small, auditable WebAuthn boundary.
 func VerifyPasskeyAssertionWithCommand(ctx context.Context, command string, request PasskeyAssertionVerificationRequest) error {
 	command = strings.TrimSpace(command)
 	if command == "" || strings.TrimSpace(request.CredentialID) == "" || strings.TrimSpace(request.ClientID) == "" || strings.TrimSpace(request.ClientDataJSON) == "" || strings.TrimSpace(request.AuthenticatorData) == "" || strings.TrimSpace(request.Signature) == "" || strings.TrimSpace(request.CredentialKeyCOSE) == "" {

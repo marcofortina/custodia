@@ -9,6 +9,8 @@ package productioncheck
 
 import "strings"
 
+// requiredEvidence captures controls that cannot be proven from process
+// configuration alone, such as HSM attestation and immutable storage retention.
 var requiredEvidence = []struct {
 	key     string
 	code    string
@@ -26,6 +28,8 @@ var requiredEvidence = []struct {
 	{"CUSTODIA_EVIDENCE_RELEASE_CHECK_FILE", "evidence_release_check", "release-check evidence is required for release closure"},
 }
 
+// CheckExternalEvidence validates that operator evidence has been provided. It
+// intentionally does not parse vendor artifacts, which differ by deployment target.
 func CheckExternalEvidence(env map[string]string) []Finding {
 	var findings []Finding
 	for _, requirement := range requiredEvidence {

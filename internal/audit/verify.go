@@ -22,6 +22,8 @@ type VerificationResult struct {
 	FailureReason  string `json:"failure_reason,omitempty"`
 }
 
+// VerifyChain fail-stops at the first broken link. Returning the failure index is
+// useful for operators without revealing or rewriting the audit data.
 func VerifyChain(events []model.AuditEvent) VerificationResult {
 	result := VerificationResult{Valid: true, VerifiedEvents: len(events), FailureIndex: -1}
 	var previousHash []byte

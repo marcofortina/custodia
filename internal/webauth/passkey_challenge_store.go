@@ -42,6 +42,8 @@ func (s *PasskeyChallengeStore) Store(record PasskeyChallengeRecord) bool {
 	return true
 }
 
+// Consume deletes the challenge before validation returns. This makes challenge
+// replay fail even when the caller supplied the wrong client or purpose.
 func (s *PasskeyChallengeStore) Consume(challenge, clientID, purpose string, now time.Time) (PasskeyChallengeRecord, error) {
 	if s == nil {
 		return PasskeyChallengeRecord{}, ErrPasskeyChallengeNotFound

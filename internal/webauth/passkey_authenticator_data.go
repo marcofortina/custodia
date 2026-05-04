@@ -54,6 +54,8 @@ func ParsePasskeyAuthenticatorDataBase64URL(value string) (*PasskeyAuthenticator
 	return ParsePasskeyAuthenticatorData(raw)
 }
 
+// ValidatePasskeyAuthenticatorData binds assertions to the configured RP ID and
+// rejects assertions that do not prove user presence/verification as required.
 func ValidatePasskeyAuthenticatorData(data *PasskeyAuthenticatorData, rpID string, requireUserVerified bool) error {
 	rpID = strings.TrimSpace(rpID)
 	if data == nil || rpID == "" || !data.UserPresent {
@@ -69,6 +71,8 @@ func ValidatePasskeyAuthenticatorData(data *PasskeyAuthenticatorData, rpID strin
 	return nil
 }
 
+// ValidatePasskeySignCount provides clone/replay detection when authenticators
+// maintain monotonically increasing counters. Zero means the device did not help.
 func ValidatePasskeySignCount(previous, current uint32) error {
 	if previous == 0 {
 		return nil

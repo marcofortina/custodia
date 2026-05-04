@@ -15,6 +15,8 @@ import (
 	"time"
 )
 
+// PasskeyChallengeBytes gives 256 bits of entropy encoded as base64url without
+// padding, matching browser WebAuthn challenge expectations.
 const PasskeyChallengeBytes = 32
 
 var ErrInvalidPasskeyConfig = errors.New("invalid passkey config")
@@ -38,6 +40,8 @@ func NewPasskeyChallenge() (string, error) {
 	return base64.RawURLEncoding.EncodeToString(buf), nil
 }
 
+// NewPasskeyOptions always requires user verification. Custodia treats passkeys
+// as a strong web factor, not as a convenience-only presence check.
 func NewPasskeyOptions(rpID, rpName, userID, userName string, timeout time.Duration, registration bool) (*PasskeyOptions, error) {
 	rpID = strings.TrimSpace(rpID)
 	rpName = strings.TrimSpace(rpName)
