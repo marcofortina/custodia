@@ -12,31 +12,31 @@ func TestClientCryptoVectorScaffoldIsVersioned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Glob() error = %v", err)
 	}
-	if len(paths) < 4 {
+	if len(paths) < 9 {
 		t.Fatalf("expected vector scaffold files, got %d", len(paths))
 	}
 	for _, path := range paths {
-		payload, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("ReadFile(%s) error = %v", path, err)
-		}
-		var doc map[string]any
-		if err := json.Unmarshal(payload, &doc); err != nil {
-			t.Fatalf("Unmarshal(%s) error = %v", path, err)
-		}
-		metadata, _ := doc["crypto_metadata"].(map[string]any)
 		if filepath.Base(path) == "schema.json" {
-			if doc["version"] != "custodia.client-crypto.v1" {
-				t.Fatalf("schema version mismatch in %s", path)
-			}
+			assertSchemaVersion(t, path)
 			continue
 		}
-		metadataPayload, err := json.Marshal(metadata)
-		if err != nil {
-			t.Fatalf("Marshal(metadata %s) error = %v", path, err)
+		if _, err := LoadVector(path); err != nil {
+			t.Fatalf("LoadVector(%s) error = %v", path, err)
 		}
-		if _, err := ParseMetadata(metadataPayload); err != nil {
-			t.Fatalf("ParseMetadata(%s) error = %v", path, err)
-		}
+	}
+}
+
+func assertSchemaVersion(t *testing.T, path string) {
+	t.Helper()
+	payload, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile(%s) error = %v", path, err)
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(payload, &doc); err != nil {
+		t.Fatalf("Unmarshal(%s) error = %v", path, err)
+	}
+	if doc["version"] != VersionV1 {
+		t.Fatalf("schema version mismatch in %s", path)
 	}
 }
