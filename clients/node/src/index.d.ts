@@ -134,4 +134,174 @@ export class CustodiaClient {
   revocationSerialStatusInfo(serialHex: string): Promise<JsonObject>;
   listAuditEventMetadata(filters?: AuditEventFilters): Promise<JsonObject>;
   exportAuditEventArtifact(filters?: AuditEventFilters): Promise<AuditExportArtifact>;
+  withCrypto(options: CryptoOptions): CryptoCustodiaClient;
 }
+
+export const CryptoVersionV1: "custodia.client-crypto.v1";
+export const ContentCipherV1: "aes-256-gcm";
+export const EnvelopeSchemeHPKEV1: "hpke-v1";
+export const AES256GCMKeyBytes: 32;
+export const AESGCMNonceBytes: 12;
+export const AESGCMTagBytes: 16;
+export const X25519KeyBytes: 32;
+
+export class CryptoError extends Error {}
+export class UnsupportedCryptoVersion extends CryptoError {}
+export class UnsupportedContentCipher extends CryptoError {}
+export class UnsupportedEnvelopeScheme extends CryptoError {}
+export class MalformedCryptoMetadata extends CryptoError {}
+export class MalformedAAD extends CryptoError {}
+export class CiphertextAuthenticationFailed extends CryptoError {}
+export class WrongRecipient extends CryptoError {}
+
+export interface CanonicalAADInputOptions {
+  secretID?: string;
+  secretName?: string;
+  versionID?: string;
+}
+
+export class CanonicalAADInputs {
+  constructor(options?: CanonicalAADInputOptions);
+  secretID: string;
+  secretName: string;
+  versionID: string;
+  static fromMapping(value?: JsonObject | null): CanonicalAADInputs;
+  toMetadataObject(): JsonObject;
+}
+
+export interface CryptoMetadataOptions {
+  version?: string;
+  contentCipher?: string;
+  envelopeScheme?: string;
+  contentNonceB64?: string;
+  aad?: CanonicalAADInputs | null;
+}
+
+export class CryptoMetadata {
+  constructor(options?: CryptoMetadataOptions);
+  version: string;
+  contentCipher: string;
+  envelopeScheme: string;
+  contentNonceB64: string;
+  aad: CanonicalAADInputs | null;
+  static fromMapping(payload: JsonObject): CryptoMetadata;
+  toJSON(): JsonObject;
+  canonicalAADInputs(fallback: CanonicalAADInputs): CanonicalAADInputs;
+}
+
+export function metadataV1(aad: CanonicalAADInputs, contentNonce: Uint8Array): CryptoMetadata;
+export function parseMetadata(payload: JsonObject | string | Uint8Array): CryptoMetadata;
+export function validateMetadata(metadata: CryptoMetadata): void;
+export function buildCanonicalAAD(metadata: CryptoMetadata | JsonObject, inputs: CanonicalAADInputs): Buffer;
+export function canonicalAADSHA256(aad: Uint8Array): string;
+export function sealContentAES256GCM(key: Uint8Array, nonce: Uint8Array, plaintext: Uint8Array, aad: Uint8Array): Buffer;
+export function openContentAES256GCM(key: Uint8Array, nonce: Uint8Array, ciphertext: Uint8Array, aad: Uint8Array): Buffer;
+export function deriveX25519PublicKey(privateKey: Uint8Array): Buffer;
+export function sealHPKEV1Envelope(recipientPublicKey: Uint8Array, senderEphemeralPrivateKey: Uint8Array, dek: Uint8Array, aad: Uint8Array): Buffer;
+export function openHPKEV1Envelope(recipientPrivateKey: Uint8Array, envelope: Uint8Array, aad: Uint8Array): Buffer;
+export function encodeEnvelope(envelope: Uint8Array): string;
+export function decodeEnvelope(value: string): Buffer;
+
+export interface RecipientPublicKeyOptions {
+  clientID: string;
+  scheme?: string;
+  publicKey: Uint8Array;
+  fingerprint?: string;
+}
+
+export class RecipientPublicKey {
+  constructor(options: RecipientPublicKeyOptions);
+  clientID: string;
+  scheme: string;
+  publicKey: Buffer;
+  fingerprint: string;
+}
+
+export class X25519PrivateKeyHandle {
+  constructor(options: { clientID: string; privateKey: Uint8Array });
+  clientID: string;
+  privateKey: Buffer;
+  readonly scheme: string;
+  openEnvelope(envelope: Uint8Array, aad: Uint8Array): Buffer;
+}
+
+export function deriveX25519RecipientPublicKey(clientID: string, privateKey: Uint8Array): RecipientPublicKey;
+
+export interface PrivateKeyProvider {
+  currentPrivateKey(): X25519PrivateKeyHandle;
+}
+
+export interface PublicKeyResolver {
+  resolveRecipientPublicKey(clientID: string): RecipientPublicKey;
+}
+
+export class StaticPrivateKeyProvider implements PrivateKeyProvider {
+  constructor(privateKey: X25519PrivateKeyHandle);
+  privateKey: X25519PrivateKeyHandle;
+  currentPrivateKey(): X25519PrivateKeyHandle;
+}
+
+export class StaticPublicKeyResolver implements PublicKeyResolver {
+  constructor(publicKeys: Record<string, RecipientPublicKey>);
+  resolveRecipientPublicKey(clientID: string): RecipientPublicKey;
+}
+
+export interface CryptoOptionsConfig {
+  publicKeyResolver: PublicKeyResolver;
+  privateKeyProvider: PrivateKeyProvider;
+  randomSource?: (length: number) => Uint8Array;
+}
+
+export class CryptoOptions {
+  constructor(config: CryptoOptionsConfig);
+  publicKeyResolver: PublicKeyResolver;
+  privateKeyProvider: PrivateKeyProvider;
+  randomSource: (length: number) => Uint8Array;
+  validate(): void;
+}
+
+export class DecryptedSecret {
+  constructor(payload: {
+    secretID: string;
+    versionID: string;
+    plaintext: Uint8Array;
+    cryptoMetadata: JsonObject;
+    permissions: number;
+    grantedAt?: string;
+    accessExpiresAt?: string | null;
+  });
+  secretID: string;
+  versionID: string;
+  plaintext: Buffer;
+  cryptoMetadata: JsonObject;
+  permissions: number;
+  grantedAt: string;
+  accessExpiresAt: string | null;
+}
+
+export class CryptoCustodiaClient {
+  constructor(transport: CustodiaClient, options: CryptoOptions);
+  createEncryptedSecret(payload: {
+    name: string;
+    plaintext: Uint8Array;
+    recipients?: string[];
+    permissions?: number;
+    expiresAt?: string;
+  }): Promise<JsonObject>;
+  createEncryptedSecretVersion(payload: {
+    secretID: string;
+    plaintext: Uint8Array;
+    recipients?: string[];
+    permissions?: number;
+    expiresAt?: string;
+  }): Promise<JsonObject>;
+  readDecryptedSecret(secretID: string): Promise<DecryptedSecret>;
+  shareEncryptedSecret(payload: {
+    secretID: string;
+    targetClientID: string;
+    permissions?: number;
+    expiresAt?: string;
+  }): Promise<JsonObject>;
+}
+
+export function withCrypto(client: CustodiaClient, options: CryptoOptions): CryptoCustodiaClient;
