@@ -2,7 +2,7 @@
 
 Custodia can build local Linux installation packages without introducing an external packaging tool such as `fpm`.
 
-The repository produces two package families:
+The repository produces two package families. Server packages are Lite-capable by default: the packaging script builds Go binaries with `SERVER_BUILD_TAGS=sqlite` unless explicitly overridden:
 
 | Package | Architecture | Contents | Intended use |
 | --- | --- | --- | --- |
@@ -24,6 +24,8 @@ Creating one `.deb`/`.rpm` per SDK language would add distro-package maintenance
 
 ```bash
 VERSION=0.1.0 REVISION=1 make package-deb
+# Override only if you intentionally do not want the default Lite-capable SQLite build:
+SERVER_BUILD_TAGS= VERSION=0.1.0 REVISION=1 make package-deb
 ```
 
 Artifacts are written to:
@@ -110,7 +112,7 @@ sudo systemctl enable --now custodia
 /usr/share/doc/custodia-clients/
 ```
 
-`/usr/bin/custodia-client` is the Bash transport helper. It remains non-crypto natively. Encrypted shell flows require `CUSTODIA_CRYPTO_PROVIDER` and delegate all cryptography to that external provider over stdin/stdout JSON.
+The Go source snapshot includes `go.mod`, `pkg/client` and the internal client-crypto package required by that public Go SDK surface. `/usr/bin/custodia-client` is the Bash transport helper. It remains non-crypto natively. Encrypted shell flows require `CUSTODIA_CRYPTO_PROVIDER` and delegate all cryptography to that external provider over stdin/stdout JSON.
 
 ## CI
 

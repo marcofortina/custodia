@@ -163,7 +163,7 @@ Test vectors minimi:
 | `aad_mismatch_fails.json` | AAD non coerente deve fallire. |
 | `unsupported_crypto_version_fails.json` | Versione non supportata deve fallire chiaramente. |
 
-Senza test vectors comuni, gli SDK non devono essere dichiarati ufficiali. La baseline attuale include fixture deterministiche per metadata/AAD, AES-256-GCM ciphertext e HPKE-v1 recipient envelopes. Questi vector hanno sbloccato i primi high-level crypto client E2E per Go e Python.
+Senza test vectors comuni, gli SDK non devono essere dichiarati ufficiali. La baseline attuale include fixture deterministiche per metadata/AAD, AES-256-GCM ciphertext e HPKE-v1 recipient envelopes. Questi vector alimentano i crypto client high-level E2E per Go, Python, Node.js/TypeScript, Java, C++, Rust e il contratto dei provider esterni Bash.
 
 ---
 
@@ -259,7 +259,7 @@ const created = await client.createSecretPayload({
 console.log(created);
 ```
 
-Gli esempi Rust, Java e C++ devono essere aggiunti solo quando i rispettivi client sono presenti o quando sono chiaramente marcati come esempi raw HTTP non ufficiali.
+Gli esempi completi per Rust, Java e C++ sono mantenuti nei rispettivi documenti SDK per evitare duplicazione e drift in questa specifica.
 
 ---
 
@@ -362,9 +362,9 @@ un progetto Go esterno deve poter importare pkg/client e parlare con custodia-se
 ---
 
 
-### 8.2 Stabilizzazione SDK Node.js / TypeScript crypto
+### 8.3 Stabilizzazione SDK Node.js / TypeScript crypto
 
-`clients/node` espone anche un wrapper high-level crypto client che resta coerente con Go/Python:
+`clients/node` espone anche un wrapper high-level crypto client che resta coerente con Go/Python/Java/C++/Rust:
 
 - AES-256-GCM per content encryption;
 - HPKE-v1 su X25519/HKDF-SHA256/AES-256-GCM per recipient envelope;
@@ -374,7 +374,7 @@ un progetto Go esterno deve poter importare pkg/client e parlare con custodia-se
 
 Il package resta `private` finché nome pubblico e release process non sono decisi, ma la superficie API è verificata dai test Node e dai vector comuni.
 
-### 8.3 Stabilizzazione SDK Java transport e crypto
+### 8.4 Stabilizzazione SDK Java transport e crypto
 
 `clients/java` esiste nel repository come client Java iniziale per payload opachi e crypto client high-level. Usa solo librerie standard Java e accetta un `SSLContext` applicativo oppure keystore/truststore Java per mTLS.
 
@@ -393,9 +393,9 @@ Criterio di confine:
 clients/java crypto -> cifra/decifra localmente, risolve le chiavi pubbliche solo tramite resolver applicativo e invia al server solo ciphertext, crypto_metadata ed envelope opachi
 ```
 
-Il crypto client Java usa gli stessi vector comuni di Go/Python/Node.
+Il crypto client Java usa gli stessi vector comuni di Go/Python/Node/C++/Rust.
 
-### 8.4 Stabilizzazione SDK C++ transport e crypto
+### 8.5 Stabilizzazione SDK C++ transport e crypto
 
 `clients/cpp` esiste nel repository come client C++ iniziale per payload opachi e crypto client high-level. Usa libcurl per HTTPS/mTLS, OpenSSL per AES-GCM/X25519/HKDF e una piccola API C++20 senza introdurre un framework di build dedicato.
 
@@ -414,9 +414,9 @@ Criterio di confine:
 clients/cpp crypto -> cifra/decifra localmente, risolve le chiavi pubbliche solo tramite resolver applicativo e invia al server solo ciphertext, crypto_metadata ed envelope opachi
 ```
 
-Il crypto client C++ usa gli stessi vector comuni di Go/Python/Node/Java; la dipendenza crypto esplicita è OpenSSL.
+Il crypto client C++ usa gli stessi vector comuni di Go/Python/Node/Java/Rust; la dipendenza crypto esplicita è OpenSSL.
 
-### 8.5 Stabilizzazione SDK Rust transport e crypto
+### 8.6 Stabilizzazione SDK Rust transport e crypto
 
 `clients/rust` esiste nel repository come client Rust per payload opachi e crypto client high-level. Usa `reqwest` blocking con TLS rustls per HTTPS/mTLS, `serde_json::Value` per il transport e primitive crypto Rust per canonical AAD, AES-256-GCM e HPKE-v1/X25519.
 
@@ -439,7 +439,7 @@ clients/rust crypto -> cifra/decifra localmente, risolve le chiavi pubbliche sol
 
 Il package resta `publish = false` finché nome pubblico e release process non sono decisi.
 
-### 8.6 Bash transport helper fuori SDK crypto
+### 8.7 Bash transport helper fuori SDK crypto
 
 `clients/bash` esiste nel repository come helper shell per CI, smoke test e script operativi basati su `curl`. Il codice Bash resta transport-only, ma può delegare flussi cifrati a un provider crypto esterno configurato con `CUSTODIA_CRYPTO_PROVIDER`.
 

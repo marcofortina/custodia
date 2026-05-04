@@ -13,7 +13,12 @@ Every encrypted payload must carry versioned crypto metadata:
   "version": "custodia.client-crypto.v1",
   "content_cipher": "aes-256-gcm",
   "envelope_scheme": "hpke-v1",
-  "aad": "custodia-secret-v1"
+  "content_nonce_b64": "base64url-or-standard-base64-nonce",
+  "aad": {
+    "secret_id": "optional-stable-secret-id",
+    "secret_name": "optional-secret-name",
+    "version_id": "optional-version-id"
+  }
 }
 ```
 

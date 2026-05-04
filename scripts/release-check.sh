@@ -34,7 +34,7 @@ fi
 
 
 if [ "${CUSTODIA_RUN_K3S_COCKROACHDB_SMOKE:-false}" = "true" ]; then
-  ./scripts/k3s-cockroachdb-smoke.sh scripts/passkey-assertion-verify-command.sh scripts/sqlite-backup.sh scripts/lite-upgrade-check.sh
+  ./scripts/k3s-cockroachdb-smoke.sh
 else
   echo "CUSTODIA_RUN_K3S_COCKROACHDB_SMOKE not true; skipping k3s CockroachDB smoke check." >&2
 fi

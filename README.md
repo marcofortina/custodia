@@ -20,7 +20,8 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 - Memory and Valkey-compatible rate limiter backends with readiness checks.
 - Minimal admin CLI for metadata operations exposed by the API.
 - Go, Python and Node.js / TypeScript client libraries with raw transport helpers; all three include high-level client-side crypto wrappers that keep plaintext, DEKs and private keys outside the server.
-- Java and C++ client libraries with raw transport helpers plus high-level client-side crypto wrappers that use the shared AES-256-GCM/HPKE-v1 vectors.
+- Java, C++ and Rust client libraries with raw transport helpers plus high-level client-side crypto wrappers that use the shared AES-256-GCM/HPKE-v1 vectors.
+- Bash transport helper for CI, smoke tests and operations; encrypted shell flows delegate crypto to an external provider instead of implementing crypto in Bash.
 - Docker, Compose, Helm and Lite single-node deployment examples.
 - Dedicated `custodia-signer` service for admin-only client CSR signing.
 - Custodia Lite profile with YAML config, SQLite build-tag artifact, local CA bootstrap, backup helper and Lite-to-Full readiness checks.
@@ -47,7 +48,7 @@ Commercial licensing, enterprise support and integration work may be available s
 
 ## Support the project
 
-Custodia is maintained as an open-source privacy-first age-assurance project. If this repository helps your lab, research, compliance work, or integration testing, sponsorship helps keep development, testing, documentation, and security hardening moving.
+Custodia is maintained as an open-source privacy-first secret-management project. If this repository helps your lab, research, compliance work, or integration testing, sponsorship helps keep development, testing, documentation, and security hardening moving.
 
 Ways to support the project:
 
@@ -69,6 +70,8 @@ bitcoin:36jDV57roGb4o59TwK1CB7viPrXToQHGiP
 - Node.js / TypeScript transport and crypto: [`docs/NODE_CLIENT_SDK.md`](docs/NODE_CLIENT_SDK.md)
 - Java transport and crypto: [`docs/JAVA_CLIENT_SDK.md`](docs/JAVA_CLIENT_SDK.md)
 - C++ transport and crypto: [`docs/CPP_CLIENT_SDK.md`](docs/CPP_CLIENT_SDK.md)
+- Rust transport and crypto: [`docs/RUST_CLIENT_SDK.md`](docs/RUST_CLIENT_SDK.md)
+- Bash transport helper: [`docs/BASH_TRANSPORT_HELPER.md`](docs/BASH_TRANSPORT_HELPER.md)
 - Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
 - Linux DEB/RPM packaging: [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md)
 
