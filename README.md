@@ -218,6 +218,7 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 - [PKCS#11 and SoftHSM signer bridge](docs/PKCS11_SOFTHSM.md)
 - [Client certificate lifecycle](docs/CLIENT_CERTIFICATE_LIFECYCLE.md)
 - [Custodia client libraries specification](docs/CUSTODIA_CLIENTS.md)
+- [Client crypto specification](docs/CLIENT_CRYPTO_SPEC.md)
 - [Go client SDK](docs/GO_CLIENT_SDK.md)
 - [Python client SDK](docs/PYTHON_CLIENT_SDK.md)
 - [Phase 5 closure tracker](docs/PHASE5_CLOSURE.md)
