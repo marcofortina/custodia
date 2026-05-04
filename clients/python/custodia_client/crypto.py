@@ -240,6 +240,78 @@ def decode_envelope(value: str) -> bytes:
     except ValueError as exc:
         raise MalformedCryptoMetadata("malformed envelope") from exc
 
+@dataclass(frozen=True)
+class RecipientPublicKey:
+    client_id: str
+    scheme: str
+    public_key: bytes
+    fingerprint: str = ""
+
+
+class PublicKeyResolver:
+    def resolve_recipient_public_key(self, client_id: str) -> RecipientPublicKey:
+        raise NotImplementedError
+
+
+class PrivateKeyHandle:
+    @property
+    def client_id(self) -> str:
+        raise NotImplementedError
+
+    @property
+    def scheme(self) -> str:
+        raise NotImplementedError
+
+    def open_envelope(self, envelope: bytes, aad: bytes) -> bytes:
+        raise NotImplementedError
+
+
+class PrivateKeyProvider:
+    def current_private_key(self) -> PrivateKeyHandle:
+        raise NotImplementedError
+
+
+@dataclass(frozen=True)
+class X25519PrivateKeyHandle(PrivateKeyHandle):
+    _client_id: str
+    private_key: bytes
+
+    def __post_init__(self) -> None:
+        derive_x25519_public_key(self.private_key)
+
+    @property
+    def client_id(self) -> str:
+        return self._client_id
+
+    @property
+    def scheme(self) -> str:
+        return ENVELOPE_SCHEME_HPKE_V1
+
+    def open_envelope(self, envelope: bytes, aad: bytes) -> bytes:
+        return open_hpke_v1_envelope(self.private_key, envelope, aad)
+
+
+def derive_x25519_recipient_public_key(client_id: str, private_key: bytes) -> RecipientPublicKey:
+    return RecipientPublicKey(client_id=client_id, scheme=ENVELOPE_SCHEME_HPKE_V1, public_key=derive_x25519_public_key(private_key))
+
+
+@dataclass(frozen=True)
+class StaticPrivateKeyProvider(PrivateKeyProvider):
+    private_key: PrivateKeyHandle
+
+    def current_private_key(self) -> PrivateKeyHandle:
+        return self.private_key
+
+
+@dataclass(frozen=True)
+class StaticPublicKeyResolver(PublicKeyResolver):
+    public_keys: Mapping[str, RecipientPublicKey]
+
+    def resolve_recipient_public_key(self, client_id: str) -> RecipientPublicKey:
+        if client_id not in self.public_keys:
+            raise KeyError(f"missing recipient public key: {client_id}")
+        return self.public_keys[client_id]
+
 
 def _hpke_seal(shared_secret: bytes, info: bytes, plaintext: bytes, aad: bytes) -> bytes:
     key, nonce = _hpke_key_schedule(shared_secret, info)
