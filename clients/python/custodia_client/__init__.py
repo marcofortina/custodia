@@ -12,9 +12,12 @@ from .crypto import (
     CRYPTO_VERSION_V1,
     ENVELOPE_SCHEME_HPKE_V1,
     CanonicalAADInputs,
+    CryptoCustodiaClient,
     CiphertextAuthenticationFailed,
     CryptoError,
+    CryptoOptions,
     CryptoMetadata,
+    DecryptedSecret,
     MalformedCryptoMetadata,
     RecipientPublicKey,
     StaticPrivateKeyProvider,
@@ -52,6 +55,9 @@ class CustodiaClient:
     key_file: str
     ca_file: str
     timeout: float = 15.0
+
+    def with_crypto(self, options: CryptoOptions) -> CryptoCustodiaClient:
+        return CryptoCustodiaClient(self, options)
 
 
     def me(self) -> dict[str, Any]:

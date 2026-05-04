@@ -4,8 +4,9 @@ import base64
 import hashlib
 import hmac
 import json
+import os
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping, Sequence
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import x25519
@@ -311,6 +312,186 @@ class StaticPublicKeyResolver(PublicKeyResolver):
         if client_id not in self.public_keys:
             raise KeyError(f"missing recipient public key: {client_id}")
         return self.public_keys[client_id]
+
+
+@dataclass(frozen=True)
+class CryptoOptions:
+    public_key_resolver: PublicKeyResolver
+    private_key_provider: PrivateKeyProvider
+    random_source: Callable[[int], bytes] = os.urandom
+
+    def validate(self) -> None:
+        if self.public_key_resolver is None:
+            raise ValueError("public key resolver is required")
+        if self.private_key_provider is None:
+            raise ValueError("private key provider is required")
+        if self.random_source is None:
+            raise ValueError("random source is required")
+
+
+@dataclass(frozen=True)
+class DecryptedSecret:
+    secret_id: str
+    version_id: str
+    plaintext: bytes
+    crypto_metadata: Mapping[str, Any]
+    permissions: int
+    granted_at: str = ""
+    access_expires_at: str | None = None
+
+
+@dataclass(frozen=True)
+class CryptoCustodiaClient:
+    transport: Any
+    options: CryptoOptions
+
+    def __post_init__(self) -> None:
+        self.options.validate()
+
+    def create_encrypted_secret(
+        self,
+        name: str,
+        plaintext: bytes,
+        recipients: Sequence[str] = (),
+        permissions: int = 7,
+        expires_at: str | None = None,
+    ) -> dict[str, Any]:
+        if not name.strip():
+            raise ValueError("secret name is required")
+        dek = self._random(AES_256_GCM_KEY_BYTES)
+        nonce = self._random(AES_GCM_NONCE_BYTES)
+        aad_inputs = CanonicalAADInputs(secret_name=name)
+        metadata = metadata_v1(aad_inputs, nonce)
+        aad = build_canonical_aad(metadata, aad_inputs)
+        ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad)
+        payload: dict[str, Any] = {
+            "name": name,
+            "ciphertext": _b64encode(ciphertext),
+            "crypto_metadata": metadata.to_dict(),
+            "envelopes": self._seal_recipient_envelopes(self._normalized_recipients(recipients), dek, aad),
+            "permissions": permissions,
+        }
+        if expires_at:
+            payload["expires_at"] = expires_at
+        return self.transport.create_secret(payload)
+
+    def create_encrypted_secret_version(
+        self,
+        secret_id: str,
+        plaintext: bytes,
+        recipients: Sequence[str] = (),
+        permissions: int = 7,
+        expires_at: str | None = None,
+    ) -> dict[str, Any]:
+        if not secret_id.strip():
+            raise ValueError("secret id is required")
+        dek = self._random(AES_256_GCM_KEY_BYTES)
+        nonce = self._random(AES_GCM_NONCE_BYTES)
+        aad_inputs = CanonicalAADInputs(secret_id=secret_id)
+        metadata = metadata_v1(aad_inputs, nonce)
+        aad = build_canonical_aad(metadata, aad_inputs)
+        ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad)
+        payload: dict[str, Any] = {
+            "ciphertext": _b64encode(ciphertext),
+            "crypto_metadata": metadata.to_dict(),
+            "envelopes": self._seal_recipient_envelopes(self._normalized_recipients(recipients), dek, aad),
+            "permissions": permissions,
+        }
+        if expires_at:
+            payload["expires_at"] = expires_at
+        return self.transport.create_secret_version(secret_id, payload)
+
+    def read_decrypted_secret(self, secret_id: str) -> DecryptedSecret:
+        secret = self.transport.get_secret(secret_id)
+        metadata = parse_metadata(secret.get("crypto_metadata") or {})
+        fallback = CanonicalAADInputs(
+            secret_id=str(secret.get("secret_id") or ""),
+            version_id=str(secret.get("version_id") or ""),
+        )
+        aad_inputs = metadata.canonical_aad_inputs(fallback)
+        aad = build_canonical_aad(metadata, aad_inputs)
+        if not metadata.content_nonce_b64:
+            raise MalformedCryptoMetadata("missing content nonce")
+        nonce = base64.b64decode(metadata.content_nonce_b64, validate=True)
+        dek = self._open_secret_envelope(str(secret.get("envelope") or ""), aad)
+        ciphertext = base64.b64decode(str(secret.get("ciphertext") or ""), validate=True)
+        plaintext = open_content_aes_256_gcm(dek, nonce, ciphertext, aad)
+        return DecryptedSecret(
+            secret_id=str(secret.get("secret_id") or ""),
+            version_id=str(secret.get("version_id") or ""),
+            plaintext=plaintext,
+            crypto_metadata=dict(metadata.to_dict()),
+            permissions=int(secret.get("permissions") or 0),
+            granted_at=str(secret.get("granted_at") or ""),
+            access_expires_at=secret.get("access_expires_at"),
+        )
+
+    def share_encrypted_secret(
+        self,
+        secret_id: str,
+        target_client_id: str,
+        permissions: int = 4,
+        expires_at: str | None = None,
+    ) -> dict[str, Any]:
+        if not target_client_id.strip():
+            raise ValueError("target client id is required")
+        secret = self.transport.get_secret(secret_id)
+        metadata = parse_metadata(secret.get("crypto_metadata") or {})
+        fallback = CanonicalAADInputs(
+            secret_id=str(secret.get("secret_id") or ""),
+            version_id=str(secret.get("version_id") or ""),
+        )
+        aad_inputs = metadata.canonical_aad_inputs(fallback)
+        aad = build_canonical_aad(metadata, aad_inputs)  # type: ignore[name-defined]
+        dek = self._open_secret_envelope(str(secret.get("envelope") or ""), aad)
+        envelope = self._seal_recipient_envelopes([target_client_id], dek, aad)[0]
+        payload: dict[str, Any] = {
+            "version_id": str(secret.get("version_id") or ""),
+            "target_client_id": target_client_id,
+            "envelope": envelope["envelope"],
+            "permissions": permissions,
+        }
+        if expires_at:
+            payload["expires_at"] = expires_at
+        return self.transport.share_secret(secret_id, payload)
+
+    def _normalized_recipients(self, recipients: Sequence[str]) -> list[str]:
+        current = self.options.private_key_provider.current_private_key()
+        normalized: list[str] = []
+        seen: set[str] = set()
+        if current.client_id:
+            normalized.append(current.client_id)
+            seen.add(current.client_id)
+        for recipient in recipients:
+            recipient = recipient.strip()
+            if recipient and recipient not in seen:
+                normalized.append(recipient)
+                seen.add(recipient)
+        if not normalized:
+            raise ValueError("missing recipient envelope")
+        return normalized
+
+    def _seal_recipient_envelopes(self, recipients: Sequence[str], dek: bytes, aad: bytes) -> list[dict[str, str]]:
+        envelopes: list[dict[str, str]] = []
+        for recipient_id in recipients:
+            public_key = self.options.public_key_resolver.resolve_recipient_public_key(recipient_id)
+            if public_key.scheme != ENVELOPE_SCHEME_HPKE_V1:
+                raise UnsupportedEnvelopeScheme("unsupported envelope scheme")
+            envelope = seal_hpke_v1_envelope(public_key.public_key, self._random(X25519_KEY_BYTES), dek, aad)
+            envelopes.append({"client_id": recipient_id, "envelope": encode_envelope(envelope)})
+        return envelopes
+
+    def _open_secret_envelope(self, encoded_envelope: str, aad: bytes) -> bytes:
+        private_key = self.options.private_key_provider.current_private_key()
+        if private_key.scheme != ENVELOPE_SCHEME_HPKE_V1:
+            raise UnsupportedEnvelopeScheme("unsupported envelope scheme")
+        return private_key.open_envelope(decode_envelope(encoded_envelope), aad)
+
+    def _random(self, length: int) -> bytes:
+        value = self.options.random_source(length)
+        if len(value) != length:
+            raise ValueError("random source returned invalid length")
+        return value
 
 
 def _hpke_seal(shared_secret: bytes, info: bytes, plaintext: bytes, aad: bytes) -> bytes:
