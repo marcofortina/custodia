@@ -99,7 +99,9 @@ All official crypto clients must pass vectors under:
 testdata/client-crypto/v1/
 ```
 
-The repository currently ships deterministic metadata/AAD fixtures. Each non-schema fixture includes `aad_inputs`, `canonical_aad`, `canonical_aad_sha256` and `expected_error`. These are not full ciphertext/envelope cryptographic vectors yet; language clients must not be declared high-level crypto clients until deterministic ciphertext/envelope vectors are present and passing.
+The repository ships deterministic v1 crypto fixtures. Each non-schema fixture includes `aad_inputs`, `canonical_aad`, `canonical_aad_sha256` and `expected_error`. Positive vectors also include `plaintext_b64`, `content_dek_b64`, `content_nonce_b64`, AES-256-GCM `ciphertext` and HPKE-v1 recipient `envelope` payloads. Negative vectors cover ciphertext authentication failure, wrong recipient, AAD mismatch and unsupported crypto version.
+
+Fixture private keys and DEKs are test-vector material only. They exist so SDKs can reproduce the same ciphertext/envelope bytes and must never be copied into production clients.
 
 
 ## Repository validator
@@ -112,4 +114,4 @@ content_cipher = aes-256-gcm
 envelope_scheme = hpke-v1
 ```
 
-This validator is not a high-level crypto client. It keeps metadata parsing, canonical AAD, error names and deterministic-AAD fixtures aligned before full deterministic cryptographic vectors are added.
+This validator is not a high-level crypto client. It keeps metadata parsing, canonical AAD, AES-256-GCM payload vectors, HPKE-v1 envelope vectors and error names aligned before public high-level crypto clients are added.
