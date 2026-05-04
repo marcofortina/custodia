@@ -1384,3 +1384,40 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 688 - Phase 5 crypto vector status
 
 - Updated the Phase 5 closure tracker after deterministic ciphertext/envelope vectors and Go crypto interfaces.
+
+## Patch 689 - client crypto persisted AAD binding metadata
+
+- Extended v1 client crypto metadata with optional persisted AAD binding and content nonce fields.
+- Added helpers/tests so high-level clients can reproduce canonical AAD on read/share/version paths without relying on extra server plaintext metadata.
+
+## Patch 690 - Go crypto client public types
+
+- Added public Go SDK request/response types for high-level create, read, version and share crypto flows.
+- Added public typed crypto errors for malformed metadata, unsupported ciphers/envelope schemes and random-source failures.
+
+## Patch 691 - Go X25519 crypto key handles
+
+- Added public Go X25519 helper functions for HPKE-v1 recipient public keys and local private-key envelope opening.
+- Kept internal HPKE implementation hidden behind public SDK types.
+
+## Patch 692 - Go high-level crypto client methods
+
+- Added `NewCryptoClient`, `Client.WithCrypto`, `CreateEncryptedSecret`, `ReadDecryptedSecret`, `ShareEncryptedSecret` and `CreateEncryptedSecretVersion`.
+- The methods encrypt/decrypt locally and send only opaque ciphertext, metadata and envelopes through the transport client.
+
+## Patch 693 - Go high-level crypto client tests
+
+- Covered create/read/share/version E2E behavior with deterministic local crypto material and httptest transport assertions.
+- Verified that posted payloads remain opaque and creator self-envelopes are added automatically.
+
+## Patch 694 - Go crypto external consumer guardrail
+
+- Extended the external Go module compile guard to cover high-level crypto public types, constructors, methods and X25519 helpers.
+
+## Patch 695 - Go high-level crypto client docs
+
+- Documented the Go high-level crypto client, local trust dependencies and persisted AAD/nonce metadata boundary.
+
+## Patch 696 - Phase 5 Go crypto status
+
+- Updated Phase 5 client docs and closure tracker after adding the first Go high-level crypto client.

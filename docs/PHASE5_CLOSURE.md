@@ -18,12 +18,14 @@ Phase 5 tracks official client libraries and client-side cryptography.
 - Client crypto metadata validator added for the v1 scaffold.
 - Deterministic metadata/AAD fixtures added with canonical AAD and SHA-256 checks.
 - Deterministic AES-256-GCM ciphertext and HPKE-v1 recipient envelope fixtures added for the shared v1 crypto vectors.
-- Public Go crypto dependency interfaces added for future high-level crypto helpers.
+- Public Go crypto dependency interfaces added for high-level crypto helpers.
+- Go high-level crypto client added for local create/read/share/version flows.
+- Go X25519 helper added for local HPKE-v1 envelope opening without exposing internal packages.
+- External Go consumer compile guard extended to the high-level crypto client surface.
 - `make test-client-crypto` added for focused client-crypto fixture validation.
 
 ## Still open
 
-- Go high-level crypto client.
 - Python high-level crypto client.
 - Node.js/TypeScript transport client.
 - Rust transport client.
@@ -32,7 +34,7 @@ Phase 5 tracks official client libraries and client-side cryptography.
 
 ## Current boundary
 
-Go and Python are transport clients. They speak REST/mTLS and move opaque payloads. Python now has typed transport payload helpers; Go has public transport and operational SDK surfaces. Deterministic crypto fixtures now cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes. They are test vectors only; Go and Python do not yet expose high-level E2E crypto helpers.
+Go now has public transport, operational and high-level crypto SDK surfaces. The Go crypto client encrypts/decrypts locally, creates HPKE-v1 recipient envelopes, shares existing DEKs locally and sends only opaque payloads to the server. Python is still a typed transport client. Deterministic crypto fixtures cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.
 
 The server remains metadata/ciphertext/envelope-only. Custodia must not become a public-key directory.
 
@@ -47,4 +49,4 @@ go test -p=1 -timeout 60s ./...
 python3 -m py_compile clients/python/custodia_client/__init__.py
 ```
 
-Phase 5 is not complete until high-level crypto clients are implemented on top of the deterministic ciphertext/envelope vectors.
+Phase 5 core is not complete until the Python high-level crypto client is implemented on top of the deterministic ciphertext/envelope vectors. The broader multi-language roadmap still has Node.js/TypeScript, Rust, Java and C++ open.
