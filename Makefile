@@ -21,6 +21,7 @@ fmt:
 check: test build test-python-client test-node-client
 	python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py clients/python/custodia_client/crypto.py
 	node --check clients/node/src/index.js
+	node --check clients/node/src/crypto.js
 
 .PHONY: test-python-client
 test-python-client:
