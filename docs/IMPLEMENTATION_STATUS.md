@@ -1209,3 +1209,31 @@ The repository still does not claim to implement physical HSM hardware, external
 
 - Added `docs/PHASE5_CLOSURE.md` to track closed and open Phase 5 work.
 - Phase 5 is not complete yet: deterministic crypto vectors and high-level crypto clients remain open.
+
+## Patch 644 - Go client public type import cleanup
+
+- Moved internal model conversion helpers out of the public Go SDK type file.
+- `pkg/client/types.go` no longer imports `custodia/internal/*`.
+
+## Patch 645 - Go public transport direct REST methods
+
+- Reworked public Go transport methods so they call REST endpoints directly with public SDK payload/response types.
+- The public transport path no longer depends on legacy internal-model helpers.
+
+## Patch 646 - Go client conversion cleanup
+
+- Removed now-unused internal model conversion helpers from the public Go client path.
+
+## Patch 647 - Go legacy helper boundary docs
+
+- Marked legacy Go client methods that expose internal model types as monorepo helpers.
+- Pointed external consumers to the new public transport methods.
+
+## Patch 648 - Go public surface guardrails
+
+- Added tests that prevent `pkg/client/types.go` and `pkg/client/public_transport.go` from importing `custodia/internal/*`.
+- Expanded the external consumer compile test to cover public transport method signatures.
+
+## Patch 649 - Go client SDK boundary docs
+
+- Updated Go SDK and client-library docs after the public transport cleanup.
