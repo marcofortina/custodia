@@ -14,7 +14,7 @@ cd "$root_dir"
 : "${OUT_DIR:=$root_dir/dist/packages}"
 : "${WORK_DIR:=$root_dir/dist/package-work}"
 : "${ARCH:=$(uname -m)}"
-: "${SERVER_BUILD_TAGS:=sqlite}"
+: "${SERVER_BUILD_TAGS=sqlite}"
 
 ldflags="-X custodia/internal/build.Version=$VERSION -X custodia/internal/build.Commit=$COMMIT -X custodia/internal/build.Date=$DATE"
 
