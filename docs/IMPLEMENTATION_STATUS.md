@@ -1148,3 +1148,7 @@ The repository still does not claim to implement physical HSM hardware, external
 
 - Updated API, security model and web-console docs that still described MFA/passkey web authentication as future-only.
 - Clarified that the web console remains metadata-only while admin mTLS, TOTP-backed sessions and optional passkey assertion delegation are available.
+
+## Patch 621 - SQLite build target driver download
+
+- Added an explicit `sqlite-driver-download` Make target and made `build-sqlite`/`test-sqlite` depend on it so connected environments materialize the declared SQLite driver module before building tagged Lite artifacts.
