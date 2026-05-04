@@ -2,7 +2,7 @@
   "name": "@custodia/client",
   "version": "0.0.0-private",
   "private": true,
-  "description": "Custodia Node.js transport client for opaque REST payloads over mTLS.",
+  "description": "Custodia Node.js transport and client-side crypto SDK for opaque REST payloads over mTLS.",
   "type": "module",
   "main": "src/index.js",
   "types": "src/index.d.ts",

@@ -1,5 +1,7 @@
 # Custodia
 
+[![CI](https://github.com/marcofortina/custodia/actions/workflows/ci.yml/badge.svg)](https://github.com/marcofortina/custodia/actions/workflows/ci.yml)
+
 Custodia is a REST vault for encrypted secrets. The server authenticates clients with mTLS, authorizes access, stores opaque encrypted blobs and returns only the caller's opaque envelope. Encryption, decryption, key discovery, key rotation and key trust stay outside the server.
 
 ## What is implemented
@@ -68,6 +70,7 @@ bitcoin:36jDV57roGb4o59TwK1CB7viPrXToQHGiP
 - Java transport and crypto: [`docs/JAVA_CLIENT_SDK.md`](docs/JAVA_CLIENT_SDK.md)
 - C++ transport and crypto: [`docs/CPP_CLIENT_SDK.md`](docs/CPP_CLIENT_SDK.md)
 - Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
+- Linux DEB/RPM packaging: [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md)
 
 ## Local development
 

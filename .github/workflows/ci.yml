@@ -5,16 +5,72 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  test-build:
+  release-check:
+    name: Release check and packages
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
           go-version: '1.22.x'
           cache: true
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - run: make release-check
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: clients/node/package.json
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            ca-certificates \
+            curl \
+            default-jdk-headless \
+            g++ \
+            jq \
+            libcurl4-openssl-dev \
+            libssl-dev \
+            pkg-config \
+            rpm
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: Run repository release check
+        run: make release-check
+
+      - name: Build Debian packages
+        run: |
+          VERSION=0.0.0+ci \
+          REVISION=1 \
+          COMMIT="${GITHUB_SHA::12}" \
+          DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+          make package-deb
+
+      - name: Build RPM packages
+        run: |
+          VERSION=0.0.0_ci \
+          REVISION=1 \
+          COMMIT="${GITHUB_SHA::12}" \
+          DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+          make package-rpm
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: custodia-linux-packages
+          path: dist/packages/*
+          if-no-files-found: error
