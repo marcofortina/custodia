@@ -132,6 +132,10 @@ package-linux:
 package-checksums:
 	./scripts/package-checksums.sh
 
+.PHONY: package-smoke
+package-smoke:
+	./scripts/package-smoke.sh
+
 .PHONY: softhsm-dev-token
 softhsm-dev-token:
 	./scripts/softhsm-dev-token.sh

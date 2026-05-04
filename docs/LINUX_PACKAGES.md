@@ -148,3 +148,16 @@ sha256sum -c SHA256SUMS
 ```
 
 The manifest is intentionally metadata-only and does not include package contents.
+
+## Package smoke checks
+
+After building packages, run extraction-based smoke checks:
+
+```bash
+VERSION=0.1.0 REVISION=1 make package-linux
+make package-smoke
+```
+
+The smoke check does not install packages into the host system. It extracts `.deb` artifacts with `dpkg-deb` and `.rpm` artifacts with `rpm2cpio`, then verifies the expected binaries, examples, SDK source snapshots, shared test vectors and Bash helper entrypoint.
+
+For server packages, the smoke check executes `vault-admin version` because it is side-effect free. It does not start `custodia-server` or `custodia-signer`; runtime startup belongs to deployment or integration tests with real configuration and certificates.

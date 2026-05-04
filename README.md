@@ -91,6 +91,12 @@ VERSION=0.1.0 REVISION=1 make package-checksums
 cd dist/packages && sha256sum -c SHA256SUMS
 ```
 
+Smoke-test package contents without installing them into the host system:
+
+```bash
+make package-smoke
+```
+
 The package split is:
 
 - `custodia-server`: server, admin CLI, signer, systemd unit and deployment examples;
