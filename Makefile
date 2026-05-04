@@ -8,6 +8,10 @@ LDFLAGS := -X custodia/internal/build.Version=$(VERSION) -X custodia/internal/bu
 test:
 	$(GO) test -p=1 -timeout 60s ./...
 
+.PHONY: test-client-crypto
+test-client-crypto:
+	$(GO) test -p=1 -timeout 60s ./internal/clientcrypto
+
 .PHONY: fmt
 fmt:
 	gofmt -w $$(find . -name '*.go')
