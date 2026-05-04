@@ -1143,3 +1143,8 @@ The repository still does not claim to implement physical HSM hardware, external
 
 - Updated `docs/CUSTODIA_LITE_PROFILE.md` from planning language to the post-Fase-4 implementation baseline.
 - Clarified that SQLite, local CA bootstrap, CA passphrase file support and Lite operational docs are implemented at repository level, while data migration remains a future dedicated tool.
+
+## Patch 619 - web authentication boundary documentation sync
+
+- Updated API, security model and web-console docs that still described MFA/passkey web authentication as future-only.
+- Clarified that the web console remains metadata-only while admin mTLS, TOTP-backed sessions and optional passkey assertion delegation are available.
