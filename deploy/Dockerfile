@@ -5,7 +5,7 @@
 # Custodia is distributed under the GNU Affero General Public License v3.0.
 # See the accompanying LICENSE file for details.
 
-FROM golang:1.22-alpine AS builder
+FROM golang:1.26-alpine AS builder
 ARG GO_BUILD_TAGS=""
 ARG CUSTODIA_VERSION="dev"
 ARG CUSTODIA_COMMIT="unknown"
