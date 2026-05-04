@@ -26,10 +26,10 @@ hmac = "0.13"
 rand = "0.10"
 sha2 = "0.11"
 x25519-dalek = { version = "2", features = ["static_secrets"] }
-reqwest = { version = "=0.11.27", default-features = false, features = ["blocking", "json", "rustls-tls"] }
-# Pin url below the Edition 2024 idna_adapter dependency pulled by newer url releases.
-# Cargo 1.75 is the documented minimum for this package.
-url = "=2.5.0"
+reqwest = { version = "0.12.28", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+# reqwest 0.12 pulls the newer rustls-webpki/idna security baseline. Keep url
+# explicit so lockfile regeneration cannot drift back to the vulnerable idna 0.5 line.
+url = "2.5.8"
 # reqwest 0.11 accepts indexmap 2.x transitively through url/idna dependencies.
 # Pin indexmap below releases that pull hashbrown 0.17, which requires Cargo Edition 2024 support.
 indexmap = "=2.14.0"
