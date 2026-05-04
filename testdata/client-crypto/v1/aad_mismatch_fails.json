@@ -1,0 +1,11 @@
+{
+  "case": "aad_mismatch_fails",
+  "status": "schema-only-negative",
+  "crypto_metadata": {
+    "version": "custodia.client-crypto.v1",
+    "content_cipher": "aes-256-gcm",
+    "envelope_scheme": "hpke-v1"
+  },
+  "failure": "AAD mismatch",
+  "expected_error": "aad_mismatch"
+}

@@ -1,0 +1,11 @@
+{
+  "version": "custodia.client-crypto.v1",
+  "content_cipher": "aes-256-gcm",
+  "envelope_scheme": "hpke-v1",
+  "required_fields": [
+    "crypto_metadata",
+    "ciphertext",
+    "envelopes"
+  ],
+  "notes": "Schema fixture for Phase 5. Deterministic crypto vectors must be added before high-level clients are official."
+}
