@@ -4,6 +4,10 @@ set -euo pipefail
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root_dir"
 
+# Package staging trees can contain Go source snapshots under dist/package-work.
+# Keep release checks scoped to the repository source tree, not generated package contents.
+rm -rf "$root_dir/dist/package-work"
+
 : "${GO:=go}"
 
 $GO test -p=1 -timeout 60s ./...
