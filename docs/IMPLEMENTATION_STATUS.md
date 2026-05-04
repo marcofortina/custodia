@@ -1421,3 +1421,38 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 696 - Phase 5 Go crypto status
 
 - Updated Phase 5 client docs and closure tracker after adding the first Go high-level crypto client.
+
+## Patch 697 - Python client crypto primitives
+
+- Added Python AES-256-GCM, HPKE-v1, canonical AAD and metadata helpers matching the shared client crypto v1 vectors.
+- Added `cryptography` as the Python client crypto dependency.
+
+## Patch 698 - Python client crypto vector tests
+
+- Covered Python canonical AAD, AES-256-GCM ciphertext, HPKE-v1 envelopes and negative vectors against `testdata/client-crypto/v1`.
+
+## Patch 699 - Python crypto client public contracts
+
+- Added Python public key resolver/private key provider contracts and X25519 helpers.
+- Exported static resolver/provider helpers for tests and pinned local maps.
+
+## Patch 700 - Python high-level crypto client methods
+
+- Added `CryptoCustodiaClient` and `CustodiaClient.with_crypto(...)`.
+- Added local create/read/share/version crypto flows that send only ciphertext, crypto metadata and opaque envelopes to the server.
+
+## Patch 701 - Python high-level crypto client tests
+
+- Covered Python create/read/share high-level crypto flows against deterministic fixtures and mocked transport payloads.
+
+## Patch 702 - Python crypto client check targets
+
+- Included `custodia_client/crypto.py` in Makefile and release-check Python syntax coverage.
+
+## Patch 703 - Python high-level crypto client documentation
+
+- Documented Python high-level crypto usage and the non-server key resolver boundary.
+
+## Patch 704 - Phase 5 Python crypto client status
+
+- Updated README, client specification and Phase 5 closure tracker after closing the Python high-level crypto client.

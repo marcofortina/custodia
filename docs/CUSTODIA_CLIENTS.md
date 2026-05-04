@@ -25,7 +25,7 @@ Principi comuni:
 | Linguaggio | Stato repository | Stato Fase 5 | Note |
 |------------|------------------|--------------|------|
 | **Go** | Esistente | Transport SDK pubblico + primo crypto client high-level E2E | `pkg/client` nel monorepo, con payload/operational methods pubblici e crypto helpers senza esporre tipi `internal/*` nelle API. |
-| **Python** | Esistente | Transport client presente; crypto client pianificato | `clients/python` nel monorepo. |
+| **Python** | Esistente | Transport client + primo crypto client high-level E2E | `clients/python` nel monorepo, con typed transport helpers e crypto wrapper basato sugli stessi vector. |
 | **Node.js / TypeScript** | Non presente | Pianificato | Da aggiungere dopo spec crypto e test vectors. |
 | **Rust** | Non presente | Pianificato | Da aggiungere dopo Go/Python. |
 | **Java** | Non presente | Pianificato | Da aggiungere dopo stabilizzazione schema crypto. |
@@ -151,7 +151,7 @@ Test vectors minimi:
 | `aad_mismatch_fails.json` | AAD non coerente deve fallire. |
 | `unsupported_crypto_version_fails.json` | Versione non supportata deve fallire chiaramente. |
 
-Senza test vectors comuni, gli SDK non devono essere dichiarati ufficiali. La baseline attuale include fixture deterministiche per metadata/AAD, AES-256-GCM ciphertext e HPKE-v1 recipient envelopes. Questi vector hanno sbloccato il primo Go high-level crypto client E2E; Python resta transport client finché il layer high-level E2E non viene implementato e documentato.
+Senza test vectors comuni, gli SDK non devono essere dichiarati ufficiali. La baseline attuale include fixture deterministiche per metadata/AAD, AES-256-GCM ciphertext e HPKE-v1 recipient envelopes. Questi vector hanno sbloccato i primi high-level crypto client E2E per Go e Python.
 
 ---
 

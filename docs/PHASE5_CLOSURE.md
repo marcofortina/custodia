@@ -21,12 +21,13 @@ Phase 5 tracks official client libraries and client-side cryptography.
 - Public Go crypto dependency interfaces added for high-level crypto helpers.
 - Go high-level crypto client added for local create/read/share/version flows.
 - Go X25519 helper added for local HPKE-v1 envelope opening without exposing internal packages.
+- Python high-level crypto client added for local create/read/share/version flows.
+- Python crypto vector tests added against the shared deterministic AES-256-GCM and HPKE-v1 fixtures.
 - External Go consumer compile guard extended to the high-level crypto client surface.
 - `make test-client-crypto` added for focused client-crypto fixture validation.
 
 ## Still open
 
-- Python high-level crypto client.
 - Node.js/TypeScript transport client.
 - Rust transport client.
 - Java transport client.
@@ -34,7 +35,7 @@ Phase 5 tracks official client libraries and client-side cryptography.
 
 ## Current boundary
 
-Go now has public transport, operational and high-level crypto SDK surfaces. The Go crypto client encrypts/decrypts locally, creates HPKE-v1 recipient envelopes, shares existing DEKs locally and sends only opaque payloads to the server. Python is still a typed transport client. Deterministic crypto fixtures cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.
+Go now has public transport, operational and high-level crypto SDK surfaces. Python now has typed transport helpers plus a high-level crypto wrapper. Both high-level clients encrypt/decrypt locally, create HPKE-v1 recipient envelopes, share existing DEKs locally and send only opaque payloads to the server. Deterministic crypto fixtures cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.
 
 The server remains metadata/ciphertext/envelope-only. Custodia must not become a public-key directory.
 
@@ -46,7 +47,8 @@ Run:
 make test-client-crypto
 go test -p=1 -timeout 60s ./pkg/client ./internal/clientcrypto
 go test -p=1 -timeout 60s ./...
-python3 -m py_compile clients/python/custodia_client/__init__.py
+python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py clients/python/custodia_client/crypto.py
+python3 -m unittest discover -s clients/python/tests
 ```
 
-Phase 5 core is not complete until the Python high-level crypto client is implemented on top of the deterministic ciphertext/envelope vectors. The broader multi-language roadmap still has Node.js/TypeScript, Rust, Java and C++ open.
+Phase 5 core Go+Python is now complete at repository level. The broader multi-language roadmap still has Node.js/TypeScript, Rust, Java and C++ open.
