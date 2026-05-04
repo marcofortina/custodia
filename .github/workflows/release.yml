@@ -116,7 +116,7 @@ jobs:
           COMMIT="${COMMIT::12}" \
           make sbom
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: custodia-release-artifacts-${{ inputs.version }}-${{ inputs.revision }}
           path: |
