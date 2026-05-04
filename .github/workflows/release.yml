@@ -1,0 +1,119 @@
+name: Release artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without leading v, for example 0.1.0
+        required: true
+        type: string
+      revision:
+        description: Package revision
+        required: false
+        default: '1'
+        type: string
+      create_release:
+        description: Create or update the GitHub release
+        required: false
+        default: true
+        type: boolean
+      prerelease:
+        description: Mark the GitHub release as prerelease
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  build-release-artifacts:
+    name: Build release artifacts
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+      REVISION: ${{ inputs.revision }}
+      COMMIT: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+          cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: clients/node/package.json
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            ca-certificates \
+            cpio \
+            curl \
+            default-jdk-headless \
+            g++ \
+            jq \
+            libcurl4-openssl-dev \
+            libssl-dev \
+            pkg-config \
+            rpm
+
+      - name: Run release check
+        run: make release-check
+
+      - name: Build Linux packages
+        run: |
+          DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+          VERSION="$VERSION" \
+          REVISION="$REVISION" \
+          COMMIT="${COMMIT::12}" \
+          make package-linux
+
+      - name: Generate checksums and manifest
+        run: |
+          DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+          VERSION="$VERSION" \
+          REVISION="$REVISION" \
+          COMMIT="${COMMIT::12}" \
+          make package-checksums
+
+      - name: Smoke-test package artifacts
+        run: make package-smoke
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: custodia-release-artifacts-${{ inputs.version }}-${{ inputs.revision }}
+          path: dist/packages/*
+          if-no-files-found: error
+
+      - name: Create or update GitHub release
+        if: ${{ inputs.create_release }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: v${{ inputs.version }}
+          PRERELEASE_FLAG: ${{ inputs.prerelease && '--prerelease' || '' }}
+        run: |
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" dist/packages/* --clobber
+          else
+            # shellcheck disable=SC2086
+            gh release create "$TAG_NAME" dist/packages/* \
+              --title "Custodia $TAG_NAME" \
+              --generate-notes \
+              $PRERELEASE_FLAG
+          fi

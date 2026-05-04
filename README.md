@@ -1,6 +1,7 @@
 # Custodia
 
 [![CI](https://github.com/marcofortina/custodia/actions/workflows/ci.yml/badge.svg)](https://github.com/marcofortina/custodia/actions/workflows/ci.yml)
+[![Release artifacts](https://github.com/marcofortina/custodia/actions/workflows/release.yml/badge.svg)](https://github.com/marcofortina/custodia/actions/workflows/release.yml)
 
 Custodia is a REST vault for encrypted secrets. The server authenticates clients with mTLS, authorizes access, stores opaque encrypted blobs and returns only the caller's opaque envelope. Encryption, decryption, key discovery, key rotation and key trust stay outside the server.
 

@@ -161,3 +161,16 @@ make package-smoke
 The smoke check does not install packages into the host system. It extracts `.deb` artifacts with `dpkg-deb` and `.rpm` artifacts with `rpm2cpio`, then verifies the expected binaries, examples, SDK source snapshots, shared test vectors and Bash helper entrypoint.
 
 For server packages, the smoke check executes `vault-admin version` because it is side-effect free. It does not start `custodia-server` or `custodia-signer`; runtime startup belongs to deployment or integration tests with real configuration and certificates.
+
+## GitHub release workflow
+
+The manual GitHub Actions workflow `.github/workflows/release.yml` builds release artifacts from a selected commit. It runs the repository release check, builds `.deb` and `.rpm` packages, generates `SHA256SUMS` and `artifacts-manifest.json`, smoke-tests the package contents and uploads all release files as workflow artifacts.
+
+To publish a GitHub release, run the workflow with:
+
+- `version`: semantic version without the leading `v`, for example `0.1.0`;
+- `revision`: package revision, usually `1`;
+- `create_release`: `true`;
+- `prerelease`: `true` only for prerelease builds.
+
+The workflow creates or updates tag release `vVERSION` and uploads the package artifacts plus checksum files.
