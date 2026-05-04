@@ -52,9 +52,9 @@ test-cpp-client:
 test-rust-client:
 	@if ! command -v cargo >/dev/null 2>&1; then \
 		echo "cargo not found; skipping Rust client tests. Run make test-rust-client where Rust is installed." >&2; \
-		exit 0; \
+	else \
+		cargo test --manifest-path clients/rust/Cargo.toml; \
 	fi
-	cargo test --manifest-path clients/rust/Cargo.toml
 
 .PHONY: run-dev
 run-dev:

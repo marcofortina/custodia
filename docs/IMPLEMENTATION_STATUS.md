@@ -1564,3 +1564,8 @@ Node high-level crypto wrapper is implemented in `clients/node` using Node built
 - Updated the Phase 5 closure tracker after adding Rust transport.
 - Marked repository-level Phase 5 complete for Go, Python, Node.js/TypeScript, Java, C++ and Rust transport.
 - Documented remaining work as future scope outside this Phase 5 closure: package publishing, semver policies and optional Rust high-level crypto.
+
+## Patch 739 - Rust client test target skip guard
+
+- Fixed `make test-rust-client` so environments without Cargo skip cleanly without trying to execute `cargo` on the next recipe line.
+- Preserved `cargo test --manifest-path clients/rust/Cargo.toml` when Rust is installed.
