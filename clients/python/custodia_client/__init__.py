@@ -7,6 +7,21 @@ import re
 
 import requests
 
+from .types import (
+    AccessGrantPayload,
+    ActivateAccessPayload,
+    CreateClientPayload,
+    CreateSecretPayload,
+    CreateSecretVersionPayload,
+    PermissionAll,
+    PermissionRead,
+    PermissionShare,
+    PermissionWrite,
+    RecipientEnvelope,
+    RevokeClientPayload,
+    ShareSecretPayload,
+)
+
 
 @dataclass(frozen=True)
 class CustodiaClient:
