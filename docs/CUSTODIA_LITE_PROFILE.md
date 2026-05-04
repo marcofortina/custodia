@@ -372,28 +372,28 @@ La migrazione deve essere principalmente configurativa:
 
 La migrazione SQLite -> PostgreSQL richiede ancora un tool dati dedicato futuro. Il repository oggi fornisce readiness checks e runbook, non una migrazione dati automatica. Non usare `sqlite3 .dump` come procedura consigliata production.
 
-## 13. Fase 4 proposta
+## 13. Fase 4 implementata
 
 ### Blocco A - documento Lite allineato
 
-Questo documento sostituisce la versione iniziale e definisce i confini corretti.
+Completato: questo documento sostituisce la versione iniziale e definisce i confini corretti.
 
-### Blocco B - config YAML comune
+### Blocco B - config YAML comune — completato
 
 - `--config` su `custodia-server`;
-- YAML loader;
+- YAML loader flat;
 - env override;
 - test precedence;
 - esempi Lite/FULL.
 
-### Blocco C - profili
+### Blocco C - profili — completato
 
 - `CUSTODIA_PROFILE=lite|full|custom`;
 - default derivati dal profilo;
 - validation matrix;
 - production check aggiornato.
 
-### Blocco D - SQLite store
+### Blocco D - SQLite store — completato repo / build-tagged
 
 - `internal/store/sqlite`;
 - migration SQLite;
@@ -401,7 +401,7 @@ Questo documento sostituisce la versione iniziale e definisce i confini corretti
 - store parity tests;
 - backup docs.
 
-### Blocco E - packaging Lite
+### Blocco E - packaging Lite — completato
 
 - `.env.lite.example`;
 - `config.lite.yaml`;
@@ -409,7 +409,7 @@ Questo documento sostituisce la versione iniziale e definisce i confini corretti
 - Docker Compose single-node Lite;
 - runbook installazione.
 
-Il runbook Lite deve includere consigli di sicurezza espliciti:
+Il runbook Lite include consigli di sicurezza espliciti:
 
 - usare utente di sistema dedicato `custodia`;
 - proteggere `/etc/custodia` con permessi restrittivi;
@@ -420,11 +420,12 @@ Il runbook Lite deve includere consigli di sicurezza espliciti:
 - ruotare certificato admin iniziale dopo bootstrap;
 - documentare procedura di disaster recovery single-node.
 
-### Blocco F - upgrade path
+### Blocco F - upgrade path — completato readiness
 
 - docs Lite -> FULL;
-- migration planning;
-- production readiness/evidence gates.
+- readiness checks Lite -> FULL;
+- production readiness/evidence gates;
+- data migration tool ancora futuro e dichiarato come tale.
 
 ## 14. Cosa FULL può attivare/disattivare
 
