@@ -40,3 +40,47 @@ func assertSchemaVersion(t *testing.T, path string) {
 		t.Fatalf("schema version mismatch in %s", path)
 	}
 }
+
+func TestValidateVectorRejectsAADHashMismatch(t *testing.T) {
+	vector := validTestVector()
+	vector.CanonicalAADSHA256 = "deadbeef"
+	if err := ValidateVector(vector); err == nil {
+		t.Fatal("ValidateVector() error = nil, want hash mismatch")
+	}
+}
+
+func TestValidateVectorRejectsCanonicalAADMismatch(t *testing.T) {
+	vector := validTestVector()
+	vector.CanonicalAAD = `{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","secret_name":"other"}`
+	vector.CanonicalAADSHA256 = "1bbd5afc1f716833d8864c90ab8f5f0b3d3342d7c91e604e3f2988d57947d4fb"
+	if err := ValidateVector(vector); err == nil {
+		t.Fatal("ValidateVector() error = nil, want canonical AAD mismatch")
+	}
+}
+
+func TestValidateVectorRequiresExpectedErrorForUnsupportedVersion(t *testing.T) {
+	vector := validTestVector()
+	vector.CryptoMetadata.Version = "custodia.client-crypto.v2"
+	if err := ValidateVector(vector); err == nil {
+		t.Fatal("ValidateVector() error = nil, want unsupported version")
+	}
+	vector.ExpectedError = "unsupported_crypto_version"
+	if err := ValidateVector(vector); err != nil {
+		t.Fatalf("ValidateVector() error = %v", err)
+	}
+}
+
+func validTestVector() Vector {
+	return Vector{
+		Case:   "create_secret_single_recipient",
+		Status: "deterministic-aad-only",
+		CryptoMetadata: Metadata{
+			Version:        VersionV1,
+			ContentCipher:  ContentCipherV1,
+			EnvelopeScheme: EnvelopeHPKEV1,
+		},
+		AADInputs:          CanonicalAADInputs{SecretName: "database-password"},
+		CanonicalAAD:       `{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","secret_name":"database-password"}`,
+		CanonicalAADSHA256: "32f7c1471093f0a85a963d5cfeaf3aeec8edcd52577175c6b4a826c5063144bf",
+	}
+}
