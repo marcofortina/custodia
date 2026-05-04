@@ -31,11 +31,12 @@ func TestClientCryptoVectorScaffoldIsVersioned(t *testing.T) {
 			}
 			continue
 		}
-		if metadata["version"] != "custodia.client-crypto.v1" {
-			t.Fatalf("missing crypto version in %s: %#v", path, metadata)
+		metadataPayload, err := json.Marshal(metadata)
+		if err != nil {
+			t.Fatalf("Marshal(metadata %s) error = %v", path, err)
 		}
-		if metadata["content_cipher"] == "" || metadata["envelope_scheme"] == "" {
-			t.Fatalf("missing crypto scheme fields in %s: %#v", path, metadata)
+		if _, err := ParseMetadata(metadataPayload); err != nil {
+			t.Fatalf("ParseMetadata(%s) error = %v", path, err)
 		}
 	}
 }
