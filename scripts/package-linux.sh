@@ -80,9 +80,9 @@ build_server_binaries() {
   ensure_server_build_dependencies
   local tags
   mapfile -t tags < <(build_tags_args)
-  "$GO" build "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-server" ./cmd/custodia-server
-  "$GO" build "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/vault-admin" ./cmd/vault-admin
-  "$GO" build "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-signer" ./cmd/custodia-signer
+  "$GO" build -buildvcs=false "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-server" ./cmd/custodia-server
+  "$GO" build -buildvcs=false "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/vault-admin" ./cmd/vault-admin
+  "$GO" build -buildvcs=false "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-signer" ./cmd/custodia-signer
 }
 
 stage_server() {
