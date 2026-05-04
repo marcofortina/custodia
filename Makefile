@@ -18,7 +18,7 @@ fmt:
 
 
 .PHONY: check
-check: test build test-python-client test-node-client test-java-client test-cpp-client
+check: test build test-python-client test-node-client test-java-client test-cpp-client test-rust-client
 	python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py clients/python/custodia_client/crypto.py
 	node --check clients/node/src/index.js
 	node --check clients/node/src/crypto.js
@@ -47,6 +47,14 @@ test-cpp-client:
 	fi
 	g++ -std=c++20 -Wall -Wextra -Werror -Iclients/cpp/include clients/cpp/src/client.cpp clients/cpp/src/crypto.cpp clients/cpp/test/client_test.cpp $$(pkg-config --cflags --libs libcurl openssl) -o /tmp/custodia-cpp-client-test
 	/tmp/custodia-cpp-client-test
+
+.PHONY: test-rust-client
+test-rust-client:
+	@if ! command -v cargo >/dev/null 2>&1; then \
+		echo "cargo not found; skipping Rust client tests. Run make test-rust-client where Rust is installed." >&2; \
+		exit 0; \
+	fi
+	cargo test --manifest-path clients/rust/Cargo.toml
 
 .PHONY: run-dev
 run-dev:
