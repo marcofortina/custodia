@@ -1,3 +1,10 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
 [package]
 name = "custodia-client"
 version = "0.0.0"
@@ -5,6 +12,7 @@ edition = "2021"
 rust-version = "1.75"
 publish = false
 license = "AGPL-3.0-only"
+authors = ["Marco Fortina"]
 description = "Custodia Rust client for opaque REST/mTLS payloads and local client-side crypto"
 
 [lib]

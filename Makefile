@@ -1,3 +1,10 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
 GO ?= go
 VERSION ?= dev
 COMMIT ?= unknown
@@ -17,8 +24,12 @@ fmt:
 	gofmt -w $$(find . -name '*.go')
 
 
+.PHONY: license-check
+license-check:
+	./scripts/check-license-headers.sh
+
 .PHONY: check
-check: test build test-python-client test-node-client test-java-client test-cpp-client test-rust-client test-bash-client
+check: license-check test build test-python-client test-node-client test-java-client test-cpp-client test-rust-client test-bash-client
 	python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py clients/python/custodia_client/crypto.py
 	node --check clients/node/src/index.js
 	node --check clients/node/src/crypto.js

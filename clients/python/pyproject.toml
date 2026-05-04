@@ -1,6 +1,15 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
 [project]
 name = "custodia-client"
 version = "0.1.0"
+license = "AGPL-3.0-only"
+authors = [{ name = "Marco Fortina" }]
 description = "Minimal Custodia mTLS REST client"
 requires-python = ">=3.11"
 dependencies = ["requests>=2.32.0", "cryptography>=42.0.0"]

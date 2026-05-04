@@ -41,7 +41,9 @@ Contributions are welcome, but they must preserve Custodia's metadata-only secur
 
 ## License
 
-Custodia is licensed under the **GNU Affero General Public License v3.0 only** (`AGPL-3.0-only`). See [`LICENSE`](LICENSE).
+Copyright (c) 2026 Marco Fortina.
+
+Custodia is licensed under the **GNU Affero General Public License v3.0 only** (`AGPL-3.0-only`). See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
 
 Custodia is open source, but the AGPL network-copyleft terms are intentional: if you modify Custodia and make that modified version available to users over a network, you must make the corresponding source code available under the AGPL.
 

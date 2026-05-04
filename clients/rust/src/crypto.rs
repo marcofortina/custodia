@@ -1,3 +1,12 @@
+/*
+ * Copyright (c) 2026 Marco Fortina
+ * SPDX-License-Identifier: AGPL-3.0-only
+ *
+ * This file is part of Custodia.
+ * Custodia is distributed under the GNU Affero General Public License v3.0.
+ * See the accompanying LICENSE file for details.
+ */
+
 //! Shared Rust client-side crypto helpers for Custodia high-level SDK flows.
 //!
 //! These helpers implement the same v1 contract used by the Go, Python,

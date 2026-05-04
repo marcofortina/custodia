@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -10,6 +17,7 @@ rm -rf "$root_dir/dist/package-work"
 
 : "${GO:=go}"
 
+./scripts/check-license-headers.sh
 $GO test -p=1 -timeout 60s ./...
 $GO build ./cmd/custodia-server ./cmd/custodia-signer
 $GO build -o /tmp/custodia-admin-check ./cmd/custodia-admin
