@@ -23,6 +23,7 @@ import (
 	"custodia/internal/auditshipper"
 	"custodia/internal/build"
 	"custodia/internal/certutil"
+	"custodia/internal/liteupgrade"
 	"custodia/internal/model"
 	"custodia/internal/mtls"
 	"custodia/internal/productioncheck"
@@ -73,6 +74,8 @@ func main() {
 		err = runProductionCheck(args[2:])
 	case "production evidence-check":
 		err = runProductionEvidenceCheck(args[2:])
+	case "lite upgrade-check":
+		err = runLiteUpgradeCheck(args[2:])
 	case "certificate sign":
 		err = runCertificateSign(&cfg, args[2:])
 	case "client whoami":
@@ -169,6 +172,39 @@ func runProductionEvidenceCheck(args []string) error {
 	}
 	if productioncheck.HasCritical(findings) {
 		return fmt.Errorf("production external evidence check failed")
+	}
+	return nil
+}
+
+func runLiteUpgradeCheck(args []string) error {
+	cmd := flag.NewFlagSet("lite upgrade-check", flag.ExitOnError)
+	liteEnvFile := cmd.String("lite-env-file", "", "source Lite environment file")
+	fullEnvFile := cmd.String("full-env-file", "", "target Full environment file")
+	_ = cmd.Parse(args)
+	if *liteEnvFile == "" {
+		return fmt.Errorf("--lite-env-file is required")
+	}
+	if *fullEnvFile == "" {
+		return fmt.Errorf("--full-env-file is required")
+	}
+	liteEnv, err := readEnvFile(*liteEnvFile)
+	if err != nil {
+		return err
+	}
+	fullEnv, err := readEnvFile(*fullEnvFile)
+	if err != nil {
+		return err
+	}
+	findings := liteupgrade.Check(liteEnv, fullEnv)
+	if len(findings) == 0 {
+		fmt.Fprintln(os.Stdout, "lite to full upgrade readiness: ok")
+		return nil
+	}
+	for _, finding := range findings {
+		fmt.Fprintf(os.Stdout, "%s\t%s\t%s\n", finding.Severity, finding.Code, finding.Message)
+	}
+	if productioncheck.HasCritical(findings) {
+		return fmt.Errorf("lite to full upgrade readiness check failed")
 	}
 	return nil
 }
@@ -940,6 +976,7 @@ func usage() {
   vault-admin [global flags] access grant-request --secret-id ID --client-id ID --permissions read[,write,share]
   vault-admin [global flags] access activate --secret-id ID --client-id ID --envelope-file FILE
   vault-admin [global flags] access revoke --secret-id ID --client-id ID
+  vault-admin [global flags] lite upgrade-check --lite-env-file FILE --full-env-file FILE
 
 global flags:
   --server-url URL
