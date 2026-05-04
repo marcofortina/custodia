@@ -1099,3 +1099,33 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 599 - Lite CA bootstrap documentation sync
 
 - Updated Lite CA/bootstrap docs and installation guidance to describe the implemented bootstrap command and passphrase-file behavior.
+
+## Patch 602 - Lite to Full upgrade readiness checks
+
+- Added a dedicated Lite-to-Full readiness checker that validates source Lite/SQLite settings and target Full/PostgreSQL-oriented settings.
+- The checker does not perform data migration and keeps the opaque crypto boundary intact.
+
+## Patch 604 - Lite to Full upgrade readiness CLI
+
+- Added `vault-admin lite upgrade-check --lite-env-file FILE --full-env-file FILE`.
+- Critical findings fail the command; warnings allow staged migration planning.
+
+## Patch 606 - Lite upgrade check helper
+
+- Added `scripts/lite-upgrade-check.sh` and `make lite-upgrade-check` wrappers for operational use.
+
+## Patch 609 - Full upgrade target env example
+
+- Added `deploy/examples/full-upgrade-target.env.example` as a concrete target-side migration planning template.
+
+## Patch 610 - Lite to Full upgrade readiness docs
+
+- Documented the readiness command in the Lite-to-Full upgrade guide.
+
+## Patch 611 - Lite migration readiness guide
+
+- Added a dedicated migration-readiness guide clarifying what is checked and what remains an operator-controlled migration/evidence activity.
+
+## Patch 612 - Phase 4 closure
+
+- Added `docs/PHASE4_CLOSURE.md` summarizing the repository-level closure of Custodia Lite.
