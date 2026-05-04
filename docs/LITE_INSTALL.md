@@ -41,7 +41,7 @@ Certificate material under `/etc/custodia` should be readable only by the
 For a first Lite installation, generate local CA and certificate material with:
 
 ```bash
-sudo -u custodia vault-admin ca bootstrap-local \
+sudo -u custodia custodia-admin ca bootstrap-local \
   --out-dir /etc/custodia \
   --admin-client-id admin \
   --server-name localhost \

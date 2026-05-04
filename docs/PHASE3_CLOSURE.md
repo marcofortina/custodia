@@ -25,7 +25,7 @@ The repository now provides deployable or rehearsal-ready paths for:
 - Dedicated `custodia-signer` service boundary.
 - PKCS#11 command signer provider and SoftHSM helper scripts.
 - CRL distribution endpoint and CRL-backed revocation serial responder.
-- `vault-admin` helpers for CRL fetch and serial status checks.
+- `custodia-admin` helpers for CRL fetch and serial status checks.
 - Audit export integrity, archive bundles, filesystem shipment and S3/Object Lock shipment.
 - MinIO Object Lock Compose profile and smoke script.
 - k3s/CockroachDB three-node rehearsal profile and smoke script.

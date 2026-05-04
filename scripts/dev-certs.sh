@@ -22,7 +22,7 @@ for client in client_alice client_bob admin; do
     -out "$out_dir/${client}.crt" -days 365 -sha256
  done
 
-cp "$out_dir/ca.crt" "$out_dir/vault-ca.pem"
-cp "$out_dir/ca.key" "$out_dir/vault-ca-key.pem"
+cp "$out_dir/ca.crt" "$out_dir/custodia-ca.pem"
+cp "$out_dir/ca.key" "$out_dir/custodia-ca-key.pem"
 
 echo "Development certificates written to $out_dir"

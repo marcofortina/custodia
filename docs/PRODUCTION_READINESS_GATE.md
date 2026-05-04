@@ -1,13 +1,13 @@
 # Custodia production readiness gate
 
-`vault-admin production check` validates a production environment file before a deployment is promoted.
+`custodia-admin production check` validates a production environment file before a deployment is promoted.
 
 The gate is intentionally conservative: it rejects unsafe development defaults and requires the external dependencies expected by the Fort Knox roadmap.
 
 ## Usage
 
 ```bash
-vault-admin production check --env-file .env.production
+custodia-admin production check --env-file .env.production
 ```
 
 or through Make:

@@ -49,7 +49,7 @@ Run:
 
 ```bash
 go test -p=1 -timeout 60s ./...
-go build ./cmd/custodia-server ./cmd/vault-admin ./cmd/custodia-signer
+go build ./cmd/custodia-server ./cmd/custodia-admin ./cmd/custodia-signer
 python3 -m py_compile clients/python/custodia_client/__init__.py
 ```
 

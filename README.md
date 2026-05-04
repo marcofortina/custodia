@@ -125,11 +125,11 @@ The development mode uses the in-memory store and insecure HTTP only when `CUSTO
 
 ## Build metadata
 
-Release builds can stamp version, commit and date into both server and CLI binaries. The values are exposed through `GET /v1/status`, `/web/status` and `vault-admin version`. See `docs/BUILD_METADATA.md`.
+Release builds can stamp version, commit and date into both server and CLI binaries. The values are exposed through `GET /v1/status`, `/web/status` and `custodia-admin version`. See `docs/BUILD_METADATA.md`.
 
 ## Audit export integrity
 
-Audit JSONL exports include SHA-256 and event-count headers for offline verification. `vault-admin audit verify-export` verifies exported body/digest/count artifacts. See `docs/AUDIT_EXPORT_INTEGRITY.md`.
+Audit JSONL exports include SHA-256 and event-count headers for offline verification. `custodia-admin audit verify-export` verifies exported body/digest/count artifacts. See `docs/AUDIT_EXPORT_INTEGRITY.md`.
 
 ## PostgreSQL store
 
@@ -198,13 +198,13 @@ The server validates authorization, the configured envelope-count cap and base64
 ## Admin client metadata
 
 ```bash
-vault-admin client create --client-id client_bob --mtls-subject client_bob
-vault-admin client list
-vault-admin client revoke --client-id client_bob --reason compromised
-vault-admin access grant-request --secret-id SECRET --client-id client_bob --permissions read
-vault-admin audit list --limit 100
-vault-admin audit verify --limit 500
-vault-admin access activate --secret-id SECRET --client-id client_bob --envelope-file bob.envelope
+custodia-admin client create --client-id client_bob --mtls-subject client_bob
+custodia-admin client list
+custodia-admin client revoke --client-id client_bob --reason compromised
+custodia-admin access grant-request --secret-id SECRET --client-id client_bob --permissions read
+custodia-admin audit list --limit 100
+custodia-admin audit verify --limit 500
+custodia-admin access activate --secret-id SECRET --client-id client_bob --envelope-file bob.envelope
 ```
 
 Client creation registers metadata only. Certificate issuance/signing remains outside the vault server and belongs to the dedicated `custodia-signer` service.
@@ -247,7 +247,7 @@ TEST_CUSTODIA_POSTGRES_URL=postgres://user:pass@localhost:5432/custodia_test?ssl
 
 ### Runtime diagnostics
 
-Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS client to inspect runtime metadata. The diagnostics output is metadata-only and never includes secret payloads or client-side cryptographic material.
+Use `custodia-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS client to inspect runtime metadata. The diagnostics output is metadata-only and never includes secret payloads or client-side cryptographic material.
 
 
 ### Operational runbooks
@@ -256,7 +256,7 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 - [Phase 1 closure summary](docs/PHASE1_CLOSURE.md)
 - [Phase 2 closure summary](docs/PHASE2_CLOSURE.md)
 - [Phase 3 closure boundary](docs/PHASE3_CLOSURE.md)
-- [Custodia Lite profile](docs/CUSTODIA_LITE_PROFILE.md)
+- [Custodia Lite profile](docs/LITE_PROFILE.md)
 - [Custodia Lite configuration](docs/LITE_CONFIG.md)
 - [Lite SQLite store](docs/LITE_SQLITE_STORE.md)
 - [Lite installation guide](docs/LITE_INSTALL.md)
@@ -272,7 +272,7 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 - [CA signing service design](docs/CA_SIGNING_SERVICE.md)
 - [PKCS#11 and SoftHSM signer bridge](docs/PKCS11_SOFTHSM.md)
 - [Client certificate lifecycle](docs/CLIENT_CERTIFICATE_LIFECYCLE.md)
-- [Custodia client libraries specification](docs/CUSTODIA_CLIENTS.md)
+- [Custodia client libraries specification](docs/CLIENT_LIBRARIES.md)
 - [Client crypto specification](docs/CLIENT_CRYPTO_SPEC.md)
 - [Go client SDK](docs/GO_CLIENT_SDK.md)
 - [Python client SDK](docs/PYTHON_CLIENT_SDK.md)
@@ -304,12 +304,12 @@ Server-side authorization invariants have executable Go model tests and a TLA+ m
 Validate production environment files before promotion:
 
 ```bash
-vault-admin production check --env-file .env.production
+custodia-admin production check --env-file .env.production
 ```
 
 The command fails on unsafe development defaults and missing external production dependencies.
 
 ### Revocation serial status
 
-`custodia-signer` exposes a CRL-backed JSON revocation responder at `/v1/revocation/serial`. Use `vault-admin revocation check-serial --serial-hex HEX` for operator drills. See `docs/CRL_OCSP_RUNBOOK.md`.
+`custodia-signer` exposes a CRL-backed JSON revocation responder at `/v1/revocation/serial`. Use `custodia-admin revocation check-serial --serial-hex HEX` for operator drills. See `docs/CRL_OCSP_RUNBOOK.md`.
 

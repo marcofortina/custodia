@@ -19,7 +19,7 @@ configuration changes plus explicit data/infrastructure migration steps.
 Before planning the data move, compare the source Lite environment and target Full environment:
 
 ```bash
-vault-admin lite upgrade-check \
+custodia-admin lite upgrade-check \
   --lite-env-file deploy/examples/lite.env.example \
   --full-env-file deploy/examples/full-upgrade-target.env.example
 ```
@@ -33,6 +33,8 @@ make lite-upgrade-check
 ```
 
 The check validates that the source is actually Lite/SQLite and that the target is PostgreSQL/Full-oriented with Valkey, PKCS#11 and audit shipment planned. Warnings are allowed for staged upgrades; critical findings must be resolved before migration.
+
+When the helper script is used instead of calling the binary directly, set `CUSTODIA_ADMIN_BIN` to point at a non-standard admin binary path.
 
 ## Database migration
 

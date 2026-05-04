@@ -7,7 +7,7 @@ Custodia can verify an audit export artifact and write an immutable-friendly arc
 Generate export artifacts first:
 
 ```bash
-vault-admin audit export \
+custodia-admin audit export \
   --out-file custodia-audit.jsonl \
   --sha256-out custodia-audit.jsonl.sha256 \
   --events-out custodia-audit.jsonl.events
@@ -16,7 +16,7 @@ vault-admin audit export \
 Archive them locally after verification:
 
 ```bash
-vault-admin audit archive-export \
+custodia-admin audit archive-export \
   --file custodia-audit.jsonl \
   --sha256-file custodia-audit.jsonl.sha256 \
   --events-file custodia-audit.jsonl.events \

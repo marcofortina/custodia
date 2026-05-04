@@ -107,14 +107,14 @@ build_server_binaries() {
     # Resolve only the package build graph in the temporary tree.
     # Do not run `go mod tidy` here: it scans optional packages too and may
     # resolve unrelated backends to newer toolchains than this repository targets.
-    (cd "$build_root" && "$GO" list -deps -mod=mod "${tags[@]}" ./cmd/custodia-server ./cmd/vault-admin ./cmd/custodia-signer >/dev/null)
+    (cd "$build_root" && "$GO" list -deps -mod=mod "${tags[@]}" ./cmd/custodia-server ./cmd/custodia-admin ./cmd/custodia-signer >/dev/null)
     mod_args=(-mod=mod)
   else
     ensure_server_build_dependencies
   fi
 
   (cd "$build_root" && "$GO" build -buildvcs=false "${mod_args[@]}" "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-server" ./cmd/custodia-server)
-  (cd "$build_root" && "$GO" build -buildvcs=false "${mod_args[@]}" "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/vault-admin" ./cmd/vault-admin)
+  (cd "$build_root" && "$GO" build -buildvcs=false "${mod_args[@]}" "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-admin" ./cmd/custodia-admin)
   (cd "$build_root" && "$GO" build -buildvcs=false "${mod_args[@]}" "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-signer" ./cmd/custodia-signer)
 }
 
@@ -130,10 +130,10 @@ stage_server() {
     "$stage/var/log/custodia"
 
   install -m 0755 "$WORK_DIR/bin/custodia-server" "$stage/usr/bin/custodia-server"
-  install -m 0755 "$WORK_DIR/bin/vault-admin" "$stage/usr/bin/vault-admin"
+  install -m 0755 "$WORK_DIR/bin/custodia-admin" "$stage/usr/bin/custodia-admin"
   install -m 0755 "$WORK_DIR/bin/custodia-signer" "$stage/usr/bin/custodia-signer"
   install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia-server/"
-  install -m 0644 docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md "$stage/usr/share/doc/custodia-server/"
+  install -m 0644 docs/LITE_PROFILE.md docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md "$stage/usr/share/doc/custodia-server/"
   install -m 0644 deploy/examples/config.lite.yaml deploy/examples/config.full.yaml deploy/examples/lite.env.example deploy/examples/production.env.example "$stage/usr/share/custodia/examples/"
 
   cat > "$stage/usr/lib/systemd/system/custodia.service" <<'SERVICE'
@@ -176,7 +176,7 @@ copy_client_tree() {
   find "$stage/usr/share/custodia/clients" -type f \( -name '*.pyc' -o -name '*.class' \) -delete
   install -m 0755 clients/bash/custodia.sh "$stage/usr/bin/custodia-client"
   install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia-clients/"
-  install -m 0644 docs/CUSTODIA_CLIENTS.md docs/CLIENT_CRYPTO_SPEC.md docs/GO_CLIENT_SDK.md docs/PYTHON_CLIENT_SDK.md docs/NODE_CLIENT_SDK.md docs/JAVA_CLIENT_SDK.md docs/CPP_CLIENT_SDK.md docs/RUST_CLIENT_SDK.md docs/BASH_TRANSPORT_HELPER.md "$stage/usr/share/doc/custodia-clients/"
+  install -m 0644 docs/CLIENT_LIBRARIES.md docs/CLIENT_CRYPTO_SPEC.md docs/GO_CLIENT_SDK.md docs/PYTHON_CLIENT_SDK.md docs/NODE_CLIENT_SDK.md docs/JAVA_CLIENT_SDK.md docs/CPP_CLIENT_SDK.md docs/RUST_CLIENT_SDK.md docs/BASH_TRANSPORT_HELPER.md "$stage/usr/share/doc/custodia-clients/"
 }
 
 stage_clients() {
@@ -202,7 +202,7 @@ Maintainer: Custodia maintainers <maintainers@example.invalid>
 Depends: ca-certificates, adduser
 Description: Custodia vault server and administration tools
  Custodia stores opaque encrypted secret payloads and authenticates API clients with mTLS.
- This package installs custodia-server, vault-admin, custodia-signer, examples and a systemd unit.
+ This package installs custodia-server, custodia-admin, custodia-signer, examples and a systemd unit.
 EOF_CONTROL
       cat > "$control_dir/postinst" <<'EOF_POSTINST'
 #!/bin/sh
@@ -296,7 +296,7 @@ build_rpm() {
   case "$pkg" in
     custodia-server)
       summary="Custodia vault server and administration tools"
-      description="Custodia stores opaque encrypted secret payloads and authenticates API clients with mTLS. This package installs custodia-server, vault-admin, custodia-signer, examples and a systemd unit."
+      description="Custodia stores opaque encrypted secret payloads and authenticates API clients with mTLS. This package installs custodia-server, custodia-admin, custodia-signer, examples and a systemd unit."
       requires="Requires: ca-certificates"
       pre='getent group custodia >/dev/null 2>&1 || groupadd -r custodia
 getent passwd custodia >/dev/null 2>&1 || useradd -r -g custodia -d /var/lib/custodia -s /sbin/nologin custodia

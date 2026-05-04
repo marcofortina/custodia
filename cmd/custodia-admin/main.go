@@ -39,7 +39,7 @@ type cliConfig struct {
 
 func main() {
 	cfg := cliConfig{}
-	flags := flag.NewFlagSet("vault-admin", flag.ExitOnError)
+	flags := flag.NewFlagSet("custodia-admin", flag.ExitOnError)
 	flags.StringVar(&cfg.serverURL, "server-url", env("CUSTODIA_SERVER_URL", "https://localhost:8443"), "Custodia API URL")
 	flags.StringVar(&cfg.certFile, "cert", env("CUSTODIA_CLIENT_CERT_FILE", ""), "mTLS client certificate")
 	flags.StringVar(&cfg.keyFile, "key", env("CUSTODIA_CLIENT_KEY_FILE", ""), "mTLS client key")
@@ -960,23 +960,23 @@ func env(key, fallback string) string {
 
 func usage() {
 	fmt.Fprintln(os.Stderr, `usage:
-  vault-admin [global flags] status read
-  vault-admin [global flags] version server
-  vault-admin [global flags] client whoami
-  vault-admin [global flags] client list
-  vault-admin [global flags] client get --client-id ID
-  vault-admin [global flags] client create --client-id ID --mtls-subject SUBJECT
-  vault-admin [global flags] client revoke --client-id ID [--reason REASON]
-  vault-admin [global flags] audit list [--limit N] [--outcome STATUS] [--action ACTION]
-  vault-admin [global flags] audit export [--limit N] [--out-file FILE] [--sha256-out FILE] [--events-out FILE]
-  vault-admin [global flags] audit verify [--limit N]
-  vault-admin [global flags] secret versions --secret-id ID
-  vault-admin [global flags] access list --secret-id ID
-  vault-admin [global flags] access requests [--limit N] [--secret-id ID] [--status STATUS]
-  vault-admin [global flags] access grant-request --secret-id ID --client-id ID --permissions read[,write,share]
-  vault-admin [global flags] access activate --secret-id ID --client-id ID --envelope-file FILE
-  vault-admin [global flags] access revoke --secret-id ID --client-id ID
-  vault-admin [global flags] lite upgrade-check --lite-env-file FILE --full-env-file FILE
+  custodia-admin [global flags] status read
+  custodia-admin [global flags] version server
+  custodia-admin [global flags] client whoami
+  custodia-admin [global flags] client list
+  custodia-admin [global flags] client get --client-id ID
+  custodia-admin [global flags] client create --client-id ID --mtls-subject SUBJECT
+  custodia-admin [global flags] client revoke --client-id ID [--reason REASON]
+  custodia-admin [global flags] audit list [--limit N] [--outcome STATUS] [--action ACTION]
+  custodia-admin [global flags] audit export [--limit N] [--out-file FILE] [--sha256-out FILE] [--events-out FILE]
+  custodia-admin [global flags] audit verify [--limit N]
+  custodia-admin [global flags] secret versions --secret-id ID
+  custodia-admin [global flags] access list --secret-id ID
+  custodia-admin [global flags] access requests [--limit N] [--secret-id ID] [--status STATUS]
+  custodia-admin [global flags] access grant-request --secret-id ID --client-id ID --permissions read[,write,share]
+  custodia-admin [global flags] access activate --secret-id ID --client-id ID --envelope-file FILE
+  custodia-admin [global flags] access revoke --secret-id ID --client-id ID
+  custodia-admin [global flags] lite upgrade-check --lite-env-file FILE --full-env-file FILE
 
 global flags:
   --server-url URL

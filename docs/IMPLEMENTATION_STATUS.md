@@ -32,7 +32,7 @@
 - Go, Python and Node.js / TypeScript clients with public transport helpers and high-level client-side crypto wrappers for opaque REST payloads.
 - Docker, Compose and Helm deployment skeletons.
 - Admin-protected metadata-only web console pages for status, clients, access requests and audit summaries.
-- Build metadata propagation through status API, web status and `vault-admin version`.
+- Build metadata propagation through status API, web status and `custodia-admin version`.
 - Custodia Lite profile with shared YAML config, SQLite build-tag store, local CA bootstrap, CA passphrase file support, backup helper and Lite-to-Full readiness checks.
 
 ## Not claimed as local-only source-code guarantees
@@ -78,7 +78,7 @@ These are explicitly operational components in the analysis and cannot be truthf
 ## Patch 012 - audit event listing
 
 - Added admin-only `GET /v1/audit-events` with bounded `limit`.
-- Added `vault-admin audit list`.
+- Added `custodia-admin audit list`.
 - Added memory-store list support while preserving immutable hash-chain fields in responses.
 
 
@@ -152,7 +152,7 @@ These are explicitly operational components in the analysis and cannot be truthf
 ## Patch 023 - audit chain verification
 
 - Added `GET /v1/audit-events/verify` for admin-only hash-chain verification.
-- Added `vault-admin audit verify`.
+- Added `custodia-admin audit verify`.
 - Added unit/API guardrails for tampered chains and invalid limits.
 
 
@@ -209,10 +209,10 @@ These are explicitly operational components in the analysis and cannot be truthf
 - Added admin-only `GET /v1/version`.
 - The endpoint returns build metadata and audits `version.read`.
 
-## Patch 198 - vault-admin server version command
+## Patch 198 - custodia-admin server version command
 
-- Added `vault-admin version server` to read build metadata from the authenticated API.
-- Kept the existing local `vault-admin version` command unchanged.
+- Added `custodia-admin version server` to read build metadata from the authenticated API.
+- Kept the existing local `custodia-admin version` command unchanged.
 
 ## Patch 199 - Go client version helper
 
@@ -262,7 +262,7 @@ These are explicitly operational components in the analysis and cannot be truthf
 
 - Request correlation is implemented through `X-Request-ID` response headers and audit metadata enrichment.
 
-- Runtime diagnostics are implemented through admin API `/v1/diagnostics`, web `/web/diagnostics`, Go/Python helpers and `vault-admin diagnostics read`.
+- Runtime diagnostics are implemented through admin API `/v1/diagnostics`, web `/web/diagnostics`, Go/Python helpers and `custodia-admin diagnostics read`.
 
 
 ## Operational documentation
@@ -281,7 +281,7 @@ Implemented runbooks now cover production readiness, backup/restore, disaster re
 
 ## Patch 236 - Docker signer binary
 
-- The Docker image now includes `custodia-signer` alongside `custodia-server` and `vault-admin`.
+- The Docker image now includes `custodia-signer` alongside `custodia-server` and `custodia-admin`.
 
 ## Patch 237 - signer build targets
 
@@ -297,14 +297,14 @@ Implemented runbooks now cover production readiness, backup/restore, disaster re
 - Added local ECDSA client key and CSR generation helper.
 - The generated CSR binds the `client_id` into CN and DNS SAN for mTLS identity extraction.
 
-## Patch 244 - vault-admin client CSR command
+## Patch 244 - custodia-admin client CSR command
 
-- Added `vault-admin client csr` for local key/CSR generation.
+- Added `custodia-admin client csr` for local key/CSR generation.
 - Private keys are written locally with exclusive creation and restrictive permissions.
 
-## Patch 246 - vault-admin certificate sign command
+## Patch 246 - custodia-admin certificate sign command
 
-- Added `vault-admin certificate sign` to submit CSRs to the dedicated signer service.
+- Added `custodia-admin certificate sign` to submit CSRs to the dedicated signer service.
 - The command targets `custodia-signer`, not the vault API server.
 
 ## Patch 248 - certificate lifecycle guide
@@ -430,9 +430,9 @@ Phase 2 is now functionally closed for the server baseline: mTLS rotation lifecy
 
 - Added Python client support for returning JSONL export body plus SHA-256 and event-count headers.
 
-## Patch 287 - vault-admin audit export artifacts
+## Patch 287 - custodia-admin audit export artifacts
 
-- `vault-admin audit export` can now write JSONL body, SHA-256 header and event-count header to separate files.
+- `custodia-admin audit export` can now write JSONL body, SHA-256 header and event-count header to separate files.
 
 ## Patch 290 - audit artifact helper documentation
 
@@ -451,7 +451,7 @@ Coverage from patch 1 through patch 271 is represented by these implemented surf
 - hash-chained audit, audit listing/filtering/verification/export and export integrity headers;
 - PostgreSQL schema contract and optional `postgres` build-tag store;
 - Valkey-compatible rate limiting and readiness checks;
-- `vault-admin` client/access/audit/status/version/diagnostics/CSR/certificate lifecycle helpers;
+- `custodia-admin` client/access/audit/status/version/diagnostics/CSR/certificate lifecycle helpers;
 - Go/Python SDK helpers for secrets, grants, audit, status, diagnostics and version reads;
 - Docker/Compose/Helm deployment scaffolding and production/DR/backup/security runbooks;
 - dedicated `custodia-signer` process plus client certificate lifecycle tooling;
@@ -483,14 +483,14 @@ Any future implementation patch must update this file or an explicitly linked st
 - Added verification for audit JSONL export body, SHA-256 digest sidecar and event-count sidecar.
 - The verifier checks the exact exported artifact instead of re-querying live audit state.
 
-## Patch 303 - vault-admin audit export verifier
+## Patch 303 - custodia-admin audit export verifier
 
-- Added `vault-admin audit verify-export` for local/offline audit export artifact verification.
+- Added `custodia-admin audit verify-export` for local/offline audit export artifact verification.
 - The command emits a JSON verification result and returns an error on digest or event-count mismatch.
 
 ## Patch 305 - audit export verifier documentation
 
-- Documented the `vault-admin audit verify-export` workflow for JSONL, `.sha256` and `.events` artifacts.
+- Documented the `custodia-admin audit verify-export` workflow for JSONL, `.sha256` and `.events` artifacts.
 
 ## Patch 311 - client CRL status metadata
 
@@ -500,7 +500,7 @@ Any future implementation patch must update this file or an explicitly linked st
 ## Patch 313 - admin revocation status endpoint
 
 - Added admin-only `GET /v1/revocation/status` to monitor configured client CRL health.
-- Added `vault-admin revocation status` plus Go/Python SDK helpers.
+- Added `custodia-admin revocation status` plus Go/Python SDK helpers.
 
 ## Patch 318 - revocation monitoring documentation
 
@@ -509,7 +509,7 @@ Any future implementation patch must update this file or an explicitly linked st
 
 ## Patch 328 - audit archive production checklist
 
-- Production readiness now requires `vault-admin audit archive-export` before WORM/SIEM ingestion.
+- Production readiness now requires `custodia-admin audit archive-export` before WORM/SIEM ingestion.
 
 ## Patch 329 - backup restore audit archive manifest
 
@@ -521,9 +521,9 @@ Any future implementation patch must update this file or an explicitly linked st
 - Added verified archive shipment support for copying audit bundles to a sink directory.
 - The shipper re-verifies JSONL digest and event count before copying.
 
-## Patch 333 - vault-admin audit ship-archive
+## Patch 333 - custodia-admin audit ship-archive
 
-- Added `vault-admin audit ship-archive` to write sink-ready audit shipments with `shipment.json`.
+- Added `custodia-admin audit ship-archive` to write sink-ready audit shipments with `shipment.json`.
 
 ## Patch 335 - audit shipment runbook
 
@@ -560,9 +560,9 @@ Any future implementation patch must update this file or an explicitly linked st
 - Added `GET /v1/crl.pem` to `custodia-signer` for configured PEM CRL publication.
 - The endpoint returns CRL metadata headers and audits read success/failure.
 
-## Patch 355 - vault-admin CRL fetch command
+## Patch 355 - custodia-admin CRL fetch command
 
-- Added `vault-admin revocation fetch-crl --out FILE` to download signer-published CRLs into exclusive output files.
+- Added `custodia-admin revocation fetch-crl --out FILE` to download signer-published CRLs into exclusive output files.
 
 ## Patch 359 - signer CRL distribution documentation
 
@@ -590,9 +590,9 @@ Any future implementation patch must update this file or an explicitly linked st
 - Added a production readiness checker for the deployment environment contract.
 - The checker rejects unsafe development defaults and missing Fort Knox production dependencies.
 
-## Patch 373 - vault-admin production readiness command
+## Patch 373 - custodia-admin production readiness command
 
-- Added `vault-admin production check --env-file FILE`.
+- Added `custodia-admin production check --env-file FILE`.
 - The command fails on critical production-readiness findings.
 
 ## Patch 375 - production readiness make target
@@ -629,9 +629,9 @@ Any future implementation patch must update this file or an explicitly linked st
 - Added external evidence checks for HSM/PKCS#11, WORM retention, database HA, Valkey cluster, zero-trust networking, air-gapped backup, penetration testing, formal verification, revocation drills and release checks.
 - Kept the checker evidence-oriented: it verifies operator evidence references without pretending to validate confidential external systems inside the repo.
 
-## Patch 393 - vault-admin production evidence command
+## Patch 393 - custodia-admin production evidence command
 
-- Added `vault-admin production evidence-check --env-file FILE`.
+- Added `custodia-admin production evidence-check --env-file FILE`.
 - The command fails closed when any Fort Knox external evidence reference is missing.
 
 ## Patch 395 - production evidence make target
@@ -726,9 +726,9 @@ The repository still does not claim to implement physical HSM hardware, external
 - Added a SigV4 S3-compatible audit archive shipper that uploads verified bundles with Object Lock retention headers.
 - The implementation supports MinIO/Object Lock smoke testing and production S3-compatible WORM sinks.
 
-## Patch 424 - vault-admin S3 audit shipment command
+## Patch 424 - custodia-admin S3 audit shipment command
 
-- Added `vault-admin audit ship-archive-s3` for verified S3/Object Lock archive shipment.
+- Added `custodia-admin audit ship-archive-s3` for verified S3/Object Lock archive shipment.
 
 ## Patch 427 - MinIO Object Lock compose profile
 
@@ -811,9 +811,9 @@ The repository still does not claim to implement physical HSM hardware, external
 - Added signer endpoint `GET /v1/revocation/serial?serial_hex=<hex>`.
 - The endpoint reads the configured CRL file and audits success/failure outcomes.
 
-## Patch 456 - vault-admin revocation serial command
+## Patch 456 - custodia-admin revocation serial command
 
-- Added `vault-admin revocation check-serial` for operator revocation drills against `custodia-signer`.
+- Added `custodia-admin revocation check-serial` for operator revocation drills against `custodia-signer`.
 
 ## Patch 458 - SDK revocation serial helpers
 
@@ -995,7 +995,7 @@ The repository still does not claim to implement physical HSM hardware, external
 
 ## Patch 557 - profile-aware production checks
 
-- Made `vault-admin production check` profile-aware.
+- Made `custodia-admin production check` profile-aware.
 - Lite checks now accept SQLite/memory/file-signer defaults while still enforcing mTLS, Web MFA and local CA material.
 - Full checks keep requiring production-grade PostgreSQL, Valkey, PKCS#11 and WORM/SIEM settings.
 
@@ -1095,7 +1095,7 @@ The repository still does not claim to implement physical HSM hardware, external
 
 ## Patch 597 - Lite local CA bootstrap command
 
-- Added `vault-admin ca bootstrap-local` for single-node Lite bootstrap.
+- Added `custodia-admin ca bootstrap-local` for single-node Lite bootstrap.
 - The command writes local CA/cert/CRL/config artifacts, supports an existing passphrase file, can generate `ca.pass`, and refuses to overwrite existing files.
 
 ## Patch 599 - Lite CA bootstrap documentation sync
@@ -1109,7 +1109,7 @@ The repository still does not claim to implement physical HSM hardware, external
 
 ## Patch 604 - Lite to Full upgrade readiness CLI
 
-- Added `vault-admin lite upgrade-check --lite-env-file FILE --full-env-file FILE`.
+- Added `custodia-admin lite upgrade-check --lite-env-file FILE --full-env-file FILE`.
 - Critical findings fail the command; warnings allow staged migration planning.
 
 ## Patch 606 - Lite upgrade check helper
@@ -1134,7 +1134,7 @@ The repository still does not claim to implement physical HSM hardware, external
 
 ## Patch 615 - Lite upgrade helper source fallback
 
-- Fixed `scripts/lite-upgrade-check.sh` so source checkouts can run the readiness helper through `go run ./cmd/vault-admin` when `vault-admin` is not installed in `PATH`.
+- Fixed `scripts/lite-upgrade-check.sh` so source checkouts can run the readiness helper through `go run ./cmd/custodia-admin` when `custodia-admin` is not installed in `PATH`.
 
 ## Patch 616 - SQLite Lite driver dependency
 
@@ -1143,7 +1143,7 @@ The repository still does not claim to implement physical HSM hardware, external
 
 ## Patch 617 - Lite specification final sync
 
-- Updated `docs/CUSTODIA_LITE_PROFILE.md` from planning language to the post-Fase-4 implementation baseline.
+- Updated `docs/LITE_PROFILE.md` from planning language to the post-Phase-4 implementation baseline.
 - Clarified that SQLite, local CA bootstrap, CA passphrase file support and Lite operational docs are implemented at repository level, while data migration remains a future dedicated tool.
 
 ## Patch 619 - web authentication boundary documentation sync
@@ -1173,7 +1173,7 @@ The repository still does not claim to implement physical HSM hardware, external
 
 ## Patch 632 - phase 5 client library specification
 
-- Added `docs/CUSTODIA_CLIENTS.md` as the Phase 5 client-library specification.
+- Added `docs/CLIENT_LIBRARIES.md` as the Phase 5 client-library specification.
 - Clarified that Go and Python are existing transport clients while crypto clients and additional languages remain planned.
 
 ## Patch 633 - client crypto specification
@@ -1191,7 +1191,7 @@ The repository still does not claim to implement physical HSM hardware, external
 
 ## Patch 637 - Go public transport methods
 
-- Added public Go transport methods that wrap the legacy internal-model methods for opaque payload operations.
+- Added public Go transport methods that wrap the monorepo internal-model methods for opaque payload operations.
 
 ## Patch 639 - external Go consumer compile guard
 
@@ -1218,15 +1218,15 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 645 - Go public transport direct REST methods
 
 - Reworked public Go transport methods so they call REST endpoints directly with public SDK payload/response types.
-- The public transport path no longer depends on legacy internal-model helpers.
+- The public transport path no longer depends on monorepo internal-model helpers.
 
 ## Patch 646 - Go client conversion cleanup
 
 - Removed now-unused internal model conversion helpers from the public Go client path.
 
-## Patch 647 - Go legacy helper boundary docs
+## Patch 647 - Go internal-model helper boundary docs
 
-- Marked legacy Go client methods that expose internal model types as monorepo helpers.
+- Marked Go internal-model helper methods that expose internal model types as monorepo helpers.
 - Pointed external consumers to the new public transport methods.
 
 ## Patch 648 - Go public surface guardrails
@@ -1241,7 +1241,7 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 651 - Phase 5 closure tracker Go transport cleanup sync
 
 - Updated `docs/PHASE5_CLOSURE.md` to reflect that Go public transport files no longer import `custodia/internal/*`.
-- Documented the legacy internal-model helpers as monorepo compatibility helpers.
+- Documented the monorepo internal-model helpers as monorepo compatibility helpers.
 
 
 ## Patch 653 - Python public transport payload types
@@ -1337,7 +1337,7 @@ The repository still does not claim to implement physical HSM hardware, external
 
 - Documented the public Go operational SDK methods and response types.
 
-## Patch 678 - Go operational legacy boundary docs
+## Patch 678 - Go operational internal-model boundary docs
 
 - Marked older operational helpers that return internal model types as monorepo compatibility helpers.
 

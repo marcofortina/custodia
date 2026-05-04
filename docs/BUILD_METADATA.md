@@ -4,7 +4,7 @@ Custodia binaries expose build metadata through:
 
 - `GET /v1/status` for admin API callers.
 - `/web/status` for the admin metadata console.
-- `vault-admin version` for local CLI checks.
+- `custodia-admin version` for local CLI checks.
 
 Default development values are `dev`, `unknown`, `unknown`. Release builds should set:
 

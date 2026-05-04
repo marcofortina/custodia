@@ -14,9 +14,9 @@ Backups protect only server-side metadata, ciphertext blobs and recipient envelo
 1. Restore into an isolated environment first.
 2. Run migrations against the restored database.
 3. Start Custodia with production-equivalent mTLS config.
-4. Run `vault-admin audit verify`.
-5. Compare archived JSONL export SHA-256 values with `vault-admin audit verify-export`.
-6. Confirm the restored archive bundle manifest was produced by `vault-admin audit archive-export`.
+4. Run `custodia-admin audit verify`.
+5. Compare archived JSONL export SHA-256 values with `custodia-admin audit verify-export`.
+6. Confirm the restored archive bundle manifest was produced by `custodia-admin audit archive-export`.
 7. Perform a metadata-only read with a known active client.
 8. Never test restore by uploading plaintext to the server.
 

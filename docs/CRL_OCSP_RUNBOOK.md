@@ -25,7 +25,7 @@ OCSP stapling is not implemented in the API process yet. Until then, CRL enforce
 Custodia exposes an admin-only revocation monitor endpoint:
 
 ```bash
-vault-admin revocation status
+custodia-admin revocation status
 ```
 
 The endpoint is backed by `GET /v1/revocation/status` and reports whether a client CRL is configured, valid, trusted by the configured client CA, how many entries it contains and when the CRL expires.
@@ -53,7 +53,7 @@ The endpoint returns `application/pkix-crl` and includes `X-Custodia-CRL-Revoked
 `custodia-signer` also exposes a JSON revocation responder for lab and operator checks:
 
 ```bash
-vault-admin \
+custodia-admin \
   --server-url https://signer.internal:9444 \
   --cert admin.crt \
   --key admin.key \

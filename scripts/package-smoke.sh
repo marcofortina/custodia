@@ -34,13 +34,13 @@ smoke_extracted_tree() {
   case "$package_name" in
     custodia-server)
       require_executable "$root" usr/bin/custodia-server
-      require_executable "$root" usr/bin/vault-admin
+      require_executable "$root" usr/bin/custodia-admin
       require_executable "$root" usr/bin/custodia-signer
       require_file "$root" usr/lib/systemd/system/custodia-server.service
       require_file "$root" usr/share/custodia/examples/config.lite.yaml
       require_file "$root" usr/share/custodia/examples/config.full.yaml
       require_file "$root" usr/share/doc/custodia-server/README.md
-      "$root/usr/bin/vault-admin" version >/dev/null
+      "$root/usr/bin/custodia-admin" version >/dev/null
       ;;
     custodia-clients)
       require_executable "$root" usr/bin/custodia-client

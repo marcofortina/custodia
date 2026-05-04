@@ -2,7 +2,7 @@
 
 Custodia can verify the repository, binaries and configuration baseline locally, but the Fort Knox design also requires evidence from infrastructure that does not live inside this repository.
 
-`vault-admin production evidence-check --env-file FILE` verifies that the production environment file points to every required external evidence artifact.
+`custodia-admin production evidence-check --env-file FILE` verifies that the production environment file points to every required external evidence artifact.
 
 ## Required evidence files
 

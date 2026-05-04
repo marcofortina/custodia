@@ -28,7 +28,7 @@ The printed digest must match `X-Custodia-Audit-Export-SHA256`.
 The audit hash-chain can still be verified separately with:
 
 ```bash
-vault-admin audit verify --limit 500
+custodia-admin audit verify --limit 500
 ```
 
 The export digest protects the exported transport artifact; audit-chain verification protects the event sequence semantics.
@@ -39,10 +39,10 @@ Go callers can use `ExportAuditEventsWithMetadata(...)` to receive the JSONL bod
 
 Python callers can use `export_audit_events_with_metadata(...)` for the same artifact bundle.
 
-`vault-admin audit export` can write the body and headers to separate files:
+`custodia-admin audit export` can write the body and headers to separate files:
 
 ```bash
-vault-admin audit export \
+custodia-admin audit export \
   --out-file custodia-audit.jsonl \
   --sha256-out custodia-audit.sha256 \
   --events-out custodia-audit.events
@@ -51,12 +51,12 @@ vault-admin audit export \
 Persist the three files together before forwarding to SIEM or WORM storage.
 
 
-## Verifying exported artifacts with vault-admin
+## Verifying exported artifacts with custodia-admin
 
 When an export is written with sidecar files, verify the body, digest and event count together:
 
 ```bash
-vault-admin audit verify-export \
+custodia-admin audit verify-export \
   --file custodia-audit.jsonl \
   --sha256-file custodia-audit.jsonl.sha256 \
   --events-file custodia-audit.jsonl.events

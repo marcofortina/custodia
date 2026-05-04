@@ -30,7 +30,7 @@ func TestParseMetadataRejectsUnsupportedContentCipher(t *testing.T) {
 }
 
 func TestParseMetadataRejectsUnsupportedEnvelopeScheme(t *testing.T) {
-	_, err := ParseMetadata([]byte(`{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"rsa-legacy"}`))
+	_, err := ParseMetadata([]byte(`{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"rsa-unsupported"}`))
 	if !errors.Is(err, ErrUnsupportedEnvelopeScheme) {
 		t.Fatalf("ParseMetadata() error = %v, want %v", err, ErrUnsupportedEnvelopeScheme)
 	}

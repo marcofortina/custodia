@@ -7,7 +7,7 @@ Custodia can now verify an audit archive bundle and copy it into a sink director
 Create a verified archive bundle first:
 
 ```bash
-vault-admin audit archive-export \
+custodia-admin audit archive-export \
   --file custodia-audit.jsonl \
   --sha256-file custodia-audit.jsonl.sha256 \
   --events-file custodia-audit.jsonl.events \
@@ -17,7 +17,7 @@ vault-admin audit archive-export \
 Ship the verified bundle:
 
 ```bash
-vault-admin audit ship-archive \
+custodia-admin audit ship-archive \
   --archive-dir /var/lib/custodia/audit-archive/20260102T030405Z \
   --sink-dir /mnt/worm/custodia-audit
 ```

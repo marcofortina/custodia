@@ -79,4 +79,4 @@ Phase 5 is complete at repository level for Go, Python, Node.js/TypeScript, Java
 
 ## Post-closure release policy
 
-SDK release, versioning and publication rules are tracked in [`SDK_RELEASE_POLICY.md`](SDK_RELEASE_POLICY.md). Fase 5 closes repository-level SDK implementation and verification; public registry publication is a release-management step, not a server crypto-boundary change.
+SDK release, versioning and publication rules are tracked in [`SDK_RELEASE_POLICY.md`](SDK_RELEASE_POLICY.md). Phase 5 closes repository-level SDK implementation and verification; public registry publication is a release-management step, not a server crypto-boundary change.

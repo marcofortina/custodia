@@ -5,7 +5,7 @@ Custodia separates client metadata registration from certificate issuance.
 ## 1. Register metadata in the vault API
 
 ```bash
-vault-admin client create \
+custodia-admin client create \
   --client-id client_alice \
   --mtls-subject client_alice
 ```
@@ -15,7 +15,7 @@ This only creates the `clients` metadata row. It does not create keys and does n
 ## 2. Generate a private key and CSR locally
 
 ```bash
-vault-admin client csr \
+custodia-admin client csr \
   --client-id client_alice \
   --private-key-out client_alice.key \
   --csr-out client_alice.csr
@@ -28,7 +28,7 @@ The private key is generated locally and written with `0600` permissions. The va
 Point `--server-url` at `custodia-signer`, not the vault API:
 
 ```bash
-vault-admin \
+custodia-admin \
   --server-url https://signer.internal:9444 \
   --cert admin.crt \
   --key admin.key \

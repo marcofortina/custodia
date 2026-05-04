@@ -8,7 +8,7 @@ from HSM/PKCS#11 dependencies while preserving mTLS.
 Custodia supports file-backed signing material through the signer key provider and provides a Lite local bootstrap command:
 
 ```bash
-vault-admin ca bootstrap-local --out-dir /etc/custodia --admin-client-id admin --server-name localhost --generate-ca-passphrase
+custodia-admin ca bootstrap-local --out-dir /etc/custodia --admin-client-id admin --server-name localhost --generate-ca-passphrase
 ```
 
 The command writes a local self-signed CA, server certificate, initial admin client certificate, empty CRL and `config.lite.yaml`. It refuses to overwrite existing files.

@@ -33,9 +33,9 @@ CUSTODIA_DATABASE_HA_TARGET=patroni
 
 1. Trigger or simulate database failover.
 2. Verify `/ready` during and after the failover window.
-3. Verify `vault-admin status read` after reconnection.
+3. Verify `custodia-admin status read` after reconnection.
 4. Verify one metadata read, one audit export and one audit archive shipment.
-5. Run `vault-admin audit verify` to ensure the audit chain remains valid after failover.
+5. Run `custodia-admin audit verify` to ensure the audit chain remains valid after failover.
 
 ## Boundary
 

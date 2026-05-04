@@ -100,7 +100,7 @@ if err := opts.Validate(); err != nil {
 
 ## Legacy methods
 
-Older methods such as `CreateSecret`, `GetSecret`, `ShareSecret`, `Me`, `ListSecrets`, `ListClients`, `Status`, `Version`, `Diagnostics`, `RevocationStatus` and `ListAuditEvents` remain for compatibility inside the monorepo, but several expose internal model types and are documented as legacy helpers. New external consumers should use the public Phase 5 transport and operational methods.
+Internal-model methods such as `CreateSecret`, `GetSecret`, `ShareSecret`, `Me`, `ListSecrets`, `ListClients`, `Status`, `Version`, `Diagnostics`, `RevocationStatus` and `ListAuditEvents` remain for monorepo use, but several expose internal model types and are documented as internal-model helpers. New external consumers should use the public Phase 5 transport and operational methods.
 
 ## External consumer contract
 

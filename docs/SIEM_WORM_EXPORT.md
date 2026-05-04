@@ -16,8 +16,8 @@ Custodia writes an internal hash-chained audit log and can export JSONL with int
 2. Persist the body as immutable JSONL.
 3. Persist response headers next to the body.
 4. Recompute SHA-256 before upload to WORM storage.
-5. Run `vault-admin audit archive-export` to verify the JSONL, `.sha256` and `.events` artifacts and create an archive bundle.
-6. Run `vault-admin audit ship-archive` to copy the verified bundle into the configured sink directory and write `shipment.json`.
+5. Run `custodia-admin audit archive-export` to verify the JSONL, `.sha256` and `.events` artifacts and create an archive bundle.
+6. Run `custodia-admin audit ship-archive` to copy the verified bundle into the configured sink directory and write `shipment.json`.
 7. Upload or mirror the sink directory to WORM object storage or forward it to SIEM.
 8. Alert on audit chain verification failure, hash mismatch, event-count mismatch or missing shipment manifest.
 
@@ -28,4 +28,4 @@ Audit exports may contain metadata, actor IDs, resource IDs and operation outcom
 
 ## S3 Object Lock shipment
 
-For S3-compatible WORM sinks, use `vault-admin audit ship-archive-s3` after `vault-admin audit archive-export`. The command verifies the archive body, digest and event count before uploading objects with SigV4 and Object Lock retention headers. MinIO Object Lock is suitable for development and smoke testing; production compliance still depends on the external storage provider enforcing retention.
+For S3-compatible WORM sinks, use `custodia-admin audit ship-archive-s3` after `custodia-admin audit archive-export`. The command verifies the archive body, digest and event count before uploading objects with SigV4 and Object Lock retention headers. MinIO Object Lock is suitable for development and smoke testing; production compliance still depends on the external storage provider enforcing retention.

@@ -11,7 +11,8 @@ rm -rf "$root_dir/dist/package-work"
 : "${GO:=go}"
 
 $GO test -p=1 -timeout 60s ./...
-$GO build ./cmd/custodia-server ./cmd/vault-admin ./cmd/custodia-signer
+$GO build ./cmd/custodia-server ./cmd/custodia-signer
+$GO build -o /tmp/custodia-admin-check ./cmd/custodia-admin
 python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py clients/python/custodia_client/crypto.py
 python3 -m unittest discover -s clients/python/tests
 node --check clients/node/src/index.js
@@ -44,8 +45,8 @@ else
 fi
 
 if [ -n "${CUSTODIA_PRODUCTION_ENV_FILE:-}" ]; then
-  $GO run ./cmd/vault-admin production check --env-file "$CUSTODIA_PRODUCTION_ENV_FILE"
-  $GO run ./cmd/vault-admin production evidence-check --env-file "$CUSTODIA_PRODUCTION_ENV_FILE"
+  $GO run ./cmd/custodia-admin production check --env-file "$CUSTODIA_PRODUCTION_ENV_FILE"
+  $GO run ./cmd/custodia-admin production evidence-check --env-file "$CUSTODIA_PRODUCTION_ENV_FILE"
 else
   echo "CUSTODIA_PRODUCTION_ENV_FILE not set; skipping production configuration and external evidence gates." >&2
 fi

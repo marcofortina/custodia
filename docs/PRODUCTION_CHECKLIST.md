@@ -9,14 +9,14 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - `CUSTODIA_DEPLOYMENT_MODE` and `CUSTODIA_DATABASE_HA_TARGET` reflect the real DB HA topology.
 - `CUSTODIA_RATE_LIMIT_BACKEND=valkey` is configured for shared rate limits.
 - `CUSTODIA_CLIENT_CRL_FILE` is mounted when local CRL enforcement is used.
-- `vault-admin revocation status` is monitored and alerts before CRL expiry.
+- `custodia-admin revocation status` is monitored and alerts before CRL expiry.
 - `/ready` runs on a dedicated health listener that is not exposed outside the cluster.
 - Admin client IDs are explicitly configured; no wildcard admin mode exists.
 - Web console remains metadata-only and requires admin mTLS; enable TOTP MFA before production.
 - Passkey endpoints are available behind admin mTLS and Web MFA. Keep TOTP enabled unless an audited external assertion verifier is configured and evidenced.
-- Audit export integrity headers are validated by downstream archival jobs with `vault-admin audit verify-export`.
-- Audit export artifacts are bundled with `vault-admin audit archive-export` before WORM/SIEM ingestion.
-- Verified audit archive bundles are shipped with `vault-admin audit ship-archive` before SIEM/WORM ingestion.
+- Audit export integrity headers are validated by downstream archival jobs with `custodia-admin audit verify-export`.
+- Audit export artifacts are bundled with `custodia-admin audit archive-export` before WORM/SIEM ingestion.
+- Verified audit archive bundles are shipped with `custodia-admin audit ship-archive` before SIEM/WORM ingestion.
 - `CUSTODIA_SIGNER_KEY_PROVIDER` is explicitly set; production must not rely on file-backed CA keys unless this is an isolated bootstrap environment.
 
 ## Must remain false
@@ -39,7 +39,7 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 Before promoting a release, run:
 
 ```bash
-vault-admin production check --env-file .env.production
+custodia-admin production check --env-file .env.production
 ```
 
 Promotion must stop on any `critical` finding. Warnings require an explicit operator decision and should be resolved before declaring a Fort Knox production deployment complete.
@@ -62,7 +62,7 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 - PKCS#11 token/key labels and PIN source are managed outside the repository.
 - HSM/TPM attestation is attached to the production evidence gate.
 
-- S3/Object Lock audit shipment is configured and verified with `vault-admin audit ship-archive-s3` or an equivalent WORM sink adapter.
+- S3/Object Lock audit shipment is configured and verified with `custodia-admin audit ship-archive-s3` or an equivalent WORM sink adapter.
 - `make minio-object-lock-smoke` passes in development if MinIO is used as the WORM-like test profile.
 
 ## k3s CockroachDB rehearsal gate

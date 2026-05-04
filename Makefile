@@ -73,13 +73,13 @@ run-dev:
 .PHONY: build
 build:
 	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-server
-	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/vault-admin
+	$(GO) build -ldflags "$(LDFLAGS)" -o custodia-admin ./cmd/custodia-admin
 	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-signer
 
 .PHONY: build-postgres
 build-postgres:
 	$(GO) build -tags postgres -ldflags "$(LDFLAGS)" ./cmd/custodia-server
-	$(GO) build -tags postgres -ldflags "$(LDFLAGS)" ./cmd/vault-admin
+	$(GO) build -tags postgres -ldflags "$(LDFLAGS)" -o custodia-admin ./cmd/custodia-admin
 	$(GO) build -tags postgres -ldflags "$(LDFLAGS)" ./cmd/custodia-signer
 
 .PHONY: test-postgres
@@ -91,8 +91,8 @@ test-postgres:
 run-signer-dev:
 	CUSTODIA_SIGNER_DEV_INSECURE_HTTP=true \
 	CUSTODIA_SIGNER_ADMIN_SUBJECTS=signer_admin \
-	CUSTODIA_SIGNER_CA_CERT_FILE=./certs/vault-ca.pem \
-	CUSTODIA_SIGNER_CA_KEY_FILE=./certs/vault-ca-key.pem \
+	CUSTODIA_SIGNER_CA_CERT_FILE=./certs/custodia-ca.pem \
+	CUSTODIA_SIGNER_CA_KEY_FILE=./certs/custodia-ca-key.pem \
 	$(GO) run ./cmd/custodia-signer
 
 .PHONY: formal-check
@@ -105,12 +105,12 @@ production-check:
 		echo "CUSTODIA_PRODUCTION_ENV_FILE is required" >&2; \
 		exit 2; \
 	fi
-	$(GO) run ./cmd/vault-admin production check --env-file "$(CUSTODIA_PRODUCTION_ENV_FILE)"
+	$(GO) run ./cmd/custodia-admin production check --env-file "$(CUSTODIA_PRODUCTION_ENV_FILE)"
 
 .PHONY: production-evidence-check
 production-evidence-check:
 	@if [ -z "$(CUSTODIA_PRODUCTION_ENV_FILE)" ]; then 		echo "CUSTODIA_PRODUCTION_ENV_FILE is required" >&2; 		exit 2; 	fi
-	$(GO) run ./cmd/vault-admin production evidence-check --env-file "$(CUSTODIA_PRODUCTION_ENV_FILE)"
+	$(GO) run ./cmd/custodia-admin production evidence-check --env-file "$(CUSTODIA_PRODUCTION_ENV_FILE)"
 
 .PHONY: release-check
 release-check:
@@ -175,7 +175,7 @@ sqlite-driver-download:
 .PHONY: build-sqlite
 build-sqlite: sqlite-driver-download
 	$(GO) build -tags sqlite -ldflags "$(LDFLAGS)" ./cmd/custodia-server
-	$(GO) build -tags sqlite -ldflags "$(LDFLAGS)" ./cmd/vault-admin
+	$(GO) build -tags sqlite -ldflags "$(LDFLAGS)" -o custodia-admin ./cmd/custodia-admin
 	$(GO) build -tags sqlite -ldflags "$(LDFLAGS)" ./cmd/custodia-signer
 
 .PHONY: test-sqlite

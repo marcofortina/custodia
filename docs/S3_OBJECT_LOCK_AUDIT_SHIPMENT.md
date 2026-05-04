@@ -5,7 +5,7 @@ Custodia can ship verified audit archive bundles to an S3-compatible bucket with
 ## Command
 
 ```bash
-vault-admin audit ship-archive-s3 \
+custodia-admin audit ship-archive-s3 \
   --archive-dir ./audit-archive/20260102T030405Z \
   --endpoint http://127.0.0.1:9000 \
   --region us-east-1 \

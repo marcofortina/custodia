@@ -30,7 +30,7 @@ Run:
 
 ```bash
 go test -p=1 -timeout 60s ./...
-go build ./cmd/custodia-server ./cmd/vault-admin ./cmd/custodia-signer
+go build ./cmd/custodia-server ./cmd/custodia-admin ./cmd/custodia-signer
 python3 -m py_compile clients/python/custodia_client/__init__.py
 bash -n scripts/release-check.sh scripts/check-formal.sh scripts/pkcs11-sign-command.sh scripts/softhsm-dev-token.sh scripts/minio-object-lock-smoke.sh scripts/k3s-cockroachdb-smoke.sh scripts/passkey-assertion-verify-command.sh scripts/sqlite-backup.sh scripts/lite-upgrade-check.sh
 ```
