@@ -35,3 +35,55 @@ func TestParseMetadataRejectsUnsupportedEnvelopeScheme(t *testing.T) {
 		t.Fatalf("ParseMetadata() error = %v, want %v", err, ErrUnsupportedEnvelopeScheme)
 	}
 }
+
+func TestBuildCanonicalAADUsesStableJSONOrder(t *testing.T) {
+	aad, err := BuildCanonicalAAD(Metadata{
+		Version:        VersionV1,
+		ContentCipher:  ContentCipherV1,
+		EnvelopeScheme: EnvelopeHPKEV1,
+	}, CanonicalAADInputs{SecretName: "database-password"})
+	if err != nil {
+		t.Fatalf("BuildCanonicalAAD() error = %v", err)
+	}
+	want := `{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","secret_name":"database-password"}`
+	if string(aad) != want {
+		t.Fatalf("BuildCanonicalAAD() = %s, want %s", aad, want)
+	}
+}
+
+func TestBuildCanonicalAADIncludesPersistedResourceIDs(t *testing.T) {
+	aad, err := BuildCanonicalAAD(Metadata{
+		Version:        VersionV1,
+		ContentCipher:  ContentCipherV1,
+		EnvelopeScheme: EnvelopeHPKEV1,
+	}, CanonicalAADInputs{SecretID: "550e8400-e29b-41d4-a716-446655440000", VersionID: "660e8400-e29b-41d4-a716-446655440000"})
+	if err != nil {
+		t.Fatalf("BuildCanonicalAAD() error = %v", err)
+	}
+	want := `{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","secret_id":"550e8400-e29b-41d4-a716-446655440000","version_id":"660e8400-e29b-41d4-a716-446655440000"}`
+	if string(aad) != want {
+		t.Fatalf("BuildCanonicalAAD() = %s, want %s", aad, want)
+	}
+}
+
+func TestBuildCanonicalAADRejectsMissingResourceBinding(t *testing.T) {
+	_, err := BuildCanonicalAAD(Metadata{
+		Version:        VersionV1,
+		ContentCipher:  ContentCipherV1,
+		EnvelopeScheme: EnvelopeHPKEV1,
+	}, CanonicalAADInputs{})
+	if !errors.Is(err, ErrMalformedAAD) {
+		t.Fatalf("BuildCanonicalAAD() error = %v, want %v", err, ErrMalformedAAD)
+	}
+}
+
+func TestBuildCanonicalAADRejectsUnsupportedMetadata(t *testing.T) {
+	_, err := BuildCanonicalAAD(Metadata{
+		Version:        "custodia.client-crypto.v2",
+		ContentCipher:  ContentCipherV1,
+		EnvelopeScheme: EnvelopeHPKEV1,
+	}, CanonicalAADInputs{SecretName: "database-password"})
+	if !errors.Is(err, ErrUnsupportedVersion) {
+		t.Fatalf("BuildCanonicalAAD() error = %v, want %v", err, ErrUnsupportedVersion)
+	}
+}
