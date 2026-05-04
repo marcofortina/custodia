@@ -29,7 +29,7 @@
 - Idempotent bootstrap client registration for all configured stores.
 - Valkey-compatible rate limiting with `/ready` health checks.
 - Minimal admin CLI for API-backed client metadata create/list/revoke and access revoke operations.
-- Minimal Go/Python clients, with Go and Python helpers for secret metadata and access grant workflows.
+- Go and Python clients with public transport helpers and high-level client-side crypto wrappers; Node.js / TypeScript has an initial transport-only client for opaque REST payloads.
 - Docker, Compose and Helm deployment skeletons.
 - Admin-protected metadata-only web console pages for status, clients, access requests and audit summaries.
 - Build metadata propagation through status API, web status and `vault-admin version`.

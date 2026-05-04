@@ -28,14 +28,14 @@ Phase 5 tracks official client libraries and client-side cryptography.
 
 ## Still open
 
-- Node.js/TypeScript transport client.
+- Node.js/TypeScript transport client added for opaque REST payloads, with TypeScript declarations and Node test target.
 - Rust transport client.
 - Java transport client.
 - C++ transport client.
 
 ## Current boundary
 
-Go now has public transport, operational and high-level crypto SDK surfaces. Python now has typed transport helpers plus a high-level crypto wrapper. Both high-level clients encrypt/decrypt locally, create HPKE-v1 recipient envelopes, share existing DEKs locally and send only opaque payloads to the server. Deterministic crypto fixtures cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.
+Go now has public transport, operational and high-level crypto SDK surfaces. Python now has typed transport helpers plus a high-level crypto wrapper. Node.js / TypeScript now has a transport-only client for opaque REST payloads with TypeScript declarations. Go and Python high-level clients encrypt/decrypt locally, create HPKE-v1 recipient envelopes, share existing DEKs locally and send only opaque payloads to the server. Deterministic crypto fixtures cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.
 
 The server remains metadata/ciphertext/envelope-only. Custodia must not become a public-key directory.
 
@@ -49,6 +49,8 @@ go test -p=1 -timeout 60s ./pkg/client ./internal/clientcrypto
 go test -p=1 -timeout 60s ./...
 python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py clients/python/custodia_client/crypto.py
 python3 -m unittest discover -s clients/python/tests
+node --check clients/node/src/index.js
+npm test --prefix clients/node
 ```
 
-Phase 5 core Go+Python is now complete at repository level. The broader multi-language roadmap still has Node.js/TypeScript, Rust, Java and C++ open.
+Phase 5 core Go+Python is complete at repository level. Node.js / TypeScript now has the requested transport layer. The broader multi-language roadmap still has Node high-level crypto plus Rust, Java and C++ open.
