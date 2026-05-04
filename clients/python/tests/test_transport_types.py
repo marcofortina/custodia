@@ -1,0 +1,102 @@
+from __future__ import annotations
+
+import sys
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from custodia_client import (  # noqa: E402
+    AccessGrantPayload,
+    ActivateAccessPayload,
+    CreateSecretPayload,
+    CreateSecretVersionPayload,
+    CustodiaClient,
+    PermissionRead,
+    RecipientEnvelope,
+    ShareSecretPayload,
+)
+
+
+class _Response:
+    content = b'{"ok":true}'
+    text = '{"ok":true}'
+    headers = {}
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self) -> dict[str, bool]:
+        return {"ok": True}
+
+
+class PythonTransportTypesTest(unittest.TestCase):
+    def test_create_secret_payload_to_dict(self) -> None:
+        payload = CreateSecretPayload(
+            name="database-password",
+            ciphertext="Y2lwaGVy",
+            envelopes=[RecipientEnvelope(client_id="client_alice", envelope="ZW52")],
+            permissions=PermissionRead,
+            crypto_metadata={"version": "custodia.client-crypto.v1"},
+        )
+        self.assertEqual(
+            payload.to_dict(),
+            {
+                "name": "database-password",
+                "ciphertext": "Y2lwaGVy",
+                "envelopes": [{"client_id": "client_alice", "envelope": "ZW52"}],
+                "permissions": PermissionRead,
+                "crypto_metadata": {"version": "custodia.client-crypto.v1"},
+            },
+        )
+
+    def test_typed_helpers_send_public_payloads(self) -> None:
+        client = CustodiaClient(
+            server_url="https://vault.example",
+            cert_file="client.crt",
+            key_file="client.key",
+            ca_file="ca.crt",
+        )
+        with patch("custodia_client.requests.request", return_value=_Response()) as request:
+            self.assertEqual(
+                client.create_secret_payload(
+                    CreateSecretPayload(
+                        name="secret",
+                        ciphertext="Y2lwaGVy",
+                        envelopes=[RecipientEnvelope("client_alice", "ZW52")],
+                    )
+                ),
+                {"ok": True},
+            )
+            self.assertEqual(
+                client.share_secret_payload(
+                    "secret-id",
+                    ShareSecretPayload(version_id="version-id", target_client_id="client_bob", envelope="ZW52"),
+                ),
+                {"ok": True},
+            )
+            self.assertEqual(
+                client.request_access_grant_payload("secret-id", AccessGrantPayload(target_client_id="client_bob")),
+                {"ok": True},
+            )
+            self.assertEqual(
+                client.activate_access_grant_payload("secret-id", "client_bob", ActivateAccessPayload(envelope="ZW52")),
+                {"ok": True},
+            )
+            self.assertEqual(
+                client.create_secret_version_payload(
+                    "secret-id",
+                    CreateSecretVersionPayload(
+                        ciphertext="Y2lwaGVy",
+                        envelopes=[RecipientEnvelope("client_alice", "ZW52")],
+                    ),
+                ),
+                {"ok": True},
+            )
+        self.assertEqual(request.call_args_list[0].kwargs["json"]["envelopes"][0]["client_id"], "client_alice")
+        self.assertNotIn("plaintext", request.call_args_list[0].kwargs["json"])
+
+
+if __name__ == "__main__":
+    unittest.main()
