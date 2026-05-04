@@ -7,6 +7,10 @@
 
 package clientcrypto
 
+// This package intentionally contains the shared, language-neutral crypto
+// building blocks used by SDK test vectors. Keep changes here conservative:
+// any drift must be reflected in every SDK and in testdata/client-crypto/v1.
+
 import (
 	"encoding/json"
 	"errors"
@@ -30,7 +34,10 @@ type canonicalAADDocument struct {
 	VersionID      string `json:"version_id,omitempty"`
 }
 
-// BuildCanonicalAAD returns the deterministic JSON AAD bytes shared by all future crypto clients.
+// BuildCanonicalAAD returns the deterministic JSON AAD bytes shared by all crypto clients.
+//
+// The serialized field order is part of the wire contract. Do not replace this
+// with a map-based encoder unless all language fixtures are regenerated.
 func BuildCanonicalAAD(metadata Metadata, inputs CanonicalAADInputs) ([]byte, error) {
 	if err := ValidateMetadata(metadata); err != nil {
 		return nil, err

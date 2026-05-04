@@ -5,6 +5,14 @@
 # Custodia is distributed under the GNU Affero General Public License v3.0.
 # See the accompanying LICENSE file for details.
 
+"""Custodia high-level client crypto helpers.
+
+The server stores only opaque ciphertext, crypto metadata and recipient
+envelopes. This module owns the local AES-GCM and HPKE-v1 work needed by the
+Python SDK, and it mirrors the shared test vectors used by the other language
+clients.
+"""
+
 from __future__ import annotations
 
 import base64
@@ -161,6 +169,7 @@ def validate_metadata(metadata: CryptoMetadata) -> None:
 
 
 def build_canonical_aad(metadata: CryptoMetadata | Mapping[str, Any], inputs: CanonicalAADInputs) -> bytes:
+    """Return the deterministic JSON AAD bound into content and envelope AEADs."""
     if isinstance(metadata, Mapping):
         metadata = CryptoMetadata.from_mapping(metadata)
     validate_metadata(metadata)
@@ -211,6 +220,7 @@ def derive_x25519_public_key(private_key: bytes) -> bytes:
 
 
 def seal_hpke_v1_envelope(recipient_public_key: bytes, sender_ephemeral_private_key: bytes, dek: bytes, aad: bytes) -> bytes:
+    """Seal a DEK for one recipient using the fixed Custodia HPKE-v1 suite."""
     if len(recipient_public_key) != X25519_KEY_BYTES or len(sender_ephemeral_private_key) != X25519_KEY_BYTES:
         raise MalformedCryptoMetadata("invalid envelope key")
     sk_e = x25519.X25519PrivateKey.from_private_bytes(sender_ephemeral_private_key)

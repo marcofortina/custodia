@@ -7,6 +7,10 @@
 
 package clientcrypto
 
+// Vector loading and validation keeps SDK compatibility concrete: a new client
+// is not considered compatible until it passes the same metadata, AAD, content
+// and envelope fixtures as the existing implementations.
+
 import (
 	"bytes"
 	"crypto/sha256"

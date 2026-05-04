@@ -96,6 +96,9 @@ custodia_validate_provider_output() {
 }
 
 
+# The Bash helper delegates encryption to an external provider. It validates
+# provider output shape but intentionally never implements HPKE or DEK handling
+# in shell.
 custodia_require_crypto_provider() {
   : "${CUSTODIA_CRYPTO_PROVIDER:?CUSTODIA_CRYPTO_PROVIDER is required for encrypted commands}"
   if ! command -v "$CUSTODIA_CRYPTO_PROVIDER" >/dev/null 2>&1; then

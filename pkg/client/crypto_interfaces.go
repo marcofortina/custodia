@@ -36,6 +36,8 @@ var (
 	ErrRandomSourceFailed        = errors.New("random source failed")
 )
 
+// RecipientPublicKey is resolved outside Custodia by application trust logic.
+// The server must never be treated as a public-key directory for encryption.
 type RecipientPublicKey struct {
 	ClientID    string
 	Scheme      string
@@ -43,6 +45,8 @@ type RecipientPublicKey struct {
 	Fingerprint string
 }
 
+// PublicKeyResolver resolves recipient encryption keys from an application
+// controlled source such as pinned files, KMS, directory services or config.
 type PublicKeyResolver interface {
 	ResolveRecipientPublicKey(ctx context.Context, clientID string) (RecipientPublicKey, error)
 }
@@ -61,6 +65,8 @@ type Clock interface {
 	Now() time.Time
 }
 
+// CryptoOptions wires the high-level crypto client to local trust material.
+// None of these providers are sent to the server; they only operate locally.
 type CryptoOptions struct {
 	PublicKeyResolver  PublicKeyResolver
 	PrivateKeyProvider PrivateKeyProvider

@@ -26,6 +26,11 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// SQLiteStore is the Lite-profile persistence adapter.
+//
+// It persists the same logical model as the in-memory store as one JSON state
+// document while SQLite provides local durability, WAL and file locking for
+// single-node deployments. It is not intended for HA/FULL deployments.
 type SQLiteStore struct {
 	mu     sync.Mutex
 	db     *sql.DB
@@ -174,6 +179,9 @@ func (s *SQLiteStore) save(ctx context.Context) error {
 	return err
 }
 
+// mutate serializes logical state changes and persists the full snapshot after
+// the in-memory operation succeeds. This keeps Lite semantics aligned with the
+// memory store while avoiding partial writes.
 func (s *SQLiteStore) mutate(ctx context.Context, fn func() error) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

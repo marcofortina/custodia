@@ -108,6 +108,9 @@ pub struct TransportResponse {
     pub body: String,
 }
 
+/// HTTP transport abstraction used by tests and by callers that need custom I/O.
+/// Implementations must not log request bodies because they may contain opaque
+/// ciphertext and recipient envelopes.
 pub trait HttpTransport: Send + Sync {
     fn send(&self, request: TransportRequest) -> Result<TransportResponse>;
 }

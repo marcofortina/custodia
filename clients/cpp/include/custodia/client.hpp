@@ -31,6 +31,8 @@ inline constexpr int permission_all = permission_share | permission_write | perm
 using Headers = std::map<std::string, std::string>;
 using Filters = std::vector<std::pair<std::string, std::string>>;
 
+// Public C++ transport configuration. The SDK uses mTLS for every request and
+// keeps payload encryption/decryption in the optional CryptoClient layer.
 struct Config {
   std::string server_url;
   std::string cert_file;
@@ -71,6 +73,8 @@ class HttpError final : public std::runtime_error {
   Response response_;
 };
 
+// Transport is injectable so tests and applications can exercise SDK behavior
+// without logging or replaying real ciphertext/envelope payloads.
 class Transport {
  public:
   virtual ~Transport() = default;

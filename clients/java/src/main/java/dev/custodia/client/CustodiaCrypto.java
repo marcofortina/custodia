@@ -30,6 +30,13 @@ import javax.crypto.Mac;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+/**
+ * Local-only crypto primitives shared by the Java high-level client.
+ *
+ * The implementation intentionally mirrors the common test vectors instead of
+ * relying on server-side crypto negotiation; unsupported metadata versions must
+ * fail closed before plaintext is released.
+ */
 public final class CustodiaCrypto {
     public static final String CRYPTO_VERSION_V1 = "custodia.client-crypto.v1";
     public static final String CONTENT_CIPHER_V1 = "aes-256-gcm";

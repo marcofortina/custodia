@@ -7,6 +7,10 @@
 
 package clientcrypto
 
+// Content encryption helpers are deliberately small wrappers around AES-GCM.
+// Nonce generation is left to SDK callers so deterministic vectors can pin the
+// exact key/nonce/AAD tuple used across languages.
+
 import (
 	"crypto/aes"
 	"crypto/cipher"

@@ -23,6 +23,10 @@
 namespace custodia {
 namespace {
 
+// The C++ crypto code follows the same fixed v1 suite as the other SDKs. Keep
+// changes synchronized with testdata/client-crypto/v1 before changing constants
+// or JSON field ordering.
+
 constexpr const char* kCryptoVersionV1 = "custodia.client-crypto.v1";
 constexpr const char* kContentCipherV1 = "aes-256-gcm";
 constexpr const char* kEnvelopeSchemeHPKEV1 = "hpke-v1";

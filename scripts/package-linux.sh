@@ -100,6 +100,8 @@ prepare_server_build_source() {
     -cf - . | tar -xf - -C "$build_src"
 }
 
+# Build binaries from a temporary copy when SQLite tags are enabled so module
+# resolution for optional Lite dependencies cannot mutate the working tree.
 build_server_binaries() {
   mkdir -p "$WORK_DIR/bin"
   log "building Go server binaries with SERVER_BUILD_TAGS=${SERVER_BUILD_TAGS:-<none>}"

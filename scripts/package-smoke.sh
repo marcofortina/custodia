@@ -78,6 +78,8 @@ package_name_from_artifact() {
   esac
 }
 
+# Smoke tests inspect package payloads in a temporary root instead of installing
+# them on the host. This keeps CI safe while still validating shipped paths.
 smoke_deb() {
   local artifact="$1"
   command -v dpkg-deb >/dev/null 2>&1 || fail "dpkg-deb is required to smoke .deb artifacts"

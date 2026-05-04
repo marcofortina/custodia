@@ -18,6 +18,10 @@ import (
 	"custodia/internal/clientcrypto"
 )
 
+// NewCryptoClient layers local encryption/decryption on top of the transport client.
+//
+// The server still receives only opaque ciphertext, metadata and recipient
+// envelopes; plaintext and DEKs never cross this boundary.
 func NewCryptoClient(transport *Client, options CryptoOptions) (*CryptoClient, error) {
 	if transport == nil {
 		return nil, fmt.Errorf("transport client is required")
@@ -32,6 +36,9 @@ func (c *Client) WithCrypto(options CryptoOptions) (*CryptoClient, error) {
 	return NewCryptoClient(c, options)
 }
 
+// CreateEncryptedSecret encrypts plaintext locally and uploads only opaque blobs.
+// The creator is automatically included as a recipient so the secret remains
+// readable by the client that created it.
 func (c *CryptoClient) CreateEncryptedSecret(ctx context.Context, req CreateEncryptedSecretRequest) (SecretVersionRef, error) {
 	if strings.TrimSpace(req.Name) == "" {
 		return SecretVersionRef{}, fmt.Errorf("secret name is required")
@@ -103,6 +110,9 @@ func (c *CryptoClient) CreateEncryptedSecretVersion(ctx context.Context, secretI
 	})
 }
 
+// ReadDecryptedSecret downloads the caller's authorized envelope and opens it locally.
+// Authentication failures are mapped to stable SDK errors instead of exposing
+// low-level crypto library details.
 func (c *CryptoClient) ReadDecryptedSecret(ctx context.Context, secretID string) (DecryptedSecret, error) {
 	secret, err := c.transport.GetSecretPayload(secretID)
 	if err != nil {
@@ -142,6 +152,9 @@ func (c *CryptoClient) ReadDecryptedSecret(ctx context.Context, secretID string)
 	}, nil
 }
 
+// ShareEncryptedSecret rewraps the existing DEK for a new recipient.
+// The server authorizes the share operation but does not learn the DEK or the
+// recipient public key trust source used by the client.
 func (c *CryptoClient) ShareEncryptedSecret(ctx context.Context, secretID string, req ShareEncryptedSecretRequest) error {
 	if strings.TrimSpace(req.TargetClientID) == "" {
 		return fmt.Errorf("target client id is required")
@@ -186,6 +199,9 @@ func (c *CryptoClient) generateContentKeyAndNonce() ([]byte, []byte, error) {
 	return dek, nonce, nil
 }
 
+// normalizedRecipients de-duplicates requested recipients and prepends the
+// local client identity. This prevents accidental creation of unreadable
+// secrets when callers forget to include themselves.
 func (c *CryptoClient) normalizedRecipients(ctx context.Context, requested []string) ([]string, error) {
 	current, err := c.options.PrivateKeyProvider.CurrentPrivateKey(ctx)
 	if err != nil {

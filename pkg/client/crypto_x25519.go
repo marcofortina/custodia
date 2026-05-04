@@ -14,6 +14,9 @@ import (
 	"custodia/internal/clientcrypto"
 )
 
+// X25519PrivateKeyHandle is a minimal in-memory handle for tests and simple
+// integrations. Production callers may implement PrivateKeyHandle with KMS, HSM
+// or process-isolated decryption instead.
 type X25519PrivateKeyHandle struct {
 	clientID   string
 	privateKey []byte

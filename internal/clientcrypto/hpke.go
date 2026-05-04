@@ -7,6 +7,10 @@
 
 package clientcrypto
 
+// HPKE helpers implement the Custodia v1 recipient-envelope contract used by
+// SDKs and fixtures. The implementation is intentionally explicit so each
+// labeled-extract/expand step can be compared with other language clients.
+
 import (
 	"crypto/aes"
 	"crypto/cipher"
@@ -49,6 +53,9 @@ func DeriveX25519PublicKey(privateKey []byte) ([]byte, error) {
 }
 
 // SealHPKEV1Envelope seals DEK material for one recipient using HPKE base-mode parameters.
+//
+// The returned envelope is enc || ciphertext, where enc is the ephemeral X25519
+// public key. Custodia stores this blob opaquely and never interprets it.
 func SealHPKEV1Envelope(recipientPublicKey, senderEphemeralPrivateKey, dek, aad []byte) ([]byte, error) {
 	pkR, err := ecdh.X25519().NewPublicKey(recipientPublicKey)
 	if err != nil {
@@ -159,6 +166,9 @@ func hpkeOpen(sharedSecret, info, ciphertext, aad []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
+// hpkeKeySchedule derives the AEAD key and nonce for the fixed v1 suite.
+// The suite is intentionally not negotiated at runtime; versioning belongs in
+// crypto_metadata so unsupported variants fail closed.
 func hpkeKeySchedule(sharedSecret, info []byte) ([]byte, []byte) {
 	pskIDHash := hpkeLabeledExtract(hpkeSuiteID, nil, "psk_id_hash", nil)
 	infoHash := hpkeLabeledExtract(hpkeSuiteID, nil, "info_hash", info)

@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import javax.net.ssl.SSLContext;
 
+/** Public Java transport configuration for REST/mTLS calls. */
 public final class CustodiaClientConfig {
     private final URI serverUrl;
     private final Path keyStorePath;

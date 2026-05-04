@@ -51,6 +51,9 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }
 
+// handleWeb intentionally exposes a metadata-only console. Browser-side secret
+// decryption is a separate client concern and must not be added here without a
+// dedicated WebCrypto/key-management design.
 func (s *Server) handleWeb(w http.ResponseWriter, _ *http.Request) {
 	body := "<h1>Custodia metadata console</h1>" +
 		webParagraph("The web console is metadata-only and requires an authenticated admin subject.") +
@@ -344,6 +347,9 @@ func (s *Server) handleVerifyAuditEvents(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, result)
 }
 
+// handleCreateSecret stores client-produced ciphertext and recipient envelopes
+// without interpreting crypto_metadata. Authorization is server-side; encryption
+// semantics remain entirely client-side.
 func (s *Server) handleCreateSecret(w http.ResponseWriter, r *http.Request) {
 	var req model.CreateSecretRequest
 	if !decodeJSON(w, r, &req) {
@@ -383,6 +389,9 @@ func (s *Server) handleListSecrets(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"secrets": secrets})
 }
 
+// handleGetSecret returns only the envelope authorized for the authenticated
+// mTLS client. Other recipients' envelopes stay hidden even though they refer
+// to the same secret version.
 func (s *Server) handleGetSecret(w http.ResponseWriter, r *http.Request) {
 	secretID, ok := s.requireSecretID(w, r, "secret.read")
 	if !ok {
@@ -456,6 +465,9 @@ func (s *Server) handleDeleteSecret(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
+// handleShareSecret activates access using an envelope supplied by a client
+// that already holds share permission. The server records the grant but never
+// manufactures or validates recipient key material.
 func (s *Server) handleShareSecret(w http.ResponseWriter, r *http.Request) {
 	secretID, ok := s.requireSecretID(w, r, "secret.share")
 	if !ok {
@@ -608,6 +620,8 @@ func (s *Server) handleRevokeAccess(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "revoked"})
 }
 
+// handleCreateSecretVersion models strong rotation: clients upload a fresh
+// ciphertext and fresh recipient envelopes after revocation or key rollover.
 func (s *Server) handleCreateSecretVersion(w http.ResponseWriter, r *http.Request) {
 	secretID, ok := s.requireSecretID(w, r, "secret.version_create")
 	if !ok {

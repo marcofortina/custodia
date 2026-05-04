@@ -21,6 +21,10 @@ import (
 	"custodia/internal/mtls"
 )
 
+// Config describes the public transport client settings.
+//
+// The client always uses mutual TLS; there is no bearer-token fallback because
+// Custodia identifies API callers from the client certificate subject.
 type Config struct {
 	ServerURL string
 	CertFile  string
@@ -28,6 +32,10 @@ type Config struct {
 	CAFile    string
 }
 
+// Client is the public REST/mTLS transport SDK.
+//
+// Transport methods forward ciphertext, envelopes and crypto_metadata as opaque
+// JSON values. High-level encryption is layered separately by CryptoClient.
 type Client struct {
 	baseURL string
 	http    *http.Client
@@ -55,6 +63,10 @@ type AccessGrantRequestFilters struct {
 	RequestedByClientID string
 }
 
+// New builds a transport client with TLS 1.3 mTLS configuration.
+//
+// The HTTP timeout is intentionally finite so SDK callers do not hang forever
+// on network partitions or unavailable load balancers.
 func New(cfg Config) (*Client, error) {
 	tlsConfig, err := mtls.ClientTLSConfig(cfg.CertFile, cfg.KeyFile, cfg.CAFile)
 	if err != nil {
@@ -363,6 +375,11 @@ func (c *Client) doRaw(method, path string, payload any, out io.Writer) error {
 	return err
 }
 
+// doRawWithHeaders is the single transport boundary for the Go SDK.
+//
+// It serializes only caller-provided payloads and returns typed HTTP errors
+// without embedding request bodies, so ciphertext/envelopes are not leaked in
+// error messages.
 func (c *Client) doRawWithHeaders(method, path string, payload any, out io.Writer) (http.Header, error) {
 	var body io.Reader
 	if payload != nil {

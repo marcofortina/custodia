@@ -14,10 +14,14 @@ import (
 	"os"
 )
 
+// ServerTLSConfig creates the default API TLS policy: TLS 1.3 plus mandatory
+// client certificate validation against the configured Custodia client CA.
 func ServerTLSConfig(certFile, keyFile, clientCAFile string) (*tls.Config, error) {
 	return ServerTLSConfigWithClientCRL(certFile, keyFile, clientCAFile, "")
 }
 
+// ServerTLSConfigWithClientCRL optionally adds CRL validation at the TLS peer
+// verification boundary, so revoked certificates fail before reaching handlers.
 func ServerTLSConfigWithClientCRL(certFile, keyFile, clientCAFile, clientCRLFile string) (*tls.Config, error) {
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {

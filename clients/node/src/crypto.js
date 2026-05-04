@@ -7,6 +7,10 @@
  * See the accompanying LICENSE file for details.
  */
 
+// This module implements the local-only crypto layer used by the Node SDK.
+// Custodia receives only opaque ciphertext, crypto metadata and envelopes;
+// plaintext, DEKs and key-resolver trust decisions remain outside the server.
+
 import {
   createCipheriv,
   createDecipheriv,
@@ -166,6 +170,8 @@ export function validateMetadata(metadata) {
 }
 
 export function buildCanonicalAAD(metadata, inputs) {
+  // JSON.stringify preserves insertion order for these explicit fields. The
+  // order is part of the cross-language AAD fixture contract.
   if (!(metadata instanceof CryptoMetadata)) {
     metadata = CryptoMetadata.fromMapping(metadata);
   }
@@ -228,6 +234,7 @@ export function deriveX25519PublicKey(privateKey) {
 }
 
 export function sealHPKEV1Envelope(recipientPublicKey, senderEphemeralPrivateKey, dek, aad) {
+  // Envelope wire format is enc || sealed_dek. The server stores it opaquely.
   assertLength(recipientPublicKey, X25519KeyBytes, "invalid envelope key");
   assertLength(senderEphemeralPrivateKey, X25519KeyBytes, "invalid envelope key");
   const skE = x25519PrivateKeyObject(senderEphemeralPrivateKey);
