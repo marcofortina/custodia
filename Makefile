@@ -100,14 +100,18 @@ k3s-cockroachdb-smoke:
 passkey-assertion-verifier-template-check:
 	@printf '{"credential_id":"fixture"}' | ./scripts/passkey-assertion-verify-command.sh | grep '"valid":false' >/dev/null
 
+.PHONY: sqlite-driver-download
+sqlite-driver-download:
+	$(GO) mod download modernc.org/sqlite
+
 .PHONY: build-sqlite
-build-sqlite:
+build-sqlite: sqlite-driver-download
 	$(GO) build -tags sqlite -ldflags "$(LDFLAGS)" ./cmd/custodia-server
 	$(GO) build -tags sqlite -ldflags "$(LDFLAGS)" ./cmd/vault-admin
 	$(GO) build -tags sqlite -ldflags "$(LDFLAGS)" ./cmd/custodia-signer
 
 .PHONY: test-sqlite
-test-sqlite:
+test-sqlite: sqlite-driver-download
 	$(GO) test -tags sqlite -p=1 -timeout 60s ./internal/store ./cmd/custodia-server
 
 .PHONY: sqlite-backup
