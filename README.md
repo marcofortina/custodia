@@ -30,6 +30,23 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 - No server-side cryptographic key resolution.
 - No server-side application decryption.
 
+
+## Support the project
+
+Custodia is maintained as an open-source privacy-first age-assurance project. If this repository helps your lab, research, compliance work, or integration testing, sponsorship helps keep development, testing, documentation, and security hardening moving.
+
+Ways to support the project:
+
+- GitHub Sponsors: use the repository **Sponsor** button or sponsor `@marcofortina`.
+- PayPal: `https://paypal.me/marcofortina`.
+- Bitcoin: `36jDV57roGb4o59TwK1CB7viPrXToQHGiP`.
+
+Bitcoin URI:
+
+```text
+bitcoin:36jDV57roGb4o59TwK1CB7viPrXToQHGiP
+```
+
 ## Local development
 
 ```bash
