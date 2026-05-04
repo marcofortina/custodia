@@ -1,15 +1,52 @@
 # Custodia Rust client
 
-`clients/rust` is the repository Rust transport client for Custodia opaque REST/mTLS payloads.
+`clients/rust` is the repository Rust client for Custodia opaque REST/mTLS payloads and local client-side crypto flows.
 
-The client is intentionally transport-only in Phase 5. It sends ciphertext, `crypto_metadata` and recipient envelopes that were already produced outside the server. It does not implement high-level client-side encryption and does not resolve recipient public keys through Custodia.
+It includes:
+
+- a transport REST/mTLS client for already-opaque payloads;
+- a high-level crypto wrapper using the shared v1 contract: canonical AAD, AES-256-GCM content encryption and HPKE-v1 recipient envelopes.
+
+The crypto wrapper encrypts/decrypts locally and must not log plaintext, ciphertext, envelopes, DEKs, private keys or passphrases. Recipient public keys are resolved by the application, not by Custodia.
 
 ## Boundary
 
 - mTLS is configured with local client cert/key and Custodia CA files.
-- Payloads remain opaque to the transport client.
+- Transport methods keep payloads opaque.
+- Crypto methods keep plaintext, DEKs and private keys local to the caller.
 - No plaintext, DEK, private key, passphrase, ciphertext or envelope is logged.
 - Retry policy is left to the caller; mutating requests are not retried automatically.
+
+## Example
+
+```rust
+use custodia_client::{
+    CustodiaClient, CustodiaClientConfig, CryptoOptions, StaticPrivateKeyProvider,
+    StaticPublicKeyResolver, X25519PrivateKeyHandle,
+};
+use std::sync::Arc;
+
+let client = CustodiaClient::new(CustodiaClientConfig::new(
+    "https://vault:8443",
+    "client.crt",
+    "client.key",
+    "ca.crt",
+))?;
+
+let private_key = Arc::new(X25519PrivateKeyHandle::new("client_alice", &alice_private_key_bytes)?);
+let crypto = client.with_crypto(CryptoOptions::new(
+    Arc::new(resolve_public_keys_out_of_band()),
+    Arc::new(StaticPrivateKeyProvider::new(private_key)),
+));
+
+crypto.create_encrypted_secret(
+    "db/password",
+    b"local plaintext",
+    &["client_bob".to_string()],
+    custodia_client::PERMISSION_ALL,
+    None,
+)?;
+```
 
 ## Test
 

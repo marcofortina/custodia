@@ -1,9 +1,12 @@
+pub mod crypto;
+pub use crypto::*;
+
 //! Custodia Rust transport client for opaque REST/mTLS payloads.
 //!
 //! The Phase 5 Rust client is transport-only. It does not encrypt, decrypt,
 //! resolve public keys or inspect ciphertext/envelopes.
 
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::fmt;
 use std::fs;
 use std::path::PathBuf;
@@ -110,6 +113,7 @@ pub enum CustodiaError {
     Transport(String),
     Json(serde_json::Error),
     Io(std::io::Error),
+    Crypto(CryptoError),
 }
 
 impl fmt::Display for CustodiaError {
@@ -120,6 +124,7 @@ impl fmt::Display for CustodiaError {
             Self::Transport(message) => write!(f, "Custodia transport error: {message}"),
             Self::Json(err) => write!(f, "Custodia JSON error: {err}"),
             Self::Io(err) => write!(f, "Custodia IO error: {err}"),
+            Self::Crypto(err) => write!(f, "Custodia crypto error: {err}"),
         }
     }
 }
@@ -129,6 +134,7 @@ impl std::error::Error for CustodiaError {
         match self {
             Self::Json(err) => Some(err),
             Self::Io(err) => Some(err),
+            Self::Crypto(err) => Some(err),
             _ => None,
         }
     }
@@ -143,6 +149,12 @@ impl From<serde_json::Error> for CustodiaError {
 impl From<std::io::Error> for CustodiaError {
     fn from(err: std::io::Error) -> Self {
         Self::Io(err)
+    }
+}
+
+impl From<CryptoError> for CustodiaError {
+    fn from(err: CryptoError) -> Self {
+        Self::Crypto(err)
     }
 }
 
@@ -315,6 +327,10 @@ impl CustodiaClient {
         })
     }
 
+    pub fn with_crypto(self, options: CryptoOptions) -> CryptoCustodiaClient {
+        CryptoCustodiaClient::new(self, options)
+    }
+
     pub fn request_json(&self, method: &str, path: &str, payload: Option<&Value>) -> Result<Value> {
         let response = self.request_raw(method, path, payload)?;
         if response.body.trim().is_empty() {
@@ -473,4 +489,228 @@ fn header_value(headers: &[(String, String)], name: &str) -> Option<String> {
         .iter()
         .find(|(key, _)| key.eq_ignore_ascii_case(name))
         .map(|(_, value)| value.clone())
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DecryptedSecret {
+    pub secret_id: String,
+    pub version_id: String,
+    pub plaintext: Vec<u8>,
+    pub crypto_metadata: Value,
+    pub permissions: u8,
+    pub granted_at: String,
+    pub access_expires_at: Option<String>,
+}
+
+pub struct CryptoCustodiaClient {
+    transport: CustodiaClient,
+    options: CryptoOptions,
+}
+
+impl CryptoCustodiaClient {
+    pub fn new(transport: CustodiaClient, options: CryptoOptions) -> Self {
+        Self { transport, options }
+    }
+
+    pub fn create_encrypted_secret(
+        &self,
+        name: &str,
+        plaintext: &[u8],
+        recipients: &[String],
+        permissions: u8,
+        expires_at: Option<&str>,
+    ) -> Result<Value> {
+        if name.trim().is_empty() {
+            return Err(CustodiaError::InvalidConfig("secret name is required".to_string()));
+        }
+        let dek = self.random(AES_256_GCM_KEY_BYTES)?;
+        let nonce = self.random(AES_GCM_NONCE_BYTES)?;
+        let aad_inputs = CanonicalAADInputs {
+            secret_name: name.to_string(),
+            ..Default::default()
+        };
+        let metadata = metadata_v1(aad_inputs.clone(), &nonce);
+        let aad = build_canonical_aad(&metadata, &aad_inputs)?;
+        let ciphertext = seal_content_aes_256_gcm(&dek, &nonce, plaintext, &aad)?;
+        let mut payload = json!({
+            "name": name,
+            "ciphertext": encode_base64(&ciphertext),
+            "crypto_metadata": metadata.to_value(),
+            "envelopes": self.seal_recipient_envelopes(&self.normalized_recipients(recipients)?, &dek, &aad)?,
+            "permissions": permissions,
+        });
+        if let Some(expires_at) = expires_at {
+            payload["expires_at"] = Value::String(expires_at.to_string());
+        }
+        self.transport.create_secret_payload(&payload)
+    }
+
+    pub fn create_encrypted_secret_version(
+        &self,
+        secret_id: &str,
+        plaintext: &[u8],
+        recipients: &[String],
+        permissions: u8,
+        expires_at: Option<&str>,
+    ) -> Result<Value> {
+        if secret_id.trim().is_empty() {
+            return Err(CustodiaError::InvalidConfig("secret id is required".to_string()));
+        }
+        let dek = self.random(AES_256_GCM_KEY_BYTES)?;
+        let nonce = self.random(AES_GCM_NONCE_BYTES)?;
+        let aad_inputs = CanonicalAADInputs {
+            secret_id: secret_id.to_string(),
+            ..Default::default()
+        };
+        let metadata = metadata_v1(aad_inputs.clone(), &nonce);
+        let aad = build_canonical_aad(&metadata, &aad_inputs)?;
+        let ciphertext = seal_content_aes_256_gcm(&dek, &nonce, plaintext, &aad)?;
+        let mut payload = json!({
+            "ciphertext": encode_base64(&ciphertext),
+            "crypto_metadata": metadata.to_value(),
+            "envelopes": self.seal_recipient_envelopes(&self.normalized_recipients(recipients)?, &dek, &aad)?,
+            "permissions": permissions,
+        });
+        if let Some(expires_at) = expires_at {
+            payload["expires_at"] = Value::String(expires_at.to_string());
+        }
+        self.transport.create_secret_version_payload(secret_id, &payload)
+    }
+
+    pub fn read_decrypted_secret(&self, secret_id: &str) -> Result<DecryptedSecret> {
+        let secret = self.transport.get_secret_payload(secret_id)?;
+        let empty_metadata = Value::Object(Default::default());
+        let metadata = parse_metadata(secret.get("crypto_metadata").unwrap_or(&empty_metadata))?;
+        let fallback = CanonicalAADInputs {
+            secret_id: value_string(secret.get("secret_id")),
+            version_id: value_string(secret.get("version_id")),
+            ..Default::default()
+        };
+        let aad_inputs = metadata.canonical_aad_inputs(fallback);
+        let aad = build_canonical_aad(&metadata, &aad_inputs)?;
+        if metadata.content_nonce_b64.is_empty() {
+            return Err(CryptoError::MalformedCryptoMetadata("missing content nonce".to_string()).into());
+        }
+        let nonce = decode_base64(&metadata.content_nonce_b64)?;
+        let dek = self.open_secret_envelope(&value_string(secret.get("envelope")), &aad)?;
+        let ciphertext = decode_base64(&value_string(secret.get("ciphertext")))?;
+        let plaintext = open_content_aes_256_gcm(&dek, &nonce, &ciphertext, &aad)?;
+        Ok(DecryptedSecret {
+            secret_id: value_string(secret.get("secret_id")),
+            version_id: value_string(secret.get("version_id")),
+            plaintext,
+            crypto_metadata: metadata.to_value(),
+            permissions: value_u8(secret.get("permissions")),
+            granted_at: value_string(secret.get("granted_at")),
+            access_expires_at: value_optional_string(secret.get("access_expires_at")),
+        })
+    }
+
+    pub fn share_encrypted_secret(
+        &self,
+        secret_id: &str,
+        target_client_id: &str,
+        permissions: u8,
+        expires_at: Option<&str>,
+    ) -> Result<Value> {
+        if target_client_id.trim().is_empty() {
+            return Err(CustodiaError::InvalidConfig("target client id is required".to_string()));
+        }
+        let secret = self.transport.get_secret_payload(secret_id)?;
+        let empty_metadata = Value::Object(Default::default());
+        let metadata = parse_metadata(secret.get("crypto_metadata").unwrap_or(&empty_metadata))?;
+        let fallback = CanonicalAADInputs {
+            secret_id: value_string(secret.get("secret_id")),
+            version_id: value_string(secret.get("version_id")),
+            ..Default::default()
+        };
+        let aad_inputs = metadata.canonical_aad_inputs(fallback);
+        let aad = build_canonical_aad(&metadata, &aad_inputs)?;
+        let dek = self.open_secret_envelope(&value_string(secret.get("envelope")), &aad)?;
+        let envelope = self.seal_recipient_envelopes(&[target_client_id.to_string()], &dek, &aad)?
+            .into_iter()
+            .next()
+            .ok_or_else(|| CustodiaError::InvalidConfig("missing recipient envelope".to_string()))?;
+        let mut payload = json!({
+            "version_id": value_string(secret.get("version_id")),
+            "target_client_id": target_client_id,
+            "envelope": envelope["envelope"].clone(),
+            "permissions": permissions,
+        });
+        if let Some(expires_at) = expires_at {
+            payload["expires_at"] = Value::String(expires_at.to_string());
+        }
+        self.transport.share_secret_payload(secret_id, &payload)
+    }
+
+    fn normalized_recipients(&self, recipients: &[String]) -> Result<Vec<String>> {
+        let current = self.options.private_key_provider.current_private_key()?;
+        let mut values = Vec::new();
+        if !current.client_id().is_empty() {
+            values.push(current.client_id().to_string());
+        }
+        for recipient in recipients {
+            let value = recipient.trim();
+            if !value.is_empty() && !values.iter().any(|existing| existing == value) {
+                values.push(value.to_string());
+            }
+        }
+        if values.is_empty() {
+            return Err(CustodiaError::InvalidConfig("missing recipient envelope".to_string()));
+        }
+        Ok(values)
+    }
+
+    fn seal_recipient_envelopes(&self, recipients: &[String], dek: &[u8], aad: &[u8]) -> Result<Vec<Value>> {
+        let mut envelopes = Vec::new();
+        for recipient in recipients {
+            let public_key = self.options.public_key_resolver.resolve_recipient_public_key(recipient)?;
+            if public_key.scheme != ENVELOPE_SCHEME_HPKE_V1 {
+                return Err(CryptoError::UnsupportedEnvelopeScheme.into());
+            }
+            let ephemeral_private_key = self.random(X25519_KEY_BYTES)?;
+            let envelope = seal_hpke_v1_envelope(&public_key.public_key, &ephemeral_private_key, dek, aad)?;
+            envelopes.push(json!({
+                "client_id": recipient,
+                "envelope": encode_envelope(&envelope),
+            }));
+        }
+        Ok(envelopes)
+    }
+
+    fn open_secret_envelope(&self, encoded_envelope: &str, aad: &[u8]) -> Result<Vec<u8>> {
+        let private_key = self.options.private_key_provider.current_private_key()?;
+        if private_key.scheme() != ENVELOPE_SCHEME_HPKE_V1 {
+            return Err(CryptoError::UnsupportedEnvelopeScheme.into());
+        }
+        Ok(private_key.open_envelope(&decode_envelope(encoded_envelope)?, aad)?)
+    }
+
+    fn random(&self, length: usize) -> Result<Vec<u8>> {
+        let value = self.options.random_source.random(length)?;
+        if value.len() != length {
+            return Err(CryptoError::RandomSource("invalid random byte length".to_string()).into());
+        }
+        Ok(value)
+    }
+}
+
+fn value_string(value: Option<&Value>) -> String {
+    match value {
+        Some(Value::String(value)) => value.clone(),
+        Some(value) if !value.is_null() => value.to_string(),
+        _ => String::new(),
+    }
+}
+
+fn value_optional_string(value: Option<&Value>) -> Option<String> {
+    match value {
+        Some(Value::String(value)) if !value.is_empty() => Some(value.clone()),
+        Some(value) if !value.is_null() => Some(value.to_string()),
+        _ => None,
+    }
+}
+
+fn value_u8(value: Option<&Value>) -> u8 {
+    value.and_then(Value::as_u64).unwrap_or_default() as u8
 }

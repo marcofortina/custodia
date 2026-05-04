@@ -1,72 +1,79 @@
 # Custodia Rust client SDK
 
-`clients/rust` is the repository Rust transport client for Custodia. It is a Phase 5 transport SDK for opaque REST/mTLS payloads.
+`clients/rust` contains the Rust SDK. It includes a raw REST/mTLS transport client for opaque Custodia payloads and a high-level client-side crypto wrapper.
 
-## Boundary
+The high-level wrapper uses the shared v1 crypto contract: canonical AAD, AES-256-GCM content encryption and HPKE-v1 recipient envelopes. Plaintext, DEKs and private keys remain local to the caller.
 
-The Rust client is transport-only:
+## TLS configuration
 
-- it authenticates to Custodia with mTLS;
-- it sends and receives already-opaque `ciphertext`, `crypto_metadata` and recipient `envelope` fields;
-- it does not encrypt or decrypt payloads;
-- it does not resolve recipient public keys;
-- it does not log plaintext, DEKs, private keys, passphrases, ciphertext or envelopes;
-- it does not retry mutating requests automatically.
-
-High-level Rust crypto helpers are intentionally left for a later phase. The shared crypto vectors remain the contract that any future Rust crypto wrapper must pass.
-
-## Configuration
+The default client uses `reqwest` blocking with rustls and local PEM files:
 
 ```rust
-use custodia_client::{CustodiaClient, CustodiaClientConfig};
-
-let config = CustodiaClientConfig::new(
-    "https://vault.example.test:8443",
-    "client.crt",
-    "client.key",
-    "ca.crt",
-);
-let client = CustodiaClient::new(config)?;
-```
-
-## Transport operations
-
-The client exposes opaque payload methods for:
-
-- client metadata: `current_client_info`, `list_client_infos`, `get_client_info`, `create_client_info`, `revoke_client_info`;
-- secrets: `create_secret_payload`, `get_secret_payload`, `list_secret_metadata`, `list_secret_version_metadata`, `list_secret_access_metadata`, `create_secret_version_payload`;
-- grants and sharing: `share_secret_payload`, `create_access_grant`, `activate_access_grant_payload`, `revoke_access`, `list_access_grant_metadata`;
-- operations: `status_info`, `version_info`, `diagnostics_info`, `revocation_status_info`, `revocation_serial_status_info`;
-- audit: `list_audit_event_metadata`, `export_audit_event_artifact`.
-
-## Example
-
-```rust
-use custodia_client::{CustodiaClient, CustodiaClientConfig, PERMISSION_ALL};
-use serde_json::json;
-
 let client = CustodiaClient::new(CustodiaClientConfig::new(
-    "https://vault.example.test:8443",
+    "https://vault:8443",
     "client.crt",
     "client.key",
     "ca.crt",
 ))?;
-
-let created = client.create_secret_payload(&json!({
-    "name": "db/password",
-    "ciphertext": "base64-already-encrypted-data",
-    "crypto_metadata": { "format": "client-defined" },
-    "envelopes": [
-        { "client_id": "client_alice", "envelope": "base64-envelope-for-alice" }
-    ],
-    "permissions": PERMISSION_ALL
-}))?;
 ```
+
+## Opaque secret payloads
+
+```rust
+let payload = serde_json::json!({
+    "name": "db",
+    "ciphertext": "base64cipher",
+    "envelopes": [{"client_id": "self", "envelope": "base64env"}],
+});
+let response = client.create_secret_payload(&payload)?;
+let secret = client.get_secret_payload("550e8400-e29b-41d4-a716-446655440000")?;
+```
+
+The transport client exposes methods for:
+
+- client metadata;
+- secret create/read/list/version/share flows;
+- pending access grants;
+- operational status/version/diagnostics;
+- revocation status;
+- audit event metadata and export artifacts.
+
+## High-level crypto flow
+
+```rust
+use custodia_client::{
+    CryptoOptions, StaticPrivateKeyProvider, StaticPublicKeyResolver,
+    X25519PrivateKeyHandle,
+};
+use std::sync::Arc;
+
+let private_key = Arc::new(X25519PrivateKeyHandle::new("client_alice", &alice_private_key_bytes)?);
+let crypto = client.with_crypto(CryptoOptions::new(
+    Arc::new(resolve_public_keys_out_of_band()),
+    Arc::new(StaticPrivateKeyProvider::new(private_key)),
+));
+
+crypto.create_encrypted_secret(
+    "db/password",
+    plaintext_bytes,
+    &["client_bob".to_string()],
+    custodia_client::PERMISSION_ALL,
+    None,
+)?;
+let decrypted = crypto.read_decrypted_secret(secret_id)?;
+crypto.share_encrypted_secret(secret_id, "client_charlie", custodia_client::PERMISSION_READ, None)?;
+```
+
+The application must provide recipient public keys through `PublicKeyResolver`; Custodia is not a key directory.
+
+## Security boundary
+
+The Rust SDK must not log plaintext, ciphertext, envelopes, DEKs, private keys, PEM key material, passphrases or bearer/session material.
+
+It does not contact Custodia for recipient public keys and does not treat the server as a key directory.
 
 ## Verification
 
 ```bash
 make test-rust-client
 ```
-
-The target runs `cargo test --manifest-path clients/rust/Cargo.toml` when Cargo is installed. In environments without Cargo it exits successfully with a clear skip message so the repository release check remains usable on Go/Python/Node/Java/C++ builders.

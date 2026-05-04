@@ -184,3 +184,147 @@ fn maps_http_errors_without_leaking_request_payload() {
         other => panic!("unexpected error: {other:?}"),
     }
 }
+
+#[derive(Default)]
+struct FixedRandomSource {
+    chunks: Mutex<Vec<Vec<u8>>>,
+}
+
+impl FixedRandomSource {
+    fn new(chunks: Vec<Vec<u8>>) -> Self {
+        Self { chunks: Mutex::new(chunks) }
+    }
+}
+
+impl custodia_client::RandomSource for FixedRandomSource {
+    fn random(&self, length: usize) -> custodia_client::CryptoResult<Vec<u8>> {
+        let mut chunks = self.chunks.lock().unwrap();
+        if chunks.is_empty() {
+            return Err(custodia_client::CryptoError::RandomSource("missing deterministic bytes".to_string()));
+        }
+        let chunk = chunks.remove(0);
+        assert_eq!(chunk.len(), length);
+        Ok(chunk)
+    }
+}
+
+fn crypto_options(random_chunks: Vec<Vec<u8>>) -> custodia_client::CryptoOptions {
+    use custodia_client::{
+        derive_x25519_recipient_public_key, StaticPrivateKeyProvider, StaticPublicKeyResolver,
+        X25519PrivateKeyHandle,
+    };
+    use std::collections::BTreeMap;
+
+    let alice_key = Arc::new(X25519PrivateKeyHandle::new("client_alice", &[1_u8; 32]).unwrap());
+    let mut public_keys = BTreeMap::new();
+    public_keys.insert(
+        "client_alice".to_string(),
+        derive_x25519_recipient_public_key("client_alice", &[1_u8; 32]).unwrap(),
+    );
+    public_keys.insert(
+        "client_bob".to_string(),
+        derive_x25519_recipient_public_key("client_bob", &[2_u8; 32]).unwrap(),
+    );
+    custodia_client::CryptoOptions::new(
+        Arc::new(StaticPublicKeyResolver::new(public_keys)),
+        Arc::new(StaticPrivateKeyProvider::new(alice_key)),
+    )
+    .with_random_source(Arc::new(FixedRandomSource::new(random_chunks)))
+}
+
+#[test]
+fn high_level_crypto_client_creates_and_reads_local_plaintext() {
+    let fake = Arc::new(FakeTransport::default());
+    fake.push_response(json_response(json!({
+        "secret_id": "550e8400-e29b-41d4-a716-446655440000",
+        "version_id": "11111111-1111-4111-8111-111111111111"
+    })));
+    let client = CustodiaClient::with_transport(config(), fake.clone()).unwrap();
+    let crypto = client.with_crypto(crypto_options(vec![
+        vec![9_u8; 32],
+        vec![8_u8; 12],
+        vec![7_u8; 32],
+        vec![6_u8; 32],
+    ]));
+
+    crypto
+        .create_encrypted_secret(
+            "db/password",
+            b"local plaintext",
+            &["client_bob".to_string()],
+            PERMISSION_ALL,
+            None,
+        )
+        .unwrap();
+
+    let create_body: serde_json::Value = serde_json::from_str(fake.requests()[0].body.as_ref().unwrap()).unwrap();
+    assert_eq!(create_body["name"], "db/password");
+    assert_ne!(create_body["ciphertext"], "local plaintext");
+    assert_eq!(create_body["crypto_metadata"]["version"], custodia_client::CRYPTO_VERSION_V1);
+    assert_eq!(create_body["crypto_metadata"]["aad"]["secret_name"], "db/password");
+    assert_eq!(create_body["envelopes"].as_array().unwrap().len(), 2);
+
+    let alice_envelope = create_body["envelopes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|item| item["client_id"] == "client_alice")
+        .unwrap()["envelope"]
+        .clone();
+    fake.push_response(json_response(json!({
+        "secret_id": "550e8400-e29b-41d4-a716-446655440000",
+        "version_id": "11111111-1111-4111-8111-111111111111",
+        "ciphertext": create_body["ciphertext"],
+        "crypto_metadata": create_body["crypto_metadata"],
+        "envelope": alice_envelope,
+        "permissions": PERMISSION_ALL
+    })));
+
+    let decrypted = crypto.read_decrypted_secret("550e8400-e29b-41d4-a716-446655440000").unwrap();
+    assert_eq!(decrypted.plaintext, b"local plaintext");
+}
+
+#[test]
+fn high_level_crypto_client_shares_existing_dek_without_plaintext_server_side() {
+    let fake = Arc::new(FakeTransport::default());
+    let client = CustodiaClient::with_transport(config(), fake.clone()).unwrap();
+    let crypto = client.with_crypto(crypto_options(vec![vec![5_u8; 32]]));
+
+    let nonce = vec![4_u8; custodia_client::AES_GCM_NONCE_BYTES];
+    let aad_inputs = custodia_client::CanonicalAADInputs {
+        secret_id: "550e8400-e29b-41d4-a716-446655440000".to_string(),
+        ..Default::default()
+    };
+    let metadata = custodia_client::metadata_v1(aad_inputs.clone(), &nonce);
+    let aad = custodia_client::build_canonical_aad(&metadata, &aad_inputs).unwrap();
+    let dek = vec![3_u8; custodia_client::AES_256_GCM_KEY_BYTES];
+    let alice_public = custodia_client::derive_x25519_public_key(&[1_u8; 32]).unwrap();
+    let envelope = custodia_client::seal_hpke_v1_envelope(&alice_public, &[7_u8; 32], &dek, &aad).unwrap();
+
+    fake.push_response(json_response(json!({
+        "secret_id": "550e8400-e29b-41d4-a716-446655440000",
+        "version_id": "11111111-1111-4111-8111-111111111111",
+        "ciphertext": custodia_client::encode_base64(&custodia_client::seal_content_aes_256_gcm(&dek, &nonce, b"secret", &aad).unwrap()),
+        "crypto_metadata": metadata.to_value(),
+        "envelope": custodia_client::encode_envelope(&envelope),
+        "permissions": PERMISSION_ALL
+    })));
+    fake.push_response(json_response(json!({"status": "shared"})));
+
+    crypto
+        .share_encrypted_secret(
+            "550e8400-e29b-41d4-a716-446655440000",
+            "client_bob",
+            custodia_client::PERMISSION_READ,
+            None,
+        )
+        .unwrap();
+
+    let requests = fake.requests();
+    assert_eq!(requests[0].method, "GET");
+    assert_eq!(requests[1].method, "POST");
+    let share_body: serde_json::Value = serde_json::from_str(requests[1].body.as_ref().unwrap()).unwrap();
+    assert_eq!(share_body["target_client_id"], "client_bob");
+    assert_eq!(share_body["permissions"], custodia_client::PERMISSION_READ);
+    assert!(share_body["envelope"].as_str().unwrap().len() > 20);
+}
