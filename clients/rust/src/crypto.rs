@@ -19,8 +19,8 @@ use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use base64::Engine as _;
 use hmac::{Hmac, Mac};
-use rand::rngs::OsRng;
-use rand::TryRngCore;
+use rand::rngs::SysRng;
+use rand::TryRng;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -182,7 +182,8 @@ pub struct OsRandomSource;
 impl RandomSource for OsRandomSource {
     fn random(&self, length: usize) -> CryptoResult<Vec<u8>> {
         let mut value = vec![0_u8; length];
-        OsRng
+        let mut rng = SysRng;
+        rng
             .try_fill_bytes(&mut value)
             .map_err(|err| CryptoError::RandomSource(err.to_string()))?;
         Ok(value)
@@ -483,7 +484,7 @@ fn hpke_labeled_expand(prk: &[u8], suite_id: &[u8], label: &[u8], info: &[u8], l
 
 fn hkdf_extract(salt: Option<&[u8]>, ikm: &[u8]) -> Vec<u8> {
     let zero_salt = [0_u8; 32];
-    let mut mac = <HmacSha256 as Mac>::new_from_slice(salt.unwrap_or(&zero_salt)).expect("HMAC accepts any key length");
+    let mut mac = <HmacSha256 as hmac::KeyInit>::new_from_slice(salt.unwrap_or(&zero_salt)).expect("HMAC accepts any key length");
     mac.update(ikm);
     mac.finalize().into_bytes().to_vec()
 }
@@ -493,7 +494,7 @@ fn hkdf_expand(prk: &[u8], info: &[u8], length: usize) -> Vec<u8> {
     let mut previous = Vec::new();
     let mut counter = 1_u8;
     while result.len() < length {
-        let mut mac = <HmacSha256 as Mac>::new_from_slice(prk).expect("HMAC accepts any key length");
+        let mut mac = <HmacSha256 as hmac::KeyInit>::new_from_slice(prk).expect("HMAC accepts any key length");
         mac.update(&previous);
         mac.update(info);
         mac.update(&[counter]);
