@@ -144,6 +144,8 @@ std::string base64_encode(const std::vector<std::uint8_t>& value);
 std::vector<std::uint8_t> base64_decode(const std::string& value);
 std::string metadata_json(const CryptoMetadata& metadata);
 
+class CryptoClient;
+
 class Client final {
  public:
   explicit Client(Config config, std::shared_ptr<Transport> transport = {});
@@ -176,6 +178,7 @@ class Client final {
   std::string revocation_serial_status_info(const std::string& serial_hex);
   std::string list_audit_event_metadata(const Filters& filters = {});
   AuditExportArtifact export_audit_event_artifact(const Filters& filters = {});
+  CryptoClient with_crypto(CryptoOptions options);
 
   Response request_raw(const std::string& method, const std::string& path, std::optional<std::string> payload_json = std::nullopt);
   std::string request_json(const std::string& method, const std::string& path, std::optional<std::string> payload_json = std::nullopt);
@@ -183,6 +186,49 @@ class Client final {
  private:
   Config config_;
   std::shared_ptr<Transport> transport_;
+};
+
+struct DecryptedSecret {
+  std::string secret_id;
+  std::string version_id;
+  std::vector<std::uint8_t> plaintext;
+  CryptoMetadata crypto_metadata;
+  int permissions{0};
+  std::string granted_at;
+  std::string access_expires_at;
+};
+
+class CryptoClient final {
+ public:
+  CryptoClient(Client& transport, CryptoOptions options);
+
+  std::string create_encrypted_secret(
+      const std::string& name,
+      const std::vector<std::uint8_t>& plaintext,
+      const std::vector<std::string>& recipients = {},
+      int permissions = permission_all,
+      const std::string& expires_at = "");
+  std::string create_encrypted_secret_version(
+      const std::string& secret_id,
+      const std::vector<std::uint8_t>& plaintext,
+      const std::vector<std::string>& recipients = {},
+      int permissions = permission_all,
+      const std::string& expires_at = "");
+  DecryptedSecret read_decrypted_secret(const std::string& secret_id);
+  std::string share_encrypted_secret(
+      const std::string& secret_id,
+      const std::string& target_client_id,
+      int permissions = permission_read,
+      const std::string& expires_at = "");
+
+ private:
+  std::vector<std::string> normalized_recipients(const std::vector<std::string>& recipients) const;
+  std::string seal_recipient_envelopes(const std::vector<std::string>& recipients, const std::vector<std::uint8_t>& dek, const std::vector<std::uint8_t>& aad);
+  std::vector<std::uint8_t> open_secret_envelope(const std::string& encoded_envelope, const std::vector<std::uint8_t>& aad) const;
+  std::vector<std::uint8_t> random(std::size_t length) const;
+
+  Client* transport_;
+  CryptoOptions options_;
 };
 
 std::string path_escape(const std::string& value);

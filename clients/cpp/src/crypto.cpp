@@ -446,3 +446,340 @@ std::string metadata_json(const CryptoMetadata& metadata) {
 }
 
 }  // namespace custodia
+
+namespace custodia {
+namespace {
+
+std::string require_text(std::string value, const std::string& label) {
+  auto first = std::find_if_not(value.begin(), value.end(), [](unsigned char ch) { return std::isspace(ch); });
+  auto last = std::find_if_not(value.rbegin(), value.rend(), [](unsigned char ch) { return std::isspace(ch); }).base();
+  if (first >= last) {
+    throw std::invalid_argument(label + " is required");
+  }
+  return std::string(first, last);
+}
+
+void append_json_int(std::ostringstream& json, const std::string& key, int value) {
+  json << json_quote(key) << ':' << value;
+}
+
+std::string json_string_field(const std::string& json, const std::string& field) {
+  std::string needle = json_quote(field) + ":";
+  auto index = json.find(needle);
+  if (index == std::string::npos) {
+    return "";
+  }
+  auto start = json.find('"', index + needle.size());
+  if (start == std::string::npos) {
+    return "";
+  }
+  std::string out;
+  bool escaped = false;
+  for (std::size_t i = start + 1; i < json.size(); i++) {
+    char ch = json[i];
+    if (escaped) {
+      switch (ch) {
+        case '"': out.push_back('"'); break;
+        case '\\': out.push_back('\\'); break;
+        case 'b': out.push_back('\b'); break;
+        case 'f': out.push_back('\f'); break;
+        case 'n': out.push_back('\n'); break;
+        case 'r': out.push_back('\r'); break;
+        case 't': out.push_back('\t'); break;
+        default: out.push_back(ch); break;
+      }
+      escaped = false;
+    } else if (ch == '\\') {
+      escaped = true;
+    } else if (ch == '"') {
+      return out;
+    } else {
+      out.push_back(ch);
+    }
+  }
+  return "";
+}
+
+int json_int_field(const std::string& json, const std::string& field) {
+  std::string needle = json_quote(field) + ":";
+  auto index = json.find(needle);
+  if (index == std::string::npos) {
+    return 0;
+  }
+  auto start = index + needle.size();
+  while (start < json.size() && std::isspace(static_cast<unsigned char>(json[start]))) {
+    start++;
+  }
+  auto end = start;
+  while (end < json.size() && std::isdigit(static_cast<unsigned char>(json[end]))) {
+    end++;
+  }
+  return end == start ? 0 : std::stoi(json.substr(start, end - start));
+}
+
+std::string json_object_field(const std::string& json, const std::string& field) {
+  std::string needle = json_quote(field) + ":";
+  auto index = json.find(needle);
+  if (index == std::string::npos) {
+    return "";
+  }
+  auto start = json.find('{', index + needle.size());
+  if (start == std::string::npos) {
+    return "";
+  }
+  int depth = 0;
+  bool in_string = false;
+  bool escaped = false;
+  for (std::size_t i = start; i < json.size(); i++) {
+    char ch = json[i];
+    if (in_string) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch == '\\') {
+        escaped = true;
+      } else if (ch == '"') {
+        in_string = false;
+      }
+      continue;
+    }
+    if (ch == '"') {
+      in_string = true;
+    } else if (ch == '{') {
+      depth++;
+    } else if (ch == '}') {
+      depth--;
+      if (depth == 0) {
+        return json.substr(start, i - start + 1);
+      }
+    }
+  }
+  return "";
+}
+
+struct ParsedSecret {
+  std::string secret_id;
+  std::string version_id;
+  std::string ciphertext;
+  CryptoMetadata metadata;
+  std::string envelope;
+  int permissions{0};
+  std::string granted_at;
+  std::string access_expires_at;
+};
+
+ParsedSecret parse_secret(const std::string& json) {
+  auto metadata_object = json_object_field(json, "crypto_metadata");
+  auto aad_object = json_object_field(metadata_object, "aad");
+  std::optional<AADInputs> aad;
+  if (!aad_object.empty()) {
+    aad = AADInputs{
+        json_string_field(aad_object, "secret_id"),
+        json_string_field(aad_object, "secret_name"),
+        json_string_field(aad_object, "version_id")};
+  }
+  CryptoMetadata metadata{
+      json_string_field(metadata_object, "version"),
+      json_string_field(metadata_object, "content_cipher"),
+      json_string_field(metadata_object, "envelope_scheme"),
+      json_string_field(metadata_object, "content_nonce_b64"),
+      aad};
+  (void)build_canonical_aad(metadata, metadata.canonical_aad_inputs(AADInputs{"probe", "", ""}));
+  return ParsedSecret{
+      json_string_field(json, "secret_id"),
+      json_string_field(json, "version_id"),
+      json_string_field(json, "ciphertext"),
+      metadata,
+      json_string_field(json, "envelope"),
+      json_int_field(json, "permissions"),
+      json_string_field(json, "granted_at"),
+      json_string_field(json, "access_expires_at")};
+}
+
+std::string envelope_object_without_client_id(std::string envelope_json) {
+  if (envelope_json.size() >= 2 && envelope_json.front() == '[' && envelope_json.back() == ']') {
+    envelope_json = envelope_json.substr(1, envelope_json.size() - 2);
+  }
+  auto envelope_field = json_quote("envelope") + ":";
+  auto pos = envelope_json.find(envelope_field);
+  if (pos == std::string::npos) {
+    return envelope_json;
+  }
+  return envelope_json.substr(pos);
+}
+
+}  // namespace
+
+CryptoClient Client::with_crypto(CryptoOptions options) { return CryptoClient(*this, std::move(options)); }
+
+CryptoClient::CryptoClient(Client& transport, CryptoOptions options) : transport_(&transport), options_(std::move(options)) {
+  if (!options_.public_key_resolver) {
+    throw std::invalid_argument("public key resolver is required");
+  }
+}
+
+std::string CryptoClient::create_encrypted_secret(
+    const std::string& name,
+    const std::vector<std::uint8_t>& plaintext,
+    const std::vector<std::string>& recipients,
+    int permissions,
+    const std::string& expires_at) {
+  auto normalized_name = require_text(name, "secret name");
+  auto dek = random(kAES256GCMKeyBytes);
+  auto nonce = random(kAESGCMNonceBytes);
+  AADInputs aad_inputs{"", normalized_name, ""};
+  auto metadata = metadata_v1(aad_inputs, nonce);
+  auto aad = build_canonical_aad(metadata, aad_inputs);
+  auto ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad);
+
+  std::ostringstream payload;
+  payload << '{';
+  append_json_field(payload, "name", normalized_name);
+  payload << ',';
+  append_json_field(payload, "ciphertext", base64_encode(ciphertext));
+  payload << ',' << json_quote("crypto_metadata") << ':' << metadata_json(metadata);
+  payload << ',' << json_quote("envelopes") << ':' << seal_recipient_envelopes(normalized_recipients(recipients), dek, aad);
+  payload << ',';
+  append_json_int(payload, "permissions", permissions);
+  if (!expires_at.empty()) {
+    payload << ',';
+    append_json_field(payload, "expires_at", expires_at);
+  }
+  payload << '}';
+  return transport_->create_secret_payload(payload.str());
+}
+
+std::string CryptoClient::create_encrypted_secret_version(
+    const std::string& secret_id,
+    const std::vector<std::uint8_t>& plaintext,
+    const std::vector<std::string>& recipients,
+    int permissions,
+    const std::string& expires_at) {
+  auto normalized_secret_id = require_text(secret_id, "secret id");
+  auto dek = random(kAES256GCMKeyBytes);
+  auto nonce = random(kAESGCMNonceBytes);
+  AADInputs aad_inputs{normalized_secret_id, "", ""};
+  auto metadata = metadata_v1(aad_inputs, nonce);
+  auto aad = build_canonical_aad(metadata, aad_inputs);
+  auto ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad);
+
+  std::ostringstream payload;
+  payload << '{';
+  append_json_field(payload, "ciphertext", base64_encode(ciphertext));
+  payload << ',' << json_quote("crypto_metadata") << ':' << metadata_json(metadata);
+  payload << ',' << json_quote("envelopes") << ':' << seal_recipient_envelopes(normalized_recipients(recipients), dek, aad);
+  payload << ',';
+  append_json_int(payload, "permissions", permissions);
+  if (!expires_at.empty()) {
+    payload << ',';
+    append_json_field(payload, "expires_at", expires_at);
+  }
+  payload << '}';
+  return transport_->create_secret_version_payload(normalized_secret_id, payload.str());
+}
+
+DecryptedSecret CryptoClient::read_decrypted_secret(const std::string& secret_id) {
+  auto secret = parse_secret(transport_->get_secret_payload(secret_id));
+  auto aad_inputs = secret.metadata.canonical_aad_inputs(AADInputs{secret.secret_id, "", secret.version_id});
+  auto aad = build_canonical_aad(secret.metadata, aad_inputs);
+  if (secret.metadata.content_nonce_b64.empty()) {
+    throw CryptoError("missing content nonce");
+  }
+  auto dek = open_secret_envelope(secret.envelope, aad);
+  auto plaintext = open_content_aes_256_gcm(dek, base64_decode(secret.metadata.content_nonce_b64), base64_decode(secret.ciphertext), aad);
+  return DecryptedSecret{secret.secret_id, secret.version_id, plaintext, secret.metadata, secret.permissions, secret.granted_at, secret.access_expires_at};
+}
+
+std::string CryptoClient::share_encrypted_secret(
+    const std::string& secret_id,
+    const std::string& target_client_id,
+    int permissions,
+    const std::string& expires_at) {
+  auto target = require_text(target_client_id, "target client id");
+  auto secret = parse_secret(transport_->get_secret_payload(secret_id));
+  auto aad_inputs = secret.metadata.canonical_aad_inputs(AADInputs{secret.secret_id, "", secret.version_id});
+  auto aad = build_canonical_aad(secret.metadata, aad_inputs);
+  auto dek = open_secret_envelope(secret.envelope, aad);
+  auto envelope_json = envelope_object_without_client_id(seal_recipient_envelopes({target}, dek, aad));
+
+  std::ostringstream payload;
+  payload << '{';
+  append_json_field(payload, "version_id", secret.version_id);
+  payload << ',';
+  append_json_field(payload, "target_client_id", target);
+  payload << ',' << envelope_json;
+  payload << ',';
+  append_json_int(payload, "permissions", permissions);
+  if (!expires_at.empty()) {
+    payload << ',';
+    append_json_field(payload, "expires_at", expires_at);
+  }
+  payload << '}';
+  return transport_->share_secret_payload(secret_id, payload.str());
+}
+
+std::vector<std::string> CryptoClient::normalized_recipients(const std::vector<std::string>& recipients) const {
+  std::vector<std::string> normalized;
+  auto add = [&normalized](const std::string& value) {
+    auto trimmed = require_text(value, "recipient id");
+    if (std::find(normalized.begin(), normalized.end(), trimmed) == normalized.end()) {
+      normalized.push_back(trimmed);
+    }
+  };
+  if (!options_.private_key.client_id().empty()) {
+    add(options_.private_key.client_id());
+  }
+  for (const auto& recipient : recipients) {
+    if (!recipient.empty()) {
+      add(recipient);
+    }
+  }
+  if (normalized.empty()) {
+    throw std::invalid_argument("missing recipient envelope");
+  }
+  return normalized;
+}
+
+std::string CryptoClient::seal_recipient_envelopes(const std::vector<std::string>& recipients, const std::vector<std::uint8_t>& dek, const std::vector<std::uint8_t>& aad) {
+  std::ostringstream envelopes;
+  envelopes << '[';
+  for (std::size_t i = 0; i < recipients.size(); i++) {
+    if (i > 0) {
+      envelopes << ',';
+    }
+    auto recipient = options_.public_key_resolver(recipients[i]);
+    if (recipient.scheme != kEnvelopeSchemeHPKEV1) {
+      throw CryptoError("unsupported envelope scheme");
+    }
+    auto envelope = seal_hpke_v1_envelope(recipient.public_key, random(kX25519KeyBytes), dek, aad);
+    envelopes << '{';
+    append_json_field(envelopes, "client_id", recipients[i]);
+    envelopes << ',';
+    append_json_field(envelopes, "envelope", base64_encode(envelope));
+    envelopes << '}';
+  }
+  envelopes << ']';
+  return envelopes.str();
+}
+
+std::vector<std::uint8_t> CryptoClient::open_secret_envelope(const std::string& encoded_envelope, const std::vector<std::uint8_t>& aad) const {
+  if (options_.private_key.scheme() != kEnvelopeSchemeHPKEV1) {
+    throw CryptoError("unsupported envelope scheme");
+  }
+  return options_.private_key.open_envelope(base64_decode(encoded_envelope), aad);
+}
+
+std::vector<std::uint8_t> CryptoClient::random(std::size_t length) const {
+  if (options_.random_source) {
+    auto out = options_.random_source(length);
+    if (out.size() != length) {
+      throw std::invalid_argument("random source returned invalid length");
+    }
+    return out;
+  }
+  std::vector<std::uint8_t> out(length);
+  std::random_device rd;
+  std::generate(out.begin(), out.end(), [&rd]() { return static_cast<std::uint8_t>(rd()); });
+  return out;
+}
+
+}  // namespace custodia
