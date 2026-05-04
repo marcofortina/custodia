@@ -13,12 +13,33 @@ configuration changes plus explicit data/infrastructure migration steps.
 6. TOTP-only -> passkey/WebAuthn with external assertion verifier if required.
 7. Manual checks -> production readiness and evidence gates.
 
+
+## Readiness check
+
+Before planning the data move, compare the source Lite environment and target Full environment:
+
+```bash
+vault-admin lite upgrade-check \
+  --lite-env-file deploy/examples/lite.env.example \
+  --full-env-file deploy/examples/full-upgrade-target.env.example
+```
+
+or through Make:
+
+```bash
+CUSTODIA_LITE_ENV_FILE=deploy/examples/lite.env.example \
+CUSTODIA_FULL_ENV_FILE=deploy/examples/full-upgrade-target.env.example \
+make lite-upgrade-check
+```
+
+The check validates that the source is actually Lite/SQLite and that the target is PostgreSQL/Full-oriented with Valkey, PKCS#11 and audit shipment planned. Warnings are allowed for staged upgrades; critical findings must be resolved before migration.
+
 ## Database migration
 
-SQLite to PostgreSQL/CockroachDB requires a dedicated migration tool. Do not use
+SQLite to PostgreSQL/CockroachDB requires a dedicated data-migration tool. Do not use
 `sqlite3 .dump` as a production migration procedure. Until that tool exists,
-treat migration as a planned maintenance operation with export, validation and
-rollback evidence.
+treat migration as a planned maintenance operation with export, validation,
+read-only verification and rollback evidence.
 
 ## Configuration transition
 
