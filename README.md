@@ -2,7 +2,7 @@
 
 Custodia is a REST vault for encrypted secrets. The server authenticates clients with mTLS, authorizes access, stores opaque encrypted blobs and returns only the caller's opaque envelope. Encryption, decryption, key discovery, key rotation and key trust stay outside the server.
 
-## What is implemented in this bootstrap
+## What is implemented
 
 - Go vault server with TLS 1.3 / mTLS support and optional client CRL rejection.
 - Client identity extraction from certificate SAN/CN.
@@ -18,8 +18,9 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 - Memory and Valkey-compatible rate limiter backends with readiness checks.
 - Minimal admin CLI for metadata operations exposed by the API.
 - Minimal Go and Python client libraries that only transport ciphertext and opaque envelopes; the Go client includes access workflow helpers.
-- Docker, Compose and Helm skeletons.
+- Docker, Compose, Helm and Lite single-node deployment examples.
 - Dedicated `custodia-signer` service for admin-only client CSR signing.
+- Custodia Lite profile with YAML config, SQLite build-tag artifact, local CA bootstrap, backup helper and Lite-to-Full readiness checks.
 
 ## What is deliberately not implemented server-side
 
@@ -66,6 +67,25 @@ CUSTODIA_DATABASE_URL=postgres://custodia:secret@127.0.0.1:5432/custodia?sslmode
 ```
 
 Run `migrations/postgres/001_init.sql` before starting the server. Container builds can enable the optional store with `CUSTODIA_GO_BUILD_TAGS=postgres docker compose build custodia` after the `pgx/v5` dependency is present in `go.mod`. The store persists only opaque ciphertext/envelope bytes and metadata; it does not add any server-side cryptographic key handling.
+
+## Custodia Lite / SQLite store
+
+Lite is a single-node profile of the same codebase. Build Lite artifacts with the SQLite tag:
+
+```bash
+make build-sqlite
+make test-sqlite
+```
+
+Then configure:
+
+```bash
+CUSTODIA_PROFILE=lite
+CUSTODIA_STORE_BACKEND=sqlite
+CUSTODIA_DATABASE_URL=file:/var/lib/custodia/custodia.db
+```
+
+Lite keeps mTLS, Web MFA, audit integrity and the opaque crypto boundary. It removes mandatory external runtime services; it does not create a weaker server-side crypto model.
 
 ## API permissions
 
@@ -155,6 +175,13 @@ Use `vault-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS c
 - [Phase 3 closure boundary](docs/PHASE3_CLOSURE.md)
 - [Custodia Lite profile](docs/CUSTODIA_LITE_PROFILE.md)
 - [Custodia Lite configuration](docs/LITE_CONFIG.md)
+- [Lite SQLite store](docs/LITE_SQLITE_STORE.md)
+- [Lite installation guide](docs/LITE_INSTALL.md)
+- [Lite local CA bootstrap](docs/LITE_CA_BOOTSTRAP.md)
+- [Lite backup and restore](docs/LITE_BACKUP_RESTORE.md)
+- [Lite to Full upgrade path](docs/LITE_TO_FULL_UPGRADE.md)
+- [Lite migration readiness](docs/LITE_MIGRATION_READINESS.md)
+- [Phase 4 closure summary](docs/PHASE4_CLOSURE.md)
 - [Disaster recovery runbook](docs/DR_RUNBOOK.md)
 - [Database HA runbook](docs/DATABASE_HA_RUNBOOK.md)
 - [k3s CockroachDB HA profile](docs/K3S_COCKROACHDB_HA.md)
@@ -193,10 +220,3 @@ The command fails on unsafe development defaults and missing external production
 
 `custodia-signer` exposes a CRL-backed JSON revocation responder at `/v1/revocation/serial`. Use `vault-admin revocation check-serial --serial-hex HEX` for operator drills. See `docs/CRL_OCSP_RUNBOOK.md`.
 
-- [Lite SQLite store](docs/LITE_SQLITE_STORE.md)
-- [Lite installation guide](docs/LITE_INSTALL.md)
-- [Lite local CA bootstrap](docs/LITE_CA_BOOTSTRAP.md)
-- [Lite backup and restore](docs/LITE_BACKUP_RESTORE.md)
-- [Lite to Full upgrade path](docs/LITE_TO_FULL_UPGRADE.md)
-- [Phase 4 closure summary](docs/PHASE4_CLOSURE.md)
-- [Lite migration readiness](docs/LITE_MIGRATION_READINESS.md)
