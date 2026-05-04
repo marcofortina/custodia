@@ -1,8 +1,8 @@
-# Custodia C++ transport SDK
+# Custodia C++ SDK
 
-`clients/cpp` contains the initial C++ transport SDK. It is a raw REST/mTLS client for opaque Custodia payloads.
+`clients/cpp` contains the C++ SDK. It includes a raw REST/mTLS transport client for opaque Custodia payloads and a high-level client-side crypto wrapper.
 
-The C++ SDK does not implement high-level client-side crypto yet. Applications must encrypt plaintext, create recipient envelopes and decrypt responses outside the server boundary.
+The high-level wrapper uses the shared v1 crypto contract: canonical AAD, AES-256-GCM content encryption and HPKE-v1 recipient envelopes. Plaintext, DEKs and private keys remain local to the caller.
 
 ## TLS configuration
 
@@ -17,7 +17,7 @@ custodia::Client client(custodia::Config{
 });
 ```
 
-The build check requires a C++20 compiler, `pkg-config` and libcurl development headers.
+The build check requires a C++20 compiler, `pkg-config`, libcurl development headers and OpenSSL development headers.
 
 ## Opaque secret payloads
 
@@ -49,3 +49,21 @@ It does not contact Custodia for recipient public keys and does not treat the se
 ```bash
 make test-cpp-client
 ```
+
+
+## High-level crypto flow
+
+```cpp
+auto crypto = client.with_crypto(custodia::CryptoOptions{
+    .public_key_resolver = [](const std::string& recipient_id) {
+      return resolve_recipient_public_key_out_of_band(recipient_id);
+    },
+    .private_key = custodia::X25519PrivateKeyHandle("client_alice", alice_private_key_bytes),
+});
+
+crypto.create_encrypted_secret("db", plaintext_bytes, {"client_bob"});
+auto decrypted = crypto.read_decrypted_secret(secret_id);
+crypto.share_encrypted_secret(secret_id, "client_charlie", custodia::permission_read);
+```
+
+The application must provide recipient public keys through `public_key_resolver`; Custodia is not a key directory.

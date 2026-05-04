@@ -1,8 +1,8 @@
-# Custodia Java transport client
+# Custodia Java client
 
-This package contains the initial Java transport client for Custodia. It is a raw REST/mTLS client: callers send and receive opaque JSON payloads that already contain ciphertext, envelopes and crypto metadata produced by application-side crypto code.
+This package contains the Java client for Custodia. It includes the raw REST/mTLS transport client and a high-level client-side crypto wrapper for AES-256-GCM content encryption plus HPKE-v1 recipient envelopes.
 
-The client intentionally does not implement high-level encryption yet and must not log plaintext, ciphertext, envelopes, DEKs, private keys or passphrases.
+The crypto wrapper encrypts/decrypts locally and must not log plaintext, ciphertext, envelopes, DEKs, private keys or passphrases.
 
 ## TLS model
 
@@ -36,3 +36,27 @@ String response = client.createSecretPayload("""
 ## Boundary
 
 This package is transport-only. It does not resolve recipient public keys, decrypt envelopes, decrypt ciphertext or contact the server for key material.
+
+
+## High-level crypto example
+
+```java
+var privateKey = new CustodiaCrypto.X25519PrivateKeyHandle("client_alice", alicePrivateKeyBytes);
+var options = new CustodiaCrypto.CryptoOptions(
+    recipientId -> resolveRecipientPublicKeyOutOfBand(recipientId),
+    new CustodiaCrypto.StaticPrivateKeyProvider(privateKey),
+    null
+);
+var crypto = client.withCrypto(options);
+
+crypto.createEncryptedSecret(
+    "db",
+    "already local plaintext".getBytes(StandardCharsets.UTF_8),
+    List.of("client_bob"),
+    CustodiaClient.PERMISSION_ALL
+);
+
+var decrypted = crypto.readDecryptedSecret(secretId);
+```
+
+Recipient public keys are still resolved by the application, not by Custodia.

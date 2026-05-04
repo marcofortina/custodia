@@ -18,7 +18,7 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 - Memory and Valkey-compatible rate limiter backends with readiness checks.
 - Minimal admin CLI for metadata operations exposed by the API.
 - Go, Python and Node.js / TypeScript client libraries with raw transport helpers; all three include high-level client-side crypto wrappers that keep plaintext, DEKs and private keys outside the server.
-- Java and C++ transport clients for opaque REST/mTLS payloads; high-level crypto wrappers remain future work for those languages.
+- Java and C++ client libraries with raw transport helpers plus high-level client-side crypto wrappers that use the shared AES-256-GCM/HPKE-v1 vectors.
 - Docker, Compose, Helm and Lite single-node deployment examples.
 - Dedicated `custodia-signer` service for admin-only client CSR signing.
 - Custodia Lite profile with YAML config, SQLite build-tag artifact, local CA bootstrap, backup helper and Lite-to-Full readiness checks.
@@ -65,8 +65,8 @@ bitcoin:36jDV57roGb4o59TwK1CB7viPrXToQHGiP
 - Go: [`docs/GO_CLIENT_SDK.md`](docs/GO_CLIENT_SDK.md)
 - Python: [`docs/PYTHON_CLIENT_SDK.md`](docs/PYTHON_CLIENT_SDK.md)
 - Node.js / TypeScript transport and crypto: [`docs/NODE_CLIENT_SDK.md`](docs/NODE_CLIENT_SDK.md)
-- Java transport: [`docs/JAVA_CLIENT_SDK.md`](docs/JAVA_CLIENT_SDK.md)
-- C++ transport: [`docs/CPP_CLIENT_SDK.md`](docs/CPP_CLIENT_SDK.md)
+- Java transport and crypto: [`docs/JAVA_CLIENT_SDK.md`](docs/JAVA_CLIENT_SDK.md)
+- C++ transport and crypto: [`docs/CPP_CLIENT_SDK.md`](docs/CPP_CLIENT_SDK.md)
 - Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
 
 ## Local development

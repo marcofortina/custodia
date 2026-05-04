@@ -1,4 +1,4 @@
-# Custodia C++ transport client
+# Custodia C++ client
 
 This package contains the initial C++ transport client for Custodia. It is a raw REST/mTLS client: callers send and receive opaque payloads that already contain ciphertext, envelopes and crypto metadata produced by application-side crypto code.
 
@@ -32,3 +32,21 @@ std::string response = client.create_secret_payload(
 ## Boundary
 
 This package is transport-only. It does not resolve recipient public keys, decrypt envelopes, decrypt ciphertext or contact the server for key material.
+
+
+## High-level crypto example
+
+```cpp
+auto private_key = custodia::X25519PrivateKeyHandle("client_alice", alice_private_key_bytes);
+auto crypto = client.with_crypto(custodia::CryptoOptions{
+    .public_key_resolver = [](const std::string& recipient_id) {
+      return resolve_recipient_public_key_out_of_band(recipient_id);
+    },
+    .private_key = private_key,
+});
+
+crypto.create_encrypted_secret("db", {'l','o','c','a','l',' ','p','l','a','i','n','t','e','x','t'}, {"client_bob"});
+auto decrypted = crypto.read_decrypted_secret(secret_id);
+```
+
+Recipient public keys are still resolved by the application, not by Custodia.

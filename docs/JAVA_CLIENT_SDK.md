@@ -1,8 +1,8 @@
-# Custodia Java transport SDK
+# Custodia Java SDK
 
-`clients/java` contains the initial Java transport SDK. It is a raw REST/mTLS client for opaque Custodia payloads.
+`clients/java` contains the Java SDK. It includes a raw REST/mTLS transport client for opaque Custodia payloads and a high-level client-side crypto wrapper.
 
-The Java SDK does not implement high-level client-side crypto yet. Applications must encrypt plaintext, create recipient envelopes and decrypt responses outside the server boundary.
+The high-level wrapper uses the shared v1 crypto contract: canonical AAD, AES-256-GCM content encryption and HPKE-v1 recipient envelopes. Plaintext, DEKs and private keys remain local to the caller.
 
 ## TLS configuration
 
@@ -55,3 +55,21 @@ It does not contact Custodia for recipient public keys and does not treat the se
 ```bash
 make test-java-client
 ```
+
+
+## High-level crypto flow
+
+```java
+var privateKey = new CustodiaCrypto.X25519PrivateKeyHandle("client_alice", alicePrivateKeyBytes);
+var crypto = client.withCrypto(new CustodiaCrypto.CryptoOptions(
+    recipientId -> resolveRecipientPublicKeyOutOfBand(recipientId),
+    new CustodiaCrypto.StaticPrivateKeyProvider(privateKey),
+    null
+));
+
+crypto.createEncryptedSecret("db", plaintextBytes, List.of("client_bob"), CustodiaClient.PERMISSION_ALL);
+var decrypted = crypto.readDecryptedSecret(secretId);
+crypto.shareEncryptedSecret(secretId, "client_charlie", CustodiaClient.PERMISSION_READ);
+```
+
+The application must provide recipient public keys through `PublicKeyResolver`; Custodia is not a key directory.
