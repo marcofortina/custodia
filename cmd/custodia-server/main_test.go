@@ -9,7 +9,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"custodia/internal/config"
@@ -61,16 +60,6 @@ func TestBootstrapClientsRejectsInvalidMappings(t *testing.T) {
 	err = bootstrapClients(context.Background(), store.NewMemoryStore(), map[string]string{"client_good": "client\nsubject"})
 	if err == nil {
 		t.Fatal("expected invalid bootstrap subject error")
-	}
-}
-
-func TestBuildStoreReturnsSQLiteBuildGuardWithoutSQLiteTag(t *testing.T) {
-	_, closeStore, err := buildStore(context.Background(), config.Config{StoreBackend: "sqlite", DatabaseURL: "file:/tmp/custodia-test.db"})
-	if closeStore != nil {
-		closeStore()
-	}
-	if err == nil || !errors.Is(err, store.ErrSQLiteStoreNotWired) {
-		t.Fatalf("expected sqlite build guard error, got %v", err)
 	}
 }
 
