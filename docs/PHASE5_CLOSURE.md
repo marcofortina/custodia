@@ -15,10 +15,12 @@ Phase 5 tracks official client libraries and client-side cryptography.
 - Go and Python transport SDK guides added.
 - Python typed transport payload helpers and tests added.
 - Client crypto metadata validator added for the v1 scaffold.
+- Deterministic metadata/AAD fixtures added with canonical AAD and SHA-256 checks.
+- `make test-client-crypto` added for focused client-crypto fixture validation.
 
 ## Still open
 
-- Deterministic cryptographic test vectors beyond schema fixtures.
+- Deterministic ciphertext/envelope cryptographic test vectors beyond metadata/AAD fixtures.
 - Go high-level crypto client.
 - Python high-level crypto client.
 - Node.js/TypeScript transport client.
@@ -28,7 +30,7 @@ Phase 5 tracks official client libraries and client-side cryptography.
 
 ## Current boundary
 
-Go and Python are transport clients. They speak REST/mTLS and move opaque payloads. Python now has typed transport payload helpers; Go has a public transport SDK surface. They do not yet encrypt plaintext, unwrap envelopes, decrypt ciphertext or resolve recipient public keys.
+Go and Python are transport clients. They speak REST/mTLS and move opaque payloads. Python now has typed transport payload helpers; Go has a public transport SDK surface. Deterministic metadata/AAD fixtures are present, but they do not yet encrypt plaintext, unwrap envelopes, decrypt ciphertext or resolve recipient public keys.
 
 The server remains metadata/ciphertext/envelope-only. Custodia must not become a public-key directory.
 
@@ -37,9 +39,10 @@ The server remains metadata/ciphertext/envelope-only. Custodia must not become a
 Run:
 
 ```bash
+make test-client-crypto
 go test -p=1 -timeout 60s ./pkg/client ./internal/clientcrypto
 go test -p=1 -timeout 60s ./...
 python3 -m py_compile clients/python/custodia_client/__init__.py
 ```
 
-Phase 5 is not complete until deterministic crypto vectors and high-level crypto clients are implemented.
+Phase 5 is not complete until deterministic ciphertext/envelope crypto vectors and high-level crypto clients are implemented.

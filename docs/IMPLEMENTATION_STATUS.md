@@ -1285,3 +1285,37 @@ The repository still does not claim to implement physical HSM hardware, external
 
 - Added Python client typed helper unittest execution to `scripts/release-check.sh`.
 - Compiles both `custodia_client/__init__.py` and `custodia_client/types.py` during release checks.
+
+## Patch 665 - client crypto canonical AAD builder
+
+- Added `internal/clientcrypto.BuildCanonicalAAD` for deterministic v1 metadata/resource AAD serialization.
+
+## Patch 666 - client crypto canonical AAD builder tests
+
+- Covered stable canonical AAD JSON, persisted resource ids, missing bindings and unsupported metadata.
+
+## Patch 667 - deterministic client crypto AAD fixtures
+
+- Added deterministic metadata/AAD fixture fields under `testdata/client-crypto/v1`.
+- Added the remaining minimum fixture names from the client-library specification as deterministic-AAD placeholders.
+
+## Patch 668 - client crypto vector loader and validator
+
+- Added `internal/clientcrypto.LoadVector` and `ValidateVector`.
+- Routed client-crypto fixture validation through canonical AAD and SHA-256 checks.
+
+## Patch 669 - client crypto vector error validation
+
+- Added negative validation coverage for AAD hash mismatch, canonical AAD mismatch and expected metadata errors.
+
+## Patch 670 - deterministic client crypto AAD documentation
+
+- Documented that the current vectors are deterministic metadata/AAD fixtures, not full ciphertext/envelope crypto vectors.
+
+## Patch 671 - client crypto test target
+
+- Added `make test-client-crypto` for focused client crypto fixture validation.
+
+## Patch 672 - Phase 5 deterministic AAD status
+
+- Updated the Phase 5 closure tracker after deterministic metadata/AAD fixture validation.
