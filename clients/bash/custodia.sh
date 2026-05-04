@@ -21,6 +21,74 @@ custodia_user_agent() {
 }
 
 
+custodia_urlencode() {
+  if [ "$#" -ne 1 ]; then
+    echo "usage: custodia_urlencode VALUE" >&2
+    return 2
+  fi
+
+  local value="$1"
+  local encoded=""
+  local char hex i
+  LC_ALL=C
+  for ((i = 0; i < ${#value}; i += 1)); do
+    char="${value:i:1}"
+    case "$char" in
+      [a-zA-Z0-9.~_-]) encoded+="$char" ;;
+      *)
+        printf -v hex '%%%02X' "'$char"
+        encoded+="$hex"
+        ;;
+    esac
+  done
+  printf '%s' "$encoded"
+}
+
+custodia_require_provider_field() {
+  if [ "$#" -ne 2 ]; then
+    echo "usage: custodia_require_provider_field FILE FIELD" >&2
+    return 2
+  fi
+  if ! grep -Eq '"'"$2"'"[[:space:]]*:' "$1"; then
+    echo "crypto provider output is missing required field: $2" >&2
+    return 65
+  fi
+}
+
+custodia_validate_provider_output() {
+  if [ "$#" -ne 2 ]; then
+    echo "usage: custodia_validate_provider_output OPERATION OUTPUT_JSON" >&2
+    return 2
+  fi
+
+  local operation="$1"
+  local output_file="$2"
+  case "$operation" in
+    create-encrypted-secret)
+      custodia_require_provider_field "$output_file" name || return $?
+      custodia_require_provider_field "$output_file" ciphertext || return $?
+      custodia_require_provider_field "$output_file" crypto_metadata || return $?
+      custodia_require_provider_field "$output_file" envelopes || return $?
+      custodia_require_provider_field "$output_file" envelope || return $?
+      ;;
+    share-encrypted-secret)
+      custodia_require_provider_field "$output_file" version_id || return $?
+      custodia_require_provider_field "$output_file" target_client_id || return $?
+      custodia_require_provider_field "$output_file" envelope || return $?
+      ;;
+    create-encrypted-secret-version)
+      custodia_require_provider_field "$output_file" ciphertext || return $?
+      custodia_require_provider_field "$output_file" crypto_metadata || return $?
+      custodia_require_provider_field "$output_file" envelopes || return $?
+      custodia_require_provider_field "$output_file" envelope || return $?
+      ;;
+    read-decrypted-secret)
+      custodia_require_provider_field "$output_file" plaintext_b64 || return $?
+      ;;
+  esac
+}
+
+
 custodia_require_crypto_provider() {
   : "${CUSTODIA_CRYPTO_PROVIDER:?CUSTODIA_CRYPTO_PROVIDER is required for encrypted commands}"
   if ! command -v "$CUSTODIA_CRYPTO_PROVIDER" >/dev/null 2>&1; then
@@ -43,6 +111,11 @@ custodia_crypto_provider() {
   # The operation name is passed as argv. Secret material must travel through
   # stdin/stdout JSON only, never as command-line arguments.
   "$CUSTODIA_CRYPTO_PROVIDER" "$operation" < "$input_file" > "$output_file"
+  local status=$?
+  if [ "$status" -ne 0 ]; then
+    return "$status"
+  fi
+  custodia_validate_provider_output "$operation" "$output_file"
 }
 
 custodia_curl() {
@@ -114,7 +187,7 @@ custodia_get_secret_raw() {
     echo "usage: custodia_get_secret_raw SECRET_ID" >&2
     return 2
   fi
-  custodia_curl GET "/v1/secrets/$1"
+  custodia_curl GET "/v1/secrets/$(custodia_urlencode "$1")"
 }
 
 custodia_share_secret_raw() {
@@ -122,7 +195,7 @@ custodia_share_secret_raw() {
     echo "usage: custodia_share_secret_raw SECRET_ID PAYLOAD_JSON" >&2
     return 2
   fi
-  custodia_curl POST "/v1/secrets/$1/share" "$2"
+  custodia_curl POST "/v1/secrets/$(custodia_urlencode "$1")/share" "$2"
 }
 
 custodia_create_secret_version_raw() {
@@ -130,7 +203,7 @@ custodia_create_secret_version_raw() {
     echo "usage: custodia_create_secret_version_raw SECRET_ID PAYLOAD_JSON" >&2
     return 2
   fi
-  custodia_curl POST "/v1/secrets/$1/versions" "$2"
+  custodia_curl POST "/v1/secrets/$(custodia_urlencode "$1")/versions" "$2"
 }
 
 custodia_create_secret_encrypted() {
@@ -141,10 +214,12 @@ custodia_create_secret_encrypted() {
 
   local payload_file
   payload_file="$(mktemp)" || return 1
-  custodia_crypto_provider create-encrypted-secret "$1" "$payload_file" || {
+  custodia_crypto_provider create-encrypted-secret "$1" "$payload_file"
+  local provider_status=$?
+  if [ "$provider_status" -ne 0 ]; then
     rm -f "$payload_file"
-    return 1
-  }
+    return "$provider_status"
+  fi
   custodia_create_secret_raw "$payload_file"
   local status=$?
   rm -f "$payload_file"
@@ -163,9 +238,17 @@ custodia_read_secret_decrypted() {
     rm -f "$raw_file"
     return 1
   }
-  custodia_crypto_provider read-decrypted-secret "$raw_file" /dev/stdout
+  local plaintext_file
+  plaintext_file="$(mktemp)" || {
+    rm -f "$raw_file"
+    return 1
+  }
+  custodia_crypto_provider read-decrypted-secret "$raw_file" "$plaintext_file"
   local status=$?
-  rm -f "$raw_file"
+  if [ "$status" -eq 0 ]; then
+    cat "$plaintext_file"
+  fi
+  rm -f "$raw_file" "$plaintext_file"
   return "$status"
 }
 
@@ -177,10 +260,12 @@ custodia_share_secret_encrypted() {
 
   local payload_file
   payload_file="$(mktemp)" || return 1
-  custodia_crypto_provider share-encrypted-secret "$2" "$payload_file" || {
+  custodia_crypto_provider share-encrypted-secret "$2" "$payload_file"
+  local provider_status=$?
+  if [ "$provider_status" -ne 0 ]; then
     rm -f "$payload_file"
-    return 1
-  }
+    return "$provider_status"
+  fi
   custodia_share_secret_raw "$1" "$payload_file"
   local status=$?
   rm -f "$payload_file"
@@ -195,10 +280,12 @@ custodia_create_secret_version_encrypted() {
 
   local payload_file
   payload_file="$(mktemp)" || return 1
-  custodia_crypto_provider create-encrypted-secret-version "$2" "$payload_file" || {
+  custodia_crypto_provider create-encrypted-secret-version "$2" "$payload_file"
+  local provider_status=$?
+  if [ "$provider_status" -ne 0 ]; then
     rm -f "$payload_file"
-    return 1
-  }
+    return "$provider_status"
+  fi
   custodia_create_secret_version_raw "$1" "$payload_file"
   local status=$?
   rm -f "$payload_file"
@@ -210,7 +297,7 @@ custodia_revoke_access() {
     echo "usage: custodia_revoke_access SECRET_ID CLIENT_ID" >&2
     return 2
   fi
-  custodia_curl DELETE "/v1/secrets/$1/access/$2"
+  custodia_curl DELETE "/v1/secrets/$(custodia_urlencode "$1")/access/$(custodia_urlencode "$2")"
 }
 
 custodia_audit_export() {

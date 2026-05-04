@@ -8,8 +8,18 @@ trap 'rm -rf "$tmp_dir"' EXIT
 cat > "$tmp_dir/curl" <<'CURL'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "${CUSTODIA_BASH_TEST_CURL_LOG:?}"
+previous=""
+for arg in "$@"; do
+  if [ "$previous" = "--data-binary" ]; then
+    data_file="${arg#@}"
+    printf 'BODY:%s\n' "$data_file" >> "${CUSTODIA_BASH_TEST_CURL_LOG:?}"
+    cat "$data_file" >> "${CUSTODIA_BASH_TEST_CURL_LOG:?}"
+    printf '\n' >> "${CUSTODIA_BASH_TEST_CURL_LOG:?}"
+  fi
+  previous="$arg"
+done
 case "$*" in
-  *'/v1/secrets/secret-1')
+  *'/v1/secrets/secret-1'|*'/v1/secrets/secret%201%2Fwith%20slash')
     printf '{"secret_id":"secret-1","ciphertext":"opaque","envelope":"opaque"}\n'
     ;;
   *)
@@ -35,7 +45,7 @@ case "$operation" in
     printf '{"plaintext_b64":"c2VjcmV0"}\n'
     ;;
   share-encrypted-secret)
-    printf '{"version_id":"version-1","target_client_id":"bob","envelope_for_target":"provider-envelope"}\n'
+    printf '{"version_id":"version-1","target_client_id":"bob","envelope":"provider-envelope"}\n'
     ;;
   create-encrypted-secret-version)
     printf '{"ciphertext":"provider-version-ciphertext","crypto_metadata":{"schema":"hpke-v1"},"envelopes":[{"client_id":"alice","envelope":"provider-envelope"}]}\n'
@@ -69,10 +79,10 @@ printf '{"name":"db","plaintext_b64":"c2VjcmV0","recipients":["alice"]}\n' > "$r
 
 custodia_status > "$tmp_dir/status.out"
 custodia_create_secret_raw "$payload" > "$tmp_dir/create.out"
-custodia_get_secret_raw "secret-1" > "$tmp_dir/get.out"
+custodia_get_secret_raw "secret 1/with slash" > "$tmp_dir/get.out"
 custodia_share_secret_raw "secret-1" "$payload" > "$tmp_dir/share.out"
 custodia_create_secret_encrypted "$request" > "$tmp_dir/create-encrypted.out"
-custodia_read_secret_decrypted "secret-1" > "$tmp_dir/read-decrypted.out"
+custodia_read_secret_decrypted "secret 1/with slash" > "$tmp_dir/read-decrypted.out"
 custodia_share_secret_encrypted "secret-1" "$request" > "$tmp_dir/share-encrypted.out"
 custodia_create_secret_version_encrypted "secret-1" "$request" > "$tmp_dir/version-encrypted.out"
 
@@ -87,6 +97,7 @@ grep -q -- '--request GET' "$CUSTODIA_BASH_TEST_CURL_LOG"
 grep -q -- '--request POST' "$CUSTODIA_BASH_TEST_CURL_LOG"
 grep -q -- 'https://vault.example.test:8443/v1/status' "$CUSTODIA_BASH_TEST_CURL_LOG"
 grep -q -- 'https://vault.example.test:8443/v1/secrets/secret-1/share' "$CUSTODIA_BASH_TEST_CURL_LOG"
+grep -q -- 'https://vault.example.test:8443/v1/secrets/secret%201%2Fwith%20slash' "$CUSTODIA_BASH_TEST_CURL_LOG"
 grep -q -- 'https://vault.example.test:8443/v1/secrets/secret-1/versions' "$CUSTODIA_BASH_TEST_CURL_LOG"
 grep -q -- 'User-Agent: custodia-bash-transport/0.0.0' "$CUSTODIA_BASH_TEST_CURL_LOG"
 
@@ -98,3 +109,8 @@ grep -q '"plaintext_b64":"c2VjcmV0"' "$CUSTODIA_BASH_TEST_PROVIDER_INPUT_DIR/cre
 grep -q '"ciphertext":"opaque"' "$CUSTODIA_BASH_TEST_PROVIDER_INPUT_DIR/read-decrypted-secret.json"
 
 bash -n "$root_dir/clients/bash/custodia.sh"
+
+# Provider outputs must be server-compatible payloads, not ad-hoc field names.
+grep -q '"target_client_id":"bob"' "$CUSTODIA_BASH_TEST_CURL_LOG"
+grep -q '"envelope":"provider-envelope"' "$CUSTODIA_BASH_TEST_CURL_LOG"
+! grep -q 'envelope_for_target' "$CUSTODIA_BASH_TEST_CURL_LOG"

@@ -91,3 +91,8 @@ Bash only passes JSON through stdin/stdout and then calls raw REST/mTLS endpoint
 ```bash
 make test-bash-client
 ```
+
+
+## Safety notes
+
+Path parameters are percent-encoded by the helper before invoking curl. External crypto-provider outputs must use server-compatible field names such as `envelope`; ad-hoc names such as `envelope_for_target` are rejected by the helper contract checks.

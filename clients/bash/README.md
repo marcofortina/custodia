@@ -68,3 +68,8 @@ The provider, not Bash, is responsible for canonical AAD, AES-256-GCM, HPKE-v1 e
 ```bash
 make test-bash-client
 ```
+
+
+## Safety notes
+
+Path parameters are percent-encoded by the helper before invoking curl. External crypto-provider outputs must use server-compatible field names such as `envelope`; ad-hoc names such as `envelope_for_target` are rejected by the helper contract checks.
