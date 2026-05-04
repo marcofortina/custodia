@@ -17,11 +17,12 @@ Phase 5 tracks official client libraries and client-side cryptography.
 - Python typed transport payload helpers and tests added.
 - Client crypto metadata validator added for the v1 scaffold.
 - Deterministic metadata/AAD fixtures added with canonical AAD and SHA-256 checks.
+- Deterministic AES-256-GCM ciphertext and HPKE-v1 recipient envelope fixtures added for the shared v1 crypto vectors.
+- Public Go crypto dependency interfaces added for future high-level crypto helpers.
 - `make test-client-crypto` added for focused client-crypto fixture validation.
 
 ## Still open
 
-- Deterministic ciphertext/envelope cryptographic test vectors beyond metadata/AAD fixtures.
 - Go high-level crypto client.
 - Python high-level crypto client.
 - Node.js/TypeScript transport client.
@@ -31,7 +32,7 @@ Phase 5 tracks official client libraries and client-side cryptography.
 
 ## Current boundary
 
-Go and Python are transport clients. They speak REST/mTLS and move opaque payloads. Python now has typed transport payload helpers; Go has public transport and operational SDK surfaces. Deterministic metadata/AAD fixtures are present, but they do not yet encrypt plaintext, unwrap envelopes, decrypt ciphertext or resolve recipient public keys.
+Go and Python are transport clients. They speak REST/mTLS and move opaque payloads. Python now has typed transport payload helpers; Go has public transport and operational SDK surfaces. Deterministic crypto fixtures now cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes. They are test vectors only; Go and Python do not yet expose high-level E2E crypto helpers.
 
 The server remains metadata/ciphertext/envelope-only. Custodia must not become a public-key directory.
 
@@ -46,4 +47,4 @@ go test -p=1 -timeout 60s ./...
 python3 -m py_compile clients/python/custodia_client/__init__.py
 ```
 
-Phase 5 is not complete until deterministic ciphertext/envelope crypto vectors and high-level crypto clients are implemented.
+Phase 5 is not complete until high-level crypto clients are implemented on top of the deterministic ciphertext/envelope vectors.

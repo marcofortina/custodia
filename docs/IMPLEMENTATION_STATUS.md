@@ -1344,3 +1344,43 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 679 - Phase 5 Go operational SDK status
 
 - Updated Phase 5 status after closing the public Go operational SDK surface.
+## Patch 680 - client crypto AES-GCM content codec
+
+- Added internal AES-256-GCM seal/open helpers for deterministic client crypto vectors.
+- Covered key length, nonce length and AAD authentication failure behavior.
+
+## Patch 681 - client crypto HPKE envelope codec
+
+- Added internal HPKE-v1 envelope seal/open helpers for deterministic recipient envelope vectors.
+- Covered wrong recipient and AAD mismatch failures without exposing this as a public high-level SDK.
+
+## Patch 682 - client crypto payload vector validation
+
+- Extended `internal/clientcrypto.ValidateVector` to validate deterministic plaintext, DEK, nonce, ciphertext and recipient envelope fixtures.
+- Kept older deterministic-AAD-only fixtures valid until they are upgraded.
+
+## Patch 683 - deterministic client crypto payload fixtures
+
+- Replaced placeholder ciphertext/envelope fixtures with deterministic AES-256-GCM and HPKE-v1 vectors.
+- Added fixture-only recipient private keys, public keys, ephemeral keys and negative tamper/wrong-recipient/AAD-mismatch payloads.
+
+## Patch 684 - client crypto payload vector validation tests
+
+- Covered ciphertext mismatch, envelope mismatch and negative crypto fixture validation.
+
+## Patch 685 - Go client crypto interface contracts
+
+- Added public Go SDK interfaces for recipient public-key resolution, local private-key envelope opening, CSPRNG source and clock injection.
+- Added external consumer compile coverage for the crypto interface contracts without adding a high-level crypto client yet.
+
+## Patch 686 - deterministic client crypto payload vector docs
+
+- Documented that the shared vectors now cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.
+
+## Patch 687 - Go client crypto interface docs
+
+- Documented the public Go crypto dependency interfaces and their trust boundary.
+
+## Patch 688 - Phase 5 crypto vector status
+
+- Updated the Phase 5 closure tracker after deterministic ciphertext/envelope vectors and Go crypto interfaces.
