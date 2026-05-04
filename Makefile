@@ -116,6 +116,18 @@ production-evidence-check:
 release-check:
 	./scripts/release-check.sh
 
+.PHONY: package-deb
+package-deb:
+	PACKAGE_FORMATS=deb ./scripts/package-linux.sh
+
+.PHONY: package-rpm
+package-rpm:
+	PACKAGE_FORMATS=rpm ./scripts/package-linux.sh
+
+.PHONY: package-linux
+package-linux:
+	PACKAGE_FORMATS="deb rpm" ./scripts/package-linux.sh
+
 .PHONY: softhsm-dev-token
 softhsm-dev-token:
 	./scripts/softhsm-dev-token.sh
