@@ -26,6 +26,7 @@ type ClientCSR struct {
 	CSRPem        []byte
 }
 
+// GenerateClientCSR creates only mTLS transport identity material; application encryption keys are provisioned separately.
 func GenerateClientCSR(clientID string) (*ClientCSR, error) {
 	if !model.ValidClientID(clientID) {
 		return nil, ErrInvalidClientID

@@ -34,6 +34,7 @@ type NopRecorder struct{}
 func (NopRecorder) Record(Event) error { return nil }
 func (NopRecorder) Close() error       { return nil }
 
+// JSONLRecorder keeps signer audit append-only at the file format level; callers still own log rotation and archival policy.
 type JSONLRecorder struct {
 	mu   sync.Mutex
 	file *os.File
@@ -47,6 +48,7 @@ func NewJSONLRecorder(path string) (*JSONLRecorder, error) {
 	return &JSONLRecorder{file: file}, nil
 }
 
+// Record fsyncs each event because signer actions are low-volume but security-relevant.
 func (r *JSONLRecorder) Record(event Event) error {
 	if event.OccurredAt.IsZero() {
 		event.OccurredAt = time.Now().UTC()

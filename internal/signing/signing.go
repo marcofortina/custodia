@@ -69,6 +69,8 @@ func NewClientCertificateSigner(caCertPEM, caKeyPEM []byte) (*ClientCertificateS
 	return &ClientCertificateSigner{caCert: caCert, caKey: caKey}, nil
 }
 
+// SignClientCSR issues mTLS client certificates after binding the CSR subject/SAN to the requested client_id.
+// The signer does not provision or validate application encryption keys.
 func (s *ClientCertificateSigner) SignClientCSR(csrPEM []byte, clientID string, ttl time.Duration, now time.Time) (*SignClientCertificateResponse, error) {
 	clientID = strings.TrimSpace(clientID)
 	if !model.ValidClientID(clientID) {

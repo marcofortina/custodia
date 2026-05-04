@@ -24,6 +24,7 @@ import (
 	"time"
 )
 
+// handleWebLogin unlocks only the metadata console; it never receives or displays secret plaintext.
 func (s *Server) handleWebLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		body := "<h1>Web MFA</h1>" +
@@ -328,6 +329,7 @@ func (s *Server) handleWebPasskeyAuthenticateOptions(w http.ResponseWriter, r *h
 	writeJSON(w, http.StatusOK, options)
 }
 
+// handleWebStatus renders operational metadata for the admin console without exposing secret payload material.
 func (s *Server) handleWebStatus(w http.ResponseWriter, r *http.Request) {
 	storeStatus := "ok"
 	if err := s.store.Health(r.Context()); err != nil {

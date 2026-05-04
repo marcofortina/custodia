@@ -6,6 +6,7 @@
 -- See the accompanying LICENSE file for details.
 
 PRAGMA foreign_keys = ON;
+-- WAL and busy_timeout make the Lite profile safer for single-node operational use without pretending to provide HA.
 PRAGMA journal_mode = WAL;
 PRAGMA busy_timeout = 5000;
 

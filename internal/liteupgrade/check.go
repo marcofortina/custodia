@@ -13,6 +13,8 @@ import (
 	"custodia/internal/productioncheck"
 )
 
+// Check compares a Lite source and FULL target without touching live services.
+// It is a planning gate: data migration remains an explicit operator action.
 func Check(liteEnv, fullEnv map[string]string) []productioncheck.Finding {
 	findings := []productioncheck.Finding{}
 	add := func(code, severity, message string) {

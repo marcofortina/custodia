@@ -32,6 +32,7 @@ type LiteBootstrapRequest struct {
 	Now           time.Time
 }
 
+// LiteBootstrapArtifacts are generated for single-node bootstrap and should be moved into restricted paths immediately.
 type LiteBootstrapArtifacts struct {
 	CACertPEM     []byte
 	CAKeyPEM      []byte
@@ -44,6 +45,7 @@ type LiteBootstrapArtifacts struct {
 	PassphraseSet bool
 }
 
+// GenerateLiteBootstrap creates a local CA, server certificate, admin client certificate and empty CRL for first-run Lite installs.
 func GenerateLiteBootstrap(req LiteBootstrapRequest) (*LiteBootstrapArtifacts, error) {
 	adminClientID := strings.TrimSpace(req.AdminClientID)
 	if !model.ValidClientID(adminClientID) {

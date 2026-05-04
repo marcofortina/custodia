@@ -28,6 +28,7 @@ type ClientCRLStatus struct {
 	RevokedCount int
 }
 
+// LoadClientCRLStatus verifies the CRL signature before reporting status so diagnostics cannot trust forged revocation metadata.
 func LoadClientCRLStatus(crlFile string, caPEM []byte) (ClientCRLStatus, error) {
 	crlPEM, err := os.ReadFile(crlFile)
 	if err != nil {
@@ -160,6 +161,7 @@ func newReloadableCRLVerifier(crlFile string, caPEM []byte) (*reloadableCRLVerif
 	return verifier, nil
 }
 
+// Verify reloads the CRL on file changes to support local revocation updates without restarting the API server.
 func (v *reloadableCRLVerifier) Verify(rawCerts [][]byte, _ [][]*x509.Certificate) error {
 	if err := v.reloadIfChanged(); err != nil {
 		return err

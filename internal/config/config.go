@@ -21,6 +21,8 @@ const (
 	ProfileCustom = "custom"
 )
 
+// Config is the single resolved runtime configuration shared by server, signer and CLI paths.
+// New knobs should flow through this type first so env, YAML and profile defaults stay consistent.
 type Config struct {
 	Profile                          string
 	ConfigFile                       string
@@ -73,6 +75,8 @@ func Load() Config {
 	return cfg
 }
 
+// LoadWithArgs applies the configuration precedence used in production: profile defaults, optional YAML, then env overrides.
+// Keeping this order centralized prevents Lite/FULL profile drift between binaries.
 func LoadWithArgs(args []string) (Config, error) {
 	configFile, err := parseConfigArgs(args)
 	if err != nil {
@@ -179,6 +183,8 @@ func parseConfigArgs(args []string) (string, error) {
 	return "", nil
 }
 
+// loadSimpleYAML intentionally supports only flat key/value files used by Custodia examples.
+// Rejecting nested YAML keeps configuration parsing auditable and avoids silently ignoring complex structures.
 func loadSimpleYAML(path string) (map[string]string, error) {
 	payload, err := os.ReadFile(path)
 	if err != nil {

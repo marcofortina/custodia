@@ -20,6 +20,7 @@ import (
 	"time"
 )
 
+// ValkeyLimiter uses the Redis wire protocol directly to avoid a client dependency in the minimal server build.
 type ValkeyLimiter struct {
 	address  string
 	useTLS   bool
@@ -41,6 +42,7 @@ func NewValkeyLimiter(rawURL string) (*ValkeyLimiter, error) {
 	return &ValkeyLimiter{address: parsed.Host, useTLS: parsed.Scheme == "rediss", password: password}, nil
 }
 
+// Allow uses per-second counters with short TTLs; failed limiter access is returned to callers so protected paths can fail closed.
 func (l *ValkeyLimiter) Allow(ctx context.Context, key string, limit int) (bool, error) {
 	if limit <= 0 {
 		return true, nil

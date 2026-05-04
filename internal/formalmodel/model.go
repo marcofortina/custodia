@@ -9,6 +9,7 @@ package formalmodel
 
 import "fmt"
 
+// State is a small executable mirror of the TLA+ access model used by tests and formal checks.
 type State struct {
 	Clients map[string]bool
 	Access  map[AccessKey]bool
@@ -55,6 +56,7 @@ func (s State) RevokeRead(clientID, secretID string, version int) State {
 	return next
 }
 
+// StrongRevokeSecret models the operational rule that old downloaded material is mitigated by rotating to a new active version.
 func (s State) StrongRevokeSecret(secretID string, activeVersion int) State {
 	next := s.clone()
 	for key := range next.Access {

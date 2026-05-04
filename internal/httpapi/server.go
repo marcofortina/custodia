@@ -15,6 +15,7 @@ import (
 	"time"
 )
 
+// Server owns the API and web metadata surface. Secret plaintext, DEKs and private crypto keys never enter this layer.
 type Server struct {
 	store                            store.Store
 	limiter                          ratelimit.Limiter
@@ -79,6 +80,7 @@ const (
 	DefaultMaxEnvelopesPerSecret            = 100
 )
 
+// New wires routes with explicit auth wrappers so public health endpoints and protected /v1 or /web endpoints stay obvious.
 func New(options Options) http.Handler {
 	maxEnvelopesPerSecret := options.MaxEnvelopesPerSecret
 	if maxEnvelopesPerSecret <= 0 {

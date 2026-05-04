@@ -12,6 +12,7 @@ import (
 	"time"
 )
 
+// CryptoClient wraps the transport client with local content encryption and envelope management.
 type CryptoClient struct {
 	transport *Client
 	options   CryptoOptions
@@ -38,6 +39,7 @@ type ShareEncryptedSecretRequest struct {
 	ExpiresAt      *time.Time
 }
 
+// DecryptedSecret is intentionally returned only by the high-level crypto client, never by raw transport methods.
 type DecryptedSecret struct {
 	SecretID        string
 	VersionID       string

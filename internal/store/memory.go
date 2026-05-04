@@ -20,6 +20,8 @@ import (
 	"custodia/internal/model"
 )
 
+// MemoryStore is the reference implementation of Custodia authorization semantics used by tests and lightweight runs.
+// Persistence stores must preserve these versioning, pending grant and audit-chain rules.
 type MemoryStore struct {
 	mu              sync.RWMutex
 	clients         map[string]model.Client
@@ -137,6 +139,7 @@ func (s *MemoryStore) GetClient(_ context.Context, clientID string) (model.Clien
 	return client, nil
 }
 
+// RevokeClient disables future server access and pending grants; already downloaded ciphertext still requires client-side rotation.
 func (s *MemoryStore) RevokeClient(_ context.Context, clientID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

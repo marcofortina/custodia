@@ -31,6 +31,8 @@ type Status struct {
 	RevokedCount int        `json:"revoked_count"`
 }
 
+// CheckCRL is an evidence-friendly status helper, not a full OCSP responder.
+// It answers from a verified CRL snapshot and preserves update timestamps for operators.
 func CheckCRL(list *x509.RevocationList, serialHex string) (*Status, error) {
 	serial, normalized, err := parseSerialHex(serialHex)
 	if err != nil {

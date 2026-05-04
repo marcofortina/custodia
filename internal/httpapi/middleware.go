@@ -54,6 +54,8 @@ func (s *Server) webAdmin(next http.Handler) http.Handler {
 	return s.auth(s.adminOnly(s.webMFA(next)))
 }
 
+// webMFA binds browser metadata access to the already-authenticated mTLS client identity.
+// The web session never grants access for a different client_id than the certificate resolved by auth.
 func (s *Server) webMFA(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !s.webMFARequired {
@@ -81,6 +83,7 @@ func (s *Server) webMFA(next http.Handler) http.Handler {
 	})
 }
 
+// auth is the API trust boundary: it maps the mTLS subject to an active client before rate limits or handlers use client_id.
 func (s *Server) auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.limiter != nil && s.ipRateLimit > 0 {

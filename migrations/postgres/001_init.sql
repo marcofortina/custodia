@@ -5,6 +5,7 @@
 -- Custodia is distributed under the GNU Affero General Public License v3.0.
 -- See the accompanying LICENSE file for details.
 
+-- pgcrypto provides gen_random_uuid() for identifiers while keeping secret bytes opaque to the database.
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS clients (
@@ -23,6 +24,7 @@ CREATE TABLE IF NOT EXISTS secrets (
     deleted_at           TIMESTAMPTZ
 );
 
+-- Secret versions preserve client-side rotation history; ciphertext and crypto_metadata remain opaque server data.
 CREATE TABLE IF NOT EXISTS secret_versions (
     secret_id            UUID NOT NULL REFERENCES secrets(secret_id) ON DELETE CASCADE,
     version_id           UUID NOT NULL DEFAULT gen_random_uuid(),
@@ -35,6 +37,7 @@ CREATE TABLE IF NOT EXISTS secret_versions (
     CHECK (octet_length(ciphertext) > 0)
 );
 
+-- Each recipient receives a separate opaque envelope so grants can change without exposing plaintext or DEKs.
 CREATE TABLE IF NOT EXISTS secret_access (
     secret_id     UUID NOT NULL,
     version_id    UUID NOT NULL,

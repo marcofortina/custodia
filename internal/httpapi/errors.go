@@ -37,6 +37,7 @@ func writeRateLimited(w http.ResponseWriter, code string) {
 	writeError(w, http.StatusTooManyRequests, code)
 }
 
+// writeMappedError exposes stable API error codes without leaking backend-specific database or validation details.
 func writeMappedError(w http.ResponseWriter, err error) {
 	status, code := mapStoreError(err)
 	writeError(w, status, code)
@@ -85,6 +86,7 @@ func enrichAuditMetadata(metadata json.RawMessage, requestID string) json.RawMes
 	return enriched
 }
 
+// audit is deliberately best-effort for request handling: operation authorization must not depend on audit sink latency.
 func (s *Server) audit(r *http.Request, action, resourceType, resourceID, outcome string, metadata json.RawMessage) {
 	_ = s.store.AppendAudit(r.Context(), model.AuditEvent{
 		EventID:       id.New(),

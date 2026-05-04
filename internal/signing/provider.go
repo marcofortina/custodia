@@ -31,6 +31,7 @@ var (
 	ErrPKCS11CommandFailed    = errors.New("pkcs11 signing command failed")
 )
 
+// CAKeyProvider abstracts certificate signing material so Lite file keys and production command/HSM bridges share one signer path.
 type CAKeyProvider interface {
 	Signer() (crypto.Signer, error)
 }
@@ -69,6 +70,7 @@ func (s PKCS11CommandSigner) Public() crypto.PublicKey {
 	return s.PublicKeyValue
 }
 
+// Sign sends only the digest and hash name to the external signer command; private CA key material never returns to Custodia.
 func (s PKCS11CommandSigner) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
 	request := pkcs11SignRequest{
 		Digest: base64.StdEncoding.EncodeToString(digest),
