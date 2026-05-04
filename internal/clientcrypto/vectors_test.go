@@ -1,6 +1,8 @@
 package clientcrypto
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -68,6 +70,39 @@ func TestValidateVectorRequiresExpectedErrorForUnsupportedVersion(t *testing.T) 
 	if err := ValidateVector(vector); err != nil {
 		t.Fatalf("ValidateVector() error = %v", err)
 	}
+}
+
+func TestValidateVectorRejectsCiphertextMismatch(t *testing.T) {
+	vector := mustLoadVectorFixture(t, "create_secret_single_recipient.json")
+	vector.Ciphertext = base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{0x42}, len(vector.Ciphertext)))
+	if err := ValidateVector(vector); err == nil {
+		t.Fatal("ValidateVector() error = nil, want ciphertext mismatch")
+	}
+}
+
+func TestValidateVectorRejectsEnvelopeMismatch(t *testing.T) {
+	vector := mustLoadVectorFixture(t, "create_secret_single_recipient.json")
+	vector.Envelopes[0].Envelope = base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{0x42}, 80))
+	if err := ValidateVector(vector); err == nil {
+		t.Fatal("ValidateVector() error = nil, want envelope mismatch")
+	}
+}
+
+func TestValidateVectorAcceptsNegativeCryptoFailures(t *testing.T) {
+	for _, name := range []string{"tamper_ciphertext_fails.json", "aad_mismatch_fails.json", "wrong_recipient_fails.json"} {
+		if _, err := LoadVector(filepath.Join("..", "..", "testdata", "client-crypto", "v1", name)); err != nil {
+			t.Fatalf("LoadVector(%s) error = %v", name, err)
+		}
+	}
+}
+
+func mustLoadVectorFixture(t *testing.T, name string) Vector {
+	t.Helper()
+	vector, err := LoadVector(filepath.Join("..", "..", "testdata", "client-crypto", "v1", name))
+	if err != nil {
+		t.Fatalf("LoadVector(%s) error = %v", name, err)
+	}
+	return vector
 }
 
 func validTestVector() Vector {
