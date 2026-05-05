@@ -205,16 +205,16 @@ sudo -u custodia custodia-admin ca bootstrap-local \
 Expected files:
 
 ```text
+/etc/custodia/admin.crt
+/etc/custodia/admin.key
 /etc/custodia/ca.crt
 /etc/custodia/ca.key
 /etc/custodia/ca.pass
 /etc/custodia/client-ca.crt
 /etc/custodia/client.crl.pem
+/etc/custodia/config.lite.yaml
 /etc/custodia/server.crt
 /etc/custodia/server.key
-/etc/custodia/admin.crt
-/etc/custodia/admin.key
-/etc/custodia/config.lite.yaml
 ```
 
 For a public DNS name, replace `localhost` with the DNS name clients will use. The value is embedded into the server certificate SAN.
