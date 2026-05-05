@@ -7,6 +7,7 @@
 
 (() => {
   const refreshStorageKey = 'custodia.console.refreshSeconds';
+  const paginationStoragePrefix = 'custodia.console.paginationPage.';
   const allowedRefreshIntervals = new Set(['5', '10', '15', '30']);
   let refreshTimeout = null;
   let refreshCountdown = null;
@@ -80,6 +81,8 @@
     }, seconds * 1000);
   };
 
+  const paginationStorageKey = (container) => `${paginationStoragePrefix}${window.location.pathname}${window.location.search}:${container.dataset.paginationLabel || 'table'}`;
+
   const initPaginatedTables = (root = document) => {
     root.querySelectorAll('[data-console-pagination="true"]').forEach((container) => {
       if (container.dataset.paginationReady === 'true') return;
@@ -91,16 +94,20 @@
       if (rows.length <= pageSize) return;
 
       container.dataset.paginationReady = 'true';
-      let currentPage = 0;
+      const key = paginationStorageKey(container);
+      const storedPage = Number.parseInt(window.sessionStorage.getItem(key) || '0', 10);
       const pageCount = Math.ceil(rows.length / pageSize);
+      let currentPage = Number.isFinite(storedPage) ? Math.min(Math.max(storedPage, 0), pageCount - 1) : 0;
       const nav = document.createElement('nav');
       nav.className = 'console-pagination';
       nav.setAttribute('aria-label', container.dataset.paginationLabel || 'Table pagination');
-      nav.innerHTML = '<button type="button" data-pagination-prev>Previous</button><span class="console-pagination__status" aria-live="polite"></span><button type="button" data-pagination-next>Next</button>';
+      nav.innerHTML = '<button type="button" data-pagination-first>First</button><button type="button" data-pagination-prev>Previous</button><span class="console-pagination__status" aria-live="polite"></span><button type="button" data-pagination-next>Next</button><button type="button" data-pagination-last>Last</button>';
       container.insertAdjacentElement('afterend', nav);
 
+      const firstButton = nav.querySelector('[data-pagination-first]');
       const previousButton = nav.querySelector('[data-pagination-prev]');
       const nextButton = nav.querySelector('[data-pagination-next]');
+      const lastButton = nav.querySelector('[data-pagination-last]');
       const status = nav.querySelector('.console-pagination__status');
       const update = () => {
         const start = currentPage * pageSize;
@@ -108,23 +115,22 @@
         rows.forEach((row, index) => {
           row.hidden = index < start || index >= end;
         });
-        status.textContent = `Page ${currentPage + 1} of ${pageCount}`;
+        status.textContent = `Showing ${start + 1}–${Math.min(end, rows.length)} of ${rows.length} · Page ${currentPage + 1} of ${pageCount}`;
+        window.sessionStorage.setItem(key, String(currentPage));
+        firstButton.disabled = currentPage === 0;
         previousButton.disabled = currentPage === 0;
         nextButton.disabled = currentPage === pageCount - 1;
+        lastButton.disabled = currentPage === pageCount - 1;
+      };
+      const goToPage = (page) => {
+        currentPage = Math.min(Math.max(page, 0), pageCount - 1);
+        update();
       };
 
-      previousButton.addEventListener('click', () => {
-        if (currentPage > 0) {
-          currentPage -= 1;
-          update();
-        }
-      });
-      nextButton.addEventListener('click', () => {
-        if (currentPage < pageCount - 1) {
-          currentPage += 1;
-          update();
-        }
-      });
+      firstButton.addEventListener('click', () => goToPage(0));
+      previousButton.addEventListener('click', () => goToPage(currentPage - 1));
+      nextButton.addEventListener('click', () => goToPage(currentPage + 1));
+      lastButton.addEventListener('click', () => goToPage(pageCount - 1));
       update();
     });
   };

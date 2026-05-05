@@ -2036,7 +2036,7 @@ func TestWebConsoleAssetIsLocalAndAdminOnly(t *testing.T) {
 			path:        "/web/assets/console.js",
 			contentType: "text/javascript",
 			file:        "web_assets/console.js",
-			tokens:      []string{"swapMain", "initPaginatedTables", "initRefreshControls", "refreshCurrentView", "custodia.console.refreshSeconds", "Refresh in ${remaining}s", "Refresh paused while editing", "document.visibilityState === 'hidden'", "setLastUpdated", "Table pagination", "Page ${currentPage + 1} of ${pageCount}", "responseURL.pathname === '/web/login'", "nextMain.classList.contains('console-auth-shell')"},
+			tokens:      []string{"swapMain", "initPaginatedTables", "initRefreshControls", "refreshCurrentView", "custodia.console.refreshSeconds", "Refresh in ${remaining}s", "Refresh paused while editing", "document.visibilityState === 'hidden'", "setLastUpdated", "Table pagination", "custodia.console.paginationPage.", "data-pagination-first", "Showing ${start + 1}–${Math.min(end, rows.length)} of ${rows.length}", "Page ${currentPage + 1} of ${pageCount}", "responseURL.pathname === '/web/login'", "nextMain.classList.contains('console-auth-shell')"},
 		},
 		{
 			path:        "/web/assets/console.css",
