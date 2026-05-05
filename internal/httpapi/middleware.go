@@ -64,7 +64,7 @@ func (s *Server) webMFA(next http.Handler) http.Handler {
 		}
 		if s.webSessionManager == nil {
 			s.auditFailure(r, "web.mfa", "system", "", map[string]string{"reason": "mfa_not_configured"})
-			writeError(w, http.StatusServiceUnavailable, "mfa_not_configured")
+			writeWebAwareError(w, r, http.StatusServiceUnavailable, "mfa_not_configured")
 			return
 		}
 		cookie, err := r.Cookie(webauth.SessionCookieName)
@@ -90,25 +90,25 @@ func (s *Server) auth(next http.Handler) http.Handler {
 			allowed, err := s.limiter.Allow(r.Context(), "ip:"+remoteIP(r), s.ipRateLimit)
 			if err != nil {
 				s.auditFailure(r, "auth.rate_limit", "client", "", map[string]string{"reason": "rate_limiter_unavailable", "scope": "ip"})
-				writeError(w, http.StatusServiceUnavailable, "rate_limiter_unavailable")
+				writeWebAwareError(w, r, http.StatusServiceUnavailable, "rate_limiter_unavailable")
 				return
 			}
 			if !allowed {
 				s.auditFailure(r, "auth.rate_limit", "client", "", map[string]string{"reason": "ip_rate_limited"})
-				writeRateLimited(w, "ip_rate_limited")
+				writeWebAwareRateLimited(w, r, "ip_rate_limited")
 				return
 			}
 		}
 		mtlsSubject, err := mtls.ClientIDFromRequest(r)
 		if err != nil {
 			s.auditFailure(r, "auth.mtls", "client", "", map[string]string{"reason": "missing_client_certificate"})
-			writeError(w, http.StatusUnauthorized, "missing_client_certificate")
+			writeWebAwareError(w, r, http.StatusUnauthorized, "missing_client_certificate")
 			return
 		}
 		client, err := s.store.GetActiveClientBySubject(r.Context(), mtlsSubject)
 		if err != nil {
 			s.auditFailure(r, "auth.mtls", "client", "", map[string]string{"reason": "client_not_authorized", "mtls_subject": mtlsSubject})
-			writeError(w, http.StatusForbidden, "client_not_authorized")
+			writeWebAwareError(w, r, http.StatusForbidden, "client_not_authorized")
 			return
 		}
 		ctx := context.WithValue(r.Context(), clientIDContextKey, client.ClientID)
@@ -117,23 +117,23 @@ func (s *Server) auth(next http.Handler) http.Handler {
 			allowed, err := s.limiter.Allow(r.Context(), "client:"+client.ClientID, s.clientRateLimit)
 			if err != nil {
 				s.auditFailure(r, "auth.rate_limit", "client", client.ClientID, map[string]string{"reason": "rate_limiter_unavailable", "scope": "client"})
-				writeError(w, http.StatusServiceUnavailable, "rate_limiter_unavailable")
+				writeWebAwareError(w, r, http.StatusServiceUnavailable, "rate_limiter_unavailable")
 				return
 			}
 			if !allowed {
 				s.auditFailure(r, "auth.rate_limit", "client", client.ClientID, map[string]string{"reason": "client_rate_limited"})
-				writeRateLimited(w, "client_rate_limited")
+				writeWebAwareRateLimited(w, r, "client_rate_limited")
 				return
 			}
 			allowed, err = s.limiter.Allow(r.Context(), "global", s.globalRateLimit)
 			if err != nil {
 				s.auditFailure(r, "auth.rate_limit", "client", client.ClientID, map[string]string{"reason": "rate_limiter_unavailable", "scope": "global"})
-				writeError(w, http.StatusServiceUnavailable, "rate_limiter_unavailable")
+				writeWebAwareError(w, r, http.StatusServiceUnavailable, "rate_limiter_unavailable")
 				return
 			}
 			if !allowed {
 				s.auditFailure(r, "auth.rate_limit", "client", client.ClientID, map[string]string{"reason": "global_rate_limited"})
-				writeRateLimited(w, "global_rate_limited")
+				writeWebAwareRateLimited(w, r, "global_rate_limited")
 				return
 			}
 		}
@@ -146,11 +146,27 @@ func (s *Server) adminOnly(next http.Handler) http.Handler {
 		clientID := clientIDFromContext(r)
 		if !s.adminClientIDs[clientID] {
 			s.auditFailure(r, "auth.admin", "client", clientID, map[string]string{"reason": "admin_required"})
-			writeError(w, http.StatusForbidden, "admin_required")
+			writeWebAwareError(w, r, http.StatusForbidden, "admin_required")
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func writeWebAwareError(w http.ResponseWriter, r *http.Request, status int, code string) {
+	if isWebHTMLPath(r.URL.Path) {
+		writeWebStatusError(w, status, code)
+		return
+	}
+	writeError(w, status, code)
+}
+
+func writeWebAwareRateLimited(w http.ResponseWriter, r *http.Request, code string) {
+	if isWebHTMLPath(r.URL.Path) {
+		writeWebStatusError(w, http.StatusTooManyRequests, code)
+		return
+	}
+	writeRateLimited(w, code)
 }
 
 func clientIDFromContext(r *http.Request) string {

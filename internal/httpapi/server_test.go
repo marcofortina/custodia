@@ -2108,7 +2108,37 @@ func TestWebConsoleRendersStyledNotFoundPages(t *testing.T) {
 	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
 		t.Fatalf("create admin: %v", err)
 	}
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "operator", MTLSSubject: "operator"}); err != nil {
+		t.Fatalf("create operator: %v", err)
+	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	unauthenticatedWebReq := httptest.NewRequest(http.MethodGet, "/web/", nil)
+	unauthenticatedWebRes := httptest.NewRecorder()
+	handler.ServeHTTP(unauthenticatedWebRes, unauthenticatedWebReq)
+	if unauthenticatedWebRes.Code != http.StatusUnauthorized {
+		t.Fatalf("expected missing web mTLS to render 401, got %d: %s", unauthenticatedWebRes.Code, unauthenticatedWebRes.Body.String())
+	}
+	if body := unauthenticatedWebRes.Body.String(); !strings.Contains(body, `>401</h1>`) || !strings.Contains(body, `console-error-shell`) || strings.Contains(body, `{"error"`) {
+		t.Fatalf("expected missing web mTLS to render styled html 401, got: %s", body)
+	}
+
+	forbiddenWebReq := mtlsRequest(http.MethodGet, "/web/", "", "operator")
+	forbiddenWebRes := httptest.NewRecorder()
+	handler.ServeHTTP(forbiddenWebRes, forbiddenWebReq)
+	if forbiddenWebRes.Code != http.StatusForbidden {
+		t.Fatalf("expected non-admin web mTLS client to render 403, got %d: %s", forbiddenWebRes.Code, forbiddenWebRes.Body.String())
+	}
+	if body := forbiddenWebRes.Body.String(); !strings.Contains(body, `>403</h1>`) || !strings.Contains(body, `console-error-shell`) || strings.Contains(body, `{"error"`) {
+		t.Fatalf("expected non-admin web client to render styled html 403, got: %s", body)
+	}
+
+	passkeyReq := mtlsRequest(http.MethodGet, "/web/passkey/authenticate/options", "", "operator")
+	passkeyRes := httptest.NewRecorder()
+	handler.ServeHTTP(passkeyRes, passkeyReq)
+	if passkeyRes.Code != http.StatusForbidden || !strings.Contains(passkeyRes.Body.String(), `{"error":"admin_required"}`) {
+		t.Fatalf("expected passkey JSON endpoint to keep JSON auth errors, got %d: %s", passkeyRes.Code, passkeyRes.Body.String())
+	}
 
 	unknownWebReq := mtlsRequest(http.MethodGet, "/web/does-not-exist", "", "admin")
 	unknownWebRes := httptest.NewRecorder()

@@ -264,6 +264,16 @@ func isWebPath(path string) bool {
 	return path == "/favicon.ico" || path == "/web" || strings.HasPrefix(path, "/web/")
 }
 
+func isWebHTMLPath(path string) bool {
+	if !isWebPath(path) {
+		return false
+	}
+	if path == "/favicon.ico" || strings.HasPrefix(path, "/web/assets/") || strings.HasPrefix(path, "/web/passkey/") {
+		return false
+	}
+	return true
+}
+
 const apiContentSecurityPolicy = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
 const webContentSecurityPolicy = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 
