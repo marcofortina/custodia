@@ -181,7 +181,8 @@ pub struct OsRandomSource;
 
 impl RandomSource for OsRandomSource {
     fn random(&self, length: usize) -> CryptoResult<Vec<u8>> {
-        let mut value = vec![0_u8; length];
+        let mut value = Vec::with_capacity(length);
+        value.resize_with(length, Default::default);
         let mut rng = SysRng;
         rng
             .try_fill_bytes(&mut value)

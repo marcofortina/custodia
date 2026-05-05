@@ -13,7 +13,7 @@ use custodia_client::{
 };
 use serde_json::json;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
 #[derive(Default)]
@@ -60,6 +60,22 @@ fn json_response(body: serde_json::Value) -> TransportResponse {
         headers: vec![("content-type".to_string(), "application/json".to_string())],
         body: body.to_string(),
     }
+}
+
+fn random_test_bytes(length: usize) -> Vec<u8> {
+    use custodia_client::{OsRandomSource, RandomSource};
+
+    OsRandomSource.random(length).unwrap()
+}
+
+fn alice_private_key() -> Vec<u8> {
+    static ALICE_PRIVATE_KEY: OnceLock<Vec<u8>> = OnceLock::new();
+    ALICE_PRIVATE_KEY.get_or_init(|| random_test_bytes(custodia_client::X25519_KEY_BYTES)).clone()
+}
+
+fn bob_private_key() -> Vec<u8> {
+    static BOB_PRIVATE_KEY: OnceLock<Vec<u8>> = OnceLock::new();
+    BOB_PRIVATE_KEY.get_or_init(|| random_test_bytes(custodia_client::X25519_KEY_BYTES)).clone()
 }
 
 #[test]
@@ -224,15 +240,17 @@ fn crypto_options(random_chunks: Vec<Vec<u8>>) -> custodia_client::CryptoOptions
     };
     use std::collections::BTreeMap;
 
-    let alice_key = Arc::new(X25519PrivateKeyHandle::new("client_alice", &[1_u8; 32]).unwrap());
+    let alice_private = alice_private_key();
+    let bob_private = bob_private_key();
+    let alice_key = Arc::new(X25519PrivateKeyHandle::new("client_alice", &alice_private).unwrap());
     let mut public_keys = BTreeMap::new();
     public_keys.insert(
         "client_alice".to_string(),
-        derive_x25519_recipient_public_key("client_alice", &[1_u8; 32]).unwrap(),
+        derive_x25519_recipient_public_key("client_alice", &alice_private).unwrap(),
     );
     public_keys.insert(
         "client_bob".to_string(),
-        derive_x25519_recipient_public_key("client_bob", &[2_u8; 32]).unwrap(),
+        derive_x25519_recipient_public_key("client_bob", &bob_private).unwrap(),
     );
     custodia_client::CryptoOptions::new(
         Arc::new(StaticPublicKeyResolver::new(public_keys)),
@@ -250,10 +268,10 @@ fn high_level_crypto_client_creates_and_reads_local_plaintext() {
     })));
     let client = CustodiaClient::with_transport(config(), fake.clone()).unwrap();
     let crypto = client.with_crypto(crypto_options(vec![
-        vec![9_u8; 32],
-        vec![8_u8; 12],
-        vec![7_u8; 32],
-        vec![6_u8; 32],
+        random_test_bytes(custodia_client::AES_256_GCM_KEY_BYTES),
+        random_test_bytes(custodia_client::AES_GCM_NONCE_BYTES),
+        random_test_bytes(custodia_client::X25519_KEY_BYTES),
+        random_test_bytes(custodia_client::X25519_KEY_BYTES),
     ]));
 
     crypto
@@ -297,18 +315,22 @@ fn high_level_crypto_client_creates_and_reads_local_plaintext() {
 fn high_level_crypto_client_shares_existing_dek_without_plaintext_server_side() {
     let fake = Arc::new(FakeTransport::default());
     let client = CustodiaClient::with_transport(config(), fake.clone()).unwrap();
-    let crypto = client.with_crypto(crypto_options(vec![vec![5_u8; 32]]));
+    let crypto = client.with_crypto(crypto_options(vec![random_test_bytes(
+        custodia_client::X25519_KEY_BYTES,
+    )]));
 
-    let nonce = vec![4_u8; custodia_client::AES_GCM_NONCE_BYTES];
+    let nonce = random_test_bytes(custodia_client::AES_GCM_NONCE_BYTES);
     let aad_inputs = custodia_client::CanonicalAADInputs {
         secret_id: "550e8400-e29b-41d4-a716-446655440000".to_string(),
         ..Default::default()
     };
     let metadata = custodia_client::metadata_v1(aad_inputs.clone(), &nonce);
     let aad = custodia_client::build_canonical_aad(&metadata, &aad_inputs).unwrap();
-    let dek = vec![3_u8; custodia_client::AES_256_GCM_KEY_BYTES];
-    let alice_public = custodia_client::derive_x25519_public_key(&[1_u8; 32]).unwrap();
-    let envelope = custodia_client::seal_hpke_v1_envelope(&alice_public, &[7_u8; 32], &dek, &aad).unwrap();
+    let dek = random_test_bytes(custodia_client::AES_256_GCM_KEY_BYTES);
+    let alice_private = alice_private_key();
+    let envelope_ephemeral = random_test_bytes(custodia_client::X25519_KEY_BYTES);
+    let alice_public = custodia_client::derive_x25519_public_key(&alice_private).unwrap();
+    let envelope = custodia_client::seal_hpke_v1_envelope(&alice_public, &envelope_ephemeral, &dek, &aad).unwrap();
 
     fake.push_response(json_response(json!({
         "secret_id": "550e8400-e29b-41d4-a716-446655440000",
