@@ -27,6 +27,7 @@ fmt:
 .PHONY: clean
 clean:
 	rm -rf bin dist custodia-server custodia-admin custodia-signer clients/rust/target
+	rm -f ./*.test coverage.out
 
 .PHONY: license-check
 license-check:
