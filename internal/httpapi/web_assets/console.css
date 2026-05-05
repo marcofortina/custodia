@@ -139,7 +139,7 @@ a:hover { text-decoration: none; }
   text-transform: uppercase;
   letter-spacing: .06em;
 }
-.console-refresh-status { margin: 4px 0 0; color: var(--muted); font-size: .9rem; }
+.console-refresh-status, .console-refresh-updated { margin: 4px 0 0; color: var(--muted); font-size: .9rem; }
 .console-auth-shell, .console-error-shell {
   min-height: 100vh;
   display: grid;

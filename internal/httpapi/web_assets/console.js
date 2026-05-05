@@ -35,9 +35,24 @@
     if (status) status.textContent = text;
   };
 
+  const setLastUpdated = (root = document) => {
+    const stamp = root.querySelector('[data-refresh-updated]') || document.querySelector('[data-refresh-updated]');
+    if (!stamp) return;
+    stamp.textContent = `Last updated ${new Date().toLocaleTimeString()}`;
+  };
+
+  const isConsoleFormFieldFocused = () => {
+    const active = document.activeElement;
+    return Boolean(active && active.closest('#console-main') && active.matches('input, select, textarea'));
+  };
+
   const scheduleRefresh = (control) => {
     clearRefreshTimers();
     if (!control || refreshInFlight) return;
+    if (document.visibilityState === 'hidden') {
+      setRefreshStatus(control, 'Refresh paused');
+      return;
+    }
 
     const select = control.querySelector('[data-refresh-interval]');
     const seconds = Number.parseInt((select && select.value) || selectedRefreshSeconds(), 10);
@@ -50,6 +65,15 @@
       if (remaining > 0) setRefreshStatus(control, `Refresh in ${remaining}s`);
     }, 1000);
     refreshTimeout = window.setTimeout(() => {
+      if (document.visibilityState === 'hidden') {
+        setRefreshStatus(control, 'Refresh paused');
+        return;
+      }
+      if (isConsoleFormFieldFocused()) {
+        setRefreshStatus(control, 'Refresh paused while editing');
+        scheduleRefresh(control);
+        return;
+      }
       refreshCurrentView(control).catch(() => {
         window.location.reload();
       });
@@ -173,6 +197,7 @@
     setRefreshStatus(control, 'Refreshing…');
     try {
       await swapMain(window.location.href, { focus: false, scroll: false });
+      setLastUpdated();
     } finally {
       refreshInFlight = false;
       initRefreshControls();
@@ -206,13 +231,20 @@
     swapMain(window.location.href).catch(() => { window.location.reload(); });
   });
 
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') initRefreshControls();
+    else clearRefreshTimers();
+  });
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       initPaginatedTables();
+      setLastUpdated();
       initRefreshControls();
     });
   } else {
     initPaginatedTables();
+    setLastUpdated();
     initRefreshControls();
   }
 })();

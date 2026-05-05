@@ -2000,6 +2000,7 @@ func TestWebConsoleRendersResponsiveHTMXSkeleton(t *testing.T) {
 		`data-console-refresh-control`,
 		`data-refresh-interval`,
 		`data-refresh-now`,
+		`data-refresh-updated`,
 		`<option value="5">5 seconds</option>`,
 		`<option value="10" selected>10 seconds</option>`,
 		`<option value="15">15 seconds</option>`,
@@ -2035,13 +2036,13 @@ func TestWebConsoleAssetIsLocalAndAdminOnly(t *testing.T) {
 			path:        "/web/assets/console.js",
 			contentType: "text/javascript",
 			file:        "web_assets/console.js",
-			tokens:      []string{"swapMain", "initPaginatedTables", "initRefreshControls", "refreshCurrentView", "custodia.console.refreshSeconds", "Refresh in ${remaining}s", "Table pagination", "Page ${currentPage + 1} of ${pageCount}", "responseURL.pathname === '/web/login'", "nextMain.classList.contains('console-auth-shell')"},
+			tokens:      []string{"swapMain", "initPaginatedTables", "initRefreshControls", "refreshCurrentView", "custodia.console.refreshSeconds", "Refresh in ${remaining}s", "Refresh paused while editing", "document.visibilityState === 'hidden'", "setLastUpdated", "Table pagination", "Page ${currentPage + 1} of ${pageCount}", "responseURL.pathname === '/web/login'", "nextMain.classList.contains('console-auth-shell')"},
 		},
 		{
 			path:        "/web/assets/console.css",
 			contentType: "text/css",
 			file:        "web_assets/console.css",
-			tokens:      []string{"SPDX-License-Identifier: AGPL-3.0-only", ".console-refresh-controls {", ".console-hero p { max-width: none; }", ".console-auth-card h1 { font-size: clamp(3.4rem, 8vw, 5rem); line-height: 0.76; text-align: center; }", ".console-security-boundary p:not(.console-panel-label) { max-width: none; margin-bottom: 0; }"},
+			tokens:      []string{"SPDX-License-Identifier: AGPL-3.0-only", ".console-refresh-controls {", ".console-refresh-status, .console-refresh-updated", ".console-hero p { max-width: none; }", ".console-auth-card h1 { font-size: clamp(3.4rem, 8vw, 5rem); line-height: 0.76; text-align: center; }", ".console-security-boundary p:not(.console-panel-label) { max-width: none; margin-bottom: 0; }"},
 		},
 	}
 

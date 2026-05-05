@@ -222,7 +222,7 @@ func writeWebPageWithOptions(w http.ResponseWriter, title string, body string, a
 
 func webRefreshControls() string {
 	return `<section class="console-refresh-controls" data-console-refresh-control aria-label="Console refresh controls">` +
-		`<div><p class="console-panel-label">Live refresh</p><p class="console-refresh-status" data-refresh-status aria-live="polite">Refresh in 10s</p></div>` +
+		`<div><p class="console-panel-label">Live refresh</p><p class="console-refresh-status" data-refresh-status aria-live="polite">Refresh in 10s</p><p class="console-refresh-updated" data-refresh-updated>Last updated just now</p></div>` +
 		`<label>Interval<select data-refresh-interval aria-label="Refresh interval"><option value="5">5 seconds</option><option value="10" selected>10 seconds</option><option value="15">15 seconds</option><option value="30">30 seconds</option></select></label>` +
 		`<button type="button" data-refresh-now aria-label="Refresh current console view"><span aria-hidden="true">↻</span><span>Refresh</span></button>` +
 		`</section>`
