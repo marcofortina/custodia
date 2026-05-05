@@ -9,6 +9,10 @@ package main
 
 import (
 	"context"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"custodia/internal/config"
@@ -82,6 +86,23 @@ func TestBuildStoreRejectsUnsupportedBackend(t *testing.T) {
 	}
 	if err == nil {
 		t.Fatal("expected unsupported store backend error")
+	}
+}
+
+func TestConfigureLoggingMirrorsToFile(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "custodia.log")
+	closeLog, err := configureLogging(logPath)
+	if err != nil {
+		t.Fatalf("configureLogging() error = %v", err)
+	}
+	log.Print("file logging smoke")
+	closeLog()
+	payload, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("ReadFile(log) error = %v", err)
+	}
+	if !strings.Contains(string(payload), "file logging smoke") {
+		t.Fatalf("expected mirrored log entry, got %q", string(payload))
 	}
 }
 

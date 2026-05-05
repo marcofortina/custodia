@@ -10,6 +10,7 @@ package main
 import (
 	"context"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -33,6 +34,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("config load failed: %v", err)
 	}
+	closeLog, err := configureLogging(cfg.LogFile)
+	if err != nil {
+		log.Fatalf("log file setup failed: %v", err)
+	}
+	defer closeLog()
+
 	ctx := context.Background()
 
 	vaultStore, closeStore, err := buildStore(ctx, cfg)
@@ -154,6 +161,31 @@ func validateDedicatedWebListener(apiAddr, webAddr string) error {
 		return errors.New("web_addr must be different from api_addr")
 	}
 	return nil
+}
+
+func configureLogging(path string) (func(), error) {
+	trimmed := strings.TrimSpace(path)
+	if trimmed == "" {
+		return func() {}, nil
+	}
+	file, err := os.OpenFile(trimmed, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o640)
+	if err != nil {
+		return nil, err
+	}
+	if err := file.Chmod(0o640); err != nil {
+		if closeErr := file.Close(); closeErr != nil {
+			return nil, errors.Join(err, closeErr)
+		}
+		return nil, err
+	}
+	previousOutput := log.Writer()
+	log.SetOutput(io.MultiWriter(os.Stderr, file))
+	return func() {
+		log.SetOutput(previousOutput)
+		if err := file.Close(); err != nil {
+			log.Printf("log file close failed: %v", err)
+		}
+	}, nil
 }
 
 func serveRuntimeServer(name string, server *http.Server, insecure bool) {

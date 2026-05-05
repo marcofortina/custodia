@@ -197,6 +197,7 @@ func liteBootstrapConfigYAML(adminClientID string) []byte {
 	return []byte(`profile: lite
 api_addr: ":8443"
 web_addr: ":9443"
+log_file: /var/log/custodia/custodia.log
 store_backend: sqlite
 database_url: file:/var/lib/custodia/custodia.db
 rate_limit_backend: memory

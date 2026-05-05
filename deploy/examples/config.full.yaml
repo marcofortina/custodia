@@ -8,6 +8,7 @@
 profile: full
 api_addr: ":8443"
 web_addr: ":9443"
+log_file: /var/log/custodia/custodia.log
 
 store_backend: postgres
 database_url: postgresql://custodia@db.example.com:5432/custodia?sslmode=require

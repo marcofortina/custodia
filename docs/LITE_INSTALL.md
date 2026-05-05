@@ -25,7 +25,7 @@ Recommended single-node layout:
 /etc/custodia              configuration and certificates
 /var/lib/custodia          SQLite database
 /var/lib/custodia/backups  SQLite backups
-/var/log/custodia          service logs and local audit artifacts
+/var/log/custodia          mirrored service log file and local artifacts
 ```
 
 Create a dedicated service user and restrict permissions:

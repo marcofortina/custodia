@@ -272,11 +272,16 @@ sudo systemctl enable --now custodia
 sudo systemctl status custodia --no-pager
 ```
 
+Custodia mirrors service logs to both systemd/journald and `/var/log/custodia/custodia.log`. Journald remains the primary service manager log stream, while the file gives operators a simple local artifact to copy, tail or archive.
+
 If the service fails, inspect the logs:
 
 ```bash
 sudo journalctl -u custodia -n 100 --no-pager
+sudo tail -n 100 /var/log/custodia/custodia.log
 ```
+
+If the service fails before file logging is initialized, the error will be in `journalctl`. After initialization, the same application log lines are mirrored to `/var/log/custodia/custodia.log`.
 
 Common startup failures:
 

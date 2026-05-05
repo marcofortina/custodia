@@ -36,6 +36,21 @@ func TestLoadHTTPTimeoutsKeepSafeDefaultsForInvalidValues(t *testing.T) {
 	}
 }
 
+func TestLoadReadsDefaultLogFile(t *testing.T) {
+	cfg := Load()
+	if cfg.LogFile != "/var/log/custodia/custodia.log" {
+		t.Fatalf("expected default log file, got %q", cfg.LogFile)
+	}
+}
+
+func TestLoadReadsLogFileOverride(t *testing.T) {
+	t.Setenv("CUSTODIA_LOG_FILE", "/tmp/custodia.log")
+	cfg := Load()
+	if cfg.LogFile != "/tmp/custodia.log" {
+		t.Fatalf("expected log file from env, got %q", cfg.LogFile)
+	}
+}
+
 func TestLoadReadsOptionalHealthAddress(t *testing.T) {
 	t.Setenv("CUSTODIA_HEALTH_ADDR", ":8080")
 	cfg := Load()
@@ -97,6 +112,7 @@ func TestLoadYAMLConfigWithEnvOverride(t *testing.T) {
 	path := t.TempDir() + "/custodia.yaml"
 	writeConfigTestFile(t, path, `profile: lite
 api_addr: ":9443"
+log_file: /tmp/custodia.log
 store_backend: sqlite
 database_url: file:/tmp/lite.db
 web_mfa_required: true
@@ -109,7 +125,7 @@ admin_client_ids: admin,ops
 	if err != nil {
 		t.Fatalf("LoadWithArgs() error = %v", err)
 	}
-	if cfg.Profile != ProfileLite || cfg.APIAddr != ":9443" || cfg.DatabaseURL != "file:/tmp/lite.db" {
+	if cfg.Profile != ProfileLite || cfg.APIAddr != ":9443" || cfg.LogFile != "/tmp/custodia.log" || cfg.DatabaseURL != "file:/tmp/lite.db" {
 		t.Fatalf("unexpected yaml config: %+v", cfg)
 	}
 	if cfg.StoreBackend != "memory" || !cfg.WebPasskeyEnabled {

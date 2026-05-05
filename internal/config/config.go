@@ -29,6 +29,7 @@ type Config struct {
 	APIAddr                          string
 	HealthAddr                       string
 	WebAddr                          string
+	LogFile                          string
 	StoreBackend                     string
 	DatabaseURL                      string
 	TLSCertFile                      string
@@ -108,6 +109,7 @@ func profileDefaults(profile string) Config {
 		APIAddr:                       ":8443",
 		HealthAddr:                    "",
 		WebAddr:                       ":9443",
+		LogFile:                       "/var/log/custodia/custodia.log",
 		StoreBackend:                  "memory",
 		DatabaseURL:                   "",
 		DevInsecureHTTP:               false,
@@ -254,6 +256,8 @@ func applyValues(cfg *Config, values map[string]string) error {
 			cfg.HealthAddr = value
 		case "web_addr":
 			cfg.WebAddr = value
+		case "log_file":
+			cfg.LogFile = value
 		case "store_backend":
 			cfg.StoreBackend = value
 		case "database_url":
@@ -352,6 +356,7 @@ func applyEnv(cfg *Config) {
 	cfg.APIAddr = env("CUSTODIA_API_ADDR", cfg.APIAddr)
 	cfg.HealthAddr = env("CUSTODIA_HEALTH_ADDR", cfg.HealthAddr)
 	cfg.WebAddr = env("CUSTODIA_WEB_ADDR", cfg.WebAddr)
+	cfg.LogFile = env("CUSTODIA_LOG_FILE", cfg.LogFile)
 	cfg.StoreBackend = env("CUSTODIA_STORE_BACKEND", cfg.StoreBackend)
 	cfg.DatabaseURL = env("CUSTODIA_DATABASE_URL", cfg.DatabaseURL)
 	cfg.TLSCertFile = env("CUSTODIA_TLS_CERT_FILE", cfg.TLSCertFile)
