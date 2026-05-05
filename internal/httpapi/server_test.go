@@ -2611,3 +2611,40 @@ func TestStatusReportsExternalPasskeyAssertionVerifier(t *testing.T) {
 		t.Fatalf("missing external verifier status: %s", res.Body.String())
 	}
 }
+
+func TestDedicatedListenerRouteFilters(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	apiReq := mtlsRequest(http.MethodGet, "/v1/status", "", "admin")
+	apiRes := httptest.NewRecorder()
+	APIOnly(handler).ServeHTTP(apiRes, apiReq)
+	if apiRes.Code != http.StatusOK {
+		t.Fatalf("expected API listener to serve API route, got %d: %s", apiRes.Code, apiRes.Body.String())
+	}
+
+	blockedWebReq := mtlsRequest(http.MethodGet, "/web/status", "", "admin")
+	blockedWebRes := httptest.NewRecorder()
+	APIOnly(handler).ServeHTTP(blockedWebRes, blockedWebReq)
+	if blockedWebRes.Code != http.StatusNotFound {
+		t.Fatalf("expected API listener to hide web route, got %d", blockedWebRes.Code)
+	}
+
+	webReq := mtlsRequest(http.MethodGet, "/web/status", "", "admin")
+	webRes := httptest.NewRecorder()
+	WebOnly(handler).ServeHTTP(webRes, webReq)
+	if webRes.Code != http.StatusOK {
+		t.Fatalf("expected web listener to serve web route, got %d: %s", webRes.Code, webRes.Body.String())
+	}
+
+	blockedAPIReq := mtlsRequest(http.MethodGet, "/v1/status", "", "admin")
+	blockedAPIRes := httptest.NewRecorder()
+	WebOnly(handler).ServeHTTP(blockedAPIRes, blockedAPIReq)
+	if blockedAPIRes.Code != http.StatusNotFound {
+		t.Fatalf("expected web listener to hide API route, got %d", blockedAPIRes.Code)
+	}
+}

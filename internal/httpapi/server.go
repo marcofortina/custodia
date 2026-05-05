@@ -8,11 +8,13 @@
 package httpapi
 
 import (
+	"net/http"
+	"strings"
+	"time"
+
 	"custodia/internal/ratelimit"
 	"custodia/internal/store"
 	"custodia/internal/webauth"
-	"net/http"
-	"time"
 )
 
 // Server owns the API and web metadata surface. Secret plaintext, DEKs and private crypto keys never enter this layer.
@@ -176,6 +178,34 @@ func New(options Options) http.Handler {
 	mux.Handle("DELETE /v1/secrets/{secret_id}/access/{client_id}", server.auth(http.HandlerFunc(server.handleRevokeAccess)))
 	mux.Handle("POST /v1/secrets/{secret_id}/versions", server.auth(http.HandlerFunc(server.handleCreateSecretVersion)))
 	return requestIDs(securityHeaders(mux))
+}
+
+// APIOnly keeps the API listener from exposing the web console when a dedicated
+// web listener is configured.
+func APIOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isWebPath(r.URL.Path) {
+			http.NotFound(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// WebOnly keeps the web listener from exposing API routes when a dedicated web
+// listener is configured.
+func WebOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !isWebPath(r.URL.Path) {
+			http.NotFound(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func isWebPath(path string) bool {
+	return path == "/web" || strings.HasPrefix(path, "/web/")
 }
 
 func securityHeaders(next http.Handler) http.Handler {

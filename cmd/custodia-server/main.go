@@ -78,14 +78,12 @@ func main() {
 		AuditShipmentSink:                cfg.AuditShipmentSink,
 	})
 
-	server := &http.Server{
-		Addr:              cfg.APIAddr,
-		Handler:           handler,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       time.Duration(cfg.HTTPReadTimeoutSeconds) * time.Second,
-		WriteTimeout:      time.Duration(cfg.HTTPWriteTimeoutSeconds) * time.Second,
-		IdleTimeout:       time.Duration(cfg.HTTPIdleTimeoutSeconds) * time.Second,
+	if err := validateDedicatedWebListener(cfg.APIAddr, cfg.WebAddr); err != nil {
+		log.Fatalf("invalid listener configuration: %v", err)
 	}
+
+	server := buildRuntimeServer(cfg.APIAddr, httpapi.APIOnly(handler), cfg)
+	webServer := buildRuntimeServer(cfg.WebAddr, httpapi.WebOnly(handler), cfg)
 
 	var healthServer *http.Server
 	if cfg.HealthAddr != "" {
@@ -105,14 +103,10 @@ func main() {
 		}()
 	}
 
-	go func() {
-		if cfg.DevInsecureHTTP {
-			log.Printf("starting insecure development HTTP server on %s", cfg.APIAddr)
-			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				log.Fatalf("server failed: %v", err)
-			}
-			return
-		}
+	if cfg.DevInsecureHTTP {
+		go serveRuntimeServer("insecure development API server", server, true)
+		go serveRuntimeServer("insecure development web server", webServer, true)
+	} else {
 		if cfg.TLSCertFile == "" || cfg.TLSKeyFile == "" || cfg.ClientCAFile == "" {
 			log.Fatalf("mTLS is required unless CUSTODIA_DEV_INSECURE_HTTP=true")
 		}
@@ -120,12 +114,11 @@ func main() {
 		if err != nil {
 			log.Fatalf("TLS config failed: %v", err)
 		}
-		server.TLSConfig = tlsConfig
-		log.Printf("starting mTLS API server on %s", cfg.APIAddr)
-		if err := server.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("server failed: %v", err)
-		}
-	}()
+		server.TLSConfig = tlsConfig.Clone()
+		webServer.TLSConfig = tlsConfig.Clone()
+		go serveRuntimeServer("mTLS API server", server, false)
+		go serveRuntimeServer("mTLS web server", webServer, false)
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
@@ -133,9 +126,50 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.ShutdownTimeoutSeconds)*time.Second)
 	defer cancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Printf("graceful shutdown failed: %v", err)
+		log.Printf("graceful API shutdown failed: %v", err)
 	}
+	shutdownServer(shutdownCtx, webServer)
 	shutdownServer(shutdownCtx, healthServer)
+}
+
+func buildRuntimeServer(addr string, handler http.Handler, cfg config.Config) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       time.Duration(cfg.HTTPReadTimeoutSeconds) * time.Second,
+		WriteTimeout:      time.Duration(cfg.HTTPWriteTimeoutSeconds) * time.Second,
+		IdleTimeout:       time.Duration(cfg.HTTPIdleTimeoutSeconds) * time.Second,
+	}
+}
+
+func validateDedicatedWebListener(apiAddr, webAddr string) error {
+	if strings.TrimSpace(apiAddr) == "" {
+		return errors.New("api_addr is required")
+	}
+	if strings.TrimSpace(webAddr) == "" {
+		return errors.New("web_addr is required")
+	}
+	if strings.TrimSpace(apiAddr) == strings.TrimSpace(webAddr) {
+		return errors.New("web_addr must be different from api_addr")
+	}
+	return nil
+}
+
+func serveRuntimeServer(name string, server *http.Server, insecure bool) {
+	if server == nil {
+		return
+	}
+	log.Printf("starting %s on %s", name, server.Addr)
+	var err error
+	if insecure {
+		err = server.ListenAndServe()
+	} else {
+		err = server.ListenAndServeTLS("", "")
+	}
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatalf("%s failed: %v", name, err)
+	}
 }
 
 // resolvedStoreBackend preserves the historical convenience where DATABASE_URL

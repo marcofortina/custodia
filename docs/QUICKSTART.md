@@ -329,7 +329,7 @@ sudo chown "$USER:$USER" /tmp/custodia-admin.p12
 chmod 0600 /tmp/custodia-admin.p12
 ```
 
-Import `/tmp/custodia-admin.p12` into your browser certificate store, then open:
+Import `/tmp/custodia-admin.p12` into your browser certificate store, then open the dedicated web listener:
 
 ```text
 https://localhost:9443/web/login

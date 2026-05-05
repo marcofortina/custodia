@@ -43,6 +43,18 @@ func TestBootstrapClientsCreatesMissingAndIgnoresExisting(t *testing.T) {
 	}
 }
 
+func TestValidateDedicatedWebListenerRequiresSeparateAddresses(t *testing.T) {
+	if err := validateDedicatedWebListener(":8443", ":9443"); err != nil {
+		t.Fatalf("expected separate listeners to be valid: %v", err)
+	}
+	if err := validateDedicatedWebListener(":8443", ""); err == nil {
+		t.Fatal("expected empty web listener to fail")
+	}
+	if err := validateDedicatedWebListener(":8443", " :8443 "); err == nil {
+		t.Fatal("expected shared API/Web listener to fail")
+	}
+}
+
 func TestValidateAdminClientIDsRejectsInvalidIDs(t *testing.T) {
 	if err := validateAdminClientIDs(map[string]bool{"admin": true}); err != nil {
 		t.Fatalf("expected valid admin id: %v", err)

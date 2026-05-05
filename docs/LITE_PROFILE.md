@@ -82,6 +82,8 @@ web_addr: ":9443"
 store_backend: sqlite
 database_url: file:/var/lib/custodia/custodia.db
 
+# The web console is served under /web on web_addr. web_addr is required and must be different from api_addr.
+
 rate_limit_backend: memory
 web_mfa_required: true
 web_passkey_enabled: false
