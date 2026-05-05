@@ -146,6 +146,7 @@ func New(options Options) http.Handler {
 	mux.Handle("POST /web/login", server.auth(server.adminOnly(http.HandlerFunc(server.handleWebLogin))))
 	mux.Handle("POST /web/logout", server.auth(server.adminOnly(http.HandlerFunc(server.handleWebLogout))))
 	mux.Handle("GET /web/assets/console.js", server.auth(server.adminOnly(http.HandlerFunc(server.handleWebConsoleAsset))))
+	mux.Handle("GET /web/assets/console.css", server.auth(server.adminOnly(http.HandlerFunc(server.handleWebConsoleAsset))))
 	mux.Handle("GET /web/passkey/register/options", server.webAdmin(http.HandlerFunc(server.handleWebPasskeyRegisterOptions)))
 	mux.Handle("POST /web/passkey/register/verify", server.webAdmin(http.HandlerFunc(server.handleWebPasskeyRegisterVerify)))
 	mux.Handle("GET /web/passkey/authenticate/options", server.webAdmin(http.HandlerFunc(server.handleWebPasskeyAuthenticateOptions)))
@@ -264,7 +265,7 @@ func isWebPath(path string) bool {
 }
 
 const apiContentSecurityPolicy = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
-const webContentSecurityPolicy = "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+const webContentSecurityPolicy = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 
 func setSecurityHeaders(w http.ResponseWriter, webSurface bool) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")

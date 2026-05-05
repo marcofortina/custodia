@@ -1934,7 +1934,7 @@ func assertWebConsolePagination(t *testing.T, handler http.Handler, path string,
 		t.Fatalf("%s expected 200, got %d: %s", path, res.Code, res.Body.String())
 	}
 	body := res.Body.String()
-	for _, expected := range []string{`data-console-pagination="true"`, `data-page-size="10"`, `data-pagination-label="` + label + `"`, `.console-pagination {`, `.console-pagination__status {`} {
+	for _, expected := range []string{`data-console-pagination="true"`, `data-page-size="10"`, `data-pagination-label="` + label + `"`} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("%s expected pagination token %q, got: %s", path, expected, body)
 		}
@@ -1994,6 +1994,7 @@ func TestWebConsoleRendersResponsiveHTMXSkeleton(t *testing.T) {
 		`id="console-main"`,
 		`hx-boost="true"`,
 		`hx-target="#console-main"`,
+		`/web/assets/console.css`,
 		`/web/assets/console.js`,
 		`/web/assets/favicon.svg`,
 		`data-console-refresh-control`,
@@ -2003,8 +2004,6 @@ func TestWebConsoleRendersResponsiveHTMXSkeleton(t *testing.T) {
 		`<option value="10" selected>10 seconds</option>`,
 		`<option value="15">15 seconds</option>`,
 		`<option value="30">30 seconds</option>`,
-		`.console-refresh-controls {`,
-		`.console-hero p { max-width: none; }`,
 	} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected responsive console skeleton token %q in body: %s", expected, body)
@@ -2012,6 +2011,9 @@ func TestWebConsoleRendersResponsiveHTMXSkeleton(t *testing.T) {
 	}
 	if strings.Contains(body, "prefers-color-scheme") {
 		t.Fatalf("web console must not keep dark/light mode switching CSS: %s", body)
+	}
+	if strings.Contains(body, "<style>") || strings.Contains(body, "style-src 'unsafe-inline'") {
+		t.Fatalf("web console must load local CSS asset instead of inline styles: %s", body)
 	}
 }
 
@@ -2023,37 +2025,59 @@ func TestWebConsoleAssetIsLocalAndAdminOnly(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	unauthenticatedReq := httptest.NewRequest(http.MethodGet, "/web/assets/console.js", nil)
-	unauthenticatedRes := httptest.NewRecorder()
-	handler.ServeHTTP(unauthenticatedRes, unauthenticatedReq)
-	if unauthenticatedRes.Code != http.StatusUnauthorized {
-		t.Fatalf("expected unauthenticated asset request to require mTLS, got %d", unauthenticatedRes.Code)
+	cases := []struct {
+		path        string
+		contentType string
+		file        string
+		tokens      []string
+	}{
+		{
+			path:        "/web/assets/console.js",
+			contentType: "text/javascript",
+			file:        "web_assets/console.js",
+			tokens:      []string{"swapMain", "initPaginatedTables", "initRefreshControls", "refreshCurrentView", "custodia.console.refreshSeconds", "Refresh in ${remaining}s", "Table pagination", "Page ${currentPage + 1} of ${pageCount}", "responseURL.pathname === '/web/login'", "nextMain.classList.contains('console-auth-shell')"},
+		},
+		{
+			path:        "/web/assets/console.css",
+			contentType: "text/css",
+			file:        "web_assets/console.css",
+			tokens:      []string{"SPDX-License-Identifier: AGPL-3.0-only", ".console-refresh-controls {", ".console-hero p { max-width: none; }", ".console-auth-card h1 { font-size: clamp(3.4rem, 8vw, 5rem); line-height: 0.76; text-align: center; }", ".console-security-boundary p:not(.console-panel-label) { max-width: none; margin-bottom: 0; }"},
+		},
 	}
 
-	req := mtlsRequest(http.MethodGet, "/web/assets/console.js", "", "admin")
-	res := httptest.NewRecorder()
-	handler.ServeHTTP(res, req)
-	if res.Code != http.StatusOK {
-		t.Fatalf("expected local console asset, got %d: %s", res.Code, res.Body.String())
-	}
-	if contentType := res.Header().Get("Content-Type"); !strings.Contains(contentType, "text/javascript") {
-		t.Fatalf("expected javascript content type, got %q", contentType)
-	}
-	body := res.Body.String()
-	for _, expected := range []string{"swapMain", "initPaginatedTables", "initRefreshControls", "refreshCurrentView", "custodia.console.refreshSeconds", "Refresh in ${remaining}s", "Table pagination", "Page ${currentPage + 1} of ${pageCount}", "responseURL.pathname === '/web/login'", "nextMain.classList.contains('console-auth-shell')"} {
-		if !strings.Contains(body, expected) {
-			t.Fatalf("expected local console asset token %q, got: %s", expected, body)
+	for _, tc := range cases {
+		unauthenticatedReq := httptest.NewRequest(http.MethodGet, tc.path, nil)
+		unauthenticatedRes := httptest.NewRecorder()
+		handler.ServeHTTP(unauthenticatedRes, unauthenticatedReq)
+		if unauthenticatedRes.Code != http.StatusUnauthorized {
+			t.Fatalf("expected unauthenticated asset request %s to require mTLS, got %d", tc.path, unauthenticatedRes.Code)
 		}
-	}
-	if strings.Contains(body, "https://") {
-		t.Fatalf("expected self-hosted htmx-style console behavior without remote URLs: %s", body)
-	}
-	asset, err := os.ReadFile("web_assets/console.js")
-	if err != nil {
-		t.Fatalf("read console asset: %v", err)
-	}
-	if body != string(asset) {
-		t.Fatalf("expected console asset response to match embedded local file")
+
+		req := mtlsRequest(http.MethodGet, tc.path, "", "admin")
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+		if res.Code != http.StatusOK {
+			t.Fatalf("expected local console asset %s, got %d: %s", tc.path, res.Code, res.Body.String())
+		}
+		if contentType := res.Header().Get("Content-Type"); !strings.Contains(contentType, tc.contentType) {
+			t.Fatalf("expected %s content type for %s, got %q", tc.contentType, tc.path, contentType)
+		}
+		body := res.Body.String()
+		for _, expected := range tc.tokens {
+			if !strings.Contains(body, expected) {
+				t.Fatalf("expected local console asset %s token %q, got: %s", tc.path, expected, body)
+			}
+		}
+		if strings.Contains(body, "https://") {
+			t.Fatalf("expected self-hosted console asset without remote URLs: %s", body)
+		}
+		asset, err := os.ReadFile(tc.file)
+		if err != nil {
+			t.Fatalf("read console asset %s: %v", tc.file, err)
+		}
+		if body != string(asset) {
+			t.Fatalf("expected console asset response %s to match embedded local file", tc.path)
+		}
 	}
 }
 
@@ -2098,19 +2122,17 @@ func TestWebConsoleRendersStyledNotFoundPages(t *testing.T) {
 	if strings.Contains(unknownWebBody, ">Page not found</h1>") {
 		t.Fatalf("expected compact numeric 404 title, got: %s", unknownWebBody)
 	}
-	for _, expected := range []string{"justify-content: flex-start; margin-bottom: 14px", "margin-bottom: clamp(46px, 6vw, 68px); text-align: left", "font-size: clamp(7.5rem, 27vw, 18rem); line-height: 0.76; text-align: center", "margin: 20px auto 0; font-size: 1.08rem; text-align: center", "justify-content: center; gap: 10px; margin-top: 36px"} {
-		if !strings.Contains(unknownWebBody, expected) {
-			t.Fatalf("expected branded numeric 404 styling token %q, got: %s", expected, unknownWebBody)
-		}
-	}
 	if !strings.Contains(unknownWebBody, "console-error-shell") || strings.Contains(unknownWebBody, `class="console-login-brand"`) {
 		t.Fatalf("expected compact standalone 404 layout, got: %s", unknownWebBody)
 	}
 	if strings.Contains(unknownWebBody, `aria-label="Console sections"`) {
 		t.Fatalf("unknown web route rendered the overview instead of 404: %s", unknownWebBody)
 	}
-	if !strings.Contains(unknownWebRes.Header().Get("Content-Security-Policy"), "style-src 'unsafe-inline'") {
-		t.Fatalf("expected web CSP on styled 404, got %q", unknownWebRes.Header().Get("Content-Security-Policy"))
+	if !strings.Contains(unknownWebBody, `/web/assets/console.css`) || strings.Contains(unknownWebBody, "<style>") {
+		t.Fatalf("expected styled 404 to load local CSS asset without inline style: %s", unknownWebBody)
+	}
+	if !strings.Contains(unknownWebRes.Header().Get("Content-Security-Policy"), "style-src 'self'") || strings.Contains(unknownWebRes.Header().Get("Content-Security-Policy"), "style-src 'unsafe-inline'") {
+		t.Fatalf("expected strict web CSP on styled 404, got %q", unknownWebRes.Header().Get("Content-Security-Policy"))
 	}
 
 	outsideWebReq := httptest.NewRequest(http.MethodGet, "/404pagina", nil)
@@ -2172,10 +2194,13 @@ func TestWebConsoleCSPAllowsOnlyLocalEnhancements(t *testing.T) {
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
 	policy := res.Header().Get("Content-Security-Policy")
-	for _, expected := range []string{"default-src 'none'", "script-src 'self'", "style-src 'unsafe-inline'", "connect-src 'self'", "img-src 'self' data:", "frame-ancestors 'none'", "form-action 'self'"} {
+	for _, expected := range []string{"default-src 'none'", "script-src 'self'", "style-src 'self'", "connect-src 'self'", "img-src 'self' data:", "frame-ancestors 'none'", "form-action 'self'"} {
 		if !strings.Contains(policy, expected) {
 			t.Fatalf("expected web CSP token %q in %q", expected, policy)
 		}
+	}
+	if strings.Contains(policy, "unsafe-inline") {
+		t.Fatalf("web CSP must not allow inline styles after CSS asset extraction: %q", policy)
 	}
 }
 
@@ -2256,12 +2281,12 @@ func TestWebLoginUsesSingleCardLayout(t *testing.T) {
 		t.Fatalf("expected login page, got %d: %s", res.Code, res.Body.String())
 	}
 	body := res.Body.String()
-	for _, expected := range []string{`class="console-auth-shell"`, `class="console-auth-card"`, `<div class="console-brand"><span class="console-logo" aria-hidden="true">C</span><span>Custodia</span></div>`, `<p class="console-kicker">Custodia Console</p>`, `<h1 id="auth-title">Verify Access</h1>`, `type="password" inputmode="numeric" autocomplete="one-time-code"`, `class="console-auth-form"`, `class="console-auth-actions"`, `.console-auth-card h1 { font-size: clamp(3.4rem, 8vw, 5rem); line-height: 0.76; text-align: center; }`, `.console-auth-card p:not(.console-kicker),`, `.console-error-card p:not(.console-kicker) { margin: 20px auto 0; font-size: 1.08rem; text-align: center; }`, `.console-auth-actions,`, `.console-error-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 36px; }`, `.console-panel { padding: 18px; }`, `.console-security-boundary { display: grid; gap: 8px; margin-top: 18px; }`, `.console-panel-label {`, `color: var(--text);`, `font-weight: 900;`, `.console-security-boundary p:not(.console-panel-label) { max-width: none; margin-bottom: 0; }`} {
+	for _, expected := range []string{`/web/assets/console.css`, `class="console-auth-shell"`, `class="console-auth-card"`, `<div class="console-brand"><span class="console-logo" aria-hidden="true">C</span><span>Custodia</span></div>`, `<p class="console-kicker">Custodia Console</p>`, `<h1 id="auth-title">Verify Access</h1>`, `type="password" inputmode="numeric" autocomplete="one-time-code"`, `class="console-auth-form"`, `class="console-auth-actions"`} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected single-card login layout token %q, got: %s", expected, body)
 		}
 	}
-	for _, unexpected := range []string{`class="console-login-brand"`, `class="console-auth-brand"`, `<h1>Custodia</h1>`, `class="console-error-card console-auth-card"`, `.console-auth-card h1 + p`, `.console-auth-card form button { width: 100%; }`, `.console-panel { display: grid; gap: 8px; padding: 18px; }`, `.console-grid + .console-panel { margin-top: 18px; }`, `<p class="console-kicker">Admin metadata console</p>`, `<p class="console-kicker">Security boundary</p>`, `Custodia Metadata Console`} {
+	for _, unexpected := range []string{`class="console-login-brand"`, `class="console-auth-brand"`, `<h1>Custodia</h1>`, `class="console-error-card console-auth-card"`, `.console-auth-card h1 + p`, `.console-auth-card form button { width: 100%; }`, `.console-panel { display: grid; gap: 8px; padding: 18px; }`, `.console-grid + .console-panel { margin-top: 18px; }`, `<p class="console-kicker">Admin metadata console</p>`, `<p class="console-kicker">Security boundary</p>`, `Custodia Metadata Console`, `<style>`} {
 		if strings.Contains(body, unexpected) {
 			t.Fatalf("expected login layout to avoid stale split/auth styling token %q, got: %s", unexpected, body)
 		}
