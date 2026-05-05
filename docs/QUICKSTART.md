@@ -28,16 +28,18 @@ Both paths converge at [Prepare the Lite runtime directories](#4-prepare-the-lit
 
 ```bash
 sudo apt update
-sudo apt install -y ca-certificates curl git make openssl sqlite3 python3 python3-pip nodejs npm golang-go openjdk-21-jdk g++ pkg-config libcurl4-openssl-dev libssl-dev rpm cpio
+sudo apt install -y ca-certificates curl git make openssl sqlite3 python3 python3-pip python3-cryptography python3-requests nodejs npm golang-go openjdk-21-jdk g++ pkg-config libcurl4-openssl-dev libssl-dev rpm cpio
 ```
 
 ### Fedora
 
 ```bash
-sudo dnf install -y ca-certificates curl git make openssl sqlite python3 python3-pip nodejs npm golang java-devel gcc-c++ pkgconf-pkg-config libcurl-devel openssl-devel rpm-build cpio dpkg
+sudo dnf install -y ca-certificates curl git make openssl sqlite python3 python3-pip python3-cryptography python3-requests nodejs npm golang java-devel gcc-c++ pkgconf-pkg-config libcurl-devel openssl-devel rpm-build cpio dpkg
 ```
 
 Fedora keeps the default JDK behind the generic `java-devel` virtual provide. Avoid pinning a specific OpenJDK package in this quickstart because Fedora releases may retire older JDK streams.
+
+The Python SDK tests import the client directly from the source tree, but they still need the runtime dependencies declared by `clients/python/pyproject.toml`. The distro packages above provide `requests` and `cryptography` without requiring a system-wide `pip install`.
 
 ### Rust toolchain for source builds
 
