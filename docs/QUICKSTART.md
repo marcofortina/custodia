@@ -34,8 +34,10 @@ sudo apt install -y ca-certificates curl git make openssl sqlite3 python3 python
 ### Fedora
 
 ```bash
-sudo dnf install -y ca-certificates curl git make openssl sqlite python3 python3-pip nodejs npm golang java-21-openjdk-devel gcc-c++ pkgconf-pkg-config libcurl-devel openssl-devel rpm-build cpio dpkg
+sudo dnf install -y ca-certificates curl git make openssl sqlite python3 python3-pip nodejs npm golang java-devel gcc-c++ pkgconf-pkg-config libcurl-devel openssl-devel rpm-build cpio dpkg
 ```
+
+Fedora keeps the default JDK behind the generic `java-devel` virtual provide. Avoid pinning a specific OpenJDK package in this quickstart because Fedora releases may retire older JDK streams.
 
 ### Rust toolchain for source builds
 
