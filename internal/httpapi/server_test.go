@@ -2297,6 +2297,58 @@ func TestWebConsoleFilterFormsPreserveSubmittedValues(t *testing.T) {
 	}
 }
 
+func TestWebConsoleFinalGuardrails(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	for _, path := range []string{"/web/", "/web/status", "/web/clients", "/web/audit", "/web/login", "/web/does-not-exist"} {
+		method := http.MethodGet
+		req := mtlsRequest(method, path, "", "admin")
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+		if res.Code < 200 || res.Code >= 500 {
+			t.Fatalf("%s expected non-5xx console response, got %d: %s", path, res.Code, res.Body.String())
+		}
+		body := res.Body.String()
+		for _, forbidden := range []string{"https://", "http://", "<style>", "style-src 'unsafe-inline'", "Admin metadata console", "Custodia Metadata Console", `class="console-login-brand"`} {
+			if strings.Contains(body, forbidden) {
+				t.Fatalf("%s contains forbidden console token %q: %s", path, forbidden, body)
+			}
+		}
+		if !strings.Contains(body, `/web/assets/console.css`) {
+			t.Fatalf("%s must load the local CSS asset: %s", path, body)
+		}
+	}
+
+	loginReq := mtlsRequest(http.MethodGet, "/web/login", "", "admin")
+	loginRes := httptest.NewRecorder()
+	handler.ServeHTTP(loginRes, loginReq)
+	loginBody := loginRes.Body.String()
+	if !strings.Contains(loginBody, `type="password" inputmode="numeric" autocomplete="one-time-code"`) {
+		t.Fatalf("TOTP input must stay password typed: %s", loginBody)
+	}
+
+	css, err := os.ReadFile("web_assets/console.css")
+	if err != nil {
+		t.Fatalf("read console css: %v", err)
+	}
+	js, err := os.ReadFile("web_assets/console.js")
+	if err != nil {
+		t.Fatalf("read console js: %v", err)
+	}
+	for name, content := range map[string]string{"console.css": string(css), "console.js": string(js)} {
+		for _, forbidden := range []string{"https://", "http://", "@import", "prefers-color-scheme", "console-login-brand"} {
+			if strings.Contains(content, forbidden) {
+				t.Fatalf("%s contains forbidden asset token %q", name, forbidden)
+			}
+		}
+	}
+}
+
 func TestWebLoginUsesSingleCardLayout(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()
