@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -106,7 +107,7 @@ func TestWebDiagnosticsPageIsAdminOnlyMetadata(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
 	}
 	body := res.Body.String()
-	if !strings.Contains(body, "Runtime diagnostics") || strings.Contains(body, "ciphertext") || strings.Contains(body, "envelope") {
+	if !strings.Contains(body, "Runtime Diagnostics") || strings.Contains(body, "ciphertext") || strings.Contains(body, "envelope") {
 		t.Fatalf("unexpected diagnostics page body: %s", body)
 	}
 }
@@ -1892,6 +1893,54 @@ func TestWebAuditRejectsInvalidLimit(t *testing.T) {
 	}
 }
 
+func TestWebConsoleDataTablesAreClientPaginated(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	for i := 0; i < 16; i++ {
+		clientID := "client_" + strconv.Itoa(i+1)
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %d: %v", i, err)
+		}
+		if err := memoryStore.AppendAudit(ctx, model.AuditEvent{EventID: strconv.Itoa(i + 1), ActorClientID: "admin", Action: "web.audit_list", ResourceType: "audit_event", Outcome: "success"}); err != nil {
+			t.Fatalf("append audit %d: %v", i, err)
+		}
+	}
+	ref, err := memoryStore.CreateSecret(ctx, "admin", model.CreateSecretRequest{Name: "pagination secret", Ciphertext: "c2VjcmV0LWNpcGhlcnRleHQ=", Envelopes: []model.RecipientEnvelope{{ClientID: "admin", Envelope: "c2VjcmV0LWVudmVsb3Bl"}}, Permissions: int(model.PermissionAll)})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	for i := 0; i < 16; i++ {
+		clientID := "client_" + strconv.Itoa(i+1)
+		if _, err := memoryStore.RequestAccessGrant(ctx, "admin", ref.SecretID, model.AccessGrantRequest{TargetClientID: clientID, Permissions: int(model.PermissionRead)}); err != nil {
+			t.Fatalf("request grant %d: %v", i, err)
+		}
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	assertWebConsolePagination(t, handler, "/web/audit", "Audit Events pagination")
+	assertWebConsolePagination(t, handler, "/web/clients", "Clients pagination")
+	assertWebConsolePagination(t, handler, "/web/access-requests", "Access Requests pagination")
+}
+
+func assertWebConsolePagination(t *testing.T, handler http.Handler, path string, label string) {
+	t.Helper()
+	req := mtlsRequest(http.MethodGet, path, "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("%s expected 200, got %d: %s", path, res.Code, res.Body.String())
+	}
+	body := res.Body.String()
+	for _, expected := range []string{`data-console-pagination="true"`, `data-page-size="10"`, `data-pagination-label="` + label + `"`, `.console-pagination {`, `.console-pagination__status {`} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("%s expected pagination token %q, got: %s", path, expected, body)
+		}
+	}
+}
+
 func TestWebConsoleRendersMetadataOnlyPages(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()
@@ -1919,6 +1968,302 @@ func TestWebConsoleRendersMetadataOnlyPages(t *testing.T) {
 		body := res.Body.String()
 		if strings.Contains(body, "c2VjcmV0LWNpcGhlcnRleHQ=") || strings.Contains(body, "c2VjcmV0LWVudmVsb3Bl") {
 			t.Fatalf("%s leaked opaque crypto payload: %s", path, body)
+		}
+	}
+}
+
+func TestWebConsoleRendersResponsiveHTMXSkeleton(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/web/", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected console page, got %d: %s", res.Code, res.Body.String())
+	}
+	body := res.Body.String()
+	for _, expected := range []string{
+		`class="console-app-shell"`,
+		`class="console-sidebar"`,
+		`class="console-mobile-nav"`,
+		`id="console-main"`,
+		`hx-boost="true"`,
+		`hx-target="#console-main"`,
+		`/web/assets/console.js`,
+		`/web/assets/favicon.svg`,
+		`data-console-refresh-control`,
+		`data-refresh-interval`,
+		`data-refresh-now`,
+		`<option value="5">5 seconds</option>`,
+		`<option value="10" selected>10 seconds</option>`,
+		`<option value="15">15 seconds</option>`,
+		`<option value="30">30 seconds</option>`,
+		`.console-refresh-controls {`,
+		`.console-hero p { max-width: none; }`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected responsive console skeleton token %q in body: %s", expected, body)
+		}
+	}
+	if strings.Contains(body, "prefers-color-scheme") {
+		t.Fatalf("web console must not keep dark/light mode switching CSS: %s", body)
+	}
+}
+
+func TestWebConsoleAssetIsLocalAndAdminOnly(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	unauthenticatedReq := httptest.NewRequest(http.MethodGet, "/web/assets/console.js", nil)
+	unauthenticatedRes := httptest.NewRecorder()
+	handler.ServeHTTP(unauthenticatedRes, unauthenticatedReq)
+	if unauthenticatedRes.Code != http.StatusUnauthorized {
+		t.Fatalf("expected unauthenticated asset request to require mTLS, got %d", unauthenticatedRes.Code)
+	}
+
+	req := mtlsRequest(http.MethodGet, "/web/assets/console.js", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected local console asset, got %d: %s", res.Code, res.Body.String())
+	}
+	if contentType := res.Header().Get("Content-Type"); !strings.Contains(contentType, "text/javascript") {
+		t.Fatalf("expected javascript content type, got %q", contentType)
+	}
+	body := res.Body.String()
+	for _, expected := range []string{"swapMain", "initPaginatedTables", "initRefreshControls", "refreshCurrentView", "custodia.console.refreshSeconds", "Refresh in ${remaining}s", "Table pagination", "Page ${currentPage + 1} of ${pageCount}", "responseURL.pathname === '/web/login'", "nextMain.classList.contains('console-auth-shell')"} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected local console asset token %q, got: %s", expected, body)
+		}
+	}
+	if strings.Contains(body, "https://") {
+		t.Fatalf("expected self-hosted htmx-style console behavior without remote URLs: %s", body)
+	}
+	asset, err := os.ReadFile("web_assets/console.js")
+	if err != nil {
+		t.Fatalf("read console asset: %v", err)
+	}
+	if body != string(asset) {
+		t.Fatalf("expected console asset response to match embedded local file")
+	}
+}
+
+func TestWebConsoleServesLocalFavicon(t *testing.T) {
+	memoryStore := store.NewMemoryStore()
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	for _, path := range []string{"/favicon.ico", "/web/assets/favicon.svg"} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+		if res.Code != http.StatusOK {
+			t.Fatalf("%s expected local favicon, got %d: %s", path, res.Code, res.Body.String())
+		}
+		if contentType := res.Header().Get("Content-Type"); !strings.Contains(contentType, "image/svg+xml") {
+			t.Fatalf("%s expected svg favicon content type, got %q", path, contentType)
+		}
+		if !strings.Contains(res.Body.String(), "Custodia") || strings.Contains(res.Body.String(), "https://") {
+			t.Fatalf("%s expected self-hosted Custodia favicon without remote references: %s", path, res.Body.String())
+		}
+	}
+}
+
+func TestWebConsoleRendersStyledNotFoundPages(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	unknownWebReq := mtlsRequest(http.MethodGet, "/web/does-not-exist", "", "admin")
+	unknownWebRes := httptest.NewRecorder()
+	handler.ServeHTTP(unknownWebRes, unknownWebReq)
+	if unknownWebRes.Code != http.StatusNotFound {
+		t.Fatalf("expected unknown web console route to return 404, got %d: %s", unknownWebRes.Code, unknownWebRes.Body.String())
+	}
+	unknownWebBody := unknownWebRes.Body.String()
+	if !strings.Contains(unknownWebBody, ">404</h1>") || !strings.Contains(unknownWebBody, "Back to home") {
+		t.Fatalf("expected styled console 404 body, got: %s", unknownWebBody)
+	}
+	if strings.Contains(unknownWebBody, ">Page not found</h1>") {
+		t.Fatalf("expected compact numeric 404 title, got: %s", unknownWebBody)
+	}
+	for _, expected := range []string{"justify-content: flex-start; margin-bottom: 14px", "margin-bottom: clamp(46px, 6vw, 68px); text-align: left", "font-size: clamp(7.5rem, 27vw, 18rem); line-height: 0.76; text-align: center", "margin: 20px auto 0; font-size: 1.08rem; text-align: center", "justify-content: center; gap: 10px; margin-top: 36px"} {
+		if !strings.Contains(unknownWebBody, expected) {
+			t.Fatalf("expected branded numeric 404 styling token %q, got: %s", expected, unknownWebBody)
+		}
+	}
+	if !strings.Contains(unknownWebBody, "console-error-shell") || strings.Contains(unknownWebBody, `class="console-login-brand"`) {
+		t.Fatalf("expected compact standalone 404 layout, got: %s", unknownWebBody)
+	}
+	if strings.Contains(unknownWebBody, `aria-label="Console sections"`) {
+		t.Fatalf("unknown web route rendered the overview instead of 404: %s", unknownWebBody)
+	}
+	if !strings.Contains(unknownWebRes.Header().Get("Content-Security-Policy"), "style-src 'unsafe-inline'") {
+		t.Fatalf("expected web CSP on styled 404, got %q", unknownWebRes.Header().Get("Content-Security-Policy"))
+	}
+
+	outsideWebReq := httptest.NewRequest(http.MethodGet, "/404pagina", nil)
+	outsideWebRes := httptest.NewRecorder()
+	WebOnly(handler).ServeHTTP(outsideWebRes, outsideWebReq)
+	if outsideWebRes.Code != http.StatusNotFound {
+		t.Fatalf("expected web listener unknown route to return 404, got %d: %s", outsideWebRes.Code, outsideWebRes.Body.String())
+	}
+	if contentType := outsideWebRes.Header().Get("Content-Type"); !strings.Contains(contentType, "text/html") {
+		t.Fatalf("expected web listener unknown route to render html 404, got %q", contentType)
+	}
+	outsideWebBody := outsideWebRes.Body.String()
+	if !strings.Contains(outsideWebBody, ">404</h1>") {
+		t.Fatalf("expected styled web listener 404 body, got: %s", outsideWebBody)
+	}
+	if !strings.Contains(outsideWebBody, "console-error-shell") || strings.Contains(outsideWebBody, `class="console-login-brand"`) {
+		t.Fatalf("expected compact standalone web listener 404 layout, got: %s", outsideWebBody)
+	}
+
+	invalidFilterReq := mtlsRequest(http.MethodGet, "/web/clients?active=maybe", "", "admin")
+	invalidFilterRes := httptest.NewRecorder()
+	handler.ServeHTTP(invalidFilterRes, invalidFilterReq)
+	if invalidFilterRes.Code != http.StatusBadRequest {
+		t.Fatalf("expected invalid web filter to render 400, got %d: %s", invalidFilterRes.Code, invalidFilterRes.Body.String())
+	}
+	invalidFilterBody := invalidFilterRes.Body.String()
+	for _, expected := range []string{`<title>Bad request – Custodia</title>`, `aria-label="Bad request"`, `>400</h1>`, "The Custodia Console could not process this request. Check the submitted values and try again."} {
+		if !strings.Contains(invalidFilterBody, expected) {
+			t.Fatalf("expected generic bad request error token %q, got: %s", expected, invalidFilterBody)
+		}
+	}
+	if strings.Contains(invalidFilterBody, `{"error"`) {
+		t.Fatalf("expected web filter error to render html, got JSON: %s", invalidFilterBody)
+	}
+
+	methodReq := mtlsRequest(http.MethodPut, "/web/login", "", "admin")
+	methodRes := httptest.NewRecorder()
+	handler.ServeHTTP(methodRes, methodReq)
+	if methodRes.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected login method error to render 405, got %d: %s", methodRes.Code, methodRes.Body.String())
+	}
+	methodBody := methodRes.Body.String()
+	for _, expected := range []string{`<title>Method not allowed – Custodia</title>`, `aria-label="Method not allowed"`, `>405</h1>`, "The requested method is not allowed for this Custodia Console page."} {
+		if !strings.Contains(methodBody, expected) {
+			t.Fatalf("expected generic method error token %q, got: %s", expected, methodBody)
+		}
+	}
+}
+
+func TestWebConsoleCSPAllowsOnlyLocalEnhancements(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/web/", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	policy := res.Header().Get("Content-Security-Policy")
+	for _, expected := range []string{"default-src 'none'", "script-src 'self'", "style-src 'unsafe-inline'", "connect-src 'self'", "img-src 'self' data:", "frame-ancestors 'none'", "form-action 'self'"} {
+		if !strings.Contains(policy, expected) {
+			t.Fatalf("expected web CSP token %q in %q", expected, policy)
+		}
+	}
+}
+
+func TestWebConsoleFilterFormsPreserveSubmittedValues(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, clientID := range []string{"admin", "client_bob"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %s: %v", clientID, err)
+		}
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	cases := []struct {
+		path     string
+		expected []string
+	}{
+		{
+			path: "/web/clients?active=true",
+			expected: []string{
+				`<option value="true" selected>Active</option>`,
+			},
+		},
+		{
+			path: "/web/audit?limit=25&outcome=failure&action=secret.read&actor_client_id=client_alice",
+			expected: []string{
+				`name="limit" inputmode="numeric" placeholder="100" value="25"`,
+				`<option value="failure" selected>Failure</option>`,
+				`name="action" placeholder="secret.read" value="secret.read"`,
+				`name="actor_client_id" placeholder="client_alice" value="client_alice"`,
+			},
+		},
+		{
+			path: "/web/access-requests?limit=25&secret_id=00000000-0000-4000-8000-000000000001&status=pending&client_id=client_bob&requested_by_client_id=admin",
+			expected: []string{
+				`name="limit" inputmode="numeric" placeholder="100" value="25"`,
+				`name="secret_id" placeholder="secret UUID" value="00000000-0000-4000-8000-000000000001"`,
+				`<option value="pending" selected>Pending</option>`,
+				`name="client_id" placeholder="client_bob" value="client_bob"`,
+				`name="requested_by_client_id" placeholder="admin" value="admin"`,
+			},
+		},
+		{
+			path: "/web/audit/verify?limit=17",
+			expected: []string{
+				`name="limit" inputmode="numeric" placeholder="500" value="17"`,
+			},
+		},
+	}
+	for _, tc := range cases {
+		req := mtlsRequest(http.MethodGet, tc.path, "", "admin")
+		res := httptest.NewRecorder()
+		handler.ServeHTTP(res, req)
+		if res.Code != http.StatusOK {
+			t.Fatalf("%s expected 200, got %d: %s", tc.path, res.Code, res.Body.String())
+		}
+		body := res.Body.String()
+		for _, expected := range tc.expected {
+			if !strings.Contains(body, expected) {
+				t.Fatalf("%s expected submitted filter token %q, got: %s", tc.path, expected, body)
+			}
+		}
+	}
+}
+
+func TestWebLoginUsesSingleCardLayout(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/web/login", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected login page, got %d: %s", res.Code, res.Body.String())
+	}
+	body := res.Body.String()
+	for _, expected := range []string{`class="console-auth-shell"`, `class="console-auth-card"`, `<div class="console-brand"><span class="console-logo" aria-hidden="true">C</span><span>Custodia</span></div>`, `<p class="console-kicker">Custodia Console</p>`, `<h1 id="auth-title">Verify Access</h1>`, `type="password" inputmode="numeric" autocomplete="one-time-code"`, `class="console-auth-form"`, `class="console-auth-actions"`, `.console-auth-card h1 { font-size: clamp(3.4rem, 8vw, 5rem); line-height: 0.76; text-align: center; }`, `.console-auth-card p:not(.console-kicker),`, `.console-error-card p:not(.console-kicker) { margin: 20px auto 0; font-size: 1.08rem; text-align: center; }`, `.console-auth-actions,`, `.console-error-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 36px; }`, `.console-panel { padding: 18px; }`, `.console-security-boundary { display: grid; gap: 8px; margin-top: 18px; }`, `.console-panel-label {`, `color: var(--text);`, `font-weight: 900;`, `.console-security-boundary p:not(.console-panel-label) { max-width: none; margin-bottom: 0; }`} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected single-card login layout token %q, got: %s", expected, body)
+		}
+	}
+	for _, unexpected := range []string{`class="console-login-brand"`, `class="console-auth-brand"`, `<h1>Custodia</h1>`, `class="console-error-card console-auth-card"`, `.console-auth-card h1 + p`, `.console-auth-card form button { width: 100%; }`, `.console-panel { display: grid; gap: 8px; padding: 18px; }`, `.console-grid + .console-panel { margin-top: 18px; }`, `<p class="console-kicker">Admin metadata console</p>`, `<p class="console-kicker">Security boundary</p>`, `Custodia Metadata Console`} {
+		if strings.Contains(body, unexpected) {
+			t.Fatalf("expected login layout to avoid stale split/auth styling token %q, got: %s", unexpected, body)
 		}
 	}
 }
@@ -1987,11 +2332,20 @@ func TestWebTOTPLoginUnlocksConsole(t *testing.T) {
 	page.AddCookie(cookie)
 	pageRes := httptest.NewRecorder()
 	handler.ServeHTTP(pageRes, page)
-	if pageRes.Code != http.StatusOK || !strings.Contains(pageRes.Body.String(), "metadata console") {
-		t.Fatalf("expected unlocked console, got %d: %s", pageRes.Code, pageRes.Body.String())
+	pageBody := pageRes.Body.String()
+	if pageRes.Code != http.StatusOK || !strings.Contains(pageBody, "Custodia Console") {
+		t.Fatalf("expected unlocked console, got %d: %s", pageRes.Code, pageBody)
 	}
-	if !strings.Contains(pageRes.Body.String(), `method="post" action="/web/logout"`) || !strings.Contains(pageRes.Body.String(), "Logout") {
-		t.Fatalf("expected authenticated console to render logout control: %s", pageRes.Body.String())
+	if strings.Contains(pageBody, "Admin metadata console") || strings.Contains(pageBody, "Custodia Metadata Console") {
+		t.Fatalf("expected unified console branding, got: %s", pageBody)
+	}
+	for _, expected := range []string{`class="console-panel console-security-boundary"`, `<p class="console-panel-label">Security boundary</p>`} {
+		if !strings.Contains(pageBody, expected) {
+			t.Fatalf("expected dedicated security boundary panel token %q, got: %s", expected, pageBody)
+		}
+	}
+	if !strings.Contains(pageBody, `method="post" action="/web/logout"`) || !strings.Contains(pageBody, "Logout") {
+		t.Fatalf("expected authenticated console to render logout control: %s", pageBody)
 	}
 }
 
@@ -2675,10 +3029,20 @@ func TestDedicatedListenerRouteFilters(t *testing.T) {
 		t.Fatalf("expected web listener to serve web route, got %d: %s", webRes.Code, webRes.Body.String())
 	}
 
+	faviconReq := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
+	faviconRes := httptest.NewRecorder()
+	WebOnly(handler).ServeHTTP(faviconRes, faviconReq)
+	if faviconRes.Code != http.StatusOK {
+		t.Fatalf("expected web listener to serve favicon route, got %d: %s", faviconRes.Code, faviconRes.Body.String())
+	}
+
 	blockedAPIReq := mtlsRequest(http.MethodGet, "/v1/status", "", "admin")
 	blockedAPIRes := httptest.NewRecorder()
 	WebOnly(handler).ServeHTTP(blockedAPIRes, blockedAPIReq)
 	if blockedAPIRes.Code != http.StatusNotFound {
 		t.Fatalf("expected web listener to hide API route, got %d", blockedAPIRes.Code)
+	}
+	if !strings.Contains(blockedAPIRes.Body.String(), ">404</h1>") || !strings.Contains(blockedAPIRes.Body.String(), "The requested Custodia Console page does not exist.") {
+		t.Fatalf("expected web listener to render a styled 404 page, got: %s", blockedAPIRes.Body.String())
 	}
 }

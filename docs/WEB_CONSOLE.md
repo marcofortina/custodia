@@ -13,6 +13,7 @@ The Custodia web console is an admin-only, metadata-only surface.
 ## Pages
 
 - `/web/` — metadata console landing page.
+- Unknown web console routes render the same responsive `404` page instead of falling back to the landing page or Go's plain `404 page not found` body.
 - `/web/status` — operational status.
 - `/web/clients` — client metadata.
 - `/web/access-requests` — pending grant metadata.
@@ -20,7 +21,7 @@ The Custodia web console is an admin-only, metadata-only surface.
 - `/web/audit/verify` — audit hash-chain verification summary.
 - `POST /web/logout` — clears the web MFA session cookie and redirects back to login.
 
-The API remains the source of truth for automation; the web console is intentionally small and metadata-only even when TOTP/passkey web authentication is enabled. Authenticated pages include a logout button that clears only the web MFA session cookie; mTLS identity remains controlled by the browser certificate.
+The API remains the source of truth for automation. The web console is a responsive, metadata-only operator surface even when TOTP/passkey web authentication is enabled. Authenticated pages include a logout button that clears only the web MFA session cookie; mTLS identity remains controlled by the browser certificate.
 
 ## Query filters
 

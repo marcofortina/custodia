@@ -13,6 +13,7 @@ import (
 	"custodia/internal/build"
 	"custodia/internal/model"
 	"custodia/internal/webauth"
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 
@@ -24,33 +25,39 @@ import (
 	"time"
 )
 
-// handleWebLogin unlocks only the metadata console; it never receives or displays secret plaintext.
+//go:embed web_assets/console.js
+var webConsoleJS string
+
+//go:embed web_assets/favicon.svg
+var webConsoleFaviconSVG string
+
+// handleWebLogin unlocks only the Custodia Console; it never receives or displays secret plaintext.
 func (s *Server) handleWebLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		body := "<h1>Web MFA</h1>" +
-			webParagraph("Enter your TOTP code to unlock the metadata console for this mTLS admin session.") +
-			`<form method="post" action="/web/login"><label for="totp">TOTP code</label><input id="totp" name="totp" inputmode="numeric" autocomplete="one-time-code" required><button type="submit">Unlock console</button></form>`
-		writeWebLoginPage(w, "Web MFA", body)
+		body := `<h1 id="auth-title">Verify Access</h1>` +
+			webParagraph("Enter your TOTP code to unlock the Custodia Console for this mTLS admin session.") +
+			`<form class="console-auth-form" method="post" action="/web/login"><label for="totp">TOTP code</label><input id="totp" name="totp" type="password" inputmode="numeric" autocomplete="one-time-code" required><div class="console-auth-actions"><button type="submit">Unlock console</button></div></form>`
+		writeWebLoginPage(w, "Verify Access", body)
 		return
 	}
 	if r.Method != http.MethodPost {
-		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed")
+		writeWebStatusError(w, http.StatusMethodNotAllowed, "method_not_allowed")
 		return
 	}
 	if s.webSessionManager == nil || strings.TrimSpace(s.webTOTPSecret) == "" {
 		s.auditFailure(r, "web.login", "system", "", map[string]string{"reason": "mfa_not_configured"})
-		writeError(w, http.StatusServiceUnavailable, "mfa_not_configured")
+		writeWebStatusError(w, http.StatusServiceUnavailable, "mfa_not_configured")
 		return
 	}
 	if err := r.ParseForm(); err != nil {
 		s.auditFailure(r, "web.login", "system", "", map[string]string{"reason": "invalid_form"})
-		writeError(w, http.StatusBadRequest, "invalid_form")
+		writeWebStatusError(w, http.StatusBadRequest, "invalid_form")
 		return
 	}
 	code := r.FormValue("totp")
 	if !webauth.VerifyTOTP(s.webTOTPSecret, code, time.Now().UTC(), 1) {
 		s.auditFailure(r, "web.login", "system", "", map[string]string{"reason": "invalid_totp"})
-		writeError(w, http.StatusUnauthorized, "invalid_totp")
+		writeWebStatusError(w, http.StatusUnauthorized, "invalid_totp")
 		return
 	}
 	clientID := clientIDFromContext(r)
@@ -67,140 +74,556 @@ func (s *Server) handleWebLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeWebLoginPage(w http.ResponseWriter, title string, body string) {
-	writeWebPageWithOptions(w, title, body, false)
-}
-
-func writeWebPage(w http.ResponseWriter, title string, body string) {
-	writeWebPageWithOptions(w, title, body, true)
-}
-
-func writeWebPageWithOptions(w http.ResponseWriter, title string, body string, authenticatedNav bool) {
+	setSecurityHeaders(w, true)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	nav := `<p class="console-kicker">Admin metadata console</p>`
-	if authenticatedNav {
-		nav = `<header class="console-topbar">
-<a class="console-brand" href="/web/" aria-label="Custodia overview"><span class="console-brand-mark" aria-hidden="true">C</span><span>Custodia</span></a>
-<nav class="console-nav" aria-label="Console navigation">
-<a href="/web/">Overview</a>
-<a href="/web/status">Status</a>
-<a href="/web/diagnostics">Diagnostics</a>
-<a href="/web/clients">Clients</a>
-<a href="/web/access-requests">Access requests</a>
-<a href="/web/audit">Audit</a>
-<a href="/web/audit/verify">Verify audit</a>
-</nav>
-<form class="console-logout" method="post" action="/web/logout"><button type="submit">Logout</button></form>
-</header>`
-	}
+	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>` + html.EscapeString(title) + ` – Custodia</title>
+<link rel="icon" href="/web/assets/favicon.svg" type="image/svg+xml">
 <style>` + webConsoleCSS + `</style>
 </head>
 <body>
-<div class="console-shell">
-` + nav + `
-<main class="console-card">
+<main id="console-main" class="console-auth-shell" tabindex="-1">
+<section class="console-auth-card" aria-labelledby="auth-title">
+<div class="console-brand"><span class="console-logo" aria-hidden="true">C</span><span>Custodia</span></div>
+<p class="console-kicker">Custodia Console</p>
 ` + body + `
+</section>
+</main>
+</body>
+</html>`))
+}
+
+func writeWebPage(w http.ResponseWriter, title string, body string) {
+	writeWebPageWithOptions(w, title, body, true)
+}
+
+func writeWebNotFoundPage(w http.ResponseWriter, authenticatedNav bool) {
+	_ = authenticatedNav
+	writeWebErrorPage(w, http.StatusNotFound, "Page not found", "The requested Custodia Console page does not exist.")
+}
+
+func writeWebStatusError(w http.ResponseWriter, statusCode int, code string) {
+	writeWebErrorPage(w, statusCode, webErrorTitle(statusCode), webErrorDescription(statusCode, code))
+}
+
+func writeWebMappedError(w http.ResponseWriter, err error) {
+	statusCode, code := mapStoreError(err)
+	writeWebStatusError(w, statusCode, code)
+}
+
+func writeWebErrorPage(w http.ResponseWriter, statusCode int, title string, description string) {
+	if title == "" {
+		title = webErrorTitle(statusCode)
+	}
+	if description == "" {
+		description = webErrorDescription(statusCode, "")
+	}
+	setSecurityHeaders(w, true)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(statusCode)
+	_, _ = w.Write([]byte(`<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>` + html.EscapeString(title) + ` – Custodia</title>
+<link rel="icon" href="/web/assets/favicon.svg" type="image/svg+xml">
+<style>` + webConsoleCSS + `</style>
+</head>
+<body>
+<main id="console-main" class="console-error-shell" tabindex="-1">
+<section class="console-error-card" aria-labelledby="web-error-title" aria-label="` + html.EscapeString(title) + `">
+<div class="console-brand"><span class="console-logo" aria-hidden="true">C</span><span>Custodia</span></div>
+<p class="console-kicker">Custodia Console</p>
+<h1 id="web-error-title">` + html.EscapeString(strconv.Itoa(statusCode)) + `</h1>
+<p>` + html.EscapeString(description) + `</p>
+<div class="console-error-actions"><a class="console-button" href="/web/">Back to home</a></div>
+</section>
+</main>
+</body>
+</html>`))
+}
+
+func webErrorTitle(statusCode int) string {
+	switch statusCode {
+	case http.StatusBadRequest:
+		return "Bad request"
+	case http.StatusUnauthorized:
+		return "Authentication required"
+	case http.StatusForbidden:
+		return "Access denied"
+	case http.StatusNotFound:
+		return "Page not found"
+	case http.StatusMethodNotAllowed:
+		return "Method not allowed"
+	case http.StatusConflict:
+		return "Conflict"
+	case http.StatusRequestEntityTooLarge:
+		return "Payload too large"
+	case http.StatusUnsupportedMediaType:
+		return "Unsupported media type"
+	case http.StatusTooManyRequests:
+		return "Rate limit exceeded"
+	case http.StatusServiceUnavailable:
+		return "Service unavailable"
+	case http.StatusInternalServerError:
+		return "Internal server error"
+	default:
+		if text := http.StatusText(statusCode); text != "" {
+			return text
+		}
+		return "Console error"
+	}
+}
+
+func webErrorDescription(statusCode int, code string) string {
+	switch statusCode {
+	case http.StatusBadRequest:
+		return "The Custodia Console could not process this request. Check the submitted values and try again."
+	case http.StatusUnauthorized:
+		return "Authentication is required before this Custodia Console page can be displayed."
+	case http.StatusForbidden:
+		return "Your current mTLS identity is not allowed to access this Custodia Console page."
+	case http.StatusNotFound:
+		return "The requested Custodia Console page does not exist."
+	case http.StatusMethodNotAllowed:
+		return "The requested method is not allowed for this Custodia Console page."
+	case http.StatusConflict:
+		return "The Custodia Console could not complete this request because the resource changed or already exists."
+	case http.StatusRequestEntityTooLarge:
+		return "The submitted request is too large for this Custodia Console operation."
+	case http.StatusUnsupportedMediaType:
+		return "The submitted content type is not supported by this Custodia Console operation."
+	case http.StatusTooManyRequests:
+		return "Too many Custodia Console requests were sent in a short time. Wait briefly and try again."
+	case http.StatusServiceUnavailable:
+		return "A required Custodia service is currently unavailable. Check operational status and try again."
+	case http.StatusInternalServerError:
+		return "The Custodia Console could not complete this request because an internal error occurred."
+	default:
+		if code != "" {
+			return "The Custodia Console could not complete this request: " + code + "."
+		}
+		return "The Custodia Console could not complete this request."
+	}
+}
+
+func writeWebPageWithOptions(w http.ResponseWriter, title string, body string, authenticatedNav bool) {
+	writeWebPageStatusWithOptions(w, http.StatusOK, title, body, authenticatedNav)
+}
+
+func webRefreshControls() string {
+	return `<section class="console-refresh-controls" data-console-refresh-control aria-label="Console refresh controls">` +
+		`<div><p class="console-panel-label">Live refresh</p><p class="console-refresh-status" data-refresh-status aria-live="polite">Refresh in 10s</p></div>` +
+		`<label>Interval<select data-refresh-interval aria-label="Refresh interval"><option value="5">5 seconds</option><option value="10" selected>10 seconds</option><option value="15">15 seconds</option><option value="30">30 seconds</option></select></label>` +
+		`<button type="button" data-refresh-now aria-label="Refresh current console view"><span aria-hidden="true">↻</span><span>Refresh</span></button>` +
+		`</section>`
+}
+
+func writeWebPageStatusWithOptions(w http.ResponseWriter, statusCode int, title string, body string, authenticatedNav bool) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	layoutClass := "console-app-shell"
+	mainClass := "console-main"
+	pageBody := body
+	nav := ""
+	refreshControls := ""
+	if authenticatedNav {
+		nav = `<aside class="console-sidebar" aria-label="Console sidebar">
+<a class="console-brand" href="/web/" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true" aria-label="Custodia overview"><span class="console-logo" aria-hidden="true">C</span><span>Custodia</span></a>
+<nav class="console-nav" aria-label="Console navigation" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">
+<a href="/web/">Overview</a>
+<a href="/web/status">Status</a>
+<a href="/web/diagnostics">Diagnostics</a>
+<a href="/web/clients">Clients</a>
+<a href="/web/access-requests">Access Requests</a>
+<a href="/web/audit">Audit</a>
+<a href="/web/audit/verify">Verify Audit</a>
+</nav>
+<form class="console-logout" method="post" action="/web/logout"><button type="submit">Logout</button></form>
+</aside>
+<header class="console-mobile-nav" aria-label="Console mobile navigation">
+<a class="console-brand" href="/web/" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true" aria-label="Custodia overview"><span class="console-logo" aria-hidden="true">C</span><span>Custodia</span></a>
+<nav aria-label="Console mobile sections" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">
+<a href="/web/status">Status</a><a href="/web/clients">Clients</a><a href="/web/audit">Audit</a>
+</nav>
+</header>`
+		refreshControls = webRefreshControls()
+	}
+	w.WriteHeader(statusCode)
+	_, _ = w.Write([]byte(`<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>` + html.EscapeString(title) + ` – Custodia</title>
+<link rel="icon" href="/web/assets/favicon.svg" type="image/svg+xml">
+<style>` + webConsoleCSS + `</style>
+<script src="/web/assets/console.js" defer></script>
+</head>
+<body>
+<div class="` + layoutClass + `">
+` + nav + `
+<main id="console-main" class="` + mainClass + `" tabindex="-1">
+` + refreshControls + `
+` + pageBody + `
 </main>
 </div>
 </body>
 </html>`))
 }
 
+func (s *Server) handleWebFavicon(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/favicon.ico" && r.URL.Path != "/web/assets/favicon.svg" {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "image/svg+xml; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	_, _ = w.Write([]byte(webConsoleFaviconSVG))
+}
+
+func (s *Server) handleWebConsoleAsset(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/web/assets/console.js" {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write([]byte(webConsoleJS))
+}
+
 const webConsoleCSS = `
 :root {
-  color-scheme: light dark;
-  --bg: #f5f7fb;
-  --surface: #ffffff;
-  --surface-soft: #f8fafc;
-  --border: #d8dee8;
-  --text: #111827;
-  --muted: #5b6472;
-  --accent: #2354d5;
-  --accent-strong: #173ea5;
+  color-scheme: light;
+  --bg: #f3f6fb;
+  --bg-strong: #e8eef8;
+  --panel: #ffffff;
+  --panel-soft: #f8fafc;
+  --panel-tint: #eef4ff;
+  --border: #d7deea;
+  --border-strong: #b8c4d6;
+  --text: #0f172a;
+  --muted: #64748b;
+  --muted-strong: #475569;
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
+  --success: #047857;
   --danger: #b42318;
-  --shadow: 0 18px 45px rgba(15, 23, 42, 0.10);
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f172a;
-    --surface: #111827;
-    --surface-soft: #182235;
-    --border: #334155;
-    --text: #f8fafc;
-    --muted: #a6b0c0;
-    --accent: #7aa2ff;
-    --accent-strong: #adc4ff;
-    --danger: #ffb4a8;
-    --shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
-  }
+  --warning: #a16207;
+  --shadow: 0 24px 70px rgba(15, 23, 42, 0.13);
+  --shadow-soft: 0 10px 28px rgba(15, 23, 42, 0.08);
 }
 * { box-sizing: border-box; }
+html { min-height: 100%; }
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at top left, rgba(35, 84, 213, 0.14), transparent 34rem), var(--bg);
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 34rem),
+    linear-gradient(135deg, var(--bg), var(--bg-strong));
   color: var(--text);
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.5;
 }
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-.console-shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 48px; }
-.console-topbar {
+a { color: inherit; text-decoration: none; }
+a:hover { text-decoration: none; }
+.console-app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 28px;
+  width: min(1440px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0 48px;
+}
+.console-logo {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, var(--accent), #60a5fa);
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.32);
+}
+.console-sidebar {
+  position: sticky;
+  top: 24px;
+  align-self: start;
+  min-height: calc(100vh - 72px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 18px;
+  border: 1px solid rgba(255,255,255,0.7);
+  border-radius: 30px;
+  background: rgba(255,255,255,0.78);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+.console-mobile-nav { display: none; }
+.console-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+}
+.console-nav { display: grid; gap: 6px; }
+.console-nav a, .console-mobile-nav nav a {
   display: flex;
   align-items: center;
-  gap: 16px;
+  min-height: 40px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  color: var(--muted-strong);
+  font-weight: 750;
+}
+.console-nav a:hover, .console-nav a[aria-current="page"], .console-mobile-nav nav a:hover {
+  background: var(--panel-tint);
+  color: var(--accent-strong);
+}
+.console-logout { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border); }
+.console-logout button {
+  width: 100%;
+  border: 1px solid #fecaca;
+  background: #fff5f5;
+  color: var(--danger);
+}
+.console-main {
+  min-width: 0;
+  padding: clamp(20px, 3vw, 36px);
+  border: 1px solid rgba(255,255,255,0.76);
+  border-radius: 32px;
+  background: rgba(255,255,255,0.86);
+  box-shadow: var(--shadow);
+  outline: none;
+}
+.console-refresh-controls {
+  display: flex;
   flex-wrap: wrap;
-  margin-bottom: 18px;
+  gap: 10px;
+  align-items: end;
+  justify-content: space-between;
+  margin-bottom: 24px;
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 20px;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  background: var(--panel-soft);
+}
+.console-refresh-controls label {
+  display: grid;
+  gap: 6px;
+  min-width: 150px;
+  color: var(--muted-strong);
+  font-size: .78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.console-refresh-status { margin: 4px 0 0; color: var(--muted); font-size: .9rem; }
+.console-auth-shell, .console-error-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  width: min(100% - 32px, 760px);
+  margin: 0 auto;
+  padding: clamp(32px, 8vw, 84px) 0;
+}
+.console-auth-card, .console-error-card {
+  width: 100%;
+  padding: clamp(28px, 5vw, 56px);
+  border: 1px solid rgba(255,255,255,0.78);
+  border-radius: 34px;
+  background:
+    radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 18rem),
+    rgba(255,255,255,0.9);
   box-shadow: var(--shadow);
 }
-.console-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); font-weight: 800; letter-spacing: -0.02em; }
-.console-brand-mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: var(--accent); color: white; }
-.console-nav { display: flex; align-items: center; gap: 6px; flex: 1 1 480px; flex-wrap: wrap; }
-.console-nav a { padding: 8px 10px; border-radius: 10px; color: var(--muted); font-weight: 650; }
-.console-nav a:hover { background: var(--surface-soft); color: var(--text); text-decoration: none; }
-.console-logout { margin: 0; }
-.console-card { padding: 28px; border: 1px solid var(--border); border-radius: 24px; background: var(--surface); box-shadow: var(--shadow); overflow-x: auto; }
-.console-kicker { margin: 0 0 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
-h1 { margin: 0 0 12px; font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1.05; letter-spacing: -0.04em; }
-h2 { margin-top: 28px; }
-p { color: var(--muted); max-width: 78ch; }
-form { display: grid; gap: 10px; max-width: 420px; margin-top: 18px; }
-label { color: var(--muted); font-weight: 700; }
-input { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-soft); color: var(--text); font: inherit; }
-button { display: inline-flex; justify-content: center; align-items: center; min-height: 38px; padding: 8px 14px; border: 0; border-radius: 12px; background: var(--accent); color: white; font: inherit; font-weight: 800; cursor: pointer; }
-button:hover { background: var(--accent-strong); }
-.console-logout button { background: transparent; color: var(--danger); border: 1px solid var(--border); }
-.console-logout button:hover { background: color-mix(in srgb, var(--danger) 11%, transparent); }
-table { width: 100%; min-width: 680px; border-collapse: collapse; margin-top: 18px; overflow: hidden; border-radius: 16px; border: 1px solid var(--border); }
-th, td { padding: 12px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
-th { background: var(--surface-soft); color: var(--muted); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.console-auth-card .console-brand,
+.console-error-card .console-brand { justify-content: flex-start; margin-bottom: 14px; }
+.console-auth-card > .console-kicker,
+.console-error-card > .console-kicker { margin-bottom: clamp(46px, 6vw, 68px); text-align: left; }
+.console-auth-card h1 { font-size: clamp(3.4rem, 8vw, 5rem); line-height: 0.76; text-align: center; }
+.console-error-card h1 { font-size: clamp(7.5rem, 27vw, 18rem); line-height: 0.76; text-align: center; }
+.console-auth-card p:not(.console-kicker),
+.console-error-card p:not(.console-kicker) { margin: 20px auto 0; font-size: 1.08rem; text-align: center; }
+.console-auth-actions,
+.console-error-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 36px; }
+.console-auth-form { display: grid; gap: 10px; margin-top: 24px; }
+.console-kicker {
+  margin: 0 0 10px;
+  color: var(--accent-strong);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.console-hero { display: grid; gap: 10px; margin-bottom: 24px; }
+.console-hero p { max-width: none; }
+h1 { margin: 0; font-size: clamp(2rem, 4vw, 3.6rem); line-height: 0.98; letter-spacing: -0.06em; }
+h2 { margin: 28px 0 12px; font-size: 1.15rem; letter-spacing: -0.025em; }
+p { margin: 0 0 16px; color: var(--muted); max-width: 82ch; }
+.console-muted { color: var(--muted); }
+.console-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+.console-grid--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.console-panel, .console-link-card, .console-toolbar {
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--panel);
+  box-shadow: var(--shadow-soft);
+}
+.console-panel { padding: 18px; }
+.console-security-boundary { display: grid; gap: 8px; margin-top: 18px; }
+.console-panel-label {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.02rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+.console-security-boundary p:not(.console-panel-label) { max-width: none; margin-bottom: 0; }
+.console-link-card { display: grid; gap: 8px; padding: 18px; transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease; }
+.console-link-card:hover { transform: translateY(-2px); border-color: #93b4ff; box-shadow: 0 18px 38px rgba(37, 99, 235, 0.14); }
+.console-link-card strong { font-size: 1.02rem; letter-spacing: -0.02em; }
+.console-link-card span { color: var(--muted); }
+.console-stat { display: grid; gap: 4px; margin: 0; }
+.console-stat dt { color: var(--muted); font-size: .78rem; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+.console-stat dd { margin: 0; font-size: clamp(1.4rem, 3vw, 2.2rem); font-weight: 950; letter-spacing: -0.05em; overflow-wrap: anywhere; }
+.console-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin: 20px 0 16px; padding: 14px; }
+.console-toolbar label { display: grid; gap: 6px; min-width: 160px; color: var(--muted-strong); font-size: .78rem; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+input, select {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: 13px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+}
+input:focus, select:focus, button:focus-visible, a:focus-visible { outline: 3px solid rgba(37, 99, 235, 0.26); outline-offset: 2px; }
+button, .console-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+button:hover, .console-button:hover { background: var(--accent-strong); }
+button:disabled { cursor: not-allowed; opacity: 0.55; }
+.console-button--ghost { border: 1px solid var(--border); background: #fff; color: var(--muted-strong); }
+.console-button--ghost:hover { background: var(--panel-soft); color: var(--text); }
+.console-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 20px; background: #fff; box-shadow: var(--shadow-soft); }
+table { width: 100%; min-width: 720px; border-collapse: collapse; }
+.console-pagination { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; margin-top: 14px; }
+.console-pagination__status { color: var(--muted-strong); font-size: 0.86rem; font-weight: 900; }
+th, td { padding: 13px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+th { background: var(--panel-soft); color: var(--muted-strong); font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.07em; }
 tr:last-child td { border-bottom: 0; }
-dl { display: grid; grid-template-columns: minmax(180px, 260px) 1fr; gap: 0; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
-dt, dd { margin: 0; padding: 12px 14px; border-bottom: 1px solid var(--border); }
-dt { background: var(--surface-soft); color: var(--muted); font-weight: 800; }
-dd { overflow-wrap: anywhere; }
-dt:last-of-type, dd:last-of-type { border-bottom: 0; }
-pre { padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface-soft); overflow: auto; }
-@media (max-width: 720px) {
-  .console-shell { width: min(100% - 20px, 1180px); padding-top: 10px; }
-  .console-card { padding: 18px; }
-  .console-nav { flex-basis: 100%; }
-  dl { grid-template-columns: 1fr; }
+tbody tr:hover td { background: #fbfdff; }
+dl.console-detail { display: grid; grid-template-columns: minmax(180px, 260px) 1fr; border: 1px solid var(--border); border-radius: 20px; overflow: hidden; background: #fff; box-shadow: var(--shadow-soft); }
+.console-detail dt, .console-detail dd { margin: 0; padding: 13px 14px; border-bottom: 1px solid var(--border); }
+.console-detail dt { background: var(--panel-soft); color: var(--muted-strong); font-weight: 900; }
+.console-detail dd { overflow-wrap: anywhere; }
+.console-detail dt:last-of-type, .console-detail dd:last-of-type { border-bottom: 0; }
+.console-badge { display: inline-flex; align-items: center; min-height: 26px; padding: 3px 9px; border-radius: 999px; background: #eff6ff; color: var(--accent-strong); font-size: .78rem; font-weight: 900; }
+.console-badge--success, .console-badge--active, .console-badge--ok { background: #ecfdf5; color: var(--success); }
+.console-badge--failure, .console-badge--revoked, .console-badge--unavailable { background: #fff1f2; color: var(--danger); }
+.console-badge--pending, .console-badge--degraded { background: #fffbeb; color: var(--warning); }
+pre { padding: 16px; border: 1px solid var(--border); border-radius: 18px; background: #0f172a; color: #e2e8f0; overflow: auto; }
+@media (max-width: 980px) {
+  .console-app-shell { display: block; width: min(100% - 20px, 1440px); padding-top: 10px; }
+  .console-sidebar { display: none; }
+  .console-mobile-nav {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 14px;
+    border: 1px solid rgba(255,255,255,0.76);
+    border-radius: 24px;
+    background: rgba(255,255,255,0.88);
+    box-shadow: var(--shadow-soft);
+  }
+  .console-mobile-nav nav { display: flex; gap: 6px; overflow-x: auto; }
+  .console-grid, .console-grid--two { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  .console-main { padding: 18px; border-radius: 24px; }
+  .console-toolbar { display: grid; }
+  dl.console-detail { grid-template-columns: 1fr; }
 }
 `
 
+func webHero(title string, description string) string {
+	return `<section class="console-hero"><p class="console-kicker">Custodia console</p><h1>` + html.EscapeString(title) + `</h1><p>` + html.EscapeString(description) + `</p></section>`
+}
+
+func webBadge(value string) string {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	normalized = strings.ReplaceAll(normalized, "_", "-")
+	if normalized == "" {
+		normalized = "unknown"
+	}
+	return `<span class="console-badge console-badge--` + html.EscapeString(normalized) + `">` + html.EscapeString(value) + `</span>`
+}
+
+func webTable(columns []string, rows string, emptyColspan int, emptyMessage string) string {
+	return webTableWithAttributes(columns, rows, emptyColspan, emptyMessage, "")
+}
+
+func webPaginatedTable(columns []string, rows string, emptyColspan int, emptyMessage string, pageSize int, label string) string {
+	if rows == "" {
+		return webTable(columns, rows, emptyColspan, emptyMessage)
+	}
+	attributes := ` data-console-pagination="true" data-page-size="` + html.EscapeString(strconv.Itoa(pageSize)) + `" data-pagination-label="` + html.EscapeString(label) + `"`
+	return webTableWithAttributes(columns, rows, emptyColspan, emptyMessage, attributes)
+}
+
+func webTableWithAttributes(columns []string, rows string, emptyColspan int, emptyMessage string, attributes string) string {
+	headers := ""
+	for _, column := range columns {
+		headers += "<th>" + html.EscapeString(column) + "</th>"
+	}
+	if rows == "" {
+		rows = `<tr><td colspan="` + html.EscapeString(strconv.Itoa(emptyColspan)) + `">` + html.EscapeString(emptyMessage) + `</td></tr>`
+	}
+	return `<div class="console-table-wrap"` + attributes + `><table><thead><tr>` + headers + `</tr></thead><tbody>` + rows + `</tbody></table></div>`
+}
+
 func webParagraph(text string) string {
 	return "<p>" + html.EscapeString(text) + "</p>"
+}
+
+func webInputValueAttr(r *http.Request, key string) string {
+	value := strings.TrimSpace(r.URL.Query().Get(key))
+	if value == "" {
+		return ""
+	}
+	return ` value="` + html.EscapeString(value) + `"`
+}
+
+func webSelectOption(value, label, current string) string {
+	selected := ""
+	if value == current {
+		selected = " selected"
+	}
+	return `<option value="` + html.EscapeString(value) + `"` + selected + `>` + html.EscapeString(label) + `</option>`
 }
 
 func (s *Server) webOptionalLimit(w http.ResponseWriter, r *http.Request, action, resourceType, resourceID string, fallback int) (int, bool) {
@@ -209,7 +632,7 @@ func (s *Server) webOptionalLimit(w http.ResponseWriter, r *http.Request, action
 		parsed, err := strconv.Atoi(rawLimit)
 		if err != nil || parsed <= 0 || parsed > 500 {
 			s.auditFailure(r, action, resourceType, resourceID, map[string]string{"reason": "invalid_limit"})
-			writeError(w, http.StatusBadRequest, "invalid_limit")
+			writeWebStatusError(w, http.StatusBadRequest, "invalid_limit")
 			return 0, false
 		}
 		limit = parsed
@@ -454,34 +877,37 @@ func (s *Server) handleWebStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	info := build.Current()
-	body := "<h1>Operational status</h1>" +
-		"<dl>" +
-		"<dt>Status</dt><dd>" + html.EscapeString(statusOutcome(storeStatus, rateLimiterStatus)) + "</dd>" +
-		"<dt>Store</dt><dd>" + html.EscapeString(storeStatus) + " (" + html.EscapeString(s.storeBackend) + ")</dd>" +
-		"<dt>Rate limiter</dt><dd>" + html.EscapeString(rateLimiterStatus) + " (" + html.EscapeString(s.rateLimitBackend) + ")</dd>" +
-		"<dt>Max envelopes per secret</dt><dd>" + html.EscapeString(strconv.Itoa(s.maxEnvelopesPerSecret)) + "</dd>" +
+	body := webHero("Operational Status", "Live metadata about service health, build identity and web authentication posture.") +
+		`<section class="console-grid console-grid--two" aria-label="Operational snapshot">` +
+		`<dl class="console-panel console-stat"><dt>Overall status</dt><dd>` + webBadge(statusOutcome(storeStatus, rateLimiterStatus)) + `</dd></dl>` +
+		`<dl class="console-panel console-stat"><dt>Store</dt><dd>` + webBadge(storeStatus) + `</dd></dl>` +
+		`<dl class="console-panel console-stat"><dt>Rate limiter</dt><dd>` + webBadge(rateLimiterStatus) + `</dd></dl>` +
+		`<dl class="console-panel console-stat"><dt>Max envelopes</dt><dd>` + html.EscapeString(strconv.Itoa(s.maxEnvelopesPerSecret)) + `</dd></dl>` +
+		`</section>` +
+		`<h2>Configuration</h2><dl class="console-detail">` +
+		"<dt>Store backend</dt><dd>" + html.EscapeString(s.storeBackend) + "</dd>" +
+		"<dt>Rate limiter backend</dt><dd>" + html.EscapeString(s.rateLimitBackend) + "</dd>" +
 		"<dt>Build version</dt><dd>" + html.EscapeString(info.Version) + "</dd>" +
 		"<dt>Build commit</dt><dd>" + html.EscapeString(info.Commit) + "</dd>" +
 		"<dt>Web MFA required</dt><dd>" + html.EscapeString(strconv.FormatBool(s.webMFARequired)) + "</dd>" +
 		"<dt>Web passkey enabled</dt><dd>" + html.EscapeString(strconv.FormatBool(s.webPasskeyEnabled)) + "</dd>" +
 		"</dl>"
 	s.audit(r, "web.status", "system", "", statusOutcome(storeStatus, rateLimiterStatus), nil)
-	writeWebPage(w, "Operational status", body)
+	writeWebPage(w, "Operational Status", body)
 }
 
 func (s *Server) handleWebDiagnostics(w http.ResponseWriter, r *http.Request) {
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
-	body := "<h1>Runtime diagnostics</h1>" +
-		"<p>Operational runtime metadata only; secret payloads are never rendered.</p>" +
-		"<dl>" +
+	body := webHero("Runtime Diagnostics", "Operational runtime metadata only; secret payloads are never rendered.") +
+		`<dl class="console-detail">` +
 		"<dt>Started at</dt><dd>" + html.EscapeString(s.startedAt.Format(time.RFC3339)) + "</dd>" +
 		"<dt>Uptime seconds</dt><dd>" + html.EscapeString(strconv.FormatInt(int64(time.Since(s.startedAt).Seconds()), 10)) + "</dd>" +
 		"<dt>Goroutines</dt><dd>" + html.EscapeString(strconv.Itoa(runtime.NumGoroutine())) + "</dd>" +
 		"<dt>Alloc bytes</dt><dd>" + html.EscapeString(strconv.FormatUint(mem.Alloc, 10)) + "</dd>" +
 		"</dl>"
 	s.audit(r, "web.diagnostics", "system", "", "success", nil)
-	writeWebPage(w, "Runtime diagnostics", body)
+	writeWebPage(w, "Runtime Diagnostics", body)
 }
 
 func statusOutcome(storeStatus, rateLimiterStatus string) string {
@@ -495,14 +921,15 @@ func (s *Server) handleWebClients(w http.ResponseWriter, r *http.Request) {
 	clients, err := s.store.ListClients(r.Context())
 	if err != nil {
 		s.auditStoreFailure(r, "web.client_list", "client", "", err)
-		writeMappedError(w, err)
+		writeWebMappedError(w, err)
 		return
 	}
-	if rawActive := strings.TrimSpace(r.URL.Query().Get("active")); rawActive != "" {
-		active, ok := parseBoolQuery(rawActive)
+	activeFilter := strings.TrimSpace(r.URL.Query().Get("active"))
+	if activeFilter != "" {
+		active, ok := parseBoolQuery(activeFilter)
 		if !ok {
 			s.auditFailure(r, "web.client_list", "client", "", map[string]string{"reason": "invalid_active_filter"})
-			writeError(w, http.StatusBadRequest, "invalid_active_filter")
+			writeWebStatusError(w, http.StatusBadRequest, "invalid_active_filter")
 			return
 		}
 		filtered := clients[:0]
@@ -519,12 +946,13 @@ func (s *Server) handleWebClients(w http.ResponseWriter, r *http.Request) {
 		if !client.IsActive {
 			state = "revoked"
 		}
-		rows += "<tr><td>" + html.EscapeString(client.ClientID) + "</td><td>" + html.EscapeString(client.MTLSSubject) + "</td><td>" + html.EscapeString(state) + "</td></tr>"
+		rows += "<tr><td>" + html.EscapeString(client.ClientID) + "</td><td>" + html.EscapeString(client.MTLSSubject) + "</td><td>" + webBadge(state) + "</td></tr>"
 	}
-	if rows == "" {
-		rows = `<tr><td colspan="3">No clients found.</td></tr>`
-	}
-	body := "<h1>Clients</h1><table><thead><tr><th>Client ID</th><th>mTLS subject</th><th>Status</th></tr></thead><tbody>" + rows + "</tbody></table>"
+	body := webHero("Clients", "mTLS client identities visible to the admin console.") +
+		`<form class="console-toolbar" method="get" action="/web/clients" hx-get="/web/clients" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">` +
+		`<label>Status<select name="active">` + webSelectOption("", "All", activeFilter) + webSelectOption("true", "Active", activeFilter) + webSelectOption("false", "Revoked", activeFilter) + `</select></label>` +
+		`<button type="submit">Apply filter</button><a class="console-button console-button--ghost" href="/web/clients" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">Reset</a></form>` +
+		webPaginatedTable([]string{"Client ID", "mTLS subject", "Status"}, rows, 3, "No clients found.", 10, "Clients pagination")
 	s.audit(r, "web.client_list", "client", "", "success", nil)
 	writeWebPage(w, "Clients", body)
 }
@@ -537,7 +965,7 @@ func (s *Server) handleWebAudit(w http.ResponseWriter, r *http.Request) {
 	events, err := s.store.ListAuditEvents(r.Context(), limit)
 	if err != nil {
 		s.auditStoreFailure(r, "web.audit_list", "audit_event", "", err)
-		writeMappedError(w, err)
+		writeWebMappedError(w, err)
 		return
 	}
 	filtered, ok := s.filterAuditEventsForRequest(w, r, "web.audit_list", events)
@@ -547,14 +975,19 @@ func (s *Server) handleWebAudit(w http.ResponseWriter, r *http.Request) {
 	events = filtered
 	rows := ""
 	for _, event := range events {
-		rows += "<tr><td>" + html.EscapeString(event.OccurredAt.Format(time.RFC3339)) + "</td><td>" + html.EscapeString(event.Action) + "</td><td>" + html.EscapeString(event.ActorClientID) + "</td><td>" + html.EscapeString(event.Outcome) + "</td></tr>"
+		rows += "<tr><td>" + html.EscapeString(event.OccurredAt.Format(time.RFC3339)) + "</td><td>" + html.EscapeString(event.Action) + "</td><td>" + html.EscapeString(event.ActorClientID) + "</td><td>" + webBadge(event.Outcome) + "</td></tr>"
 	}
-	if rows == "" {
-		rows = `<tr><td colspan="4">No audit events found.</td></tr>`
-	}
-	body := "<h1>Audit events</h1><p>Latest 100 events. Export remains available as JSONL from the API.</p><table><thead><tr><th>Time</th><th>Action</th><th>Actor</th><th>Outcome</th></tr></thead><tbody>" + rows + "</tbody></table>"
+	auditOutcomeFilter := strings.TrimSpace(r.URL.Query().Get("outcome"))
+	body := webHero("Audit Events", "Latest bounded audit metadata. JSONL export remains available from the API.") +
+		`<form class="console-toolbar" method="get" action="/web/audit" hx-get="/web/audit" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">` +
+		`<label>Limit<input name="limit" inputmode="numeric" placeholder="100"` + webInputValueAttr(r, "limit") + `></label>` +
+		`<label>Action<input name="action" placeholder="secret.read"` + webInputValueAttr(r, "action") + `></label>` +
+		`<label>Actor<input name="actor_client_id" placeholder="client_alice"` + webInputValueAttr(r, "actor_client_id") + `></label>` +
+		`<label>Outcome<select name="outcome">` + webSelectOption("", "Any", auditOutcomeFilter) + webSelectOption("success", "Success", auditOutcomeFilter) + webSelectOption("failure", "Failure", auditOutcomeFilter) + `</select></label>` +
+		`<button type="submit">Apply filter</button><a class="console-button console-button--ghost" href="/web/audit" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">Reset</a></form>` +
+		webPaginatedTable([]string{"Time", "Action", "Actor", "Outcome"}, rows, 4, "No audit events found.", 10, "Audit Events pagination")
 	s.audit(r, "web.audit_list", "audit_event", "", "success", nil)
-	writeWebPage(w, "Audit events", body)
+	writeWebPage(w, "Audit Events", body)
 }
 
 func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request) {
@@ -565,24 +998,25 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 	secretID := strings.TrimSpace(r.URL.Query().Get("secret_id"))
 	if secretID != "" && !model.ValidUUIDID(secretID) {
 		s.auditFailure(r, "web.access_request_list", "secret", secretID, map[string]string{"reason": "invalid_secret_id_filter"})
-		writeError(w, http.StatusBadRequest, "invalid_secret_id_filter")
+		writeWebStatusError(w, http.StatusBadRequest, "invalid_secret_id_filter")
 		return
 	}
 	requests, err := s.store.ListAccessGrantRequests(r.Context(), secretID)
 	if err != nil {
 		s.auditStoreFailure(r, "web.access_request_list", "secret", "", err)
-		writeMappedError(w, err)
+		writeWebMappedError(w, err)
 		return
 	}
-	if status := strings.TrimSpace(r.URL.Query().Get("status")); status != "" {
-		if !model.ValidAccessRequestStatus(status) {
+	statusFilter := strings.TrimSpace(r.URL.Query().Get("status"))
+	if statusFilter != "" {
+		if !model.ValidAccessRequestStatus(statusFilter) {
 			s.auditFailure(r, "web.access_request_list", "secret", "", map[string]string{"reason": "invalid_status_filter"})
-			writeError(w, http.StatusBadRequest, "invalid_status_filter")
+			writeWebStatusError(w, http.StatusBadRequest, "invalid_status_filter")
 			return
 		}
 		filtered := requests[:0]
 		for _, request := range requests {
-			if request.Status == status {
+			if request.Status == statusFilter {
 				filtered = append(filtered, request)
 			}
 		}
@@ -591,7 +1025,7 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 	if targetClientID := strings.TrimSpace(r.URL.Query().Get("client_id")); targetClientID != "" {
 		if !model.ValidClientID(targetClientID) {
 			s.auditFailure(r, "web.access_request_list", "secret", secretID, map[string]string{"reason": "invalid_client_id_filter"})
-			writeError(w, http.StatusBadRequest, "invalid_client_id_filter")
+			writeWebStatusError(w, http.StatusBadRequest, "invalid_client_id_filter")
 			return
 		}
 		filtered := requests[:0]
@@ -605,7 +1039,7 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 	if requestedBy := strings.TrimSpace(r.URL.Query().Get("requested_by_client_id")); requestedBy != "" {
 		if !model.ValidClientID(requestedBy) {
 			s.auditFailure(r, "web.access_request_list", "secret", secretID, map[string]string{"reason": "invalid_requested_by_filter"})
-			writeError(w, http.StatusBadRequest, "invalid_requested_by_filter")
+			writeWebStatusError(w, http.StatusBadRequest, "invalid_requested_by_filter")
 			return
 		}
 		filtered := requests[:0]
@@ -621,14 +1055,19 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 	}
 	rows := ""
 	for _, request := range requests {
-		rows += "<tr><td>" + html.EscapeString(request.SecretID) + "</td><td>" + html.EscapeString(request.VersionID) + "</td><td>" + html.EscapeString(request.ClientID) + "</td><td>" + html.EscapeString(request.RequestedByClientID) + "</td><td>" + html.EscapeString(request.Status) + "</td></tr>"
+		rows += "<tr><td>" + html.EscapeString(request.SecretID) + "</td><td>" + html.EscapeString(request.VersionID) + "</td><td>" + html.EscapeString(request.ClientID) + "</td><td>" + html.EscapeString(request.RequestedByClientID) + "</td><td>" + webBadge(request.Status) + "</td></tr>"
 	}
-	if rows == "" {
-		rows = `<tr><td colspan="5">No access requests found.</td></tr>`
-	}
-	body := "<h1>Access requests</h1><p>Metadata-only pending grant workflow. Envelopes are never rendered here.</p><table><thead><tr><th>Secret</th><th>Version</th><th>Target client</th><th>Requested by</th><th>Status</th></tr></thead><tbody>" + rows + "</tbody></table>"
+	body := webHero("Access Requests", "Metadata-only pending grant workflow. Envelopes are never rendered here.") +
+		`<form class="console-toolbar" method="get" action="/web/access-requests" hx-get="/web/access-requests" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">` +
+		`<label>Limit<input name="limit" inputmode="numeric" placeholder="100"` + webInputValueAttr(r, "limit") + `></label>` +
+		`<label>Secret<input name="secret_id" placeholder="secret UUID"` + webInputValueAttr(r, "secret_id") + `></label>` +
+		`<label>Status<select name="status">` + webSelectOption("", "Any", statusFilter) + webSelectOption("pending", "Pending", statusFilter) + webSelectOption("activated", "Activated", statusFilter) + webSelectOption("revoked", "Revoked", statusFilter) + webSelectOption("expired", "Expired", statusFilter) + `</select></label>` +
+		`<label>Target<input name="client_id" placeholder="client_bob"` + webInputValueAttr(r, "client_id") + `></label>` +
+		`<label>Requester<input name="requested_by_client_id" placeholder="admin"` + webInputValueAttr(r, "requested_by_client_id") + `></label>` +
+		`<button type="submit">Apply filter</button><a class="console-button console-button--ghost" href="/web/access-requests" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">Reset</a></form>` +
+		webPaginatedTable([]string{"Secret", "Version", "Target client", "Requested by", "Status"}, rows, 5, "No access requests found.", 10, "Access Requests pagination")
 	s.audit(r, "web.access_request_list", "secret", "", "success", nil)
-	writeWebPage(w, "Access requests", body)
+	writeWebPage(w, "Access Requests", body)
 }
 
 func (s *Server) handleWebAuditVerify(w http.ResponseWriter, r *http.Request) {
@@ -639,7 +1078,7 @@ func (s *Server) handleWebAuditVerify(w http.ResponseWriter, r *http.Request) {
 	events, err := s.store.ListAuditEvents(r.Context(), limit)
 	if err != nil {
 		s.auditStoreFailure(r, "web.audit_verify", "audit_event", "", err)
-		writeMappedError(w, err)
+		writeWebMappedError(w, err)
 		return
 	}
 	result := audit.VerifyChain(events)
@@ -647,8 +1086,11 @@ func (s *Server) handleWebAuditVerify(w http.ResponseWriter, r *http.Request) {
 	if !result.Valid {
 		outcome = "failure"
 	}
-	body := "<h1>Audit chain verification</h1><dl>" +
-		"<dt>Valid</dt><dd>" + html.EscapeString(strconv.FormatBool(result.Valid)) + "</dd>" +
+	body := webHero("Audit Chain Verification", "Hash-chain integrity summary for the latest bounded audit events.") +
+		`<form class="console-toolbar" method="get" action="/web/audit/verify" hx-get="/web/audit/verify" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">` +
+		`<label>Limit<input name="limit" inputmode="numeric" placeholder="500"` + webInputValueAttr(r, "limit") + `></label><button type="submit">Verify</button></form>` +
+		`<dl class="console-detail">` +
+		"<dt>Valid</dt><dd>" + webBadge(strconv.FormatBool(result.Valid)) + "</dd>" +
 		"<dt>Verified events</dt><dd>" + html.EscapeString(strconv.Itoa(result.VerifiedEvents)) + "</dd>" +
 		"<dt>Failure index</dt><dd>" + html.EscapeString(strconv.Itoa(result.FailureIndex)) + "</dd>" +
 		"</dl>"

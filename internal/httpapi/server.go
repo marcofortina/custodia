@@ -8,6 +8,7 @@
 package httpapi
 
 import (
+	"bytes"
 	"net/http"
 	"strings"
 	"time"
@@ -139,9 +140,12 @@ func New(options Options) http.Handler {
 	mux.HandleFunc("GET /health", server.handleHealth)
 	mux.HandleFunc("GET /live", server.handleLive)
 	mux.HandleFunc("GET /ready", server.handleReady)
+	mux.HandleFunc("GET /favicon.ico", server.handleWebFavicon)
+	mux.HandleFunc("GET /web/assets/favicon.svg", server.handleWebFavicon)
 	mux.Handle("GET /web/login", server.auth(server.adminOnly(http.HandlerFunc(server.handleWebLogin))))
 	mux.Handle("POST /web/login", server.auth(server.adminOnly(http.HandlerFunc(server.handleWebLogin))))
 	mux.Handle("POST /web/logout", server.auth(server.adminOnly(http.HandlerFunc(server.handleWebLogout))))
+	mux.Handle("GET /web/assets/console.js", server.auth(server.adminOnly(http.HandlerFunc(server.handleWebConsoleAsset))))
 	mux.Handle("GET /web/passkey/register/options", server.webAdmin(http.HandlerFunc(server.handleWebPasskeyRegisterOptions)))
 	mux.Handle("POST /web/passkey/register/verify", server.webAdmin(http.HandlerFunc(server.handleWebPasskeyRegisterVerify)))
 	mux.Handle("GET /web/passkey/authenticate/options", server.webAdmin(http.HandlerFunc(server.handleWebPasskeyAuthenticateOptions)))
@@ -177,7 +181,58 @@ func New(options Options) http.Handler {
 	mux.Handle("POST /v1/secrets/{secret_id}/access/{client_id}/activate", server.auth(http.HandlerFunc(server.handleActivateAccessGrant)))
 	mux.Handle("DELETE /v1/secrets/{secret_id}/access/{client_id}", server.auth(http.HandlerFunc(server.handleRevokeAccess)))
 	mux.Handle("POST /v1/secrets/{secret_id}/versions", server.auth(http.HandlerFunc(server.handleCreateSecretVersion)))
-	return requestIDs(securityHeaders(mux))
+	return requestIDs(securityHeaders(webConsoleMethodErrorPages(mux)))
+}
+
+type bufferedResponseWriter struct {
+	header http.Header
+	status int
+	body   bytes.Buffer
+}
+
+func newBufferedResponseWriter() *bufferedResponseWriter {
+	return &bufferedResponseWriter{header: make(http.Header)}
+}
+
+func (w *bufferedResponseWriter) Header() http.Header {
+	return w.header
+}
+
+func (w *bufferedResponseWriter) WriteHeader(statusCode int) {
+	if w.status == 0 {
+		w.status = statusCode
+	}
+}
+
+func (w *bufferedResponseWriter) Write(data []byte) (int, error) {
+	if w.status == 0 {
+		w.status = http.StatusOK
+	}
+	return w.body.Write(data)
+}
+
+func webConsoleMethodErrorPages(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !isWebPath(r.URL.Path) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		captured := newBufferedResponseWriter()
+		next.ServeHTTP(captured, r)
+		if captured.status == http.StatusMethodNotAllowed {
+			writeWebStatusError(w, http.StatusMethodNotAllowed, "method_not_allowed")
+			return
+		}
+		for key, values := range captured.header {
+			for _, value := range values {
+				w.Header().Add(key, value)
+			}
+		}
+		if captured.status != 0 {
+			w.WriteHeader(captured.status)
+		}
+		_, _ = w.Write(captured.body.Bytes())
+	})
 }
 
 // APIOnly keeps the API listener from exposing the web console when a dedicated
@@ -197,7 +252,7 @@ func APIOnly(next http.Handler) http.Handler {
 func WebOnly(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !isWebPath(r.URL.Path) {
-			http.NotFound(w, r)
+			writeWebNotFoundPage(w, false)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -205,17 +260,28 @@ func WebOnly(next http.Handler) http.Handler {
 }
 
 func isWebPath(path string) bool {
-	return path == "/web" || strings.HasPrefix(path, "/web/")
+	return path == "/favicon.ico" || path == "/web" || strings.HasPrefix(path, "/web/")
+}
+
+const apiContentSecurityPolicy = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+const webContentSecurityPolicy = "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+
+func setSecurityHeaders(w http.ResponseWriter, webSurface bool) {
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "DENY")
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
+	if webSurface {
+		w.Header().Set("Content-Security-Policy", webContentSecurityPolicy)
+		return
+	}
+	w.Header().Set("Content-Security-Policy", apiContentSecurityPolicy)
 }
 
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("X-Frame-Options", "DENY")
-		w.Header().Set("Referrer-Policy", "no-referrer")
-		w.Header().Set("Cache-Control", "no-store")
-		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
-		w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
+		setSecurityHeaders(w, isWebPath(r.URL.Path))
 		next.ServeHTTP(w, r)
 	})
 }

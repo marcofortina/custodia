@@ -54,11 +54,22 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 // handleWeb intentionally exposes a metadata-only console. Browser-side secret
 // decryption is a separate client concern and must not be added here without a
 // dedicated WebCrypto/key-management design.
-func (s *Server) handleWeb(w http.ResponseWriter, _ *http.Request) {
-	body := "<h1>Custodia metadata console</h1>" +
-		webParagraph("The web console is metadata-only and requires an authenticated admin subject.") +
-		webParagraph("The vault never decrypts secrets and never manages client-side encryption keys.")
-	writeWebPage(w, "Metadata console", body)
+func (s *Server) handleWeb(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/web/" {
+		writeWebNotFoundPage(w, true)
+		return
+	}
+	body := `<section class="console-hero"><p class="console-kicker">Custodia Console</p><h1>Custodia Console</h1><p>The console is a responsive metadata-only control plane for operators. It never decrypts secrets and never manages client-side encryption keys.</p></section>` +
+		`<section class="console-grid" aria-label="Console sections">` +
+		`<a class="console-link-card" href="/web/status" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Operational Status</strong><span>Store, rate limiter, build and web auth posture.</span></a>` +
+		`<a class="console-link-card" href="/web/clients" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Clients</strong><span>mTLS identities and active/revoked state.</span></a>` +
+		`<a class="console-link-card" href="/web/access-requests" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Access Requests</strong><span>Pending grant metadata without envelopes.</span></a>` +
+		`<a class="console-link-card" href="/web/audit" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Audit Events</strong><span>Recent admin-visible audit metadata.</span></a>` +
+		`<a class="console-link-card" href="/web/audit/verify" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Verify Audit</strong><span>Hash-chain integrity summary.</span></a>` +
+		`<a class="console-link-card" href="/web/diagnostics" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Runtime Diagnostics</strong><span>Runtime counters and uptime only.</span></a>` +
+		`</section>` +
+		`<section class="console-panel console-security-boundary"><p class="console-panel-label">Security boundary</p><p>The web surface remains metadata-only: it displays operational status, client records, access workflow metadata and audit summaries, but never renders plaintext, ciphertext, recipient envelopes, DEKs, private keys or key discovery endpoints.</p></section>`
+	writeWebPage(w, "Custodia Console", body)
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -682,10 +693,17 @@ func (s *Server) optionalLimit(w http.ResponseWriter, r *http.Request, action, r
 }
 
 func (s *Server) filterAuditEventsForRequest(w http.ResponseWriter, r *http.Request, action string, events []model.AuditEvent) ([]model.AuditEvent, bool) {
+	writeFilterError := func(code string) {
+		if strings.HasPrefix(action, "web.") {
+			writeWebStatusError(w, http.StatusBadRequest, code)
+			return
+		}
+		writeError(w, http.StatusBadRequest, code)
+	}
 	if outcome := strings.TrimSpace(r.URL.Query().Get("outcome")); outcome != "" {
 		if outcome != "success" && outcome != "failure" && outcome != "degraded" {
 			s.auditFailure(r, action, "audit_event", "", map[string]string{"reason": "invalid_outcome_filter"})
-			writeError(w, http.StatusBadRequest, "invalid_outcome_filter")
+			writeFilterError("invalid_outcome_filter")
 			return nil, false
 		}
 		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.Outcome == outcome })
@@ -693,7 +711,7 @@ func (s *Server) filterAuditEventsForRequest(w http.ResponseWriter, r *http.Requ
 	if auditAction := strings.TrimSpace(r.URL.Query().Get("action")); auditAction != "" {
 		if !model.ValidAuditAction(auditAction) {
 			s.auditFailure(r, action, "audit_event", "", map[string]string{"reason": "invalid_action_filter"})
-			writeError(w, http.StatusBadRequest, "invalid_action_filter")
+			writeFilterError("invalid_action_filter")
 			return nil, false
 		}
 		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.Action == auditAction })
@@ -701,7 +719,7 @@ func (s *Server) filterAuditEventsForRequest(w http.ResponseWriter, r *http.Requ
 	if actorClientID := strings.TrimSpace(r.URL.Query().Get("actor_client_id")); actorClientID != "" {
 		if !model.ValidClientID(actorClientID) {
 			s.auditFailure(r, action, "audit_event", "", map[string]string{"reason": "invalid_actor_client_id_filter"})
-			writeError(w, http.StatusBadRequest, "invalid_actor_client_id_filter")
+			writeFilterError("invalid_actor_client_id_filter")
 			return nil, false
 		}
 		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.ActorClientID == actorClientID })
@@ -709,7 +727,7 @@ func (s *Server) filterAuditEventsForRequest(w http.ResponseWriter, r *http.Requ
 	if resourceType := strings.TrimSpace(r.URL.Query().Get("resource_type")); resourceType != "" {
 		if !model.ValidAuditResourceType(resourceType) {
 			s.auditFailure(r, action, "audit_event", "", map[string]string{"reason": "invalid_resource_type_filter"})
-			writeError(w, http.StatusBadRequest, "invalid_resource_type_filter")
+			writeFilterError("invalid_resource_type_filter")
 			return nil, false
 		}
 		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.ResourceType == resourceType })
@@ -717,7 +735,7 @@ func (s *Server) filterAuditEventsForRequest(w http.ResponseWriter, r *http.Requ
 	if resourceID := strings.TrimSpace(r.URL.Query().Get("resource_id")); resourceID != "" {
 		if !model.ValidAuditResourceID(resourceID) {
 			s.auditFailure(r, action, "audit_event", "", map[string]string{"reason": "invalid_resource_id_filter"})
-			writeError(w, http.StatusBadRequest, "invalid_resource_id_filter")
+			writeFilterError("invalid_resource_id_filter")
 			return nil, false
 		}
 		events = filterAuditEvents(events, func(event model.AuditEvent) bool { return event.ResourceID == resourceID })
