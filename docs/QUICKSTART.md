@@ -358,20 +358,25 @@ Do not expose a fresh Lite node directly to the Internet without a network acces
 
 ## 11. Basic backup check
 
-SQLite backups should use an online backup flow, not blind file copies of the live database. With only the installed package, use SQLite's online `.backup` command:
+SQLite backups should use an online backup flow, not blind file copies of the live database. Run the backup as the `custodia` service user so the backup is created with the same access boundary as the running service.
+
+With only the installed package, use SQLite's online `.backup` command:
 
 ```bash
 sudo install -d -m 0750 -o custodia -g custodia /var/lib/custodia/backups
+BACKUP_PATH="/var/lib/custodia/backups/custodia-$(date -u +%Y%m%dT%H%M%SZ).db"
 sudo -u custodia sqlite3 /var/lib/custodia/custodia.db \
-  ".backup '/var/lib/custodia/backups/custodia-$(date -u +%Y%m%dT%H%M%SZ).db'"
+  ".backup '${BACKUP_PATH}'"
+sudo chmod 0640 "${BACKUP_PATH}"
 ```
 
-From a cloned repository, you can also use the included helper:
+From a cloned repository, you can also use the included helper. Run it as `custodia` and use the helper's `CUSTODIA_SQLITE_DB` / `CUSTODIA_SQLITE_BACKUP_DIR` variables:
 
 ```bash
 sudo install -d -m 0750 -o custodia -g custodia /var/lib/custodia/backups
-sudo CUSTODIA_DATABASE_URL=file:/var/lib/custodia/custodia.db \
-  CUSTODIA_SQLITE_BACKUP_PATH=/var/lib/custodia/backups/custodia-$(date -u +%Y%m%dT%H%M%SZ).db \
+sudo -u custodia env \
+  CUSTODIA_SQLITE_DB=/var/lib/custodia/custodia.db \
+  CUSTODIA_SQLITE_BACKUP_DIR=/var/lib/custodia/backups \
   ./scripts/sqlite-backup.sh
 ```
 
