@@ -32,16 +32,22 @@ jobs:
         include:
           - language: go
             build: go
+            build_mode: manual
           - language: python
             build: none
+            build_mode: none
           - language: javascript-typescript
             build: none
+            build_mode: none
           - language: java-kotlin
             build: java
+            build_mode: manual
           - language: c-cpp
-            build: cpp
+            build: none
+            build_mode: none
           - language: rust
-            build: rust
+            build: none
+            build_mode: none
 
     steps:
       - uses: actions/checkout@v6
@@ -54,19 +60,19 @@ jobs:
           cache-dependency-path: go.mod
 
       - uses: actions/setup-python@v6
-        if: ${{ matrix.build == 'none' || matrix.build == 'python' }}
+        if: ${{ matrix.language == 'python' }}
         with:
           python-version: '3.12'
 
       - uses: actions/setup-node@v6
-        if: ${{ matrix.build == 'none' }}
+        if: ${{ matrix.language == 'javascript-typescript' }}
         with:
           node-version: '24'
           cache: npm
           cache-dependency-path: clients/node/package.json
 
       - name: Install compiled-language dependencies
-        if: ${{ matrix.build == 'java' || matrix.build == 'cpp' || matrix.build == 'rust' }}
+        if: ${{ matrix.build_mode == 'manual' && matrix.build == 'java' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -78,7 +84,7 @@ jobs:
             pkg-config
 
       - name: Install Rust toolchain
-        if: ${{ matrix.build == 'rust' }}
+        if: ${{ matrix.build_mode == 'manual' && matrix.build == 'rust' }}
         run: |
           rustup toolchain install stable --profile minimal
           rustup default stable
@@ -87,6 +93,7 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build_mode }}
           queries: security-extended,security-and-quality
 
       - name: Build Go extraction target
@@ -108,7 +115,7 @@ jobs:
         run: make test-cpp-client
 
       - name: Build Rust extraction target
-        if: ${{ matrix.build == 'rust' }}
+        if: ${{ matrix.build_mode == 'manual' && matrix.build == 'rust' }}
         run: make test-rust-client
 
       - name: Analyze
