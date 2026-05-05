@@ -18,8 +18,9 @@ The Custodia web console is an admin-only, metadata-only surface.
 - `/web/access-requests` — pending grant metadata.
 - `/web/audit` — latest audit metadata.
 - `/web/audit/verify` — audit hash-chain verification summary.
+- `POST /web/logout` — clears the web MFA session cookie and redirects back to login.
 
-The API remains the source of truth for automation; the web console is intentionally small and metadata-only even when TOTP/passkey web authentication is enabled.
+The API remains the source of truth for automation; the web console is intentionally small and metadata-only even when TOTP/passkey web authentication is enabled. Authenticated pages include a logout button that clears only the web MFA session cookie; mTLS identity remains controlled by the browser certificate.
 
 ## Query filters
 

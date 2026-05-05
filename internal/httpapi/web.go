@@ -30,7 +30,7 @@ func (s *Server) handleWebLogin(w http.ResponseWriter, r *http.Request) {
 		body := "<h1>Web MFA</h1>" +
 			webParagraph("Enter your TOTP code to unlock the metadata console for this mTLS admin session.") +
 			`<form method="post" action="/web/login"><label for="totp">TOTP code</label><input id="totp" name="totp" inputmode="numeric" autocomplete="one-time-code" required><button type="submit">Unlock console</button></form>`
-		writeWebPage(w, "Web MFA", body)
+		writeWebLoginPage(w, "Web MFA", body)
 		return
 	}
 	if r.Method != http.MethodPost {
@@ -66,26 +66,138 @@ func (s *Server) handleWebLogout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/web/login", http.StatusSeeOther)
 }
 
+func writeWebLoginPage(w http.ResponseWriter, title string, body string) {
+	writeWebPageWithOptions(w, title, body, false)
+}
+
 func writeWebPage(w http.ResponseWriter, title string, body string) {
+	writeWebPageWithOptions(w, title, body, true)
+}
+
+func writeWebPageWithOptions(w http.ResponseWriter, title string, body string, authenticatedNav bool) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write([]byte(`<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><title>` + html.EscapeString(title) + ` – Custodia</title></head>
-<body>
-<nav>
-<a href="/web/">Overview</a> |
-<a href="/web/status">Status</a> |
-<a href="/web/diagnostics">Diagnostics</a> |
-<a href="/web/clients">Clients</a> |
-<a href="/web/access-requests">Access requests</a> |
-<a href="/web/audit">Audit</a> |
+	nav := `<p class="console-kicker">Admin metadata console</p>`
+	if authenticatedNav {
+		nav = `<header class="console-topbar">
+<a class="console-brand" href="/web/" aria-label="Custodia overview"><span class="console-brand-mark" aria-hidden="true">C</span><span>Custodia</span></a>
+<nav class="console-nav" aria-label="Console navigation">
+<a href="/web/">Overview</a>
+<a href="/web/status">Status</a>
+<a href="/web/diagnostics">Diagnostics</a>
+<a href="/web/clients">Clients</a>
+<a href="/web/access-requests">Access requests</a>
+<a href="/web/audit">Audit</a>
 <a href="/web/audit/verify">Verify audit</a>
 </nav>
-<hr>
+<form class="console-logout" method="post" action="/web/logout"><button type="submit">Logout</button></form>
+</header>`
+	}
+	_, _ = w.Write([]byte(`<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>` + html.EscapeString(title) + ` – Custodia</title>
+<style>` + webConsoleCSS + `</style>
+</head>
+<body>
+<div class="console-shell">
+` + nav + `
+<main class="console-card">
 ` + body + `
+</main>
+</div>
 </body>
 </html>`))
 }
+
+const webConsoleCSS = `
+:root {
+  color-scheme: light dark;
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --border: #d8dee8;
+  --text: #111827;
+  --muted: #5b6472;
+  --accent: #2354d5;
+  --accent-strong: #173ea5;
+  --danger: #b42318;
+  --shadow: 0 18px 45px rgba(15, 23, 42, 0.10);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --surface: #111827;
+    --surface-soft: #182235;
+    --border: #334155;
+    --text: #f8fafc;
+    --muted: #a6b0c0;
+    --accent: #7aa2ff;
+    --accent-strong: #adc4ff;
+    --danger: #ffb4a8;
+    --shadow: 0 18px 45px rgba(0, 0, 0, 0.35);
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top left, rgba(35, 84, 213, 0.14), transparent 34rem), var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.5;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.console-shell { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 48px; }
+.console-topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: var(--shadow);
+}
+.console-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); font-weight: 800; letter-spacing: -0.02em; }
+.console-brand-mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: var(--accent); color: white; }
+.console-nav { display: flex; align-items: center; gap: 6px; flex: 1 1 480px; flex-wrap: wrap; }
+.console-nav a { padding: 8px 10px; border-radius: 10px; color: var(--muted); font-weight: 650; }
+.console-nav a:hover { background: var(--surface-soft); color: var(--text); text-decoration: none; }
+.console-logout { margin: 0; }
+.console-card { padding: 28px; border: 1px solid var(--border); border-radius: 24px; background: var(--surface); box-shadow: var(--shadow); overflow-x: auto; }
+.console-kicker { margin: 0 0 12px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+h1 { margin: 0 0 12px; font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1.05; letter-spacing: -0.04em; }
+h2 { margin-top: 28px; }
+p { color: var(--muted); max-width: 78ch; }
+form { display: grid; gap: 10px; max-width: 420px; margin-top: 18px; }
+label { color: var(--muted); font-weight: 700; }
+input { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-soft); color: var(--text); font: inherit; }
+button { display: inline-flex; justify-content: center; align-items: center; min-height: 38px; padding: 8px 14px; border: 0; border-radius: 12px; background: var(--accent); color: white; font: inherit; font-weight: 800; cursor: pointer; }
+button:hover { background: var(--accent-strong); }
+.console-logout button { background: transparent; color: var(--danger); border: 1px solid var(--border); }
+.console-logout button:hover { background: color-mix(in srgb, var(--danger) 11%, transparent); }
+table { width: 100%; min-width: 680px; border-collapse: collapse; margin-top: 18px; overflow: hidden; border-radius: 16px; border: 1px solid var(--border); }
+th, td { padding: 12px 14px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+th { background: var(--surface-soft); color: var(--muted); font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; }
+tr:last-child td { border-bottom: 0; }
+dl { display: grid; grid-template-columns: minmax(180px, 260px) 1fr; gap: 0; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+dt, dd { margin: 0; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+dt { background: var(--surface-soft); color: var(--muted); font-weight: 800; }
+dd { overflow-wrap: anywhere; }
+dt:last-of-type, dd:last-of-type { border-bottom: 0; }
+pre { padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface-soft); overflow: auto; }
+@media (max-width: 720px) {
+  .console-shell { width: min(100% - 20px, 1180px); padding-top: 10px; }
+  .console-card { padding: 18px; }
+  .console-nav { flex-basis: 100%; }
+  dl { grid-template-columns: 1fr; }
+}
+`
 
 func webParagraph(text string) string {
 	return "<p>" + html.EscapeString(text) + "</p>"

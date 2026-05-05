@@ -1990,6 +1990,40 @@ func TestWebTOTPLoginUnlocksConsole(t *testing.T) {
 	if pageRes.Code != http.StatusOK || !strings.Contains(pageRes.Body.String(), "metadata console") {
 		t.Fatalf("expected unlocked console, got %d: %s", pageRes.Code, pageRes.Body.String())
 	}
+	if !strings.Contains(pageRes.Body.String(), `method="post" action="/web/logout"`) || !strings.Contains(pageRes.Body.String(), "Logout") {
+		t.Fatalf("expected authenticated console to render logout control: %s", pageRes.Body.String())
+	}
+}
+
+func TestWebLogoutClearsSessionCookie(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{
+		Store:            memoryStore,
+		Limiter:          ratelimit.NewMemoryLimiter(),
+		AdminClientIDs:   map[string]bool{"admin": true},
+		ClientRateLimit:  100,
+		GlobalRateLimit:  100,
+		WebMFARequired:   true,
+		WebTOTPSecret:    "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ",
+		WebSessionSecret: "01234567890123456789012345678901",
+		WebSessionTTL:    time.Minute,
+		WebSessionSecure: false,
+	})
+
+	logout := mtlsRequest(http.MethodPost, "/web/logout", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, logout)
+	if res.Code != http.StatusSeeOther || res.Header().Get("Location") != "/web/login" {
+		t.Fatalf("expected logout redirect to login, got %d location=%q body=%s", res.Code, res.Header().Get("Location"), res.Body.String())
+	}
+	cookies := res.Result().Cookies()
+	if len(cookies) == 0 || cookies[0].Name != webauth.SessionCookieName || cookies[0].MaxAge != -1 {
+		t.Fatalf("expected expired web session cookie, got %#v", cookies)
+	}
 }
 
 func TestWebTOTPLoginRejectsInvalidCode(t *testing.T) {
