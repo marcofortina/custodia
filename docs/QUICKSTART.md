@@ -22,37 +22,22 @@ Recommended first run: install the package, complete the Lite bootstrap, verify 
 
 Both paths converge at [Prepare the Lite runtime directories](#4-prepare-the-lite-runtime-directories).
 
-## 2. Install prerequisites
+## 2. Install package-path prerequisites
+
+Install only these prerequisites when you are following the recommended package install path. The source build path has its own larger dependency set in [Clone, build and install from source](#3b-clone-build-and-install-from-source).
 
 ### Debian or Ubuntu
 
 ```bash
 sudo apt update
-sudo apt install -y ca-certificates curl git make openssl sqlite3 python3 python3-pip python3-cryptography python3-requests nodejs npm golang-go openjdk-21-jdk g++ pkg-config libcurl4-openssl-dev libssl-dev rpm cpio
+sudo apt install -y ca-certificates curl openssl sqlite3 python3
 ```
 
 ### Fedora
 
 ```bash
-sudo dnf install -y ca-certificates curl git make openssl sqlite python3 python3-pip python3-cryptography python3-requests nodejs npm golang java-devel gcc-c++ pkgconf-pkg-config libcurl-devel openssl-devel rpm-build cpio dpkg
+sudo dnf install -y ca-certificates curl openssl sqlite python3
 ```
-
-Fedora keeps the default JDK behind the generic `java-devel` virtual provide. Avoid pinning a specific OpenJDK package in this quickstart because Fedora releases may retire older JDK streams.
-
-The Python SDK tests import the client directly from the source tree, but they still need the runtime dependencies declared by `clients/python/pyproject.toml`. The distro packages above provide `requests` and `cryptography` without requiring a system-wide `pip install`.
-
-### Rust toolchain for source builds
-
-Rust is only required when you want to run all SDK tests from source. Install it with your distro package manager or with `rustup`:
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-. "$HOME/.cargo/env"
-rustc --version
-cargo --version
-```
-
-Custodia currently supports Cargo/Rust `1.86` or newer.
 
 ## 3. Install Custodia
 
@@ -121,6 +106,38 @@ Continue with [Prepare the Lite runtime directories](#4-prepare-the-lite-runtime
 ### 3B. Clone, build and install from source
 
 This is the advanced path. Use it when you want to build the binaries yourself or validate local changes before packaging.
+
+Install the full source-build dependency set before cloning and testing the repository.
+
+#### Debian or Ubuntu
+
+```bash
+sudo apt update
+sudo apt install -y ca-certificates curl git make openssl sqlite3 python3 python3-pip python3-cryptography python3-requests nodejs npm golang-go openjdk-21-jdk g++ pkg-config libcurl4-openssl-dev libssl-dev rpm cpio
+```
+
+#### Fedora
+
+```bash
+sudo dnf install -y ca-certificates curl git make openssl sqlite python3 python3-pip python3-cryptography python3-requests nodejs npm golang java-devel gcc-c++ pkgconf-pkg-config libcurl-devel openssl-devel rpm-build cpio dpkg
+```
+
+Fedora keeps the default JDK behind the generic `java-devel` virtual provide. Avoid pinning a specific OpenJDK package in this quickstart because Fedora releases may retire older JDK streams.
+
+The Python SDK tests import the client directly from the source tree, but they still need the runtime dependencies declared by `clients/python/pyproject.toml`. The distro packages above provide `requests` and `cryptography` without requiring a system-wide `pip install`.
+
+#### Rust toolchain for source builds
+
+Rust is only required when you want to run all SDK tests from source. Install it with your distro package manager or with `rustup`:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+. "$HOME/.cargo/env"
+rustc --version
+cargo --version
+```
+
+Custodia currently supports Cargo/Rust `1.86` or newer.
 
 Clone the repository:
 
