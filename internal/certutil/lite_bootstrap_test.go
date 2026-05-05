@@ -42,8 +42,11 @@ func TestGenerateLiteBootstrapCreatesExpectedArtifacts(t *testing.T) {
 	if block == nil || !x509.IsEncryptedPEMBlock(block) {
 		t.Fatalf("expected encrypted CA key PEM, got %v", block)
 	}
-	if !strings.Contains(string(artifacts.ConfigYAML), "profile: lite") || !strings.Contains(string(artifacts.ConfigYAML), "admin_client_ids: admin") {
-		t.Fatalf("unexpected config yaml: %s", string(artifacts.ConfigYAML))
+	configYAML := string(artifacts.ConfigYAML)
+	for _, expected := range []string{"profile: lite", "bootstrap_clients: admin:admin", "admin_client_ids: admin"} {
+		if !strings.Contains(configYAML, expected) {
+			t.Fatalf("expected config yaml to contain %q: %s", expected, configYAML)
+		}
 	}
 }
 

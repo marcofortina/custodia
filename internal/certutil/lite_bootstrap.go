@@ -212,6 +212,7 @@ signer_key_provider: file
 signer_ca_cert_file: /etc/custodia/ca.crt
 signer_ca_key_file: /etc/custodia/ca.key
 signer_ca_key_passphrase_file: /etc/custodia/ca.pass
+bootstrap_clients: ` + adminClientID + `:` + adminClientID + `
 admin_client_ids: ` + adminClientID + `
 `)
 }
