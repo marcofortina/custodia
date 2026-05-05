@@ -95,6 +95,8 @@ func main() {
 		err = runLiteUpgradeCheck(args[2:])
 	case "certificate sign":
 		err = runCertificateSign(&cfg, args[2:])
+	case "ca bootstrap-local":
+		err = runCABootstrapLocal(args[2:])
 	case "client whoami":
 		err = requestJSON(&cfg, http.MethodGet, "/v1/me", nil, os.Stdout)
 	case "client list":
@@ -1049,6 +1051,7 @@ func usage() {
   custodia-admin [global flags] access activate --secret-id ID --client-id ID --envelope-file FILE
   custodia-admin [global flags] access revoke --secret-id ID --client-id ID
   custodia-admin [global flags] lite upgrade-check --lite-env-file FILE --full-env-file FILE
+  custodia-admin ca bootstrap-local [--out-dir DIR] [--admin-client-id ID] [--server-name NAME] [--generate-ca-passphrase]
   custodia-admin web totp generate [--issuer NAME] [--account NAME] [--format text|yaml|json]
 
 global flags:
