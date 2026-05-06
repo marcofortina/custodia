@@ -87,6 +87,7 @@ For a guided install on a clean Debian, Ubuntu or Fedora host, use [`docs/QUICKS
 /usr/bin/custodia-admin
 /usr/bin/custodia-signer
 /usr/lib/systemd/system/custodia.service
+/usr/lib/systemd/system/custodia-signer.service
 /usr/share/custodia/examples/
 /usr/share/doc/custodia-server/
 /etc/custodia/
@@ -102,7 +103,7 @@ The package does **not** install a live `/etc/custodia/config.yaml` by default, 
 sudo install -d -m 0750 -o root -g custodia /etc/custodia
 sudo cp /usr/share/custodia/examples/config.lite.yaml /etc/custodia/config.yaml
 sudo editor /etc/custodia/config.yaml
-sudo systemctl enable --now custodia
+sudo systemctl enable --now custodia custodia-signer
 ```
 
 ## Client package layout
@@ -164,7 +165,7 @@ make package-smoke
 
 The smoke check does not install packages into the host system. It extracts `.deb` artifacts with `dpkg-deb` and `.rpm` artifacts with `rpm2cpio`, then verifies the expected binaries, examples, SDK source snapshots, shared test vectors and Bash helper entrypoint.
 
-For server packages, the smoke check executes `custodia-admin version` because it is side-effect free. It does not start `custodia-server` or `custodia-signer`; runtime startup belongs to deployment or integration tests with real configuration and certificates.
+For server packages, the smoke check executes `custodia-admin version` because it is side-effect free. It verifies that both `custodia.service` and `custodia-signer.service` are packaged, but it does not start `custodia-server` or `custodia-signer`; runtime startup belongs to deployment or integration tests with real configuration and certificates.
 
 ## GitHub release workflow
 

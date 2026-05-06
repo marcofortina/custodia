@@ -119,7 +119,7 @@ Required behavior:
 
 ## Local CA and signer
 
-Lite uses a file-backed local CA by default:
+Lite uses a file-backed local CA by default. The signer is a separate `custodia-signer` process, not an embedded part of `custodia-server`:
 
 ```text
 CUSTODIA_SIGNER_KEY_PROVIDER=file
@@ -135,6 +135,8 @@ Recommended hardening:
 - prefer a passphrase-protected CA key when the file provider supports it;
 - rotate the initial admin certificate after bootstrap;
 - back up CA material offline.
+
+Start `custodia-signer.service` when you need to issue additional client certificates after bootstrap. It listens on `:9444` by default and should be exposed only to trusted admin hosts.
 
 Full deployments should use a real HSM, PKCS#11 provider, or TPM-backed signing path with evidence captured by production checks.
 

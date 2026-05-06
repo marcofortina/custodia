@@ -95,6 +95,7 @@ The package installs:
 /usr/bin/custodia-admin
 /usr/bin/custodia-signer
 /usr/lib/systemd/system/custodia.service
+/usr/lib/systemd/system/custodia-signer.service
 /usr/share/custodia/examples/
 /etc/custodia/
 /var/lib/custodia/
@@ -176,6 +177,7 @@ sudo install -m 0755 dist/local/bin/custodia-server /usr/local/bin/custodia-serv
 sudo install -m 0755 dist/local/bin/custodia-admin /usr/local/bin/custodia-admin
 sudo install -m 0755 dist/local/bin/custodia-signer /usr/local/bin/custodia-signer
 sudo install -m 0644 deploy/examples/custodia-lite.service /etc/systemd/system/custodia.service
+sudo install -m 0644 deploy/examples/custodia-signer-lite.service /etc/systemd/system/custodia-signer.service
 ```
 
 Create the service user if it does not exist yet:
@@ -264,24 +266,30 @@ unset TOTP_OUTPUT TOTP_SECRET SESSION_SECRET
 
 The JSON output also contains an `otpauth://` provisioning URI. Use manual entry in Google Authenticator, Aegis, 1Password, Bitwarden or another TOTP-compatible authenticator if your app cannot scan/import that URI directly. Treat the TOTP secret like an admin credential.
 
-## 7. Start Custodia
+## 7. Start Custodia services
+
+Start the vault API/Web process and the separate Lite signer process:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now custodia
+sudo systemctl enable --now custodia custodia-signer
 sudo systemctl status custodia --no-pager
+sudo systemctl status custodia-signer --no-pager
 ```
 
-Custodia mirrors service logs to both systemd/journald and `/var/log/custodia/custodia.log`. Journald remains the primary service manager log stream, while the file gives operators a simple local artifact to copy, tail or archive.
+The signer listens on `:9444` only when `custodia-signer.service` is running. It is intentionally separate from `custodia-server` so the vault API process does not own the CA private key.
 
-If the service fails, inspect the logs:
+Custodia mirrors service logs to both systemd/journald and `/var/log/custodia/custodia.log`. Journald remains the primary service manager log stream, while the file gives operators a simple local artifact to copy, tail or archive. The signer audit log is written to `/var/log/custodia/signer-audit.jsonl` when the Lite signer unit is used.
+
+If either service fails, inspect the logs:
 
 ```bash
 sudo journalctl -u custodia -n 100 --no-pager
+sudo journalctl -u custodia-signer -n 100 --no-pager
 sudo tail -n 100 /var/log/custodia/custodia.log
 ```
 
-If the service fails before file logging is initialized, the error will be in `journalctl`. After initialization, the same application log lines are mirrored to `/var/log/custodia/custodia.log`.
+If the vault service fails before file logging is initialized, the error will be in `journalctl`. After initialization, the same application log lines are mirrored to `/var/log/custodia/custodia.log`.
 
 Common startup failures:
 
@@ -291,6 +299,7 @@ Common startup failures:
 | SQLite backend is unknown | binary was built without the `sqlite` build tag | install the release package or rebuild with `go build -tags sqlite` |
 | TLS certificate error on startup | `tls_cert_file` or `tls_key_file` path is wrong | compare `/etc/custodia/config.yaml` with files in `/etc/custodia` |
 | `mfa_not_configured` in logs | web MFA secrets were not added to config | repeat step 6 and restart the service |
+| `custodia-signer` is not listening on `9444` | signer service was not enabled or failed to read CA material | run `sudo systemctl status custodia-signer --no-pager` and check `/etc/custodia/ca.*` ownership/modes |
 
 ## 8. Verify the API with the admin mTLS certificate
 
@@ -366,6 +375,8 @@ For a first local test on the same machine, no firewall rule is required. If rem
 ```bash
 sudo ufw allow 8443/tcp
 sudo ufw allow 9443/tcp
+# Optional: expose the signer only to trusted admin hosts when remote CSR signing is required.
+# sudo ufw allow from ADMIN_IP to any port 9444 proto tcp
 ```
 
 ### Fedora with firewalld
@@ -373,6 +384,8 @@ sudo ufw allow 9443/tcp
 ```bash
 sudo firewall-cmd --permanent --add-port=8443/tcp
 sudo firewall-cmd --permanent --add-port=9443/tcp
+# Optional: expose the signer only to trusted admin hosts when remote CSR signing is required.
+# sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="ADMIN_IP" port port="9444" protocol="tcp" accept'
 sudo firewall-cmd --reload
 ```
 
@@ -408,6 +421,7 @@ After the service starts, this block should complete without errors:
 
 ```bash
 sudo systemctl is-active --quiet custodia
+sudo systemctl is-active --quiet custodia-signer
 
 sudo custodia-admin \
   --server-url https://localhost:8443 \
@@ -421,6 +435,8 @@ sudo test -f /etc/custodia/config.yaml
 sudo test -f /etc/custodia/admin.crt
 sudo test -f /etc/custodia/admin.key
 sudo test -f /etc/custodia/ca.crt
+sudo test -f /etc/custodia/ca.key
+sudo test -f /etc/custodia/ca.pass
 sudo test -d /var/lib/custodia
 sudo test -d /var/log/custodia
 rm -f /tmp/custodia-status.json
@@ -433,6 +449,7 @@ If this block passes, the API side of the Lite node is ready for first use. Comp
 Before considering the node ready for real data:
 
 - `systemctl status custodia` is healthy;
+- `systemctl status custodia-signer` is healthy when you need client certificate issuance;
 - `custodia-admin status read` succeeds with the admin certificate;
 - `/etc/custodia` is mode `0750` or stricter;
 - private keys under `/etc/custodia` are mode `0600`;
@@ -446,6 +463,7 @@ Before considering the node ready for real data:
 
 - Lite profile: `docs/LITE_PROFILE.md`
 - Lite configuration: `docs/LITE_CONFIG.md`
+- Client certificate lifecycle: `docs/CLIENT_CERTIFICATE_LIFECYCLE.md`
 - Lite CA bootstrap: `docs/LITE_CA_BOOTSTRAP.md`
 - Linux packages: `docs/LINUX_PACKAGES.md`
 - Web MFA: `docs/WEB_MFA.md`

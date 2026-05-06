@@ -1,6 +1,6 @@
 # Custodia CA signing service
 
-The vault API process must not hold the client CA private key. Certificate lifecycle belongs to the dedicated `custodia-signer` process, backed by TPM/HSM/PKCS#11 or an isolated offline CA workflow.
+The vault API process must not hold the client CA private key. Certificate lifecycle belongs to the dedicated `custodia-signer` process. Lite can use a file-backed local CA generated during bootstrap; production deployments should use TPM/HSM/PKCS#11 or an isolated offline CA workflow.
 
 ## Implemented boundary
 
@@ -40,7 +40,18 @@ Current implementation supports explicit signer key providers:
 - `CUSTODIA_SIGNER_KEY_PROVIDER=file` uses `CUSTODIA_SIGNER_CA_CERT_FILE` and `CUSTODIA_SIGNER_CA_KEY_FILE`.
 - `CUSTODIA_SIGNER_KEY_PROVIDER=pkcs11` delegates certificate digest signing to `CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND`.
 
-The `file` provider is acceptable for development, isolated bootstrap and tests. Production deployments should use the PKCS#11 command bridge with an HSM/TPM/vendor module before exposing signing in a live environment. The signer process must fail closed rather than silently falling back to file-backed CA material when an unsupported provider is requested. SoftHSM is supported only as a development/test harness.
+The `file` provider is acceptable for Lite, development, isolated bootstrap and tests. Production deployments should use the PKCS#11 command bridge with an HSM/TPM/vendor module before exposing signing in a live environment. The signer process must fail closed rather than silently falling back to file-backed CA material when an unsupported provider is requested. SoftHSM is supported only as a development/test harness.
+
+## Lite systemd unit
+
+Lite does not embed the signer into `custodia-server`. Start `custodia-signer` as a separate service when you need to issue additional client certificates:
+
+```bash
+sudo systemctl enable --now custodia-signer
+sudo systemctl status custodia-signer --no-pager
+```
+
+Package installs ship `custodia-signer.service`. Source installs can copy `deploy/examples/custodia-signer-lite.service` to `/etc/systemd/system/custodia-signer.service`. The Lite unit listens on `:9444`, uses `/etc/custodia/ca.crt`, `/etc/custodia/ca.key` and `/etc/custodia/ca.pass`, and allows the bootstrap admin subject `admin` to submit signing requests.
 
 ## CSR policy
 

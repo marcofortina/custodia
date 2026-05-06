@@ -143,7 +143,7 @@ stage_server() {
   install -m 0755 "$WORK_DIR/bin/custodia-signer" "$stage/usr/bin/custodia-signer"
   install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia-server/"
   install -m 0644 docs/QUICKSTART.md docs/LITE_PROFILE.md docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md "$stage/usr/share/doc/custodia-server/"
-  install -m 0644 deploy/examples/config.lite.yaml deploy/examples/config.full.yaml deploy/examples/lite.env.example deploy/examples/production.env.example "$stage/usr/share/custodia/examples/"
+  install -m 0644 deploy/examples/config.lite.yaml deploy/examples/config.full.yaml deploy/examples/lite.env.example deploy/examples/production.env.example deploy/examples/custodia-signer-lite.service "$stage/usr/share/custodia/examples/"
 
   cat > "$stage/usr/lib/systemd/system/custodia.service" <<'SERVICE'
 [Unit]
@@ -166,6 +166,43 @@ ReadWritePaths=/var/lib/custodia /var/log/custodia
 ReadOnlyPaths=/etc/custodia
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+  cat > "$stage/usr/lib/systemd/system/custodia-signer.service" <<'SERVICE'
+[Unit]
+Description=Custodia Certificate Signer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=custodia
+Group=custodia
+Environment=CUSTODIA_SIGNER_ADDR=:9444
+Environment=CUSTODIA_SIGNER_TLS_CERT_FILE=/etc/custodia/server.crt
+Environment=CUSTODIA_SIGNER_TLS_KEY_FILE=/etc/custodia/server.key
+Environment=CUSTODIA_SIGNER_CLIENT_CA_FILE=/etc/custodia/client-ca.crt
+Environment=CUSTODIA_SIGNER_ADMIN_SUBJECTS=admin
+Environment=CUSTODIA_SIGNER_KEY_PROVIDER=file
+Environment=CUSTODIA_SIGNER_CA_CERT_FILE=/etc/custodia/ca.crt
+Environment=CUSTODIA_SIGNER_CA_KEY_FILE=/etc/custodia/ca.key
+Environment=CUSTODIA_SIGNER_CA_KEY_PASSPHRASE_FILE=/etc/custodia/ca.pass
+Environment=CUSTODIA_SIGNER_CRL_FILE=/etc/custodia/client.crl.pem
+Environment=CUSTODIA_SIGNER_AUDIT_LOG_FILE=/var/log/custodia/signer-audit.jsonl
+ExecStart=/usr/bin/custodia-signer
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/etc/custodia
+ReadWritePaths=/var/log/custodia
+CapabilityBoundingSet=
+AmbientCapabilities=
 
 [Install]
 WantedBy=multi-user.target

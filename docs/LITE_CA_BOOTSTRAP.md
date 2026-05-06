@@ -11,7 +11,7 @@ Custodia supports file-backed signing material through the signer key provider a
 custodia-admin ca bootstrap-local --out-dir /etc/custodia --admin-client-id admin --server-name localhost --generate-ca-passphrase
 ```
 
-The command writes a local self-signed CA, server certificate, initial admin client certificate, empty CRL and `config.lite.yaml`. It refuses to overwrite existing files.
+The command writes a local self-signed CA, server certificate, initial admin client certificate, empty CRL and `config.lite.yaml`. It refuses to overwrite existing files. Additional client certificates are issued by the separate `custodia-signer` process; package installs ship `custodia-signer.service`, while source installs can copy `deploy/examples/custodia-signer-lite.service`.
 
 For development only, `scripts/dev-certs.sh` also creates throwaway certificates:
 
