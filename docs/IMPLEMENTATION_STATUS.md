@@ -1,6 +1,6 @@
 # Implementation status
 
-## Current status after patch 625
+## Current status after web console hardening
 
 - Phase 1 is closed at repository level.
 - Phase 2 is closed at repository level: mTLS lifecycle, strong-revocation versioning, Valkey-compatible rate limiting, Go/Python SDK helpers, metadata-only web console, TOTP MFA and the passkey/WebAuthn boundary through external assertion verification are implemented.
@@ -31,7 +31,7 @@
 - Minimal admin CLI for API-backed client metadata create/list/revoke and access revoke operations.
 - Go, Python and Node.js / TypeScript clients with public transport helpers and high-level client-side crypto wrappers for opaque REST payloads.
 - Docker, Compose and Helm deployment skeletons.
-- Admin-protected metadata-only web console pages for status, clients, access requests and audit summaries.
+- Admin-protected metadata-only web console pages for status, diagnostics, clients, access requests and audit summaries. The console now uses local embedded CSS/JS/favicon assets, strict self-only web CSP, styled HTML error pages for web-console errors, preserved filter values, client-side data-table pagination and AJAX autorefresh controls.
 - Build metadata propagation through status API, web status and `custodia-admin version`.
 - Custodia Lite profile with shared YAML config, SQLite build-tag store, local CA bootstrap, CA passphrase file support, backup helper and Lite-to-Full readiness checks.
 
