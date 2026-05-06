@@ -33,7 +33,7 @@ A language SDK can be marked official only when it has all of the following in t
 | Rust | Monorepo source | crates.io package pending | Transport + high-level crypto |
 | Bash | Monorepo source and Linux client package helper | Linux package helper only | Transport + optional external crypto provider bridge |
 
-The Linux `custodia-clients` package installs source snapshots and the Bash helper. It is not a replacement for native language package registries.
+The Linux `custodia-clients` package installs the encrypted Go `custodia-client` CLI, source snapshots and the Bash helper. It is not a replacement for native language package registries.
 
 ## Versioning
 

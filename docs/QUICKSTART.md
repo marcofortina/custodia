@@ -54,11 +54,13 @@ VERSION=0.1.0
 REVISION=1
 BASE_URL="https://github.com/${OWNER}/${REPO}/releases/download/v${VERSION}"
 
-# Debian/Ubuntu package
+# Debian/Ubuntu packages
 curl -fLO "${BASE_URL}/custodia-server_${VERSION}-${REVISION}_amd64.deb"
+curl -fLO "${BASE_URL}/custodia-clients_${VERSION}-${REVISION}_all.deb"
 
-# Fedora package
+# Fedora packages
 curl -fLO "${BASE_URL}/custodia-server-${VERSION}-${REVISION}.x86_64.rpm"
+curl -fLO "${BASE_URL}/custodia-clients-${VERSION}-${REVISION}.noarch.rpm"
 
 curl -fLO "${BASE_URL}/SHA256SUMS"
 curl -fLO "${BASE_URL}/artifacts-manifest.json"
@@ -77,7 +79,9 @@ The package file you are about to install must report `OK`.
 Run the command from the directory that contains the downloaded `.deb` file:
 
 ```bash
-sudo apt install -y "./custodia-server_${VERSION}-${REVISION}_amd64.deb"
+sudo apt install -y \
+  "./custodia-server_${VERSION}-${REVISION}_amd64.deb" \
+  "./custodia-clients_${VERSION}-${REVISION}_all.deb"
 ```
 
 ### Fedora
@@ -85,10 +89,12 @@ sudo apt install -y "./custodia-server_${VERSION}-${REVISION}_amd64.deb"
 Run the command from the directory that contains the downloaded `.rpm` file:
 
 ```bash
-sudo dnf install -y "./custodia-server-${VERSION}-${REVISION}.x86_64.rpm"
+sudo dnf install -y \
+  "./custodia-server-${VERSION}-${REVISION}.x86_64.rpm" \
+  "./custodia-clients-${VERSION}-${REVISION}.noarch.rpm"
 ```
 
-The package installs:
+The server package installs:
 
 ```text
 /usr/bin/custodia-server
@@ -100,6 +106,15 @@ The package installs:
 /etc/custodia/
 /var/lib/custodia/
 /var/log/custodia/
+```
+
+The client package installs:
+
+```text
+/usr/bin/custodia-client
+/usr/share/custodia/clients/
+/usr/share/custodia/testdata/client-crypto/
+/usr/share/doc/custodia-clients/
 ```
 
 Continue with [Prepare the Lite runtime directories](#4-prepare-the-lite-runtime-directories).
@@ -126,6 +141,12 @@ sudo dnf install -y ca-certificates curl git make openssl sqlite python3 python3
 Fedora keeps the default JDK behind the generic `java-devel` virtual provide. Avoid pinning a specific OpenJDK package in this quickstart because Fedora releases may retire older JDK streams.
 
 The Python SDK tests import the client directly from the source tree, but they still need the runtime dependencies declared by `clients/python/pyproject.toml`. The distro packages above provide `requests` and `cryptography` without requiring a system-wide `pip install`.
+
+Custodia source builds require Go `1.25.x` or newer, matching `go.mod`. Some distribution `golang-go` packages may lag behind; install a newer Go toolchain or allow Go's toolchain download mechanism before running the source build commands:
+
+```bash
+go version
+```
 
 #### Rust toolchain for source builds
 
@@ -168,6 +189,7 @@ mkdir -p dist/local/bin
 go build -buildvcs=false -tags sqlite -o dist/local/bin/custodia-server ./cmd/custodia-server
 go build -buildvcs=false -o dist/local/bin/custodia-admin ./cmd/custodia-admin
 go build -buildvcs=false -o dist/local/bin/custodia-signer ./cmd/custodia-signer
+go build -buildvcs=false -o dist/local/bin/custodia-client ./cmd/custodia-client
 ```
 
 Install the binaries and the Lite systemd unit:
@@ -176,6 +198,7 @@ Install the binaries and the Lite systemd unit:
 sudo install -m 0755 dist/local/bin/custodia-server /usr/local/bin/custodia-server
 sudo install -m 0755 dist/local/bin/custodia-admin /usr/local/bin/custodia-admin
 sudo install -m 0755 dist/local/bin/custodia-signer /usr/local/bin/custodia-signer
+sudo install -m 0755 dist/local/bin/custodia-client /usr/local/bin/custodia-client
 sudo install -m 0644 deploy/examples/custodia-lite.service /etc/systemd/system/custodia.service
 sudo install -m 0644 deploy/examples/custodia-signer-lite.service /etc/systemd/system/custodia-signer.service
 ```
@@ -444,7 +467,33 @@ rm -f /tmp/custodia-status.json
 
 If this block passes, the API side of the Lite node is ready for first use. Complete the web login test separately because browser certificate import is interactive.
 
-## 13. First-run checklist
+## 13. Verify the client CLI and run an encrypted smoke test
+
+The package install path installs `custodia-client` through the `custodia-clients` package. The source install path installs it to `/usr/local/bin/custodia-client` in step 3B. Verify it is available before testing encrypted put/get/share workflows:
+
+```bash
+custodia-client help >/dev/null
+custodia-client key generate --help >/dev/null
+```
+
+Issue a first local mTLS client bundle through the vault and signer. This shortcut performs client metadata registration, CSR generation, CSR signing, certificate extraction and local ZIP bundling; application encryption keys are still generated separately by `custodia-client`:
+
+```bash
+sudo custodia-admin \
+  --server-url https://localhost:8443 \
+  --cert /etc/custodia/admin.crt \
+  --key /etc/custodia/admin.key \
+  --ca /etc/custodia/ca.crt \
+  client issue \
+  --signer-url https://localhost:9444 \
+  --client-id client_alice \
+  --out-dir /tmp/custodia-client-alice
+sudo chown -R "$USER:$USER" /tmp/custodia-client-alice
+```
+
+For a complete copy/paste test with two clients, local X25519 application keys, encrypted `put`, encrypted `get`, Alice-to-Bob `share`, version rotation and access revocation, follow [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](CUSTODIA_ALICE_BOB_SMOKE.md).
+
+## 14. First-run checklist
 
 Before considering the node ready for real data:
 
@@ -459,11 +508,13 @@ Before considering the node ready for real data:
 - audit export/verify was scheduled;
 - remote firewall exposure was reviewed.
 
-## 14. What to read next
+## 15. What to read next
 
 - Lite profile: `docs/LITE_PROFILE.md`
 - Lite configuration: `docs/LITE_CONFIG.md`
 - Client certificate lifecycle: `docs/CLIENT_CERTIFICATE_LIFECYCLE.md`
+- Client CLI: `docs/CUSTODIA_CLIENT_CLI.md`
+- Alice/Bob encrypted smoke test: `docs/CUSTODIA_ALICE_BOB_SMOKE.md`
 - Lite CA bootstrap: `docs/LITE_CA_BOOTSTRAP.md`
 - Linux packages: `docs/LINUX_PACKAGES.md`
 - Web MFA: `docs/WEB_MFA.md`

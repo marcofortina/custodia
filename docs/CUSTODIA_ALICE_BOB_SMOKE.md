@@ -41,54 +41,20 @@ chmod 700 "$WORK"
 
 ## 1. Register and issue Alice
 
-Register Alice metadata in the vault:
+Issue Alice with the admin shortcut. This registers metadata in the vault, generates Alice's mTLS private key and CSR locally, signs the CSR through `custodia-signer`, extracts the certificate and writes `client_alice-mtls.zip`:
 
 ```bash
-custodia-admin \
+sudo custodia-admin \
   --server-url "$API" \
   --cert "$ADMIN_CERT" \
   --key "$ADMIN_KEY" \
   --ca "$CA" \
-  client create \
+  client issue \
+  --signer-url "$SIGNER" \
   --client-id client_alice \
-  --mtls-subject client_alice
-```
-
-Generate Alice's mTLS key and CSR locally:
-
-```bash
-custodia-admin client csr \
-  --client-id client_alice \
-  --private-key-out "$WORK/client_alice.key" \
-  --csr-out "$WORK/client_alice.csr"
-```
-
-Sign Alice's CSR through `custodia-signer` and extract the certificate:
-
-```bash
-custodia-admin \
-  --server-url "$SIGNER" \
-  --cert "$ADMIN_CERT" \
-  --key "$ADMIN_KEY" \
-  --ca "$CA" \
-  certificate sign \
-  --client-id client_alice \
-  --csr-file "$WORK/client_alice.csr" \
-  > "$WORK/client_alice.sign.json"
-
-custodia-admin certificate extract \
-  --input "$WORK/client_alice.sign.json" \
-  --certificate-out "$WORK/client_alice.crt"
-```
-
-Optionally create a local handoff bundle:
-
-```bash
-custodia-admin certificate bundle \
-  --certificate "$WORK/client_alice.crt" \
-  --private-key "$WORK/client_alice.key" \
-  --ca "$CA" \
-  --out "$WORK/client_alice-mtls.zip"
+  --out-dir "$WORK"
+sudo chown "$USER:$USER" "$WORK"/client_alice.* "$WORK"/client_alice-mtls.zip
+chmod 600 "$WORK/client_alice.key" "$WORK/client_alice.sign.json" "$WORK/client_alice-mtls.zip"
 ```
 
 Verify Alice's mTLS identity:
@@ -168,33 +134,17 @@ super secret demo value
 ## 4. Register and issue Bob
 
 ```bash
-custodia-admin \
+sudo custodia-admin \
   --server-url "$API" \
   --cert "$ADMIN_CERT" \
   --key "$ADMIN_KEY" \
   --ca "$CA" \
-  client create \
+  client issue \
+  --signer-url "$SIGNER" \
   --client-id client_bob \
-  --mtls-subject client_bob
-
-custodia-admin client csr \
-  --client-id client_bob \
-  --private-key-out "$WORK/client_bob.key" \
-  --csr-out "$WORK/client_bob.csr"
-
-custodia-admin \
-  --server-url "$SIGNER" \
-  --cert "$ADMIN_CERT" \
-  --key "$ADMIN_KEY" \
-  --ca "$CA" \
-  certificate sign \
-  --client-id client_bob \
-  --csr-file "$WORK/client_bob.csr" \
-  > "$WORK/client_bob.sign.json"
-
-custodia-admin certificate extract \
-  --input "$WORK/client_bob.sign.json" \
-  --certificate-out "$WORK/client_bob.crt"
+  --out-dir "$WORK"
+sudo chown "$USER:$USER" "$WORK"/client_bob.* "$WORK"/client_bob-mtls.zip
+chmod 600 "$WORK/client_bob.key" "$WORK/client_bob.sign.json" "$WORK/client_bob-mtls.zip"
 ```
 
 Generate and validate Bob's application key/config:

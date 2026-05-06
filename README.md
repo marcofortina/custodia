@@ -88,6 +88,7 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 - C++ transport and crypto: [`docs/CPP_CLIENT_SDK.md`](docs/CPP_CLIENT_SDK.md)
 - Rust transport and crypto: [`docs/RUST_CLIENT_SDK.md`](docs/RUST_CLIENT_SDK.md)
 - Encrypted client CLI: [`docs/CUSTODIA_CLIENT_CLI.md`](docs/CUSTODIA_CLIENT_CLI.md)
+- Alice/Bob first encrypted secret smoke test: [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](docs/CUSTODIA_ALICE_BOB_SMOKE.md)
 - Bash transport helper: [`docs/BASH_TRANSPORT_HELPER.md`](docs/BASH_TRANSPORT_HELPER.md)
 - Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
 - SDK release policy: [`docs/SDK_RELEASE_POLICY.md`](docs/SDK_RELEASE_POLICY.md)

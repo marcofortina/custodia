@@ -7,7 +7,7 @@ The repository produces two package families. Server packages are Lite-capable b
 | Package | Architecture | Contents | Intended use |
 | --- | --- | --- | --- |
 | `custodia-server` | host arch | `custodia-server`, `custodia-admin`, `custodia-signer`, systemd unit, examples and server docs | Install and operate a Custodia node. |
-| `custodia-clients` | `all` / `noarch` | SDK source snapshots, shared crypto vectors, SDK docs and `/usr/bin/custodia-client` Bash helper | Developer/CI/ops client integration. |
+| `custodia-clients` | `all` / `noarch` | encrypted `/usr/bin/custodia-client` CLI, SDK source snapshots, shared crypto vectors, SDK docs and Bash helper | Developer/CI/ops client integration. |
 
 This split is intentional. Operating-system packages are good for deployable binaries and local source snapshots. Language SDK distribution should still use language-native channels when the project starts publishing real public packages:
 
@@ -163,7 +163,7 @@ VERSION=0.1.0 REVISION=1 make package-linux
 make package-smoke
 ```
 
-The smoke check does not install packages into the host system. It extracts `.deb` artifacts with `dpkg-deb` and `.rpm` artifacts with `rpm2cpio`, then verifies the expected binaries, examples, SDK source snapshots, shared test vectors and Bash helper entrypoint.
+The smoke check does not install packages into the host system. It extracts `.deb` artifacts with `dpkg-deb` and `.rpm` artifacts with `rpm2cpio`, then verifies the expected binaries, examples, SDK source snapshots, shared test vectors, encrypted client CLI and Bash helper entrypoint.
 
 For server packages, the smoke check executes `custodia-admin version` because it is side-effect free. It verifies that both `custodia.service` and `custodia-signer.service` are packaged, but it does not start `custodia-server` or `custodia-signer`; runtime startup belongs to deployment or integration tests with real configuration and certificates.
 
