@@ -1,0 +1,158 @@
+.\" Copyright (c) 2026 Marco Fortina
+.\" SPDX-License-Identifier: AGPL-3.0-only
+.TH CUSTODIA-SIGNER 1 "@DATE@" "Custodia @VERSION@" "Custodia Manual"
+.SH NAME
+custodia-signer \- run the Custodia client certificate signing service
+.SH SYNOPSIS
+.SY custodia-signer
+.YS
+.SY custodia-signer
+.B version
+.YS
+.SY custodia-signer
+.B --version
+.YS
+.SY custodia-signer
+.B help
+.YS
+.SH DESCRIPTION
+.B custodia-signer
+runs the dedicated Custodia certificate signing service. It signs approved
+client mTLS CSRs and keeps CA signing concerns separate from the vault server.
+.PP
+The signer is optional for purely manual certificate workflows, but it is the
+recommended Lite path when using the admin client issue shortcut.
+.SH COMMANDS
+.TP
+.B version
+Print build metadata and exit before loading TLS, CA or signing key material.
+.TP
+.B --version
+Alias for
+.BR version .
+.TP
+.B help, -h, --help
+Print usage information and exit before runtime initialization.
+.SH ENVIRONMENT
+.TP
+.B CUSTODIA_SIGNER_ADDR
+Listen address. Example:
+.BR :9444 .
+.TP
+.B CUSTODIA_SIGNER_TLS_CERT_FILE
+TLS server certificate.
+.TP
+.B CUSTODIA_SIGNER_TLS_KEY_FILE
+TLS server private key.
+.TP
+.B CUSTODIA_SIGNER_CLIENT_CA_FILE
+Client CA bundle used to authenticate admin mTLS clients.
+.TP
+.B CUSTODIA_SIGNER_ADMIN_SUBJECTS
+Comma-separated admin certificate subjects authorized to sign CSRs.
+.TP
+.B CUSTODIA_SIGNER_KEY_PROVIDER
+Signing key provider. Lite file mode uses
+.BR file .
+.TP
+.B CUSTODIA_SIGNER_CA_CERT_FILE
+CA certificate used to issue client certificates.
+.TP
+.B CUSTODIA_SIGNER_CA_KEY_FILE
+File-backed CA private key path for Lite deployments.
+.TP
+.B CUSTODIA_SIGNER_CA_KEY_PASSPHRASE_FILE
+Optional file-backed CA private key passphrase path.
+.TP
+.B CUSTODIA_SIGNER_CRL_FILE
+Optional CRL file path.
+.TP
+.B CUSTODIA_SIGNER_AUDIT_LOG_FILE
+Signer audit JSONL path.
+.SH FILES
+.TP
+.I /etc/custodia/ca.crt
+Default Lite CA certificate.
+.TP
+.I /etc/custodia/ca.key
+Default Lite CA private key. Keep readable only by the
+.B custodia
+service user.
+.TP
+.I /etc/custodia/ca.pass
+Optional Lite CA private key passphrase file.
+.TP
+.I /etc/custodia/server.crt
+Default signer TLS certificate in packaged Lite examples.
+.TP
+.I /etc/custodia/server.key
+Default signer TLS private key in packaged Lite examples.
+.TP
+.I /var/log/custodia/signer-audit.jsonl
+Default signer audit log file.
+.SH SYSTEMD
+Packaged installs provide
+.BR custodia-signer.service .
+Typical commands:
+.PP
+.EX
+sudo systemctl enable --now custodia-signer
+sudo systemctl status custodia-signer --no-pager
+sudo journalctl -u custodia-signer -f
+.EE
+.SH SECURITY NOTES
+.B custodia-signer
+may have access to CA signing material, unlike
+.BR custodia-server (1).
+Keep it isolated, run it as the restricted
+.B custodia
+user, and prefer HSM/PKCS#11-backed signing for production.
+.PP
+The signer issues mTLS certificates only; it must not handle application
+plaintext, DEKs, or application encryption keys.
+.SH EXAMPLES
+Run the Lite file-backed signer manually:
+.PP
+.EX
+CUSTODIA_SIGNER_ADDR=:9444 \\
+CUSTODIA_SIGNER_TLS_CERT_FILE=/etc/custodia/server.crt \\
+CUSTODIA_SIGNER_TLS_KEY_FILE=/etc/custodia/server.key \\
+CUSTODIA_SIGNER_CLIENT_CA_FILE=/etc/custodia/client-ca.crt \\
+CUSTODIA_SIGNER_ADMIN_SUBJECTS=admin \\
+CUSTODIA_SIGNER_KEY_PROVIDER=file \\
+CUSTODIA_SIGNER_CA_CERT_FILE=/etc/custodia/ca.crt \\
+CUSTODIA_SIGNER_CA_KEY_FILE=/etc/custodia/ca.key \\
+custodia-signer
+.EE
+.PP
+Check build metadata without CA/key initialization:
+.PP
+.EX
+custodia-signer version
+.EE
+.SH VERSION
+Custodia version: @VERSION@
+.br
+Build commit: @COMMIT@
+.br
+Build date: @DATE@
+.PP
+Runtime version is available with:
+.PP
+.EX
+custodia-signer version
+.EE
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Runtime or signing service failure.
+.TP
+.B 2
+Usage error.
+.SH SEE ALSO
+.BR custodia-admin (1),
+.BR custodia-client (1),
+.BR custodia-server (1)

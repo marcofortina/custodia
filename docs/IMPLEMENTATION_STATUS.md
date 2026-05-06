@@ -1821,3 +1821,16 @@ Suggested verification:
 make man
 grep -R "custodia-server" build/man/man1/custodia-server.1
 ```
+
+## Patch 879 - custodia-signer manual page
+
+- Added `custodia-signer(1)` as a roff template with build metadata substitution.
+- Documented runtime info commands, signer environment, Lite CA files, systemd usage and signing-boundary security notes.
+- The existing manpage build/install/package pipeline automatically includes it in local installs and the `custodia-server` DEB/RPM package.
+
+Suggested verification:
+
+```bash
+make man
+grep -R "custodia-signer" build/man/man1/custodia-signer.1
+```
