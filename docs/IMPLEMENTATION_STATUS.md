@@ -1808,3 +1808,16 @@ Suggested verification:
 make man
 grep -R "custodia-client" build/man/man1/custodia-client.1
 ```
+
+## Patch 878 - custodia-server manual page
+
+- Added `custodia-server(1)` as a roff template with build metadata substitution.
+- Documented runtime info commands, universal SQLite/PostgreSQL store selection, packaged files, systemd usage and the server crypto boundary.
+- The existing manpage build/install/package pipeline automatically includes it in local installs and the `custodia-server` DEB/RPM package.
+
+Suggested verification:
+
+```bash
+make man
+grep -R "custodia-server" build/man/man1/custodia-server.1
+```

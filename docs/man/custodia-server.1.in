@@ -1,0 +1,160 @@
+.\" Copyright (c) 2026 Marco Fortina
+.\" SPDX-License-Identifier: AGPL-3.0-only
+.TH CUSTODIA-SERVER 1 "@DATE@" "Custodia @VERSION@" "Custodia Manual"
+.SH NAME
+custodia-server \- run the Custodia vault server
+.SH SYNOPSIS
+.SY custodia-server
+.OP --config FILE
+.YS
+.SY custodia-server
+.B version
+.YS
+.SY custodia-server
+.B --version
+.YS
+.SY custodia-server
+.B help
+.YS
+.SH DESCRIPTION
+.B custodia-server
+runs the Custodia vault API. The server stores opaque encrypted secret payloads,
+authenticates clients with mTLS, records metadata and audit events, and never
+handles application plaintext or application private encryption keys.
+.PP
+A normal build is universal and includes SQLite and PostgreSQL store support.
+Select Lite or FULL behavior at runtime through configuration.
+.SH COMMANDS
+.TP
+.B version
+Print build metadata and exit before loading configuration, logging, stores or
+runtime services.
+.TP
+.B --version
+Alias for
+.BR version .
+.TP
+.B help, -h, --help
+Print usage information and exit before runtime initialization.
+.SH OPTIONS
+.TP
+.BI --config " FILE"
+Path to the YAML configuration file.
+.SH ENVIRONMENT
+.TP
+.B CUSTODIA_CONFIG_FILE
+Configuration file path when
+.B --config
+is not provided.
+.TP
+.B CUSTODIA_STORE_BACKEND
+Store backend. Use
+.B sqlite
+for Lite or
+.B postgres
+for PostgreSQL deployments.
+.TP
+.B CUSTODIA_SQLITE_PATH
+SQLite database path for Lite deployments.
+.TP
+.B CUSTODIA_DATABASE_URL
+PostgreSQL connection URL for FULL deployments.
+.TP
+.B CUSTODIA_TLS_CERT_FILE
+Server TLS certificate.
+.TP
+.B CUSTODIA_TLS_KEY_FILE
+Server TLS private key.
+.TP
+.B CUSTODIA_CLIENT_CA_FILE
+Client CA bundle for mTLS authentication.
+.TP
+.B CUSTODIA_LOG_FILE
+Log file path. Packaged installs default under
+.IR /var/log/custodia .
+.SH FILES
+.TP
+.I /etc/custodia/config.yaml
+Default packaged server configuration.
+.TP
+.I /etc/custodia/server.crt
+Default TLS certificate for packaged Lite installs.
+.TP
+.I /etc/custodia/server.key
+Default TLS private key for packaged Lite installs.
+.TP
+.I /etc/custodia/client-ca.crt
+Default client CA bundle.
+.TP
+.I /var/lib/custodia/
+Default state directory.
+.TP
+.I /var/log/custodia/custodia.log
+Default packaged server log file.
+.SH SYSTEMD
+Packaged installs provide
+.BR custodia.service .
+Typical commands:
+.PP
+.EX
+sudo systemctl enable --now custodia
+sudo systemctl status custodia --no-pager
+sudo journalctl -u custodia -f
+.EE
+.SH SECURITY NOTES
+.B custodia-server
+must not decrypt application secrets. Clients provide ciphertext, crypto
+metadata and opaque recipient envelopes. Application cryptography is performed
+by
+.BR custodia-client (1)
+or SDK clients outside the server process.
+.PP
+The packaged unit runs as the restricted
+.B custodia
+user and grants write access only to configured state/log paths.
+.SH EXAMPLES
+Start a packaged Lite service:
+.PP
+.EX
+sudo systemctl enable --now custodia
+.EE
+.PP
+Run a local development server with in-memory storage:
+.PP
+.EX
+CUSTODIA_DEV_INSECURE_HTTP=true \\
+CUSTODIA_STORE_BACKEND=memory \\
+custodia-server
+.EE
+.PP
+Check build metadata without runtime initialization:
+.PP
+.EX
+custodia-server version
+.EE
+.SH VERSION
+Custodia version: @VERSION@
+.br
+Build commit: @COMMIT@
+.br
+Build date: @DATE@
+.PP
+Runtime version is available with:
+.PP
+.EX
+custodia-server version
+.EE
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Runtime or configuration failure.
+.TP
+.B 2
+Usage error.
+.SH SEE ALSO
+.BR custodia-admin (1),
+.BR custodia-client (1),
+.BR custodia-signer (1)
