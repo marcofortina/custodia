@@ -17,7 +17,13 @@ custodia-client key generate \
 
 The private key file is local secret material and is written with mode `0600`. The public key file may be distributed through an application-controlled trust channel, for example configuration management, a pinned repository, an internal directory or offline provisioning.
 
-The server is not a public-key directory. Recipient public keys are loaded from local files with `--recipient`.
+The server is not a public-key directory. Recipient public keys are loaded from local files with `--recipient`. Inspect a private key without exposing it with:
+
+```bash
+custodia-client key inspect --key client_alice.x25519.json
+```
+
+The command prints the client id, crypto scheme and derived public-key fingerprint only.
 
 ## Common mTLS options
 
@@ -70,7 +76,13 @@ You can also set:
 export CUSTODIA_CLIENT_CONFIG=client_alice.config.json
 ```
 
-Explicit flags and environment variables override values loaded from the config file.
+Explicit flags and environment variables override values loaded from the config file. Validate a profile and its referenced local mTLS/crypto files with:
+
+```bash
+custodia-client config check --config client_alice.config.json
+```
+
+`config check` is local/offline: it validates the HTTPS URL, certificate/key pair, CA bundle and optional crypto key without contacting Custodia. This catches most path/key mistakes before running put/get/share commands.
 
 ## Put an encrypted secret
 

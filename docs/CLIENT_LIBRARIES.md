@@ -180,3 +180,8 @@ make test-bash-client
 ```
 
 Release checks call the language-specific targets when the required toolchains are available.
+
+
+## CLI validation helpers
+
+`custodia-client config check` validates local config profiles and referenced mTLS/crypto files. `custodia-client key inspect` reports a local X25519 key fingerprint without exposing private key material.

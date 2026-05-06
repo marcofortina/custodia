@@ -1700,3 +1700,17 @@ Suggested verification:
 go test ./cmd/custodia-client
 make check
 ```
+
+
+## Patch 864 - custodia-client local validation helpers
+
+- Added `custodia-client config check` to validate reusable client profiles, HTTPS URLs, local mTLS certificate/key pairs, CA bundles and optional crypto key files before running secret operations.
+- Added `custodia-client key inspect` to report local X25519 key metadata and public-key fingerprint without exposing private key material.
+- Updated CLI and client library documentation for first-run troubleshooting.
+
+Suggested verification:
+
+```bash
+go test ./cmd/custodia-client
+make check
+```

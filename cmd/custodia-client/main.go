@@ -11,6 +11,8 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -18,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -122,7 +125,9 @@ func (a *app) usage() {
 	fmt.Fprintln(a.stdout, `Usage:
   custodia-client key generate --client-id ID --private-key-out FILE --public-key-out FILE
   custodia-client key public --client-id ID --private-key FILE --public-key-out FILE
+  custodia-client key inspect --key FILE
   custodia-client config write --out FILE --server-url URL --cert FILE --key FILE --ca FILE [--client-id ID --crypto-key FILE]
+  custodia-client config check --config FILE
   custodia-client secret put --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --name NAME --value-file FILE [--recipient ID=PUBLIC.json]
   custodia-client secret get --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --secret-id ID [--out FILE]
   custodia-client secret share --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --secret-id ID --target-client-id ID --recipient ID=PUBLIC.json
@@ -146,6 +151,8 @@ func (a *app) runConfig(args []string) int {
 	switch args[0] {
 	case "write":
 		return a.runConfigWrite(args[1:])
+	case "check":
+		return a.runConfigCheck(args[1:])
 	default:
 		fmt.Fprintf(a.stderr, "unknown config subcommand: %s\n", args[0])
 		return 2
@@ -177,6 +184,30 @@ func (a *app) runConfigWrite(args []string) int {
 	return 0
 }
 
+func (a *app) runConfigCheck(args []string) int {
+	fs := newFlagSet("custodia-client config check", a.stderr)
+	var transport transportFlags
+	registerTransportFlags(fs, &transport)
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	if strings.TrimSpace(transport.configFile) == "" {
+		fmt.Fprintln(a.stderr, "--config is required")
+		return 2
+	}
+	config, err := validateClientConfigFile(transport.configFile)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	return writeJSON(a.stdout, map[string]any{
+		"status":         "ok",
+		"server_url":     config.ServerURL,
+		"client_id":      config.ClientID,
+		"has_crypto_key": strings.TrimSpace(config.CryptoKey) != "",
+	})
+}
+
 func (a *app) runKey(args []string) int {
 	if len(args) == 0 {
 		fmt.Fprintln(a.stderr, "missing key subcommand")
@@ -187,6 +218,8 @@ func (a *app) runKey(args []string) int {
 		return a.runKeyGenerate(args[1:])
 	case "public":
 		return a.runKeyPublic(args[1:])
+	case "inspect":
+		return a.runKeyInspect(args[1:])
 	default:
 		fmt.Fprintf(a.stderr, "unknown key subcommand: %s\n", args[0])
 		return 2
@@ -251,6 +284,33 @@ func (a *app) runKeyPublic(args []string) int {
 	return 0
 }
 
+func (a *app) runKeyInspect(args []string) int {
+	fs := newFlagSet("custodia-client key inspect", a.stderr)
+	keyPath := fs.String("key", "", "private X25519 key JSON")
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	if strings.TrimSpace(*keyPath) == "" {
+		fmt.Fprintln(a.stderr, "--key is required")
+		return 2
+	}
+	payload, privateKey, err := readPrivateKeyFile(*keyPath)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	publicKey, err := sdk.DeriveX25519RecipientPublicKey(firstNonEmpty(payload.ClientID, "validation"), privateKey)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "derive public key: %v\n", err)
+		return 1
+	}
+	return writeJSON(a.stdout, map[string]any{
+		"client_id":              payload.ClientID,
+		"scheme":                 payload.Scheme,
+		"public_key_fingerprint": fingerprint(publicKey.PublicKey),
+	})
+}
+
 func (a *app) runSecret(args []string) int {
 	if len(args) == 0 {
 		fmt.Fprintln(a.stderr, "missing secret subcommand")
@@ -281,8 +341,10 @@ func (a *app) runSecret(args []string) int {
 
 func (a *app) runSecretPut(args []string) int {
 	fs := newFlagSet("custodia-client secret put", a.stderr)
-	transport := registerTransportFlags(fs)
-	crypto := registerCryptoFlags(fs)
+	var transport transportFlags
+	registerTransportFlags(fs, &transport)
+	var crypto cryptoFlags
+	registerCryptoFlags(fs, &crypto)
 	name := fs.String("name", "", "secret name")
 	valueFile := fs.String("value-file", "", "plaintext file to encrypt locally")
 	permissions := fs.Int("permissions", defaultPermissions, "permission bitmask for recipients")
@@ -318,8 +380,10 @@ func (a *app) runSecretPut(args []string) int {
 
 func (a *app) runSecretGet(args []string) int {
 	fs := newFlagSet("custodia-client secret get", a.stderr)
-	transport := registerTransportFlags(fs)
-	crypto := registerCryptoFlagsNoRecipients(fs)
+	var transport transportFlags
+	registerTransportFlags(fs, &transport)
+	var crypto cryptoFlags
+	registerCryptoFlagsNoRecipients(fs, &crypto)
 	secretID := fs.String("secret-id", "", "secret id")
 	out := fs.String("out", "-", "plaintext output file or - for stdout")
 	if !parseFlags(fs, args, a.stderr) {
@@ -351,7 +415,8 @@ func (a *app) runSecretGet(args []string) int {
 
 func (a *app) runSecretDelete(args []string) int {
 	fs := newFlagSet("custodia-client secret delete", a.stderr)
-	transport := registerTransportFlags(fs)
+	var transport transportFlags
+	registerTransportFlags(fs, &transport)
 	secretID := fs.String("secret-id", "", "secret id")
 	confirmed := fs.Bool("yes", false, "confirm destructive secret deletion")
 	if !parseFlags(fs, args, a.stderr) {
@@ -379,8 +444,10 @@ func (a *app) runSecretDelete(args []string) int {
 
 func (a *app) runSecretShare(args []string) int {
 	fs := newFlagSet("custodia-client secret share", a.stderr)
-	transport := registerTransportFlags(fs)
-	crypto := registerCryptoFlags(fs)
+	var transport transportFlags
+	registerTransportFlags(fs, &transport)
+	var crypto cryptoFlags
+	registerCryptoFlags(fs, &crypto)
 	secretID := fs.String("secret-id", "", "secret id")
 	targetClientID := fs.String("target-client-id", "", "target recipient client id")
 	permissions := fs.Int("permissions", defaultSharePerms, "target permission bitmask")
@@ -417,8 +484,10 @@ func (a *app) runSecretVersion(args []string) int {
 
 func (a *app) runSecretVersionPut(args []string) int {
 	fs := newFlagSet("custodia-client secret version put", a.stderr)
-	transport := registerTransportFlags(fs)
-	crypto := registerCryptoFlags(fs)
+	var transport transportFlags
+	registerTransportFlags(fs, &transport)
+	var crypto cryptoFlags
+	registerCryptoFlags(fs, &crypto)
 	secretID := fs.String("secret-id", "", "secret id")
 	valueFile := fs.String("value-file", "", "plaintext file to encrypt locally")
 	permissions := fs.Int("permissions", defaultPermissions, "permission bitmask for recipients")
@@ -449,7 +518,8 @@ func (a *app) runSecretVersionPut(args []string) int {
 
 func (a *app) runSecretVersionsList(args []string) int {
 	fs := newFlagSet("custodia-client secret versions", a.stderr)
-	transport := registerTransportFlags(fs)
+	var transport transportFlags
+	registerTransportFlags(fs, &transport)
 	secretID := fs.String("secret-id", "", "secret id")
 	limit := fs.Int("limit", 100, "maximum rows to return")
 	if !parseFlags(fs, args, a.stderr) {
@@ -490,7 +560,8 @@ func (a *app) runSecretAccess(args []string) int {
 
 func (a *app) runSecretAccessList(args []string) int {
 	fs := newFlagSet("custodia-client secret access list", a.stderr)
-	transport := registerTransportFlags(fs)
+	var transport transportFlags
+	registerTransportFlags(fs, &transport)
 	secretID := fs.String("secret-id", "", "secret id")
 	limit := fs.Int("limit", 100, "maximum rows to return")
 	if !parseFlags(fs, args, a.stderr) {
@@ -515,7 +586,8 @@ func (a *app) runSecretAccessList(args []string) int {
 
 func (a *app) runSecretAccessRevoke(args []string) int {
 	fs := newFlagSet("custodia-client secret access revoke", a.stderr)
-	transport := registerTransportFlags(fs)
+	var transport transportFlags
+	registerTransportFlags(fs, &transport)
 	secretID := fs.String("secret-id", "", "secret id")
 	targetClientID := fs.String("target-client-id", "", "target client id whose future access is revoked")
 	confirmed := fs.Bool("yes", false, "confirm access revocation")
@@ -544,7 +616,8 @@ func (a *app) runSecretAccessRevoke(args []string) int {
 
 func (a *app) runSecretList(args []string) int {
 	fs := newFlagSet("custodia-client secret list", a.stderr)
-	transport := registerTransportFlags(fs)
+	var transport transportFlags
+	registerTransportFlags(fs, &transport)
 	limit := fs.Int("limit", 100, "maximum rows to return")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
@@ -579,27 +652,22 @@ func parseFlags(fs *flag.FlagSet, args []string, stderr io.Writer) bool {
 	return true
 }
 
-func registerTransportFlags(fs *flag.FlagSet) transportFlags {
-	var flags transportFlags
+func registerTransportFlags(fs *flag.FlagSet, flags *transportFlags) {
 	fs.StringVar(&flags.configFile, "config", envDefault("CUSTODIA_CLIENT_CONFIG", ""), "Custodia client config JSON")
 	fs.StringVar(&flags.serverURL, "server-url", envDefault("CUSTODIA_BASE_URL", ""), "Custodia API base URL")
 	fs.StringVar(&flags.certFile, "cert", envDefault("CUSTODIA_CLIENT_CERT", ""), "mTLS client certificate")
 	fs.StringVar(&flags.keyFile, "key", envDefault("CUSTODIA_CLIENT_KEY", ""), "mTLS client private key")
 	fs.StringVar(&flags.caFile, "ca", envDefault("CUSTODIA_CA_CERT", ""), "Custodia CA certificate")
-	return flags
 }
 
-func registerCryptoFlags(fs *flag.FlagSet) cryptoFlags {
-	flags := registerCryptoFlagsNoRecipients(fs)
+func registerCryptoFlags(fs *flag.FlagSet, flags *cryptoFlags) {
+	registerCryptoFlagsNoRecipients(fs, flags)
 	fs.Var(&flags.recipients, "recipient", "recipient public key file, either ID=FILE or FILE")
-	return flags
 }
 
-func registerCryptoFlagsNoRecipients(fs *flag.FlagSet) cryptoFlags {
-	var flags cryptoFlags
+func registerCryptoFlagsNoRecipients(fs *flag.FlagSet, flags *cryptoFlags) {
 	fs.StringVar(&flags.clientID, "client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "local client id")
 	fs.StringVar(&flags.cryptoKey, "crypto-key", envDefault("CUSTODIA_CRYPTO_KEY", ""), "local X25519 private key JSON")
-	return flags
 }
 
 func buildTransportClient(transport transportFlags) (*sdk.Client, error) {
@@ -701,6 +769,44 @@ func readClientConfigFile(path string) (clientConfigFile, error) {
 		return clientConfigFile{}, err
 	}
 	return config, nil
+}
+
+func validateClientConfigFile(path string) (clientConfigFile, error) {
+	config, err := readClientConfigFile(path)
+	if err != nil {
+		return clientConfigFile{}, err
+	}
+	if strings.TrimSpace(config.ServerURL) == "" || strings.TrimSpace(config.CertFile) == "" || strings.TrimSpace(config.KeyFile) == "" || strings.TrimSpace(config.CAFile) == "" {
+		return clientConfigFile{}, fmt.Errorf("config must define server_url, cert_file, key_file and ca_file")
+	}
+	parsed, err := url.Parse(config.ServerURL)
+	if err != nil || parsed.Scheme != "https" || strings.TrimSpace(parsed.Host) == "" {
+		return clientConfigFile{}, fmt.Errorf("config server_url must be an https URL")
+	}
+	if _, err := tls.LoadX509KeyPair(config.CertFile, config.KeyFile); err != nil {
+		return clientConfigFile{}, fmt.Errorf("config certificate/key pair is invalid: %w", err)
+	}
+	if err := validateCACertificateFile(config.CAFile); err != nil {
+		return clientConfigFile{}, err
+	}
+	if strings.TrimSpace(config.CryptoKey) != "" {
+		if _, _, err := readPrivateKeyFile(config.CryptoKey); err != nil {
+			return clientConfigFile{}, err
+		}
+	}
+	return config, nil
+}
+
+func validateCACertificateFile(path string) error {
+	body, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read CA certificate: %w", err)
+	}
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(body) {
+		return fmt.Errorf("CA certificate file does not contain a valid PEM certificate")
+	}
+	return nil
 }
 
 type staticResolver map[string]sdk.RecipientPublicKey

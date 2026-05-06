@@ -11,10 +11,13 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"custodia/internal/certutil"
 
 	sdk "custodia/pkg/client"
 )
@@ -118,6 +121,28 @@ func TestWritePublicKeyUsesDocumentedJSONShape(t *testing.T) {
 	}
 }
 
+func TestKeyInspectReportsLocalPublicFingerprint(t *testing.T) {
+	dir := t.TempDir()
+	privatePath := filepath.Join(dir, "client_alice.x25519.json")
+	publicPath := filepath.Join(dir, "client_alice.x25519.pub.json")
+	var stdout, stderr bytes.Buffer
+	if code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{"key", "generate", "--client-id", "client_alice", "--private-key-out", privatePath, "--public-key-out", publicPath}); code != 0 {
+		t.Fatalf("key generate failed with %d: %s", code, stderr.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{"key", "inspect", "--key", privatePath}); code != 0 {
+		t.Fatalf("key inspect failed with %d: %s", code, stderr.String())
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &payload); err != nil {
+		t.Fatalf("inspect output is not json: %v", err)
+	}
+	if payload["client_id"] != "client_alice" || payload["scheme"] != sdk.CryptoEnvelopeHPKEV1 || !strings.HasPrefix(payload["public_key_fingerprint"].(string), "sha256:") {
+		t.Fatalf("unexpected inspect payload: %v", payload)
+	}
+}
+
 func TestConfigWriteCreatesReusableClientConfig(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "client.json")
@@ -148,6 +173,55 @@ func TestConfigWriteCreatesReusableClientConfig(t *testing.T) {
 	}
 	if got := info.Mode().Perm(); got != keyFileMode {
 		t.Fatalf("config mode = %v, want %v", got, keyFileMode)
+	}
+}
+
+func TestConfigCheckValidatesLocalFiles(t *testing.T) {
+	dir := t.TempDir()
+	artifacts, err := certutil.GenerateLiteBootstrap(certutil.LiteBootstrapRequest{AdminClientID: "client_alice", ServerName: "localhost"})
+	if err != nil {
+		t.Fatalf("GenerateLiteBootstrap() error = %v", err)
+	}
+	caPath := filepath.Join(dir, "ca.crt")
+	certPath := filepath.Join(dir, "client.crt")
+	keyPath := filepath.Join(dir, "client.key")
+	for path, body := range map[string][]byte{caPath: artifacts.CACertPEM, certPath: artifacts.AdminCertPEM, keyPath: artifacts.AdminKeyPEM} {
+		if err := os.WriteFile(path, body, 0o600); err != nil {
+			t.Fatalf("WriteFile(%s) error = %v", path, err)
+		}
+	}
+	cryptoKeyPath := filepath.Join(dir, "client_alice.x25519.json")
+	publicKeyPath := filepath.Join(dir, "client_alice.x25519.pub.json")
+	if code := (&app{stdout: io.Discard, stderr: io.Discard}).run([]string{"key", "generate", "--client-id", "client_alice", "--private-key-out", cryptoKeyPath, "--public-key-out", publicKeyPath}); code != 0 {
+		t.Fatalf("key generate failed with %d", code)
+	}
+	configPath := filepath.Join(dir, "client.config.json")
+	if err := writeJSONFileExclusive(configPath, clientConfigFile{ServerURL: "https://localhost:8443", CertFile: certPath, KeyFile: keyPath, CAFile: caPath, ClientID: "client_alice", CryptoKey: cryptoKeyPath}, keyFileMode); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{"config", "check", "--config", configPath})
+	if code != 0 {
+		t.Fatalf("config check failed with %d: %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"status": "ok"`) || !strings.Contains(stdout.String(), `"has_crypto_key": true`) {
+		t.Fatalf("unexpected config check output: %s", stdout.String())
+	}
+}
+
+func TestConfigCheckRejectsInvalidURLBeforeTransport(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "client.config.json")
+	if err := writeJSONFileExclusive(configPath, clientConfigFile{ServerURL: "http://localhost:8443", CertFile: "client.crt", KeyFile: "client.key", CAFile: "ca.crt"}, keyFileMode); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{"config", "check", "--config", configPath})
+	if code != 1 {
+		t.Fatalf("expected config check failure, got %d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "server_url must be an https URL") {
+		t.Fatalf("unexpected error: %s", stderr.String())
 	}
 }
 
@@ -205,7 +279,7 @@ func TestHelpMentionsEncryptedSecretCommands(t *testing.T) {
 		t.Fatalf("help failed: %d %s", code, stderr.String())
 	}
 	body := stdout.String()
-	for _, token := range []string{"config write", "--config FILE", "secret put", "secret get", "secret share", "secret delete", "secret version put", "secret versions", "secret access list", "secret access revoke", "Secret payloads are encrypted/decrypted locally"} {
+	for _, token := range []string{"config write", "config check", "key inspect", "--config FILE", "secret put", "secret get", "secret share", "secret delete", "secret version put", "secret versions", "secret access list", "secret access revoke", "Secret payloads are encrypted/decrypted locally"} {
 		if !strings.Contains(body, token) {
 			t.Fatalf("help missing %q: %s", token, body)
 		}
