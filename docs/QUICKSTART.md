@@ -100,7 +100,7 @@ The server package installs:
 /usr/bin/custodia-server
 /usr/bin/custodia-admin
 /usr/bin/custodia-signer
-/usr/lib/systemd/system/custodia.service
+/usr/lib/systemd/system/custodia-server.service
 /usr/lib/systemd/system/custodia-signer.service
 /usr/share/custodia/examples/
 /etc/custodia/
@@ -192,7 +192,7 @@ Build and install the binaries. The default Makefile build is universal and incl
 ```bash
 make
 sudo make install PREFIX=/usr/local
-sudo install -m 0644 deploy/examples/custodia-lite.service /etc/systemd/system/custodia.service
+sudo install -m 0644 deploy/examples/custodia-lite.service /etc/systemd/system/custodia-server.service
 sudo install -m 0644 deploy/examples/custodia-signer-lite.service /etc/systemd/system/custodia-signer.service
 ```
 
@@ -288,8 +288,8 @@ Start the vault API/Web process and the separate Lite signer process:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now custodia custodia-signer
-sudo systemctl status custodia --no-pager
+sudo systemctl enable --now custodia-server custodia-signer
+sudo systemctl status custodia-server --no-pager
 sudo systemctl status custodia-signer --no-pager
 ```
 
@@ -300,7 +300,7 @@ Custodia mirrors service logs to both systemd/journald and `/var/log/custodia/cu
 If either service fails, inspect the logs:
 
 ```bash
-sudo journalctl -u custodia -n 100 --no-pager
+sudo journalctl -u custodia-server -n 100 --no-pager
 sudo journalctl -u custodia-signer -n 100 --no-pager
 sudo tail -n 100 /var/log/custodia/custodia.log
 ```
@@ -436,7 +436,7 @@ sudo -u custodia env \
 After the service starts, this block should complete without errors:
 
 ```bash
-sudo systemctl is-active --quiet custodia
+sudo systemctl is-active --quiet custodia-server
 sudo systemctl is-active --quiet custodia-signer
 
 sudo -u custodia custodia-admin \
@@ -494,7 +494,7 @@ For a complete copy/paste test with two clients, local X25519 application keys, 
 
 Before considering the node ready for real data:
 
-- `systemctl status custodia` is healthy;
+- `systemctl status custodia-server` is healthy;
 - `systemctl status custodia-signer` is healthy when you need client certificate issuance;
 - `custodia-admin status read` succeeds with the admin certificate;
 - `/etc/custodia` is mode `0750` or stricter;

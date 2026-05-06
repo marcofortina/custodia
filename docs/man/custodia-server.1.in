@@ -93,13 +93,13 @@ Default state directory.
 Default packaged server log file.
 .SH SYSTEMD
 Packaged installs provide
-.BR custodia.service .
+.BR custodia-server.service .
 Typical commands:
 .PP
 .EX
-sudo systemctl enable --now custodia
-sudo systemctl status custodia --no-pager
-sudo journalctl -u custodia -f
+sudo systemctl enable --now custodia-server
+sudo systemctl status custodia-server --no-pager
+sudo journalctl -u custodia-server -f
 .EE
 .SH SECURITY NOTES
 .B custodia-server
@@ -116,7 +116,7 @@ user and grants write access only to configured state/log paths.
 Start a packaged Lite service:
 .PP
 .EX
-sudo systemctl enable --now custodia
+sudo systemctl enable --now custodia-server
 .EE
 .PP
 Run a local development server with in-memory storage:

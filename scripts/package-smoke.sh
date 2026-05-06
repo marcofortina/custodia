@@ -43,7 +43,7 @@ smoke_extracted_tree() {
       require_executable "$root" usr/bin/custodia-server
       require_executable "$root" usr/bin/custodia-admin
       require_executable "$root" usr/bin/custodia-signer
-      require_file "$root" usr/lib/systemd/system/custodia.service
+      require_file "$root" usr/lib/systemd/system/custodia-server.service
       require_file "$root" usr/lib/systemd/system/custodia-signer.service
       require_file "$root" usr/share/custodia/examples/config.lite.yaml
       require_file "$root" usr/share/custodia/examples/config.full.yaml

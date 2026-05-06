@@ -20,7 +20,7 @@ The vault never receives plaintext, DEKs, private keys or recipient public keys.
 The Lite server and signer are running:
 
 ```bash
-sudo systemctl status custodia --no-pager
+sudo systemctl status custodia-server --no-pager
 sudo systemctl status custodia-signer --no-pager
 sudo ss -ltnp | grep -E ':(8443|9444)'
 ```

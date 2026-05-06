@@ -28,11 +28,11 @@ This produces a timestamped `.db` copy using `sqlite3 .backup`.
 Example:
 
 ```bash
-sudo systemctl stop custodia
+sudo systemctl stop custodia-server
 sudo cp /var/lib/custodia/backups/custodia-YYYYMMDD-HHMMSS.db /var/lib/custodia/custodia.db
 sudo chown custodia:custodia /var/lib/custodia/custodia.db
 sudo chmod 0640 /var/lib/custodia/custodia.db
-sudo systemctl start custodia
+sudo systemctl start custodia-server
 ```
 
 ## Audit artifacts

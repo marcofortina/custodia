@@ -171,7 +171,7 @@ stage_server() {
   install_manpages "$stage" custodia-admin custodia-server custodia-signer
   install -m 0644 deploy/examples/config.lite.yaml deploy/examples/config.full.yaml deploy/examples/lite.env.example deploy/examples/production.env.example deploy/examples/custodia-signer-lite.service "$stage/usr/share/custodia/examples/"
 
-  cat > "$stage/usr/lib/systemd/system/custodia.service" <<'SERVICE'
+  cat > "$stage/usr/lib/systemd/system/custodia-server.service" <<'SERVICE'
 [Unit]
 Description=Custodia Vault Server
 After=network-online.target
