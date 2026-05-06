@@ -6,7 +6,7 @@
 # See the accompanying LICENSE file for details.
 
 [Unit]
-Description=Custodia Vault Lite
+Description=Custodia Vault Server
 After=network-online.target
 Wants=network-online.target
 

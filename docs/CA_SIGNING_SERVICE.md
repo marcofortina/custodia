@@ -55,7 +55,7 @@ sudo systemctl enable --now custodia-signer
 sudo systemctl status custodia-signer --no-pager
 ```
 
-Package installs ship `custodia-signer.service`. Source installs can copy `deploy/examples/custodia-signer-lite.service` to `/etc/systemd/system/custodia-signer.service`. The Lite unit listens on `:9444`, uses `/etc/custodia/ca.crt`, `/etc/custodia/ca.key` and `/etc/custodia/ca.pass`, and allows the bootstrap admin subject `admin` to submit signing requests.
+Package installs ship `custodia-signer.service`. Source installs can copy `deploy/examples/custodia-signer.service` to `/etc/systemd/system/custodia-signer.service`. The Lite unit listens on `:9444`, uses `/etc/custodia/ca.crt`, `/etc/custodia/ca.key` and `/etc/custodia/ca.pass`, and allows the bootstrap admin subject `admin` to submit signing requests.
 
 ## CSR policy
 

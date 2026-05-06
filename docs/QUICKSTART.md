@@ -192,8 +192,8 @@ Build and install the binaries. The default Makefile build is universal and incl
 ```bash
 make
 sudo make install PREFIX=/usr/local
-sudo install -m 0644 deploy/examples/custodia-lite.service /etc/systemd/system/custodia-server.service
-sudo install -m 0644 deploy/examples/custodia-signer-lite.service /etc/systemd/system/custodia-signer.service
+sudo install -m 0644 deploy/examples/custodia-server.service /etc/systemd/system/custodia-server.service
+sudo install -m 0644 deploy/examples/custodia-signer.service /etc/systemd/system/custodia-signer.service
 ```
 
 Create the service user if it does not exist yet:

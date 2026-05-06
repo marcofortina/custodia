@@ -1061,7 +1061,7 @@ The repository still does not claim to implement physical HSM hardware, external
 
 ## Patch 582 - Lite systemd unit example
 
-- Added a hardened `custodia-lite.service` example using `custodia-server --config /etc/custodia/config.yaml`.
+- Added a hardened `custodia-server.service` example using `custodia-server --config /etc/custodia/config.yaml`.
 
 ## Patch 583 - Lite Docker Compose example
 

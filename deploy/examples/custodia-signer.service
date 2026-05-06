@@ -6,7 +6,7 @@
 # See the accompanying LICENSE file for details.
 
 [Unit]
-Description=Custodia Lite Certificate Signer
+Description=Custodia Certificate Signer
 After=network-online.target
 Wants=network-online.target
 

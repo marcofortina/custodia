@@ -64,7 +64,7 @@ Review every certificate path before starting the service.
 
 ## Run
 
-Use the systemd unit examples in `deploy/examples/custodia-lite.service` and `deploy/examples/custodia-signer-lite.service`, or run the vault manually for a first smoke test:
+Use the systemd unit examples in `deploy/examples/custodia-server.service` and `deploy/examples/custodia-signer.service`, or run the vault manually for a first smoke test:
 
 ```bash
 custodia-server --config /etc/custodia/config.yaml
