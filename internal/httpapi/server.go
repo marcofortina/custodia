@@ -214,7 +214,7 @@ func (w *bufferedResponseWriter) Write(data []byte) (int, error) {
 
 func webConsoleMethodErrorPages(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !isWebPath(r.URL.Path) {
+		if !isWebHTMLPath(r.URL.Path) {
 			next.ServeHTTP(w, r)
 			return
 		}

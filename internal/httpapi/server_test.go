@@ -2140,6 +2140,16 @@ func TestWebConsoleRendersStyledNotFoundPages(t *testing.T) {
 		t.Fatalf("expected passkey JSON endpoint to keep JSON auth errors, got %d: %s", passkeyRes.Code, passkeyRes.Body.String())
 	}
 
+	passkeyMethodReq := mtlsRequest(http.MethodPut, "/web/passkey/authenticate/options", "", "admin")
+	passkeyMethodRes := httptest.NewRecorder()
+	handler.ServeHTTP(passkeyMethodRes, passkeyMethodReq)
+	if passkeyMethodRes.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected passkey method error to stay non-html 405, got %d: %s", passkeyMethodRes.Code, passkeyMethodRes.Body.String())
+	}
+	if strings.Contains(passkeyMethodRes.Body.String(), "console-error-shell") || strings.Contains(passkeyMethodRes.Body.String(), "Custodia Console") {
+		t.Fatalf("passkey JSON endpoint method errors must not render HTML console errors: %s", passkeyMethodRes.Body.String())
+	}
+
 	unknownWebReq := mtlsRequest(http.MethodGet, "/web/does-not-exist", "", "admin")
 	unknownWebRes := httptest.NewRecorder()
 	handler.ServeHTTP(unknownWebRes, unknownWebReq)
