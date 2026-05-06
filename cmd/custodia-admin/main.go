@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -112,6 +113,8 @@ func main() {
 		err = runClientGet(&cfg, args[2:])
 	case "client create":
 		err = runClientCreate(&cfg, args[2:])
+	case "client issue":
+		err = runClientIssue(&cfg, args[2:])
 	case "client csr":
 		err = runClientCSR(args[2:])
 	case "client revoke":
@@ -633,6 +636,131 @@ func normalizeClientCertificatePEM(payload string) ([]byte, error) {
 		return nil, fmt.Errorf("certificate_pem is not a client-auth certificate")
 	}
 	return append([]byte(payload), '\n'), nil
+}
+
+func runClientIssue(cfg *cliConfig, args []string) error {
+	cmd := flag.NewFlagSet("client issue", flag.ExitOnError)
+	clientID := cmd.String("client-id", "", "client id to register and issue")
+	mtlsSubject := cmd.String("mtls-subject", "", "certificate SAN/CN mapped to the client id; defaults to client id")
+	outDir := cmd.String("out-dir", "", "output directory for key, CSR, certificate and bundle")
+	vaultURL := cmd.String("vault-url", "", "Custodia vault API URL; defaults to global --server-url")
+	signerURL := cmd.String("signer-url", env("CUSTODIA_SIGNER_URL", "https://localhost:9444"), "custodia-signer URL")
+	ttlHours := cmd.Int("ttl-hours", 0, "optional certificate TTL in hours")
+	_ = cmd.Parse(args)
+	id := strings.TrimSpace(*clientID)
+	if id == "" || strings.TrimSpace(*outDir) == "" {
+		return fmt.Errorf("--client-id and --out-dir are required")
+	}
+	if !model.ValidClientID(id) {
+		return fmt.Errorf("--client-id is invalid")
+	}
+	subject := strings.TrimSpace(*mtlsSubject)
+	if subject == "" {
+		subject = id
+	}
+	if !model.ValidMTLSSubject(subject) {
+		return fmt.Errorf("--mtls-subject is invalid")
+	}
+	if *ttlHours < 0 {
+		return fmt.Errorf("--ttl-hours must be positive when set")
+	}
+	if strings.TrimSpace(*signerURL) == "" {
+		return fmt.Errorf("--signer-url is required")
+	}
+	paths := clientIssueOutputPaths(*outDir, id)
+	if err := ensureClientIssueOutputsAvailable(paths); err != nil {
+		return err
+	}
+	generated, err := certutil.GenerateClientCSR(id)
+	if err != nil {
+		return err
+	}
+	vaultCfg := *cfg
+	if strings.TrimSpace(*vaultURL) != "" {
+		vaultCfg.serverURL = strings.TrimSpace(*vaultURL)
+	}
+	signerCfg := *cfg
+	signerCfg.serverURL = strings.TrimSpace(*signerURL)
+	if err := requestJSON(&vaultCfg, http.MethodPost, "/v1/clients", model.CreateClientRequest{ClientID: id, MTLSSubject: subject}, io.Discard); err != nil {
+		return fmt.Errorf("register client metadata: %w", err)
+	}
+	if err := writeExclusive(paths.privateKey, generated.PrivateKeyPEM, 0o600); err != nil {
+		return err
+	}
+	if err := writeExclusive(paths.csr, generated.CSRPem, 0o644); err != nil {
+		return err
+	}
+	signReq := signing.SignClientCertificateRequest{ClientID: id, CSRPem: string(generated.CSRPem), TTLHours: *ttlHours}
+	var signBody bytes.Buffer
+	if err := requestJSON(&signerCfg, http.MethodPost, "/v1/certificates/sign", signReq, &signBody); err != nil {
+		return fmt.Errorf("sign client certificate: %w", err)
+	}
+	if err := writeExclusive(paths.signerJSON, signBody.Bytes(), 0o600); err != nil {
+		return err
+	}
+	var signResponse signing.SignClientCertificateResponse
+	if err := json.Unmarshal(signBody.Bytes(), &signResponse); err != nil {
+		return fmt.Errorf("invalid signer JSON: %w", err)
+	}
+	certificatePEM, err := normalizeClientCertificatePEM(signResponse.CertificatePEM)
+	if err != nil {
+		return err
+	}
+	if err := writeExclusive(paths.certificate, certificatePEM, 0o644); err != nil {
+		return err
+	}
+	if err := runCertificateBundle([]string{"--certificate", paths.certificate, "--private-key", paths.privateKey, "--ca", cfg.caFile, "--out", paths.bundle}); err != nil {
+		return fmt.Errorf("bundle issued client material: %w", err)
+	}
+	fmt.Fprintf(os.Stdout, "issued %s into %s\n", id, *outDir)
+	return nil
+}
+
+type clientIssuePaths struct {
+	outDir      string
+	privateKey  string
+	csr         string
+	signerJSON  string
+	certificate string
+	bundle      string
+}
+
+func clientIssueOutputPaths(outDir, clientID string) clientIssuePaths {
+	prefix := safeClientIssueFilePrefix(clientID)
+	return clientIssuePaths{
+		outDir:      outDir,
+		privateKey:  filepath.Join(outDir, prefix+".key"),
+		csr:         filepath.Join(outDir, prefix+".csr"),
+		signerJSON:  filepath.Join(outDir, prefix+".sign.json"),
+		certificate: filepath.Join(outDir, prefix+".crt"),
+		bundle:      filepath.Join(outDir, prefix+"-mtls.zip"),
+	}
+}
+
+func safeClientIssueFilePrefix(clientID string) string {
+	var b strings.Builder
+	for _, r := range clientID {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '.' || r == '_' || r == '-' {
+			b.WriteRune(r)
+			continue
+		}
+		b.WriteByte('_')
+	}
+	return b.String()
+}
+
+func ensureClientIssueOutputsAvailable(paths clientIssuePaths) error {
+	if err := os.MkdirAll(paths.outDir, 0o700); err != nil {
+		return err
+	}
+	for _, path := range []string{paths.privateKey, paths.csr, paths.signerJSON, paths.certificate, paths.bundle} {
+		if _, err := os.Stat(path); err == nil {
+			return fmt.Errorf("output already exists: %s", path)
+		} else if !os.IsNotExist(err) {
+			return err
+		}
+	}
+	return nil
 }
 
 func runClientCSR(args []string) error {
@@ -1255,6 +1383,7 @@ func usage() {
   custodia-admin [global flags] client list
   custodia-admin [global flags] client get --client-id ID
   custodia-admin [global flags] client create --client-id ID --mtls-subject SUBJECT
+  custodia-admin [global flags] client issue --client-id ID --out-dir DIR [--signer-url URL]
   custodia-admin [global flags] client revoke --client-id ID [--reason REASON]
   custodia-admin [global flags] certificate sign --client-id ID --csr-file FILE [--ttl-hours HOURS]
   custodia-admin certificate extract --input FILE --certificate-out FILE

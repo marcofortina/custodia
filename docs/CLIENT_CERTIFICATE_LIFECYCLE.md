@@ -2,6 +2,27 @@
 
 Custodia separates client metadata registration from certificate issuance. The vault API registers client metadata; the dedicated `custodia-signer` process signs client mTLS CSRs.
 
+
+## Fast path: issue a complete local client bundle
+
+For Lite or lab installs where the same operator can reach both the vault API and `custodia-signer`, `client issue` performs the full local workflow in one command:
+
+```bash
+sudo custodia-admin \
+  --cert /etc/custodia/admin.crt \
+  --key /etc/custodia/admin.key \
+  --ca /etc/custodia/ca.crt \
+  client issue \
+  --vault-url https://localhost:8443 \
+  --signer-url https://localhost:9444 \
+  --client-id client_alice \
+  --out-dir ./client_alice
+```
+
+The command registers the client metadata, generates the client mTLS key and CSR locally, submits the CSR to `custodia-signer`, extracts the signed certificate and creates `client_alice-mtls.zip`. It still keeps application encryption keys separate; generate those with `custodia-client key generate`.
+
+Output files are exclusive and the command refuses to overwrite existing material.
+
 ## 1. Register metadata in the vault API
 
 ```bash

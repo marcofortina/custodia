@@ -1723,3 +1723,17 @@ make check
 - Kept the workflow explicit about the crypto boundary: plaintext, DEKs, private keys and recipient public keys remain outside the server.
 
 Documentation-only patch; no runtime tests required.
+
+
+## Patch 866 - admin client issue workflow
+
+- Added `custodia-admin client issue` to orchestrate client metadata registration, local mTLS key/CSR generation, signer submission, certificate extraction and local bundle creation.
+- Kept the signer boundary intact: `custodia-server` still does not hold CA private keys and application encryption keys remain separate from mTLS material.
+- Updated signer, lifecycle, Lite install, quickstart and README docs with the copy/paste shortcut.
+
+Suggested verification:
+
+```bash
+go test ./cmd/custodia-admin
+make check
+```

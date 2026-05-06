@@ -469,3 +469,20 @@ Before considering the node ready for real data:
 - Web MFA: `docs/WEB_MFA.md`
 - Backup and restore: `docs/LITE_BACKUP_RESTORE.md`
 - Upgrade to Full: `docs/LITE_TO_FULL_UPGRADE.md`
+
+
+Client certificate shortcut after installing the signer:
+
+```bash
+sudo custodia-admin \
+  --cert /etc/custodia/admin.crt \
+  --key /etc/custodia/admin.key \
+  --ca /etc/custodia/ca.crt \
+  client issue \
+  --vault-url https://localhost:8443 \
+  --signer-url https://localhost:9444 \
+  --client-id client_alice \
+  --out-dir ./client_alice
+```
+
+This creates local mTLS material and `client_alice-mtls.zip`; application encryption keys are still generated separately with `custodia-client key generate`.

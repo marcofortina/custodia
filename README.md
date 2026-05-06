@@ -308,7 +308,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 **Identity, certificates and web authentication**
 
 - [CA signing service design](docs/CA_SIGNING_SERVICE.md)
-- [Client certificate lifecycle](docs/CLIENT_CERTIFICATE_LIFECYCLE.md)
+- [Client certificate lifecycle](docs/CLIENT_CERTIFICATE_LIFECYCLE.md) — includes the `custodia-admin client issue` shortcut
 - [CRL and OCSP operations](docs/CRL_OCSP_RUNBOOK.md)
 - [PKCS#11 and SoftHSM signer bridge](docs/PKCS11_SOFTHSM.md)
 - [Web MFA](docs/WEB_MFA.md)
@@ -352,4 +352,3 @@ The command fails on unsafe development defaults and missing external production
 ### Revocation serial status
 
 `custodia-signer` exposes a CRL-backed JSON revocation responder at `/v1/revocation/serial`. Use `custodia-admin revocation check-serial --serial-hex HEX` for operator drills. See `docs/CRL_OCSP_RUNBOOK.md`.
-

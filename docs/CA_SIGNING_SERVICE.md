@@ -22,6 +22,10 @@ The signing request body is:
 
 The response contains only the signed mTLS client certificate and validity window. The signer never receives, stores, publishes or validates client-side encryption keys. Operators can materialize the returned `certificate_pem` into a PEM file with `custodia-admin certificate extract --input sign.json --certificate-out client.crt`; the extraction command is local-only and never handles private keys. After extraction, `custodia-admin certificate bundle --certificate client.crt --private-key client.key --ca ca.crt --out client-mtls.zip` can create a local handoff archive; this bundle helper does not call the signer and must be protected because it contains the mTLS private key.
 
+## Admin CLI workflow shortcut
+
+`custodia-admin client issue` can orchestrate vault metadata registration, local CSR generation, signer submission, certificate extraction and local bundle creation from one operator command. It still uses the signer API for the signing step and does not move application encryption keys into the server.
+
 ## Production authentication
 
 Production mode requires mTLS:

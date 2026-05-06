@@ -190,6 +190,37 @@ func TestRunAuditCommandsRejectInvalidFilters(t *testing.T) {
 	}
 }
 
+func TestRunClientIssueValidatesArgsBeforeNetwork(t *testing.T) {
+	if err := runClientIssue(&cliConfig{}, []string{"--client-id", "client bad", "--out-dir", t.TempDir()}); err == nil {
+		t.Fatal("expected invalid client id error")
+	}
+	if err := runClientIssue(&cliConfig{}, []string{"--client-id", "client_alice"}); err == nil {
+		t.Fatal("expected missing out-dir error")
+	}
+	if err := runClientIssue(&cliConfig{}, []string{"--client-id", "client_alice", "--out-dir", t.TempDir(), "--ttl-hours", "-1"}); err == nil {
+		t.Fatal("expected invalid ttl error")
+	}
+}
+
+func TestRunClientIssueRefusesExistingOutputBeforeNetwork(t *testing.T) {
+	dir := t.TempDir()
+	paths := clientIssueOutputPaths(dir, "client_alice")
+	if err := os.WriteFile(paths.privateKey, []byte("existing"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	err := runClientIssue(&cliConfig{}, []string{"--client-id", "client_alice", "--out-dir", dir})
+	if err == nil || !strings.Contains(err.Error(), "output already exists") {
+		t.Fatalf("expected existing output error before network, got: %v", err)
+	}
+}
+
+func TestClientIssueOutputPathsAreSafe(t *testing.T) {
+	paths := clientIssueOutputPaths("/tmp/custodia", "tenant:client")
+	if !strings.HasSuffix(paths.privateKey, "tenant_client.key") || !strings.HasSuffix(paths.bundle, "tenant_client-mtls.zip") {
+		t.Fatalf("unexpected issue paths: %+v", paths)
+	}
+}
+
 func TestRunClientCSRRejectsInvalidClientID(t *testing.T) {
 	err := runClientCSR([]string{"--client-id", "client bad", "--private-key-out", "key.pem", "--csr-out", "client.csr"})
 	if err == nil {
