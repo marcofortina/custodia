@@ -12,8 +12,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"flag"
 	"fmt"
 	"io"
@@ -95,6 +97,8 @@ func main() {
 		err = runLiteUpgradeCheck(args[2:])
 	case "certificate sign":
 		err = runCertificateSign(&cfg, args[2:])
+	case "certificate extract":
+		err = runCertificateExtract(args[2:])
 	case "ca bootstrap-local":
 		err = runCABootstrapLocal(args[2:])
 	case "client whoami":
@@ -418,6 +422,65 @@ func runCertificateSign(cfg *cliConfig, args []string) error {
 	}
 	req := signing.SignClientCertificateRequest{ClientID: *clientID, CSRPem: string(csrPEM), TTLHours: *ttlHours}
 	return requestJSON(cfg, http.MethodPost, "/v1/certificates/sign", req, os.Stdout)
+}
+
+func runCertificateExtract(args []string) error {
+	cmd := flag.NewFlagSet("certificate extract", flag.ExitOnError)
+	input := cmd.String("input", "", "signer JSON response file, or - for stdin")
+	certificateOut := cmd.String("certificate-out", "", "path for the extracted client certificate PEM")
+	_ = cmd.Parse(args)
+	if *input == "" || *certificateOut == "" {
+		return fmt.Errorf("--input and --certificate-out are required")
+	}
+	payload, err := readFileOrStdin(*input)
+	if err != nil {
+		return err
+	}
+	var response signing.SignClientCertificateResponse
+	if err := json.Unmarshal(payload, &response); err != nil {
+		return fmt.Errorf("invalid signer JSON: %w", err)
+	}
+	certificatePEM, err := normalizeClientCertificatePEM(response.CertificatePEM)
+	if err != nil {
+		return err
+	}
+	return writeExclusive(*certificateOut, certificatePEM, 0o644)
+}
+
+func readFileOrStdin(path string) ([]byte, error) {
+	if strings.TrimSpace(path) == "-" {
+		return io.ReadAll(os.Stdin)
+	}
+	return os.ReadFile(path)
+}
+
+func normalizeClientCertificatePEM(payload string) ([]byte, error) {
+	payload = strings.TrimSpace(payload)
+	if payload == "" {
+		return nil, fmt.Errorf("signer JSON does not contain certificate_pem")
+	}
+	block, rest := pem.Decode([]byte(payload))
+	if block == nil || block.Type != "CERTIFICATE" {
+		return nil, fmt.Errorf("certificate_pem must contain a PEM certificate")
+	}
+	if strings.TrimSpace(string(rest)) != "" {
+		return nil, fmt.Errorf("certificate_pem must contain exactly one PEM certificate")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("certificate_pem is not a valid certificate: %w", err)
+	}
+	clientAuth := false
+	for _, usage := range cert.ExtKeyUsage {
+		if usage == x509.ExtKeyUsageClientAuth {
+			clientAuth = true
+			break
+		}
+	}
+	if !clientAuth {
+		return nil, fmt.Errorf("certificate_pem is not a client-auth certificate")
+	}
+	return append([]byte(payload), '\n'), nil
 }
 
 func runClientCSR(args []string) error {
@@ -1041,6 +1104,8 @@ func usage() {
   custodia-admin [global flags] client get --client-id ID
   custodia-admin [global flags] client create --client-id ID --mtls-subject SUBJECT
   custodia-admin [global flags] client revoke --client-id ID [--reason REASON]
+  custodia-admin [global flags] certificate sign --client-id ID --csr-file FILE [--ttl-hours HOURS]
+  custodia-admin certificate extract --input FILE --certificate-out FILE
   custodia-admin [global flags] audit list [--limit N] [--outcome STATUS] [--action ACTION]
   custodia-admin [global flags] audit export [--limit N] [--out-file FILE] [--sha256-out FILE] [--events-out FILE]
   custodia-admin [global flags] audit verify [--limit N]

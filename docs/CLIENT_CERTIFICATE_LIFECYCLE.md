@@ -45,7 +45,7 @@ sudo custodia-admin \
   --csr-file client_alice.csr
 ```
 
-The signer returns JSON containing a client-auth certificate bound to `client_alice`. For command-line smoke tests, write the returned `certificate_pem` value to the client certificate file:
+The signer returns JSON containing a client-auth certificate bound to `client_alice`. Save the signer response, then extract the PEM certificate with `custodia-admin certificate extract`:
 
 ```bash
 sudo custodia-admin \
@@ -58,14 +58,12 @@ sudo custodia-admin \
   --csr-file client_alice.csr \
   > client_alice.sign.json
 
-python3 - <<'PYCODE'
-import json
-from pathlib import Path
-payload = json.loads(Path("client_alice.sign.json").read_text())
-Path("client_alice.crt").write_text(payload["certificate_pem"])
-PYCODE
-chmod 0644 client_alice.crt
+custodia-admin certificate extract \
+  --input client_alice.sign.json \
+  --certificate-out client_alice.crt
 ```
+
+`certificate extract` validates that `certificate_pem` contains exactly one client-auth PEM certificate, writes `client_alice.crt` with `0644` permissions and refuses to overwrite an existing file. The private key remains the file generated locally by `custodia-admin client csr`.
 
 ## 4. Use the certificate for vault API mTLS
 

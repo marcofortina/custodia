@@ -20,7 +20,7 @@ The signing request body is:
 }
 ```
 
-The response contains only the signed mTLS client certificate and validity window. The signer never receives, stores, publishes or validates client-side encryption keys.
+The response contains only the signed mTLS client certificate and validity window. The signer never receives, stores, publishes or validates client-side encryption keys. Operators can materialize the returned `certificate_pem` into a PEM file with `custodia-admin certificate extract --input sign.json --certificate-out client.crt`; the extraction command is local-only and never handles private keys.
 
 ## Production authentication
 

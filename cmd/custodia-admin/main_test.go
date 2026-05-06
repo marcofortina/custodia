@@ -217,6 +217,63 @@ func TestRunCertificateSignRejectsInvalidArgs(t *testing.T) {
 	}
 }
 
+func TestRunCertificateExtractWritesClientCertificate(t *testing.T) {
+	outDir := filepath.Join(t.TempDir(), "lite")
+	if err := runCABootstrapLocal([]string{"--out-dir", outDir, "--admin-client-id", "admin", "--server-name", "localhost"}); err != nil {
+		t.Fatalf("runCABootstrapLocal() error = %v", err)
+	}
+	certificatePEM, err := os.ReadFile(filepath.Join(outDir, "admin.crt"))
+	if err != nil {
+		t.Fatalf("ReadFile(admin.crt) error = %v", err)
+	}
+	payload, err := json.Marshal(map[string]string{"certificate_pem": string(certificatePEM)})
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+	signerJSON := filepath.Join(t.TempDir(), "client.sign.json")
+	if err := os.WriteFile(signerJSON, payload, 0o600); err != nil {
+		t.Fatalf("WriteFile(sign json) error = %v", err)
+	}
+	certificateOut := filepath.Join(t.TempDir(), "client.crt")
+	if err := runCertificateExtract([]string{"--input", signerJSON, "--certificate-out", certificateOut}); err != nil {
+		t.Fatalf("runCertificateExtract() error = %v", err)
+	}
+	written, err := os.ReadFile(certificateOut)
+	if err != nil {
+		t.Fatalf("ReadFile(certificateOut) error = %v", err)
+	}
+	if string(written) != strings.TrimSpace(string(certificatePEM))+"\n" {
+		t.Fatalf("unexpected certificate output: %q", string(written))
+	}
+	info, err := os.Stat(certificateOut)
+	if err != nil {
+		t.Fatalf("Stat(certificateOut) error = %v", err)
+	}
+	if got := info.Mode().Perm(); got != 0o644 {
+		t.Fatalf("certificate mode = %o, want 0644", got)
+	}
+	if err := runCertificateExtract([]string{"--input", signerJSON, "--certificate-out", certificateOut}); err == nil {
+		t.Fatal("expected exclusive output write error")
+	}
+}
+
+func TestRunCertificateExtractRejectsInvalidPayloads(t *testing.T) {
+	dir := t.TempDir()
+	cases := map[string]string{
+		"missing-pem.json": `{}`,
+		"invalid-pem.json": `{"certificate_pem":"not a cert"}`,
+	}
+	for name, payload := range cases {
+		path := filepath.Join(dir, name)
+		if err := os.WriteFile(path, []byte(payload), 0o600); err != nil {
+			t.Fatalf("WriteFile(%s) error = %v", name, err)
+		}
+		if err := runCertificateExtract([]string{"--input", path, "--certificate-out", filepath.Join(dir, name+".crt")}); err == nil {
+			t.Fatalf("expected extract error for %s", name)
+		}
+	}
+}
+
 func TestWriteAuditExportArtifacts(t *testing.T) {
 	dir := t.TempDir()
 	bodyPath := dir + "/audit.jsonl"
