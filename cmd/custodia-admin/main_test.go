@@ -8,6 +8,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
@@ -254,6 +255,90 @@ func TestRunCertificateExtractWritesClientCertificate(t *testing.T) {
 	}
 	if err := runCertificateExtract([]string{"--input", signerJSON, "--certificate-out", certificateOut}); err == nil {
 		t.Fatal("expected exclusive output write error")
+	}
+}
+
+func TestRunCertificateBundleWritesLocalArchive(t *testing.T) {
+	outDir := filepath.Join(t.TempDir(), "lite")
+	if err := runCABootstrapLocal([]string{"--out-dir", outDir, "--admin-client-id", "admin", "--server-name", "localhost"}); err != nil {
+		t.Fatalf("runCABootstrapLocal() error = %v", err)
+	}
+	bundleOut := filepath.Join(t.TempDir(), "client.zip")
+	if err := runCertificateBundle([]string{
+		"--certificate", filepath.Join(outDir, "admin.crt"),
+		"--private-key", filepath.Join(outDir, "admin.key"),
+		"--ca", filepath.Join(outDir, "ca.crt"),
+		"--out", bundleOut,
+	}); err != nil {
+		t.Fatalf("runCertificateBundle() error = %v", err)
+	}
+	info, err := os.Stat(bundleOut)
+	if err != nil {
+		t.Fatalf("Stat(bundleOut) error = %v", err)
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Fatalf("bundle mode = %o, want 0600", got)
+	}
+	reader, err := zip.OpenReader(bundleOut)
+	if err != nil {
+		t.Fatalf("OpenReader(bundleOut) error = %v", err)
+	}
+	defer reader.Close()
+
+	entries := map[string]os.FileMode{}
+	for _, file := range reader.File {
+		entries[file.Name] = file.Mode().Perm()
+	}
+	for name, wantMode := range map[string]os.FileMode{"client.crt": 0o644, "client.key": 0o600, "ca.crt": 0o644, "README.txt": 0o644} {
+		if gotMode, ok := entries[name]; !ok {
+			t.Fatalf("missing bundle entry %s", name)
+		} else if gotMode != wantMode {
+			t.Fatalf("bundle entry %s mode = %o, want %o", name, gotMode, wantMode)
+		}
+	}
+	if err := runCertificateBundle([]string{
+		"--certificate", filepath.Join(outDir, "admin.crt"),
+		"--private-key", filepath.Join(outDir, "admin.key"),
+		"--ca", filepath.Join(outDir, "ca.crt"),
+		"--out", bundleOut,
+	}); err == nil {
+		t.Fatal("expected exclusive bundle output write error")
+	}
+}
+
+func TestRunCertificateBundleRejectsInvalidInputs(t *testing.T) {
+	dir := t.TempDir()
+	bad := filepath.Join(dir, "bad.pem")
+	if err := os.WriteFile(bad, []byte("not pem\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile(bad) error = %v", err)
+	}
+	outDir := filepath.Join(dir, "lite")
+	if err := runCABootstrapLocal([]string{"--out-dir", outDir, "--admin-client-id", "admin", "--server-name", "localhost"}); err != nil {
+		t.Fatalf("runCABootstrapLocal() error = %v", err)
+	}
+	if err := runCertificateBundle([]string{
+		"--certificate", bad,
+		"--private-key", filepath.Join(outDir, "admin.key"),
+		"--ca", filepath.Join(outDir, "ca.crt"),
+		"--out", filepath.Join(dir, "bad-cert.zip"),
+	}); err == nil {
+		t.Fatal("expected invalid client certificate error")
+	}
+	if err := runCertificateBundle([]string{
+		"--certificate", filepath.Join(outDir, "admin.crt"),
+		"--private-key", bad,
+		"--ca", filepath.Join(outDir, "ca.crt"),
+		"--out", filepath.Join(dir, "bad-key.zip"),
+	}); err == nil {
+		t.Fatal("expected invalid private key error")
+	}
+	if err := runCertificateBundle([]string{
+		"--certificate", filepath.Join(outDir, "admin.crt"),
+		"--private-key", filepath.Join(outDir, "admin.key"),
+		"--ca", filepath.Join(outDir, "admin.crt"),
+		"--out", filepath.Join(dir, "bad-ca.zip"),
+	}); err == nil {
+		t.Fatal("expected non-CA certificate error")
 	}
 }
 

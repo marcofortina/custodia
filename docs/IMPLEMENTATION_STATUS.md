@@ -1635,3 +1635,9 @@ Node high-level crypto wrapper is implemented in `clients/node` using Node built
 - Added `custodia-admin certificate extract` to materialize signer JSON responses into client certificate PEM files without ad-hoc `python`/`jq` snippets.
 - Validates that `certificate_pem` contains exactly one client-auth certificate and writes output files exclusively with `0644` permissions.
 - Updated certificate lifecycle and signer docs to keep Lite first-run certificate issuance copy/pasteable.
+
+## Patch 858 - certificate bundle command
+
+- Added `custodia-admin certificate bundle` to create a local-only zip archive with `client.crt`, `client.key`, `ca.crt` and a README for application handoff.
+- Validates client certificate, private key and CA certificate inputs, writes the archive exclusively with `0600` permissions and keeps application encryption keys out of the bundle.
+- Updated certificate lifecycle and signer docs to document the safer CLI handoff path after `certificate extract`.

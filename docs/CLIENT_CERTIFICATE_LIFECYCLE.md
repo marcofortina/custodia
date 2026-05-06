@@ -65,6 +65,18 @@ custodia-admin certificate extract \
 
 `certificate extract` validates that `certificate_pem` contains exactly one client-auth PEM certificate, writes `client_alice.crt` with `0644` permissions and refuses to overwrite an existing file. The private key remains the file generated locally by `custodia-admin client csr`.
 
+Optional local client bundle for handoff to an application host:
+
+```bash
+custodia-admin certificate bundle \
+  --certificate client_alice.crt \
+  --private-key client_alice.key \
+  --ca /etc/custodia/ca.crt \
+  --out client_alice-mtls.zip
+```
+
+`certificate bundle` is a local-only packaging helper. It writes an exclusive `0600` zip containing `client.crt`, `client.key`, `ca.crt` and `README.txt`; it does not contact the vault, signer or Web Console. Protect the archive because it contains the client mTLS private key. Application encryption keys remain separate and are never bundled by this command.
+
 ## 4. Use the certificate for vault API mTLS
 
 Configure client applications with:

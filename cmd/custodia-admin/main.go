@@ -8,6 +8,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"context"
@@ -99,6 +100,8 @@ func main() {
 		err = runCertificateSign(&cfg, args[2:])
 	case "certificate extract":
 		err = runCertificateExtract(args[2:])
+	case "certificate bundle":
+		err = runCertificateBundle(args[2:])
 	case "ca bootstrap-local":
 		err = runCABootstrapLocal(args[2:])
 	case "client whoami":
@@ -445,6 +448,155 @@ func runCertificateExtract(args []string) error {
 		return err
 	}
 	return writeExclusive(*certificateOut, certificatePEM, 0o644)
+}
+
+func runCertificateBundle(args []string) error {
+	cmd := flag.NewFlagSet("certificate bundle", flag.ExitOnError)
+	certificateFile := cmd.String("certificate", "", "client certificate PEM file")
+	privateKeyFile := cmd.String("private-key", "", "client private key PEM file generated locally")
+	caFile := cmd.String("ca", "", "CA certificate PEM file trusted by the client")
+	outFile := cmd.String("out", "", "zip bundle output path")
+	_ = cmd.Parse(args)
+	if *certificateFile == "" || *privateKeyFile == "" || *caFile == "" || *outFile == "" {
+		return fmt.Errorf("--certificate, --private-key, --ca and --out are required")
+	}
+
+	certificatePEM, err := readAndNormalizeClientCertificate(*certificateFile)
+	if err != nil {
+		return err
+	}
+	privateKeyPEM, err := readAndNormalizePrivateKey(*privateKeyFile)
+	if err != nil {
+		return err
+	}
+	caPEM, err := readAndNormalizeCACertificate(*caFile)
+	if err != nil {
+		return err
+	}
+
+	entries := []bundleEntry{
+		{name: "client.crt", data: certificatePEM, mode: 0o644},
+		{name: "client.key", data: privateKeyPEM, mode: 0o600},
+		{name: "ca.crt", data: caPEM, mode: 0o644},
+		{name: "README.txt", data: []byte(certificateBundleReadme), mode: 0o644},
+	}
+	return writeCertificateBundle(*outFile, entries)
+}
+
+type bundleEntry struct {
+	name string
+	data []byte
+	mode os.FileMode
+}
+
+const certificateBundleReadme = `Custodia client mTLS bundle
+
+Files:
+- client.crt: client mTLS certificate signed by the Custodia CA.
+- client.key: client mTLS private key generated locally by the operator.
+- ca.crt: CA certificate used to verify Custodia server/signer endpoints.
+
+Security notes:
+- Protect this archive because it contains client.key.
+- Do not upload this archive to Custodia or to the Web Console.
+- Application encryption keys are separate from these mTLS transport files.
+`
+
+func readAndNormalizeClientCertificate(path string) ([]byte, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return normalizeClientCertificatePEM(string(data))
+}
+
+func readAndNormalizePrivateKey(path string) ([]byte, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	payload := strings.TrimSpace(string(data))
+	if payload == "" {
+		return nil, fmt.Errorf("private key PEM is empty")
+	}
+	block, rest := pem.Decode([]byte(payload))
+	if block == nil {
+		return nil, fmt.Errorf("private key PEM must contain a PEM private key")
+	}
+	if strings.TrimSpace(string(rest)) != "" {
+		return nil, fmt.Errorf("private key PEM must contain exactly one PEM block")
+	}
+	switch block.Type {
+	case "PRIVATE KEY":
+		if _, err := x509.ParsePKCS8PrivateKey(block.Bytes); err != nil {
+			return nil, fmt.Errorf("private key PEM is not a valid PKCS#8 private key: %w", err)
+		}
+	case "EC PRIVATE KEY":
+		if _, err := x509.ParseECPrivateKey(block.Bytes); err != nil {
+			return nil, fmt.Errorf("private key PEM is not a valid EC private key: %w", err)
+		}
+	case "RSA PRIVATE KEY":
+		if _, err := x509.ParsePKCS1PrivateKey(block.Bytes); err != nil {
+			return nil, fmt.Errorf("private key PEM is not a valid RSA private key: %w", err)
+		}
+	default:
+		return nil, fmt.Errorf("private key PEM block type %q is not supported", block.Type)
+	}
+	return append([]byte(payload), '\n'), nil
+}
+
+func readAndNormalizeCACertificate(path string) ([]byte, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	payload := strings.TrimSpace(string(data))
+	if payload == "" {
+		return nil, fmt.Errorf("CA certificate PEM is empty")
+	}
+	block, rest := pem.Decode([]byte(payload))
+	if block == nil || block.Type != "CERTIFICATE" {
+		return nil, fmt.Errorf("CA certificate PEM must contain a PEM certificate")
+	}
+	if strings.TrimSpace(string(rest)) != "" {
+		return nil, fmt.Errorf("CA certificate PEM must contain exactly one PEM certificate")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("CA certificate PEM is not a valid certificate: %w", err)
+	}
+	if !cert.IsCA {
+		return nil, fmt.Errorf("CA certificate PEM is not a CA certificate")
+	}
+	return append([]byte(payload), '\n'), nil
+}
+
+func writeCertificateBundle(path string, entries []bundleEntry) error {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
+	}
+	zipWriter := zip.NewWriter(file)
+	for _, entry := range entries {
+		header := &zip.FileHeader{Name: entry.name, Method: zip.Deflate}
+		header.SetMode(entry.mode)
+		writer, err := zipWriter.CreateHeader(header)
+		if err != nil {
+			_ = zipWriter.Close()
+			_ = file.Close()
+			return err
+		}
+		if _, err := writer.Write(entry.data); err != nil {
+			_ = zipWriter.Close()
+			_ = file.Close()
+			return err
+		}
+	}
+	if err := zipWriter.Close(); err != nil {
+		_ = file.Close()
+		return err
+	}
+	return file.Close()
 }
 
 func readFileOrStdin(path string) ([]byte, error) {
@@ -1106,6 +1258,7 @@ func usage() {
   custodia-admin [global flags] client revoke --client-id ID [--reason REASON]
   custodia-admin [global flags] certificate sign --client-id ID --csr-file FILE [--ttl-hours HOURS]
   custodia-admin certificate extract --input FILE --certificate-out FILE
+  custodia-admin certificate bundle --certificate FILE --private-key FILE --ca FILE --out FILE
   custodia-admin [global flags] audit list [--limit N] [--outcome STATUS] [--action ACTION]
   custodia-admin [global flags] audit export [--limit N] [--out-file FILE] [--sha256-out FILE] [--events-out FILE]
   custodia-admin [global flags] audit verify [--limit N]
