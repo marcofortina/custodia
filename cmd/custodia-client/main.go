@@ -945,9 +945,14 @@ func writeExclusive(path string, body []byte, mode os.FileMode) error {
 	if err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
-	defer file.Close()
 	if _, err := file.Write(body); err != nil {
+		if closeErr := file.Close(); closeErr != nil {
+			return fmt.Errorf("write %s: %w", path, errors.Join(err, closeErr))
+		}
 		return fmt.Errorf("write %s: %w", path, err)
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("close %s: %w", path, err)
 	}
 	return nil
 }
