@@ -1,8 +1,12 @@
+# Local patch exports
 *.patch
 
 # Build outputs
-bin/
-dist/
+/bin/
+/dist/
+/custodia-admin
+/custodia-server
+/custodia-signer
 clients/rust/target/
 
 # Go
