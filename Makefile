@@ -20,7 +20,7 @@ LDFLAGS := -X custodia/internal/build.Version=$(VERSION) -X custodia/internal/bu
 .DEFAULT_GOAL := all
 
 .PHONY: all
-all: test build
+all: test build man
 
 .PHONY: test
 test:

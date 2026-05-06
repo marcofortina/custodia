@@ -1834,3 +1834,17 @@ Suggested verification:
 make man
 grep -R "custodia-signer" build/man/man1/custodia-signer.1
 ```
+
+## Patch 880 - Make all builds manpages
+
+- Included generated manual pages in the default `make all` path.
+- Kept `make man` available for manual-page-only rebuilds.
+- Updated README build wording so `make`, `make build`, `make man` and `make check` have distinct scopes.
+
+Documentation/build metadata only. Suggested verification:
+
+```bash
+make -n
+make -n man
+make -n install
+```
