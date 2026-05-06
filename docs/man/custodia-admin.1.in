@@ -1,0 +1,170 @@
+.\" Copyright (c) 2026 Marco Fortina
+.\" SPDX-License-Identifier: AGPL-3.0-only
+.TH CUSTODIA-ADMIN 1 "@DATE@" "Custodia @VERSION@" "Custodia Manual"
+.SH NAME
+custodia-admin \- administer a Custodia vault and certificate workflow
+.SH SYNOPSIS
+.SY custodia-admin
+.OP --server-url URL
+.OP --cert FILE
+.OP --key FILE
+.OP --ca FILE
+.I command
+.RI [ arguments ...]
+.YS
+.SY custodia-admin
+.B version
+.YS
+.SY custodia-admin
+.B --version
+.YS
+.SH DESCRIPTION
+.B custodia-admin
+is the operator CLI for Custodia. It talks to the vault API over mTLS,
+performs metadata-only administration, exports and verifies audit material,
+and orchestrates client certificate workflows.
+.PP
+When the admin certificate and key live under
+.I /etc/custodia,
+run the command as the restricted
+.B custodia
+service user, for example:
+.PP
+.EX
+sudo -u custodia custodia-admin --server-url https://localhost:8443 \\
+  --cert /etc/custodia/admin.crt \\
+  --key /etc/custodia/admin.key \\
+  --ca /etc/custodia/ca.crt version server
+.EE
+.SH COMMANDS
+.TP
+.B version
+Print local build metadata and exit without contacting the server.
+.TP
+.B version server
+Print server build metadata from
+.BR /v1/version .
+.TP
+.B client create --client-id ID --mtls-subject SUBJECT
+Register client metadata in the vault.
+.TP
+.B client csr --client-id ID --private-key-out FILE --csr-out FILE
+Generate a local client mTLS private key and CSR.
+.TP
+.B client issue --client-id ID --out-dir DIR --signer-url URL
+Register client metadata, generate local mTLS key/CSR, submit the CSR to
+.BR custodia-signer (1),
+extract the certificate, and create a local certificate bundle.
+.TP
+.B certificate sign --client-id ID --csr-file FILE
+Submit a CSR to the signing service.
+.TP
+.B certificate extract --input FILE --certificate-out FILE
+Extract a certificate PEM from signer JSON output.
+.TP
+.B certificate bundle --certificate FILE --private-key FILE --ca FILE --out FILE
+Create a local ZIP bundle containing client mTLS material.
+.TP
+.B audit export
+Export bounded audit metadata.
+.TP
+.B audit verify-export
+Verify exported audit body/digest/count artifacts.
+.TP
+.B production check
+Run production configuration checks from an environment file.
+.SH GLOBAL OPTIONS
+.TP
+.BI --server-url " URL"
+Custodia API base URL.
+.TP
+.BI --cert " FILE"
+Admin mTLS client certificate.
+.TP
+.BI --key " FILE"
+Admin mTLS private key.
+.TP
+.BI --ca " FILE"
+Custodia CA certificate.
+.SH ENVIRONMENT
+.TP
+.B CUSTODIA_BASE_URL
+Default API base URL.
+.TP
+.B CUSTODIA_ADMIN_CERT
+Default admin certificate path.
+.TP
+.B CUSTODIA_ADMIN_KEY
+Default admin private key path.
+.TP
+.B CUSTODIA_CA_CERT
+Default CA certificate path.
+.TP
+.B CUSTODIA_SIGNER_URL
+Default signer URL for client certificate issue workflows.
+.SH FILES
+.TP
+.I /etc/custodia/admin.crt
+Default local admin mTLS certificate.
+.TP
+.I /etc/custodia/admin.key
+Default local admin mTLS private key. Keep readable only by root/custodia.
+.TP
+.I /etc/custodia/ca.crt
+Default Custodia CA certificate.
+.TP
+.I /var/log/custodia/
+Default server and signer log directory for packaged installs.
+.SH SECURITY NOTES
+.B custodia-admin
+must not handle secret plaintext, DEKs, recipient envelopes, or application
+private encryption keys. It is an administrative metadata and certificate
+workflow tool.
+.PP
+Prefer running commands that read
+.I /etc/custodia/admin.key
+as the
+.B custodia
+service user instead of unrestricted root.
+.SH EXAMPLES
+Issue a local client mTLS bundle:
+.PP
+.EX
+sudo install -d -o custodia -g custodia -m 0700 /tmp/custodia-client-alice
+sudo -u custodia custodia-admin \\
+  --server-url https://localhost:8443 \\
+  --cert /etc/custodia/admin.crt \\
+  --key /etc/custodia/admin.key \\
+  --ca /etc/custodia/ca.crt \\
+  client issue \\
+  --signer-url https://localhost:9444 \\
+  --client-id client_alice \\
+  --out-dir /tmp/custodia-client-alice
+sudo chown -R "$USER:$USER" /tmp/custodia-client-alice
+.EE
+.SH VERSION
+Custodia version: @VERSION@
+.br
+Build commit: @COMMIT@
+.br
+Build date: @DATE@
+.PP
+Runtime version is available with:
+.PP
+.EX
+custodia-admin version
+.EE
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Runtime or API failure.
+.TP
+.B 2
+Usage error.
+.SH SEE ALSO
+.BR custodia-client (1),
+.BR custodia-server (1),
+.BR custodia-signer (1)

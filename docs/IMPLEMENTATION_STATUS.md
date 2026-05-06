@@ -1780,3 +1780,18 @@ make test-sqlite
 # Optional, with TEST_CUSTODIA_POSTGRES_URL set:
 make test-postgres
 ```
+
+## Patch 876 - custodia-admin manual page
+
+- Added `custodia-admin(1)` as a roff template with build metadata substitution.
+- Added `scripts/build-manpages.sh` without external manpage generators.
+- Added `make man` and `make install-man`; `make install` now installs generated manpages.
+- Updated Linux packaging so DEB/RPM stages include compressed manpages when templates exist.
+
+Suggested verification:
+
+```bash
+make man
+make -n install
+bash -n scripts/build-manpages.sh scripts/package-linux.sh
+```

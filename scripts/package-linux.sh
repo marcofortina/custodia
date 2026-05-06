@@ -127,6 +127,25 @@ build_server_binaries() {
   (cd "$build_root" && "$GO" build -buildvcs=false "${mod_args[@]}" "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-signer" ./cmd/custodia-signer)
 }
 
+build_manpages() {
+  mkdir -p "$WORK_DIR/man/man1"
+  log "building manual pages"
+  VERSION="$VERSION" COMMIT="$COMMIT" DATE="$DATE" OUT_DIR="$WORK_DIR/man/man1" ./scripts/build-manpages.sh
+}
+
+install_manpages() {
+  local stage="$1"
+  shift
+  local src="$WORK_DIR/man/man1"
+  local name
+  for name in "$@"; do
+    if [ -f "$src/$name.1" ]; then
+      install -d "$stage/usr/share/man/man1"
+      gzip -n -c "$src/$name.1" > "$stage/usr/share/man/man1/$name.1.gz"
+    fi
+  done
+}
+
 build_client_binary() {
   mkdir -p "$WORK_DIR/bin"
   log "building Go client CLI"
@@ -149,6 +168,7 @@ stage_server() {
   install -m 0755 "$WORK_DIR/bin/custodia-signer" "$stage/usr/bin/custodia-signer"
   install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia-server/"
   install -m 0644 docs/QUICKSTART.md docs/LITE_PROFILE.md docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md "$stage/usr/share/doc/custodia-server/"
+  install_manpages "$stage" custodia-admin custodia-server custodia-signer
   install -m 0644 deploy/examples/config.lite.yaml deploy/examples/config.full.yaml deploy/examples/lite.env.example deploy/examples/production.env.example deploy/examples/custodia-signer-lite.service "$stage/usr/share/custodia/examples/"
 
   cat > "$stage/usr/lib/systemd/system/custodia.service" <<'SERVICE'
@@ -229,6 +249,7 @@ copy_client_tree() {
   install -m 0755 "$WORK_DIR/bin/custodia-client" "$stage/usr/bin/custodia-client"
   install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia-clients/"
   install -m 0644 docs/CLIENT_LIBRARIES.md docs/CLIENT_CRYPTO_SPEC.md docs/CUSTODIA_CLIENT_CLI.md docs/GO_CLIENT_SDK.md docs/PYTHON_CLIENT_SDK.md docs/NODE_CLIENT_SDK.md docs/JAVA_CLIENT_SDK.md docs/CPP_CLIENT_SDK.md docs/RUST_CLIENT_SDK.md docs/BASH_TRANSPORT_HELPER.md "$stage/usr/share/doc/custodia-clients/"
+  install_manpages "$stage" custodia-client
 }
 
 stage_clients() {
@@ -417,6 +438,8 @@ main() {
     echo "dpkg-deb is required for PACKAGE_FORMATS=deb" >&2
     exit 2
   fi
+
+  build_manpages
 
   local deb_arch rpm_arch
   deb_arch="$(normalize_deb_arch "$ARCH")"

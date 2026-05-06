@@ -11,6 +11,7 @@ COMMIT ?= unknown
 DATE ?= unknown
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
+MANDIR ?= $(PREFIX)/share/man
 INSTALL ?= install
 SERVER_BUILD_TAGS ?= sqlite postgres
 SERVER_BUILD_TAGS_FLAG = $(if $(strip $(SERVER_BUILD_TAGS)),-tags "$(SERVER_BUILD_TAGS)")
@@ -36,7 +37,7 @@ fmt:
 
 .PHONY: clean
 clean:
-	rm -rf bin dist custodia-server custodia-admin custodia-signer custodia-client clients/rust/target
+	rm -rf bin build/man dist custodia-server custodia-admin custodia-signer custodia-client clients/rust/target
 	rm -f ./*.test coverage.out
 
 .PHONY: license-check
@@ -103,8 +104,12 @@ build: sqlite-driver-download
 	$(GO) build $(SERVER_BUILD_TAGS_FLAG) -ldflags "$(LDFLAGS)" ./cmd/custodia-signer
 	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-client
 
+.PHONY: man
+man:
+	VERSION="$(VERSION)" COMMIT="$(COMMIT)" DATE="$(DATE)" ./scripts/build-manpages.sh
+
 .PHONY: install
-install: build install-binaries
+install: build install-binaries install-man
 
 .PHONY: install-binaries
 install-binaries:
@@ -113,6 +118,13 @@ install-binaries:
 	$(INSTALL) -m 0755 custodia-admin "$(DESTDIR)$(BINDIR)/custodia-admin"
 	$(INSTALL) -m 0755 custodia-signer "$(DESTDIR)$(BINDIR)/custodia-signer"
 	$(INSTALL) -m 0755 custodia-client "$(DESTDIR)$(BINDIR)/custodia-client"
+
+.PHONY: install-man
+install-man: man
+	$(INSTALL) -d "$(DESTDIR)$(MANDIR)/man1"
+	for page in build/man/man1/*.1; do \
+		$(INSTALL) -m 0644 "$$page" "$(DESTDIR)$(MANDIR)/man1/$$(basename "$$page")"; \
+	done
 
 .PHONY: build-postgres
 build-postgres:

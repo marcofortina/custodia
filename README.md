@@ -141,7 +141,7 @@ make
 make run-dev
 ```
 
-The default `make` target runs `make all`, which executes the Go test suite and builds the main binaries. Use `make test` when you only want the Go tests, and `make check` for the full multi-language/release-like verification pass. Install the locally built binaries with `sudo make install`; override `PREFIX` or `DESTDIR` for staged installs.
+The default `make` target runs `make all`, which executes the Go test suite and builds the main binaries. Use `make test` when you only want the Go tests, and `make check` for the full multi-language/release-like verification pass. Install the locally built binaries and manual pages with `sudo make install`; override `PREFIX`, `BINDIR`, `MANDIR` or `DESTDIR` for staged installs. Build the local manpages only with `make man`.
 
 The development mode uses the in-memory store and insecure HTTP only when `CUSTODIA_DEV_INSECURE_HTTP=true` is set. Production must use `CUSTODIA_TLS_CERT_FILE`, `CUSTODIA_TLS_KEY_FILE` and `CUSTODIA_CLIENT_CA_FILE`. Set `CUSTODIA_CLIENT_CRL_FILE` to a PEM CRL signed by the configured client CA to fail closed on revoked client certificate serials.
 
