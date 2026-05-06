@@ -79,6 +79,8 @@ bitcoin:36jDV57roGb4o59TwK1CB7viPrXToQHGiP
 
 ## Client SDKs
 
+The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/CLIENT_LIBRARIES.md). It supersedes older external planning notes for Phase 5 implementation status.
+
 - Go: [`docs/GO_CLIENT_SDK.md`](docs/GO_CLIENT_SDK.md)
 - Python: [`docs/PYTHON_CLIENT_SDK.md`](docs/PYTHON_CLIENT_SDK.md)
 - Node.js / TypeScript transport and crypto: [`docs/NODE_CLIENT_SDK.md`](docs/NODE_CLIENT_SDK.md)

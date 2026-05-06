@@ -51,6 +51,12 @@ Phase 5 tracks official client libraries and client-side cryptography.
 
 Future work outside this closure: public package publishing and semver/release process hardening.
 
+## Planning-spec reconciliation
+
+External planning notes from before closure may still describe Go/Python as transport-only, or Node.js/TypeScript, Java, C++ and Rust as planned. Those statements are historical. The repository source of truth is now this closure tracker plus [`CLIENT_LIBRARIES.md`](CLIENT_LIBRARIES.md), [`CLIENT_CRYPTO_SPEC.md`](CLIENT_CRYPTO_SPEC.md) and [`SDK_RELEASE_POLICY.md`](SDK_RELEASE_POLICY.md).
+
+Any future external client roadmap must be synchronized back into those repository documents before it is treated as current implementation status.
+
 ## Current boundary
 
 Go now has public transport, operational and high-level crypto SDK surfaces. Python now has typed transport helpers plus a high-level crypto wrapper. Node.js / TypeScript now has transport and high-level crypto clients for opaque REST payloads with TypeScript declarations. Java, C++, and Rust now have transport and high-level crypto clients. Go, Python, Node.js, Java, C++ and Rust high-level clients encrypt/decrypt locally, create HPKE-v1 recipient envelopes, share existing DEKs locally and send only opaque payloads to the server. Bash is a transport helper for CI/smoke/ops scripts. Native Bash remains non-crypto; encrypted commands are available only through an external crypto provider executable. Deterministic crypto fixtures cover canonical AAD, AES-256-GCM ciphertext and HPKE-v1 recipient envelopes.

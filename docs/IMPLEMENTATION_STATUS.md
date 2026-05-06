@@ -1616,3 +1616,10 @@ Node high-level crypto wrapper is implemented in `clients/node` using Node built
 
 - Documented DEB/RPM package layout, build commands, installation boundary and package split rationale.
 - Updated release-check docs and README package pointers.
+
+## Patch 855 - Phase 5 external client spec sync
+
+- Marked `docs/CLIENT_LIBRARIES.md` as the canonical repository-level client specification after Phase 5 closure.
+- Documented that older external planning notes describing missing or transport-only SDKs are historical and superseded by the current repository implementation matrix.
+- Linked the README client SDK section to the canonical SDK matrix.
+- Updated the Phase 5 closure tracker with a planning-spec reconciliation note.

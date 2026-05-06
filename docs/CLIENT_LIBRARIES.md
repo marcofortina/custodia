@@ -2,12 +2,20 @@
 
 Custodia client libraries allow applications to talk to the Custodia API while preserving the end-to-end crypto boundary. The server authenticates and authorizes clients, but it never receives plaintext, DEKs, private keys, or application-level decryption material.
 
+This document is the canonical repository-level client specification after Phase 5 closure. Earlier external planning notes that described Go/Python as transport-only, or Node.js/TypeScript, Java, C++ and Rust as merely planned, are historical and superseded by the implementation and verification matrix below.
+
 The repository contains two client layers:
 
 1. **Transport clients** send and receive already-opaque REST payloads over mTLS.
 2. **High-level crypto clients** encrypt plaintext locally, build recipient envelopes locally, call the transport client, and decrypt authorized responses locally.
 
 The Bash helper is intentionally different: it is a transport helper with an optional external crypto-provider bridge. It does not implement native Bash cryptography.
+
+## Repository status after Phase 5 closure
+
+Phase 5 is complete at repository level for Go, Python, Node.js/TypeScript, Java, C++ and Rust transport plus high-level crypto. Bash is included as a transport helper for CI, smoke tests and operational scripts; encrypted Bash flows require an external crypto provider executable.
+
+The public registry publication status remains separate from repository implementation status. Until release channels are published, language packages are monorepo source snapshots governed by the SDK release policy.
 
 ## SDK capability matrix
 
@@ -143,6 +151,17 @@ Linux packages provide two installable groups:
 | `custodia-clients` | SDK source snapshots, Bash helper, shared crypto vectors, and SDK docs. |
 
 External language registry publishing remains future release work.
+
+## Canonical source of truth
+
+Use these repository documents as the current source of truth:
+
+- [`CLIENT_LIBRARIES.md`](CLIENT_LIBRARIES.md): SDK capability and boundary matrix.
+- [`CLIENT_CRYPTO_SPEC.md`](CLIENT_CRYPTO_SPEC.md): shared crypto metadata, AAD, AEAD and envelope contract.
+- [`PHASE5_CLOSURE.md`](PHASE5_CLOSURE.md): repository-level closure status.
+- [`SDK_RELEASE_POLICY.md`](SDK_RELEASE_POLICY.md): official SDK and public package release criteria.
+
+Design notes outside the repository are useful historical context, but they must not override the closed Phase 5 matrix unless they are re-synchronized into these documents.
 
 ## Verification targets
 
