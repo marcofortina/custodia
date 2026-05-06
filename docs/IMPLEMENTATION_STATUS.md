@@ -1795,3 +1795,16 @@ make man
 make -n install
 bash -n scripts/build-manpages.sh scripts/package-linux.sh
 ```
+
+## Patch 877 - custodia-client manual page
+
+- Added `custodia-client(1)` as a roff template with build metadata substitution.
+- Documented encrypted CLI commands, reusable config profiles, key inspection, secret lifecycle commands, environment variables and crypto-boundary security notes.
+- The existing manpage build/install/package pipeline automatically includes it in local installs and the `custodia-clients` DEB/RPM package.
+
+Suggested verification:
+
+```bash
+make man
+grep -R "custodia-client" build/man/man1/custodia-client.1
+```

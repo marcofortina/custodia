@@ -1,0 +1,181 @@
+.\" Copyright (c) 2026 Marco Fortina
+.\" SPDX-License-Identifier: AGPL-3.0-only
+.TH CUSTODIA-CLIENT 1 "@DATE@" "Custodia @VERSION@" "Custodia Manual"
+.SH NAME
+custodia-client \- encrypted Custodia client CLI
+.SH SYNOPSIS
+.SY custodia-client
+.I command
+.RI [ arguments ...]
+.YS
+.SY custodia-client
+.B version
+.YS
+.SY custodia-client
+.B --version
+.YS
+.SH DESCRIPTION
+.B custodia-client
+is the end-user encrypted secret CLI for Custodia. It performs application
+cryptography locally and sends only ciphertext, crypto metadata, and opaque
+recipient envelopes to the server.
+.PP
+The server is not a public-key directory. Recipient public keys are loaded
+from local files supplied by trusted out-of-band exchange.
+.SH COMMANDS
+.TP
+.B config write --out FILE --server-url URL --cert FILE --key FILE --ca FILE [--client-id ID --crypto-key FILE]
+Write a reusable local JSON profile for mTLS and local crypto paths.
+.TP
+.B config check --config FILE
+Validate the profile, HTTPS URL, local mTLS certificate/key pair, CA bundle,
+and optional crypto key without contacting the server.
+.TP
+.B key generate --client-id ID --private-key-out FILE --public-key-out FILE
+Generate a local X25519 application key pair.
+.TP
+.B key public --client-id ID --private-key FILE --public-key-out FILE
+Derive and write a local public key file from a private key file.
+.TP
+.B key inspect --key FILE
+Print key metadata and public-key fingerprint without exposing private material.
+.TP
+.B secret put --config FILE --name NAME --value-file FILE
+Encrypt a plaintext file locally and create a secret.
+.TP
+.B secret get --config FILE --secret-id ID --out FILE
+Read a secret, decrypt locally, and write plaintext output with mode 0600.
+.TP
+.B secret share --config FILE --secret-id ID --target-client-id ID --recipient ID=FILE
+Grant another client access by rewrapping local key material to the target
+recipient public key.
+.TP
+.B secret version put --config FILE --secret-id ID --value-file FILE [--recipient ID=FILE]
+Create a new encrypted version. Include every recipient that should keep access.
+.TP
+.B secret versions --config FILE --secret-id ID [--limit N]
+List secret version metadata.
+.TP
+.B secret access list --config FILE --secret-id ID [--limit N]
+List access grant metadata.
+.TP
+.B secret access revoke --config FILE --secret-id ID --target-client-id ID --yes
+Revoke future server-side access for a target client. Already downloaded
+material may remain decryptable offline.
+.TP
+.B secret delete --config FILE --secret-id ID --yes
+Delete a secret from future server-side reads.
+.SH GLOBAL OPTIONS
+.TP
+.BI --config " FILE"
+Reusable client profile. Also accepted through
+.BR CUSTODIA_CLIENT_CONFIG .
+.TP
+.BI --server-url " URL"
+Custodia API base URL.
+.TP
+.BI --cert " FILE"
+Client mTLS certificate.
+.TP
+.BI --key " FILE"
+Client mTLS private key.
+.TP
+.BI --ca " FILE"
+Custodia CA certificate.
+.TP
+.BI --client-id " ID"
+Local client id for crypto operations.
+.TP
+.BI --crypto-key " FILE"
+Local X25519 private key JSON.
+.TP
+.BI --recipient " ID=FILE"
+Recipient public key file for share/version operations.
+.SH ENVIRONMENT
+.TP
+.B CUSTODIA_CLIENT_CONFIG
+Default reusable profile path.
+.TP
+.B CUSTODIA_BASE_URL
+Default API base URL.
+.TP
+.B CUSTODIA_CLIENT_CERT
+Default mTLS client certificate.
+.TP
+.B CUSTODIA_CLIENT_KEY
+Default mTLS client private key.
+.TP
+.B CUSTODIA_CA_CERT
+Default CA certificate.
+.TP
+.B CUSTODIA_CLIENT_ID
+Default local client id.
+.TP
+.B CUSTODIA_CRYPTO_KEY
+Default local X25519 private key file.
+.SH FILES
+.TP
+.I client.config.json
+Reusable local client profile written by
+.BR "custodia-client config write" .
+.TP
+.I client.x25519.json
+Local application private key. Keep mode 0600.
+.TP
+.I client.x25519.pub.json
+Local application public key to exchange out of band.
+.SH SECURITY NOTES
+Plaintext, DEKs, application private keys, and recipient public-key discovery
+remain outside the server. Avoid writing plaintext to stdout on shared terminals.
+.PP
+Revoking access is future server-side revocation. For strong revocation, create
+a new encrypted version without the removed recipient.
+.SH EXAMPLES
+Create and validate a local profile:
+.PP
+.EX
+custodia-client config write \\
+  --out client_alice.config.json \\
+  --server-url https://localhost:8443 \\
+  --cert client_alice.crt \\
+  --key client_alice.key \\
+  --ca /etc/custodia/ca.crt \\
+  --client-id client_alice \\
+  --crypto-key client_alice.x25519.json
+custodia-client config check --config client_alice.config.json
+.EE
+.PP
+Create and read a secret:
+.PP
+.EX
+custodia-client secret put --config client_alice.config.json \\
+  --name demo --value-file secret.txt
+custodia-client secret get --config client_alice.config.json \\
+  --secret-id SECRET_ID --out secret.readback.txt
+.EE
+.SH VERSION
+Custodia version: @VERSION@
+.br
+Build commit: @COMMIT@
+.br
+Build date: @DATE@
+.PP
+Runtime version is available with:
+.PP
+.EX
+custodia-client version
+.EE
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Runtime or API failure.
+.TP
+.B 2
+Usage error.
+.SH SEE ALSO
+.BR custodia-admin (1),
+.BR custodia-server (1),
+.BR custodia-signer (1)
