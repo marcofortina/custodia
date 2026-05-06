@@ -326,10 +326,10 @@ Common startup failures:
 
 ## 8. Verify the API with the admin mTLS certificate
 
-The generated admin certificate is a client certificate. Use it with `custodia-admin`:
+The generated admin certificate is a client certificate. When the admin key lives under `/etc/custodia`, run `custodia-admin` as the `custodia` service user so the command uses the same restricted account that owns the local key material:
 
 ```bash
-sudo custodia-admin \
+sudo -u custodia custodia-admin \
   --server-url https://localhost:8443 \
   --cert /etc/custodia/admin.crt \
   --key /etc/custodia/admin.key \
@@ -342,7 +342,7 @@ Expected result: JSON status metadata. It must not contain plaintext secrets, DE
 You can also inspect runtime diagnostics:
 
 ```bash
-sudo custodia-admin \
+sudo -u custodia custodia-admin \
   --server-url https://localhost:8443 \
   --cert /etc/custodia/admin.crt \
   --key /etc/custodia/admin.key \
@@ -446,7 +446,7 @@ After the service starts, this block should complete without errors:
 sudo systemctl is-active --quiet custodia
 sudo systemctl is-active --quiet custodia-signer
 
-sudo custodia-admin \
+sudo -u custodia custodia-admin \
   --server-url https://localhost:8443 \
   --cert /etc/custodia/admin.crt \
   --key /etc/custodia/admin.key \
@@ -479,7 +479,10 @@ custodia-client key generate --help >/dev/null
 Issue a first local mTLS client bundle through the vault and signer. This shortcut performs client metadata registration, CSR generation, CSR signing, certificate extraction and local ZIP bundling; application encryption keys are still generated separately by `custodia-client`:
 
 ```bash
-sudo custodia-admin \
+sudo rm -rf /tmp/custodia-client-alice
+sudo install -d -o custodia -g custodia -m 0700 /tmp/custodia-client-alice
+
+sudo -u custodia custodia-admin \
   --server-url https://localhost:8443 \
   --cert /etc/custodia/admin.crt \
   --key /etc/custodia/admin.key \
@@ -488,6 +491,7 @@ sudo custodia-admin \
   --signer-url https://localhost:9444 \
   --client-id client_alice \
   --out-dir /tmp/custodia-client-alice
+
 sudo chown -R "$USER:$USER" /tmp/custodia-client-alice
 ```
 
@@ -525,7 +529,10 @@ Before considering the node ready for real data:
 Client certificate shortcut after installing the signer:
 
 ```bash
-sudo custodia-admin \
+sudo rm -rf /tmp/custodia-client-alice
+sudo install -d -o custodia -g custodia -m 0700 /tmp/custodia-client-alice
+
+sudo -u custodia custodia-admin \
   --cert /etc/custodia/admin.crt \
   --key /etc/custodia/admin.key \
   --ca /etc/custodia/ca.crt \
@@ -533,7 +540,9 @@ sudo custodia-admin \
   --vault-url https://localhost:8443 \
   --signer-url https://localhost:9444 \
   --client-id client_alice \
-  --out-dir ./client_alice
+  --out-dir /tmp/custodia-client-alice
+
+sudo chown -R "$USER:$USER" /tmp/custodia-client-alice
 ```
 
 This creates local mTLS material and `client_alice-mtls.zip`; application encryption keys are still generated separately with `custodia-client key generate`.

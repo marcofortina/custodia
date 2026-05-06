@@ -34,6 +34,7 @@ export CA=/etc/custodia/ca.crt
 export ADMIN_CERT=/etc/custodia/admin.crt
 export ADMIN_KEY=/etc/custodia/admin.key
 export WORK=/tmp/custodia-alice-bob
+export ISSUE_ROOT=/tmp/custodia-issue
 
 mkdir -p "$WORK"
 chmod 700 "$WORK"
@@ -44,7 +45,10 @@ chmod 700 "$WORK"
 Issue Alice with the admin shortcut. This registers metadata in the vault, generates Alice's mTLS private key and CSR locally, signs the CSR through `custodia-signer`, extracts the certificate and writes `client_alice-mtls.zip`:
 
 ```bash
-sudo custodia-admin \
+sudo rm -rf "$ISSUE_ROOT/client_alice"
+sudo install -d -o custodia -g custodia -m 0700 "$ISSUE_ROOT/client_alice"
+
+sudo -u custodia custodia-admin \
   --server-url "$API" \
   --cert "$ADMIN_CERT" \
   --key "$ADMIN_KEY" \
@@ -52,8 +56,12 @@ sudo custodia-admin \
   client issue \
   --signer-url "$SIGNER" \
   --client-id client_alice \
-  --out-dir "$WORK"
+  --out-dir "$ISSUE_ROOT/client_alice"
+
+sudo cp -a "$ISSUE_ROOT/client_alice"/client_alice.* "$WORK"/
+sudo cp -a "$ISSUE_ROOT/client_alice"/client_alice-mtls.zip "$WORK"/
 sudo chown "$USER:$USER" "$WORK"/client_alice.* "$WORK"/client_alice-mtls.zip
+sudo rm -rf "$ISSUE_ROOT/client_alice"
 chmod 600 "$WORK/client_alice.key" "$WORK/client_alice.sign.json" "$WORK/client_alice-mtls.zip"
 ```
 
@@ -134,7 +142,10 @@ super secret demo value
 ## 4. Register and issue Bob
 
 ```bash
-sudo custodia-admin \
+sudo rm -rf "$ISSUE_ROOT/client_bob"
+sudo install -d -o custodia -g custodia -m 0700 "$ISSUE_ROOT/client_bob"
+
+sudo -u custodia custodia-admin \
   --server-url "$API" \
   --cert "$ADMIN_CERT" \
   --key "$ADMIN_KEY" \
@@ -142,8 +153,12 @@ sudo custodia-admin \
   client issue \
   --signer-url "$SIGNER" \
   --client-id client_bob \
-  --out-dir "$WORK"
+  --out-dir "$ISSUE_ROOT/client_bob"
+
+sudo cp -a "$ISSUE_ROOT/client_bob"/client_bob.* "$WORK"/
+sudo cp -a "$ISSUE_ROOT/client_bob"/client_bob-mtls.zip "$WORK"/
 sudo chown "$USER:$USER" "$WORK"/client_bob.* "$WORK"/client_bob-mtls.zip
+sudo rm -rf "$ISSUE_ROOT/client_bob"
 chmod 600 "$WORK/client_bob.key" "$WORK/client_bob.sign.json" "$WORK/client_bob-mtls.zip"
 ```
 

@@ -5,10 +5,12 @@ Custodia separates client metadata registration from certificate issuance. The v
 
 ## Fast path: issue a complete local client bundle
 
-For Lite or lab installs where the same operator can reach both the vault API and `custodia-signer`, `client issue` performs the full local workflow in one command:
+For Lite or lab installs where the same operator can reach both the vault API and `custodia-signer`, `client issue` performs the full local workflow in one command. Commands that read `/etc/custodia/admin.key` should run as the `custodia` service user, not as unrestricted root. Create an output directory that the `custodia` user can write, then hand the generated client material back to the operator if needed:
 
 ```bash
-sudo custodia-admin \
+sudo install -d -o custodia -g custodia -m 0700 /tmp/custodia-client-alice
+
+sudo -u custodia custodia-admin \
   --cert /etc/custodia/admin.crt \
   --key /etc/custodia/admin.key \
   --ca /etc/custodia/ca.crt \
@@ -16,7 +18,9 @@ sudo custodia-admin \
   --vault-url https://localhost:8443 \
   --signer-url https://localhost:9444 \
   --client-id client_alice \
-  --out-dir ./client_alice
+  --out-dir /tmp/custodia-client-alice
+
+sudo chown -R "$USER:$USER" /tmp/custodia-client-alice
 ```
 
 The command registers the client metadata, generates the client mTLS key and CSR locally, submits the CSR to `custodia-signer`, extracts the signed certificate and creates `client_alice-mtls.zip`. It still keeps application encryption keys separate; generate those with `custodia-client key generate`.
@@ -56,7 +60,7 @@ sudo systemctl status custodia-signer --no-pager
 Point `--server-url` at `custodia-signer`, not the vault API:
 
 ```bash
-sudo custodia-admin \
+sudo -u custodia custodia-admin \
   --server-url https://localhost:9444 \
   --cert /etc/custodia/admin.crt \
   --key /etc/custodia/admin.key \
@@ -69,7 +73,7 @@ sudo custodia-admin \
 The signer returns JSON containing a client-auth certificate bound to `client_alice`. Save the signer response, then extract the PEM certificate with `custodia-admin certificate extract`:
 
 ```bash
-sudo custodia-admin \
+sudo -u custodia custodia-admin \
   --server-url https://localhost:9444 \
   --cert /etc/custodia/admin.crt \
   --key /etc/custodia/admin.key \
