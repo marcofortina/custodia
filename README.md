@@ -155,13 +155,10 @@ Audit JSONL exports include SHA-256 and event-count headers for offline verifica
 
 ## PostgreSQL store
 
-The default build keeps the project standard-library-only for local tests. To enable the real PostgreSQL store, add the driver dependency and build with the explicit tag:
+The default `make build`/`make install` path builds a universal `custodia-server` with both `sqlite` and `postgres` store support. Select PostgreSQL at runtime with configuration, not by installing a different product:
 
 ```bash
-go get github.com/jackc/pgx/v5
-go test -tags postgres ./...
-go build -tags postgres ./cmd/custodia-server
-make build-postgres
+make
 ```
 
 Then configure:
@@ -175,11 +172,10 @@ Run `migrations/postgres/001_init.sql` before starting the server. Container bui
 
 ## Custodia Lite / SQLite store
 
-Lite is a single-node profile of the same codebase. Build Lite artifacts with the SQLite tag:
+Lite is a single-node profile of the same codebase. The default build is universal and includes SQLite support, so Lite and Full use the same installed server binary. Select SQLite at runtime with configuration:
 
 ```bash
-make build-sqlite
-make test-sqlite
+make
 ```
 
 Then configure:
@@ -254,7 +250,7 @@ The default test suite does not require external services. To exercise the optio
 
 ```bash
 go get github.com/jackc/pgx/v5
-TEST_CUSTODIA_POSTGRES_URL=postgres://user:pass@localhost:5432/custodia_test?sslmode=disable go test -tags postgres ./internal/store
+TEST_CUSTODIA_POSTGRES_URL=postgres://user:pass@localhost:5432/custodia_test?sslmode=disable make test-postgres
 ```
 
 

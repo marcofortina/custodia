@@ -21,7 +21,7 @@ cd "$root_dir"
 : "${OUT_DIR:=$root_dir/dist/packages}"
 : "${WORK_DIR:=$root_dir/dist/package-work}"
 : "${ARCH:=$(uname -m)}"
-: "${SERVER_BUILD_TAGS=sqlite}"
+: "${SERVER_BUILD_TAGS=sqlite postgres}"
 
 ldflags="-X custodia/internal/build.Version=$VERSION -X custodia/internal/build.Commit=$COMMIT -X custodia/internal/build.Date=$DATE"
 
@@ -84,7 +84,7 @@ build_tags_args() {
 
 ensure_server_build_dependencies() {
   if server_build_tags_include sqlite; then
-    log "ensuring SQLite driver module is available for Lite-capable server package"
+    log "ensuring SQLite driver module is available for universal server package"
     "$GO" mod download modernc.org/sqlite
   fi
 }
@@ -100,8 +100,8 @@ prepare_server_build_source() {
     -cf - . | tar -xf - -C "$build_src"
 }
 
-# Build binaries from a temporary copy when SQLite tags are enabled so module
-# resolution for optional Lite dependencies cannot mutate the working tree.
+# Build binaries from a temporary copy when optional store tags are enabled so
+# module resolution for tagged dependencies cannot mutate the working tree.
 build_server_binaries() {
   mkdir -p "$WORK_DIR/bin"
   log "building Go server binaries with SERVER_BUILD_TAGS=${SERVER_BUILD_TAGS:-<none>}"

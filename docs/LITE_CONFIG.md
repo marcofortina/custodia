@@ -59,14 +59,7 @@ remain part of the same server model.
 
 ## SQLite Lite store build note
 
-The `sqlite` store is scoped to the Lite/custom single-node profile. Release artifacts intended for Lite SQLite deployments must be built with the SQLite build tag and driver dependency available:
-
-```bash
-make build-sqlite
-make test-sqlite
-```
-
-The default build fails closed for `CUSTODIA_STORE_BACKEND=sqlite` unless the SQLite build tag is used. This keeps the standard-library bootstrap dependency-light while making SQLite an explicit Lite artifact.
+The `sqlite` store is scoped to the Lite/custom single-node profile. The default build is universal and includes the SQLite store used by Lite/custom single-node deployments. Keep `make build-sqlite` and `make test-sqlite` for focused diagnostics, but normal installs should use `make` or release packages.
 
 
 ## Operational guides

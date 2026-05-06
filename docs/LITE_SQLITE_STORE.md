@@ -5,14 +5,14 @@ The SQLite backend is deliberately scoped to the Lite/custom single-node profile
 
 ## Build
 
-The SQLite backend is behind an explicit Go build tag so the standard build remains dependency-light:
+The standard build includes the SQLite backend through the universal store build. Focused diagnostics can still exercise the SQLite-only tag path:
 
 ```bash
 make build-sqlite
 make test-sqlite
 ```
 
-The tagged build uses the `modernc.org/sqlite` driver dependency and the `database/sql` driver name `sqlite`. Release builds for the Lite profile must build with `-tags sqlite`.
+The SQLite store uses the `modernc.org/sqlite` driver dependency and the `database/sql` driver name `sqlite`.
 
 ## Configuration
 

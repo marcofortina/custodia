@@ -1764,3 +1764,19 @@ make
 DESTDIR=/tmp/custodia-install-check make install
 find /tmp/custodia-install-check -type f | sort
 ```
+
+## Patch 874 - universal store build
+
+- Made the default server build universal with `SERVER_BUILD_TAGS=sqlite postgres`.
+- Kept `build-sqlite` and `build-postgres` as focused diagnostic/specialized targets, not the normal product split.
+- Updated package builds to produce one server artifact that can run Lite or Full based on runtime configuration.
+- Updated README and Lite/package docs so SQLite/PostgreSQL are described as configuration choices for the same binary.
+
+Suggested verification:
+
+```bash
+make
+make test-sqlite
+# Optional, with TEST_CUSTODIA_POSTGRES_URL set:
+make test-postgres
+```

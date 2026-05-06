@@ -2,7 +2,7 @@
 
 Custodia can build local Linux installation packages without introducing an external packaging tool such as `fpm`.
 
-The repository produces two package families. Server packages are Lite-capable by default: the packaging script builds Go binaries with `SERVER_BUILD_TAGS=sqlite` unless explicitly overridden:
+The repository produces two package families. Server packages are universal by default: the packaging script builds Go binaries with `SERVER_BUILD_TAGS="sqlite postgres"` unless explicitly overridden. Lite and Full behavior are selected by runtime configuration, not by installing different server products:
 
 | Package | Architecture | Contents | Intended use |
 | --- | --- | --- | --- |
@@ -24,8 +24,8 @@ Creating one `.deb`/`.rpm` per SDK language would add distro-package maintenance
 
 ```bash
 VERSION=0.1.0 REVISION=1 make package-deb
-# Override only if you intentionally do not want the default Lite-capable SQLite build:
-SERVER_BUILD_TAGS= VERSION=0.1.0 REVISION=1 make package-deb
+# Override only for specialized diagnostics, for example to build only PostgreSQL support:
+SERVER_BUILD_TAGS=postgres VERSION=0.1.0 REVISION=1 make package-deb
 ```
 
 Artifacts are written to:

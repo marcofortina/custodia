@@ -27,7 +27,7 @@ CUSTODIA_WEB_PASSKEY_ENABLED=false
 CUSTODIA_SIGNER_KEY_PROVIDER=file
 ```
 
-The packaged `custodia-server` build is Lite-capable by default and includes the SQLite build tag. Source builds can override this with `SERVER_BUILD_TAGS` when producing package artifacts.
+The packaged `custodia-server` build is universal by default and includes SQLite and PostgreSQL store support. Source/package builds can override `SERVER_BUILD_TAGS` only for specialized diagnostics.
 
 ## Components disabled by default
 

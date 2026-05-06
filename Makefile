@@ -12,6 +12,8 @@ DATE ?= unknown
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 INSTALL ?= install
+SERVER_BUILD_TAGS ?= sqlite postgres
+SERVER_BUILD_TAGS_FLAG = $(if $(strip $(SERVER_BUILD_TAGS)),-tags "$(SERVER_BUILD_TAGS)")
 LDFLAGS := -X custodia/internal/build.Version=$(VERSION) -X custodia/internal/build.Commit=$(COMMIT) -X custodia/internal/build.Date=$(DATE)
 
 .DEFAULT_GOAL := all
@@ -95,10 +97,10 @@ run-dev:
 	$(GO) run ./cmd/custodia-server
 
 .PHONY: build
-build:
-	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-server
-	$(GO) build -ldflags "$(LDFLAGS)" -o custodia-admin ./cmd/custodia-admin
-	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-signer
+build: sqlite-driver-download
+	$(GO) build $(SERVER_BUILD_TAGS_FLAG) -ldflags "$(LDFLAGS)" ./cmd/custodia-server
+	$(GO) build $(SERVER_BUILD_TAGS_FLAG) -ldflags "$(LDFLAGS)" -o custodia-admin ./cmd/custodia-admin
+	$(GO) build $(SERVER_BUILD_TAGS_FLAG) -ldflags "$(LDFLAGS)" ./cmd/custodia-signer
 	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-client
 
 .PHONY: install

@@ -187,25 +187,11 @@ make test-rust-client
 make test-bash-client
 ```
 
-Build Lite-capable binaries. The `sqlite` build tag is required for the single-node Lite profile:
+Build and install the binaries. The default Makefile build is universal and includes both SQLite and PostgreSQL store support; Lite or Full behavior is selected by configuration. The Makefile install target installs only the four binaries; the service units and runtime directories are still managed explicitly below.
 
 ```bash
-mkdir -p dist/local/bin
-go build -buildvcs=false -tags sqlite -o dist/local/bin/custodia-server ./cmd/custodia-server
-go build -buildvcs=false -o dist/local/bin/custodia-admin ./cmd/custodia-admin
-go build -buildvcs=false -o dist/local/bin/custodia-signer ./cmd/custodia-signer
-go build -buildvcs=false -o dist/local/bin/custodia-client ./cmd/custodia-client
-```
-
-Install the binaries and the Lite systemd unit. The Makefile install target installs only the four binaries; the service units and runtime directories are still managed explicitly below.
-
-```bash
-sudo install -m 0755 dist/local/bin/custodia-server /usr/local/bin/custodia-server
-sudo install -m 0755 dist/local/bin/custodia-admin /usr/local/bin/custodia-admin
-sudo install -m 0755 dist/local/bin/custodia-signer /usr/local/bin/custodia-signer
-sudo install -m 0755 dist/local/bin/custodia-client /usr/local/bin/custodia-client
-# Alternatively, after `make`, install the binaries with:
-# sudo make install PREFIX=/usr/local
+make
+sudo make install PREFIX=/usr/local
 sudo install -m 0644 deploy/examples/custodia-lite.service /etc/systemd/system/custodia.service
 sudo install -m 0644 deploy/examples/custodia-signer-lite.service /etc/systemd/system/custodia-signer.service
 ```
@@ -326,7 +312,7 @@ Common startup failures:
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
 | `permission denied` under `/etc/custodia` | bootstrap files are not readable by the `custodia` service user | check ownership and modes with `sudo ls -la /etc/custodia` |
-| SQLite backend is unknown | binary was built without the `sqlite` build tag | install the release package or rebuild with `go build -tags sqlite` |
+| SQLite backend is unknown | binary was built without SQLite support | install the release package or rebuild with the default `make` target |
 | TLS certificate error on startup | `tls_cert_file` or `tls_key_file` path is wrong | compare `/etc/custodia/config.yaml` with files in `/etc/custodia` |
 | `mfa_not_configured` in logs | web MFA secrets were not added to config | repeat step 6 and restart the service |
 | `custodia-signer` is not listening on `9444` | signer service was not enabled or failed to read CA material | run `sudo systemctl status custodia-signer --no-pager` and check `/etc/custodia/ca.*` ownership/modes |

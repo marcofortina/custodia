@@ -9,13 +9,11 @@ audit integrity.
 
 ## Artifact
 
-Build or install a Lite artifact that includes the SQLite build tag:
+Build or install the standard universal artifact. It includes SQLite and PostgreSQL store support; the selected backend comes from configuration:
 
 ```bash
-make build-sqlite
+make
 ```
-
-The standard build intentionally fails closed for `CUSTODIA_STORE_BACKEND=sqlite`.
 
 ## Directories
 
