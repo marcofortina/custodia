@@ -241,3 +241,8 @@ custodia-client secret delete \
 - Recipient public keys must be pinned or resolved outside Custodia.
 - The CLI does not use the Web Console and does not send plaintext to the server.
 - `custodia-admin certificate bundle` packages mTLS transport material only; it does not include application crypto keys.
+
+
+## End-to-end Alice/Bob smoke test
+
+For a complete first-run workflow that registers two mTLS clients, issues certificates, creates local application keys, stores an encrypted secret, shares it and rotates it, see [`CUSTODIA_ALICE_BOB_SMOKE.md`](CUSTODIA_ALICE_BOB_SMOKE.md).

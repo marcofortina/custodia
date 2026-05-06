@@ -185,3 +185,8 @@ Release checks call the language-specific targets when the required toolchains a
 ## CLI validation helpers
 
 `custodia-client config check` validates local config profiles and referenced mTLS/crypto files. `custodia-client key inspect` reports a local X25519 key fingerprint without exposing private key material.
+
+
+## End-to-end smoke test
+
+The canonical copy/paste smoke workflow for the installable CLI is [`CUSTODIA_ALICE_BOB_SMOKE.md`](CUSTODIA_ALICE_BOB_SMOKE.md). It verifies Alice/Bob mTLS issuance, local X25519 keys, encrypted put/get, share, versioning and access revocation.

@@ -1714,3 +1714,12 @@ Suggested verification:
 go test ./cmd/custodia-client
 make check
 ```
+
+
+## Patch 865 - Alice/Bob encrypted secret smoke runbook
+
+- Added `docs/CUSTODIA_ALICE_BOB_SMOKE.md` with a copy/paste Lite smoke test for Alice/Bob client registration, certificate issuance, local crypto key generation, encrypted secret put/get, sharing, versioning and access revocation.
+- Linked the runbook from the README, client CLI docs and client library matrix.
+- Kept the workflow explicit about the crypto boundary: plaintext, DEKs, private keys and recipient public keys remain outside the server.
+
+Documentation-only patch; no runtime tests required.
