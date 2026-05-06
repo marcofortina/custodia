@@ -197,13 +197,15 @@ go build -buildvcs=false -o dist/local/bin/custodia-signer ./cmd/custodia-signer
 go build -buildvcs=false -o dist/local/bin/custodia-client ./cmd/custodia-client
 ```
 
-Install the binaries and the Lite systemd unit:
+Install the binaries and the Lite systemd unit. The Makefile install target installs only the four binaries; the service units and runtime directories are still managed explicitly below.
 
 ```bash
 sudo install -m 0755 dist/local/bin/custodia-server /usr/local/bin/custodia-server
 sudo install -m 0755 dist/local/bin/custodia-admin /usr/local/bin/custodia-admin
 sudo install -m 0755 dist/local/bin/custodia-signer /usr/local/bin/custodia-signer
 sudo install -m 0755 dist/local/bin/custodia-client /usr/local/bin/custodia-client
+# Alternatively, after `make`, install the binaries with:
+# sudo make install PREFIX=/usr/local
 sudo install -m 0644 deploy/examples/custodia-lite.service /etc/systemd/system/custodia.service
 sudo install -m 0644 deploy/examples/custodia-signer-lite.service /etc/systemd/system/custodia-signer.service
 ```

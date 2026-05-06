@@ -1750,3 +1750,17 @@ Suggested verification:
 make
 make test
 ```
+
+## Patch 873 - Makefile install target
+
+- Added `make install` for locally built binaries.
+- Added `PREFIX`, `BINDIR`, `DESTDIR` and `INSTALL` knobs for standard staged installs.
+- Kept service units and runtime directory provisioning explicit in docs instead of hiding them behind a binary install target.
+
+Suggested verification:
+
+```bash
+make
+DESTDIR=/tmp/custodia-install-check make install
+find /tmp/custodia-install-check -type f | sort
+```

@@ -9,6 +9,9 @@ GO ?= go
 VERSION ?= dev
 COMMIT ?= unknown
 DATE ?= unknown
+PREFIX ?= /usr/local
+BINDIR ?= $(PREFIX)/bin
+INSTALL ?= install
 LDFLAGS := -X custodia/internal/build.Version=$(VERSION) -X custodia/internal/build.Commit=$(COMMIT) -X custodia/internal/build.Date=$(DATE)
 
 .DEFAULT_GOAL := all
@@ -97,6 +100,17 @@ build:
 	$(GO) build -ldflags "$(LDFLAGS)" -o custodia-admin ./cmd/custodia-admin
 	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-signer
 	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-client
+
+.PHONY: install
+install: build install-binaries
+
+.PHONY: install-binaries
+install-binaries:
+	$(INSTALL) -d "$(DESTDIR)$(BINDIR)"
+	$(INSTALL) -m 0755 custodia-server "$(DESTDIR)$(BINDIR)/custodia-server"
+	$(INSTALL) -m 0755 custodia-admin "$(DESTDIR)$(BINDIR)/custodia-admin"
+	$(INSTALL) -m 0755 custodia-signer "$(DESTDIR)$(BINDIR)/custodia-signer"
+	$(INSTALL) -m 0755 custodia-client "$(DESTDIR)$(BINDIR)/custodia-client"
 
 .PHONY: build-postgres
 build-postgres:
