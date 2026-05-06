@@ -125,9 +125,37 @@ func TestHelpMentionsEncryptedSecretCommands(t *testing.T) {
 		t.Fatalf("help failed: %d %s", code, stderr.String())
 	}
 	body := stdout.String()
-	for _, token := range []string{"secret put", "secret get", "secret share", "secret version put", "Secret payloads are encrypted/decrypted locally"} {
+	for _, token := range []string{"secret put", "secret get", "secret share", "secret version put", "secret versions", "secret access list", "Secret payloads are encrypted/decrypted locally"} {
 		if !strings.Contains(body, token) {
 			t.Fatalf("help missing %q: %s", token, body)
 		}
+	}
+}
+
+func TestMetadataListCommandsRequireSecretIDBeforeTransport(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args []string
+	}{
+		{name: "versions", args: []string{"secret", "versions"}},
+		{name: "access list", args: []string{"secret", "access", "list"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			code := (&app{stdout: &stdout, stderr: &stderr}).run(tc.args)
+			if code != 2 {
+				t.Fatalf("expected usage failure, got %d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+			}
+			if !strings.Contains(stderr.String(), "--secret-id is required") {
+				t.Fatalf("expected secret id error, got: %s", stderr.String())
+			}
+		})
+	}
+}
+
+func TestTransportClientRequiresMTLSOptions(t *testing.T) {
+	_, err := buildTransportClient(transportFlags{serverURL: "https://127.0.0.1:8443"})
+	if err == nil || !strings.Contains(err.Error(), "--server-url, --cert, --key and --ca are required") {
+		t.Fatalf("expected mTLS option error, got: %v", err)
 	}
 }

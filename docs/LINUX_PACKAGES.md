@@ -117,7 +117,7 @@ sudo systemctl enable --now custodia custodia-signer
 /usr/share/doc/custodia-clients/
 ```
 
-The Go source snapshot includes `go.mod`, `pkg/client` and the internal client-crypto package required by that public Go SDK surface. `/usr/bin/custodia-client` is the Bash transport helper. It remains non-crypto natively. Encrypted shell flows require `CUSTODIA_CRYPTO_PROVIDER` and delegate all cryptography to that external provider over stdin/stdout JSON.
+The Go source snapshot includes `go.mod`, `pkg/client` and the internal client-crypto package required by that public Go SDK surface. `/usr/bin/custodia-client` is the Go encrypted secrets CLI for local put/get/share/version workflows. The Bash transport helper is still shipped under `/usr/share/custodia/clients/bash/custodia.sh` for CI and raw REST/mTLS smoke tests.
 
 ## CI
 

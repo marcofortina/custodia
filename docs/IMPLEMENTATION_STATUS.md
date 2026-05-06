@@ -1656,3 +1656,18 @@ Verification:
 go test ./cmd/custodia-client
 make check
 ```
+
+
+## Patch 861 - custodia-client metadata listing UX
+
+- Added `custodia-client secret versions` for version metadata inspection.
+- Added `custodia-client secret access list` for access grant metadata inspection.
+- Kept both commands metadata-only: no plaintext, DEKs, recipient envelopes or private keys are rendered.
+- Updated client CLI and package documentation so `/usr/bin/custodia-client` is consistently described as the Go encrypted secrets CLI.
+
+Recommended verification:
+
+```bash
+go test ./cmd/custodia-client
+make check
+```

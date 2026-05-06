@@ -9,7 +9,7 @@ The repository contains two client layers:
 1. **Transport clients** send and receive already-opaque REST payloads over mTLS.
 2. **High-level crypto clients** encrypt plaintext locally, build recipient envelopes locally, call the transport client, and decrypt authorized responses locally.
 
-The Go `custodia-client` command is the repository-provided encrypted secrets CLI for end-user put/get/share/version workflows. The Bash helper is intentionally different: it is a transport helper with an optional external crypto-provider bridge. It does not implement native Bash cryptography.
+The Go `custodia-client` command is the repository-provided encrypted secrets CLI for end-user put/get/share/version workflows plus metadata inspection. The Bash helper is intentionally different: it is a transport helper with an optional external crypto-provider bridge. It does not implement native Bash cryptography.
 
 ## Repository status after Phase 5 closure
 
@@ -27,7 +27,7 @@ The public registry publication status remains separate from repository implemen
 | Java | `clients/java` | Yes | Yes | `java.net.http`, Java TLS configuration, and local crypto. |
 | C++ | `clients/cpp` | Yes | Yes | libcurl transport and OpenSSL crypto. |
 | Rust | `clients/rust` | Yes | Yes | reqwest/rustls transport and local crypto. |
-| Go CLI | `cmd/custodia-client` | Yes | Yes | Encrypted put/get/share/version user CLI. |
+| Go CLI | `cmd/custodia-client` | Yes | Yes | Encrypted put/get/share/version and metadata inspection user CLI. |
 | Bash | `clients/bash` | Yes | External provider only | Shell helper for CI and operational scripts. |
 
 A client is considered repository-official when it has:

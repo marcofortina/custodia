@@ -114,6 +114,8 @@ func (a *app) usage() {
   custodia-client secret get --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --secret-id ID [--out FILE]
   custodia-client secret share --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --secret-id ID --target-client-id ID --recipient ID=PUBLIC.json
   custodia-client secret version put --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --secret-id ID --value-file FILE [--recipient ID=PUBLIC.json]
+  custodia-client secret versions --server-url URL --cert FILE --key FILE --ca FILE --secret-id ID [--limit N]
+  custodia-client secret access list --server-url URL --cert FILE --key FILE --ca FILE --secret-id ID [--limit N]
   custodia-client secret list --server-url URL --cert FILE --key FILE --ca FILE [--limit N]
 
 Secret payloads are encrypted/decrypted locally. Custodia receives only ciphertext, crypto_metadata and opaque recipient envelopes.`)
@@ -207,6 +209,10 @@ func (a *app) runSecret(args []string) int {
 		return a.runSecretShare(args[1:])
 	case "version":
 		return a.runSecretVersion(args[1:])
+	case "versions":
+		return a.runSecretVersionsList(args[1:])
+	case "access":
+		return a.runSecretAccess(args[1:])
 	case "list":
 		return a.runSecretList(args[1:])
 	default:
@@ -355,6 +361,68 @@ func (a *app) runSecretVersionPut(args []string) int {
 	return writeJSON(a.stdout, ref)
 }
 
+func (a *app) runSecretVersionsList(args []string) int {
+	fs := newFlagSet("custodia-client secret versions", a.stderr)
+	transport := registerTransportFlags(fs)
+	secretID := fs.String("secret-id", "", "secret id")
+	limit := fs.Int("limit", 100, "maximum rows to return")
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	if strings.TrimSpace(*secretID) == "" {
+		fmt.Fprintln(a.stderr, "--secret-id is required")
+		return 2
+	}
+	client, err := buildTransportClient(transport)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	versions, err := client.ListSecretVersionsWithLimit(*secretID, *limit)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "list secret versions: %v\n", err)
+		return 1
+	}
+	return writeJSON(a.stdout, map[string]any{"versions": versions})
+}
+
+func (a *app) runSecretAccess(args []string) int {
+	if len(args) == 0 {
+		fmt.Fprintln(a.stderr, "missing secret access subcommand")
+		return 2
+	}
+	if args[0] != "list" {
+		fmt.Fprintf(a.stderr, "unknown secret access subcommand: %s\n", args[0])
+		return 2
+	}
+	return a.runSecretAccessList(args[1:])
+}
+
+func (a *app) runSecretAccessList(args []string) int {
+	fs := newFlagSet("custodia-client secret access list", a.stderr)
+	transport := registerTransportFlags(fs)
+	secretID := fs.String("secret-id", "", "secret id")
+	limit := fs.Int("limit", 100, "maximum rows to return")
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	if strings.TrimSpace(*secretID) == "" {
+		fmt.Fprintln(a.stderr, "--secret-id is required")
+		return 2
+	}
+	client, err := buildTransportClient(transport)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	access, err := client.ListSecretAccessWithLimit(*secretID, *limit)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "list secret access: %v\n", err)
+		return 1
+	}
+	return writeJSON(a.stdout, map[string]any{"access": access})
+}
+
 func (a *app) runSecretList(args []string) int {
 	fs := newFlagSet("custodia-client secret list", a.stderr)
 	transport := registerTransportFlags(fs)
@@ -362,9 +430,9 @@ func (a *app) runSecretList(args []string) int {
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
-	client, err := sdk.New(sdk.Config{ServerURL: transport.serverURL, CertFile: transport.certFile, KeyFile: transport.keyFile, CAFile: transport.caFile})
+	client, err := buildTransportClient(transport)
 	if err != nil {
-		fmt.Fprintf(a.stderr, "create transport client: %v\n", err)
+		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
 	secrets, err := client.ListSecretMetadata(*limit)
@@ -414,10 +482,18 @@ func registerCryptoFlagsNoRecipients(fs *flag.FlagSet) cryptoFlags {
 	return flags
 }
 
-func buildCryptoClient(transport transportFlags, crypto cryptoFlags) (*sdk.CryptoClient, []string, error) {
+func buildTransportClient(transport transportFlags) (*sdk.Client, error) {
 	if strings.TrimSpace(transport.serverURL) == "" || strings.TrimSpace(transport.certFile) == "" || strings.TrimSpace(transport.keyFile) == "" || strings.TrimSpace(transport.caFile) == "" {
-		return nil, nil, fmt.Errorf("--server-url, --cert, --key and --ca are required")
+		return nil, fmt.Errorf("--server-url, --cert, --key and --ca are required")
 	}
+	client, err := sdk.New(sdk.Config{ServerURL: transport.serverURL, CertFile: transport.certFile, KeyFile: transport.keyFile, CAFile: transport.caFile})
+	if err != nil {
+		return nil, fmt.Errorf("create transport client: %w", err)
+	}
+	return client, nil
+}
+
+func buildCryptoClient(transport transportFlags, crypto cryptoFlags) (*sdk.CryptoClient, []string, error) {
 	if strings.TrimSpace(crypto.cryptoKey) == "" {
 		return nil, nil, fmt.Errorf("--crypto-key is required")
 	}
@@ -451,9 +527,9 @@ func buildCryptoClient(transport transportFlags, crypto cryptoFlags) (*sdk.Crypt
 		publicKeys[recipientID] = publicKey
 		recipientIDs = append(recipientIDs, recipientID)
 	}
-	transportClient, err := sdk.New(sdk.Config{ServerURL: transport.serverURL, CertFile: transport.certFile, KeyFile: transport.keyFile, CAFile: transport.caFile})
+	transportClient, err := buildTransportClient(transport)
 	if err != nil {
-		return nil, nil, fmt.Errorf("create transport client: %w", err)
+		return nil, nil, err
 	}
 	cryptoClient, err := transportClient.WithCrypto(sdk.CryptoOptions{PublicKeyResolver: staticResolver(publicKeys), PrivateKeyProvider: staticPrivateKeyProvider{handle: handle}, RandomSource: rand.Reader, Clock: sdk.SystemClock{}})
 	if err != nil {

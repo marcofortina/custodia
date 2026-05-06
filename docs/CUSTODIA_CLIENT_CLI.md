@@ -136,6 +136,32 @@ custodia-client secret list \
   --limit 50
 ```
 
+## List versions and access grants
+
+Inspect version metadata for a secret without decrypting payloads:
+
+```bash
+custodia-client secret versions \
+  --server-url https://localhost:8443 \
+  --cert client_alice.crt \
+  --key client_alice.key \
+  --ca /etc/custodia/ca.crt \
+  --secret-id <secret_id> \
+  --limit 50
+```
+
+Inspect the server-side access grants for a secret. The output contains grant metadata and never includes recipient envelopes or plaintext:
+
+```bash
+custodia-client secret access list \
+  --server-url https://localhost:8443 \
+  --cert client_alice.crt \
+  --key client_alice.key \
+  --ca /etc/custodia/ca.crt \
+  --secret-id <secret_id> \
+  --limit 50
+```
+
 ## Security notes
 
 - mTLS private keys identify the client to Custodia.

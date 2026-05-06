@@ -30,7 +30,7 @@ If you are not sure what to choose, use the package install path. It covers Debi
 - Minimal admin CLI for metadata operations exposed by the API.
 - Go, Python and Node.js / TypeScript client libraries with raw transport helpers; all three include high-level client-side crypto wrappers that keep plaintext, DEKs and private keys outside the server.
 - Java, C++ and Rust client libraries with raw transport helpers plus high-level client-side crypto wrappers that use the shared AES-256-GCM/HPKE-v1 vectors.
-- Bash transport helper for CI, smoke tests and operations; encrypted shell flows delegate crypto to an external provider instead of implementing crypto in Bash.
+- Go `custodia-client` CLI for encrypted put/get/share/version workflows plus a Bash transport helper for CI, smoke tests and operations.
 - Docker, Compose, Helm and Lite single-node deployment examples.
 - Dedicated `custodia-signer` service for admin-only client CSR signing.
 - Custodia Lite profile with YAML config, SQLite build-tag artifact, local CA bootstrap, backup helper and Lite-to-Full readiness checks.
@@ -87,6 +87,7 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 - Java transport and crypto: [`docs/JAVA_CLIENT_SDK.md`](docs/JAVA_CLIENT_SDK.md)
 - C++ transport and crypto: [`docs/CPP_CLIENT_SDK.md`](docs/CPP_CLIENT_SDK.md)
 - Rust transport and crypto: [`docs/RUST_CLIENT_SDK.md`](docs/RUST_CLIENT_SDK.md)
+- Encrypted client CLI: [`docs/CUSTODIA_CLIENT_CLI.md`](docs/CUSTODIA_CLIENT_CLI.md)
 - Bash transport helper: [`docs/BASH_TRANSPORT_HELPER.md`](docs/BASH_TRANSPORT_HELPER.md)
 - Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
 - SDK release policy: [`docs/SDK_RELEASE_POLICY.md`](docs/SDK_RELEASE_POLICY.md)
@@ -127,7 +128,7 @@ For a clean machine first run, start with **[`docs/QUICKSTART.md`](docs/QUICKSTA
 The package split is:
 
 - `custodia-server`: server, admin CLI, signer, systemd unit and deployment examples;
-- `custodia-clients`: SDK source snapshots, shared vectors, docs and the Bash transport helper.
+- `custodia-clients`: encrypted `custodia-client` CLI, SDK source snapshots, shared vectors, docs and the Bash transport helper.
 
 See [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md).
 
