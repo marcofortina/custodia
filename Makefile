@@ -26,7 +26,7 @@ fmt:
 
 .PHONY: clean
 clean:
-	rm -rf bin dist custodia-server custodia-admin custodia-signer clients/rust/target
+	rm -rf bin dist custodia-server custodia-admin custodia-signer custodia-client clients/rust/target
 	rm -f ./*.test coverage.out
 
 .PHONY: license-check
@@ -91,12 +91,14 @@ build:
 	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-server
 	$(GO) build -ldflags "$(LDFLAGS)" -o custodia-admin ./cmd/custodia-admin
 	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-signer
+	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-client
 
 .PHONY: build-postgres
 build-postgres:
 	$(GO) build -tags postgres -ldflags "$(LDFLAGS)" ./cmd/custodia-server
 	$(GO) build -tags postgres -ldflags "$(LDFLAGS)" -o custodia-admin ./cmd/custodia-admin
 	$(GO) build -tags postgres -ldflags "$(LDFLAGS)" ./cmd/custodia-signer
+	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-client
 
 .PHONY: test-postgres
 test-postgres:
@@ -193,6 +195,7 @@ build-sqlite: sqlite-driver-download
 	$(GO) build -tags sqlite -ldflags "$(LDFLAGS)" ./cmd/custodia-server
 	$(GO) build -tags sqlite -ldflags "$(LDFLAGS)" -o custodia-admin ./cmd/custodia-admin
 	$(GO) build -tags sqlite -ldflags "$(LDFLAGS)" ./cmd/custodia-signer
+	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-client
 
 .PHONY: test-sqlite
 test-sqlite: sqlite-driver-download

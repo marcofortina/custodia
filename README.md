@@ -325,6 +325,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 - [Custodia client libraries specification](docs/CLIENT_LIBRARIES.md)
 - [Client crypto specification](docs/CLIENT_CRYPTO_SPEC.md)
 - [Go client SDK](docs/GO_CLIENT_SDK.md)
+- [Custodia client CLI](docs/CUSTODIA_CLIENT_CLI.md)
 - [Python client SDK](docs/PYTHON_CLIENT_SDK.md)
 - [Node.js / TypeScript client SDK](docs/NODE_CLIENT_SDK.md)
 - [Java client SDK](docs/JAVA_CLIENT_SDK.md)

@@ -9,7 +9,7 @@ The repository contains two client layers:
 1. **Transport clients** send and receive already-opaque REST payloads over mTLS.
 2. **High-level crypto clients** encrypt plaintext locally, build recipient envelopes locally, call the transport client, and decrypt authorized responses locally.
 
-The Bash helper is intentionally different: it is a transport helper with an optional external crypto-provider bridge. It does not implement native Bash cryptography.
+The Go `custodia-client` command is the repository-provided encrypted secrets CLI for end-user put/get/share/version workflows. The Bash helper is intentionally different: it is a transport helper with an optional external crypto-provider bridge. It does not implement native Bash cryptography.
 
 ## Repository status after Phase 5 closure
 
@@ -27,6 +27,7 @@ The public registry publication status remains separate from repository implemen
 | Java | `clients/java` | Yes | Yes | `java.net.http`, Java TLS configuration, and local crypto. |
 | C++ | `clients/cpp` | Yes | Yes | libcurl transport and OpenSSL crypto. |
 | Rust | `clients/rust` | Yes | Yes | reqwest/rustls transport and local crypto. |
+| Go CLI | `cmd/custodia-client` | Yes | Yes | Encrypted put/get/share/version user CLI. |
 | Bash | `clients/bash` | Yes | External provider only | Shell helper for CI and operational scripts. |
 
 A client is considered repository-official when it has:
@@ -148,7 +149,7 @@ Linux packages provide two installable groups:
 | Package | Contents |
 | --- | --- |
 | `custodia-server` | server binaries, `custodia-admin`, signer, systemd unit, server docs and examples. |
-| `custodia-clients` | SDK source snapshots, Bash helper, shared crypto vectors, and SDK docs. |
+| `custodia-clients` | `custodia-client` encrypted secrets CLI, SDK source snapshots, Bash helper, shared crypto vectors, and SDK docs. |
 
 External language registry publishing remains future release work.
 
@@ -157,6 +158,7 @@ External language registry publishing remains future release work.
 Use these repository documents as the current source of truth:
 
 - [`CLIENT_LIBRARIES.md`](CLIENT_LIBRARIES.md): SDK capability and boundary matrix.
+- [`CUSTODIA_CLIENT_CLI.md`](CUSTODIA_CLIENT_CLI.md): encrypted secrets CLI usage.
 - [`CLIENT_CRYPTO_SPEC.md`](CLIENT_CRYPTO_SPEC.md): shared crypto metadata, AAD, AEAD and envelope contract.
 - [`PHASE5_CLOSURE.md`](PHASE5_CLOSURE.md): repository-level closure status.
 - [`SDK_RELEASE_POLICY.md`](SDK_RELEASE_POLICY.md): official SDK and public package release criteria.

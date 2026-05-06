@@ -62,7 +62,6 @@ smoke_extracted_tree() {
       require_file "$root" usr/share/custodia/clients/cpp/include/custodia/client.hpp
       require_file "$root" usr/share/custodia/clients/rust/Cargo.toml
       require_file "$root" usr/share/custodia/testdata/client-crypto/v1/create_secret_single_recipient.json
-      bash -n "$root/usr/bin/custodia-client"
       "$root/usr/bin/custodia-client" help >/dev/null
       ;;
     *)

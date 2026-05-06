@@ -127,6 +127,12 @@ build_server_binaries() {
   (cd "$build_root" && "$GO" build -buildvcs=false "${mod_args[@]}" "${tags[@]}" -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-signer" ./cmd/custodia-signer)
 }
 
+build_client_binary() {
+  mkdir -p "$WORK_DIR/bin"
+  log "building Go client CLI"
+  "$GO" build -buildvcs=false -ldflags "$ldflags" -o "$WORK_DIR/bin/custodia-client" ./cmd/custodia-client
+}
+
 stage_server() {
   local stage="$1"
   rm -rf "$stage"
@@ -220,9 +226,9 @@ copy_client_tree() {
   cp -R testdata/client-crypto "$stage/usr/share/custodia/testdata/"
   find "$stage/usr/share/custodia/clients" -type d \( -name __pycache__ -o -name .pytest_cache -o -name node_modules -o -name target \) -prune -exec rm -rf {} +
   find "$stage/usr/share/custodia/clients" -type f \( -name '*.pyc' -o -name '*.class' \) -delete
-  install -m 0755 clients/bash/custodia.sh "$stage/usr/bin/custodia-client"
+  install -m 0755 "$WORK_DIR/bin/custodia-client" "$stage/usr/bin/custodia-client"
   install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia-clients/"
-  install -m 0644 docs/CLIENT_LIBRARIES.md docs/CLIENT_CRYPTO_SPEC.md docs/GO_CLIENT_SDK.md docs/PYTHON_CLIENT_SDK.md docs/NODE_CLIENT_SDK.md docs/JAVA_CLIENT_SDK.md docs/CPP_CLIENT_SDK.md docs/RUST_CLIENT_SDK.md docs/BASH_TRANSPORT_HELPER.md "$stage/usr/share/doc/custodia-clients/"
+  install -m 0644 docs/CLIENT_LIBRARIES.md docs/CLIENT_CRYPTO_SPEC.md docs/CUSTODIA_CLIENT_CLI.md docs/GO_CLIENT_SDK.md docs/PYTHON_CLIENT_SDK.md docs/NODE_CLIENT_SDK.md docs/JAVA_CLIENT_SDK.md docs/CPP_CLIENT_SDK.md docs/RUST_CLIENT_SDK.md docs/BASH_TRANSPORT_HELPER.md "$stage/usr/share/doc/custodia-clients/"
 }
 
 stage_clients() {
@@ -277,9 +283,9 @@ Priority: optional
 Architecture: all
 Maintainer: Custodia maintainers <maintainers@example.invalid>
 Depends: ca-certificates, curl
-Description: Custodia client SDK source bundle and Bash transport helper
- Custodia client SDKs keep plaintext, DEKs and private keys outside the server.
- This package installs SDK source snapshots, shared test vectors and the custodia-client Bash helper.
+Description: Custodia client CLI, SDK source bundle and Bash transport helper
+ Custodia client tooling keeps plaintext, DEKs and private keys outside the server.
+ This package installs the Go custodia-client CLI, SDK source snapshots, shared test vectors and the Bash helper.
 EOF_CONTROL
       ;;
   esac
@@ -356,14 +362,14 @@ exit 0'
       buildarch="$arch"
       ;;
     custodia-clients)
-      summary="Custodia client SDK source bundle and Bash transport helper"
-      description="Custodia client SDKs keep plaintext, DEKs and private keys outside the server. This package installs SDK source snapshots, shared test vectors and the custodia-client Bash helper."
+      summary="Custodia client CLI, SDK source bundle and Bash transport helper"
+      description="Custodia client tooling keeps plaintext, DEKs and private keys outside the server. This package installs the Go custodia-client CLI, SDK source snapshots, shared test vectors and the Bash helper."
       requires="Requires: ca-certificates
 Requires: curl"
       pre='exit 0'
       post='exit 0'
       postun='exit 0'
-      buildarch="noarch"
+      buildarch="$arch"
       ;;
   esac
 
@@ -425,10 +431,11 @@ main() {
   fi
 
   if has_word clients "${names[@]}"; then
+    build_client_binary
     local clients_stage="$WORK_DIR/stage/custodia-clients"
     stage_clients "$clients_stage"
-    if has_word deb "${formats[@]}"; then build_deb custodia-clients "$clients_stage" all; fi
-    if has_word rpm "${formats[@]}"; then build_rpm custodia-clients "$clients_stage" noarch; fi
+    if has_word deb "${formats[@]}"; then build_deb custodia-clients "$clients_stage" "$deb_arch"; fi
+    if has_word rpm "${formats[@]}"; then build_rpm custodia-clients "$clients_stage" "$rpm_arch"; fi
   fi
 
   log "artifacts written to $OUT_DIR"

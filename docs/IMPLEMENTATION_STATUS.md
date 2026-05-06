@@ -1641,3 +1641,18 @@ Node high-level crypto wrapper is implemented in `clients/node` using Node built
 - Added `custodia-admin certificate bundle` to create a local-only zip archive with `client.crt`, `client.key`, `ca.crt` and a README for application handoff.
 - Validates client certificate, private key and CA certificate inputs, writes the archive exclusively with `0600` permissions and keeps application encryption keys out of the bundle.
 - Updated certificate lifecycle and signer docs to document the safer CLI handoff path after `certificate extract`.
+
+
+## Patch 860 - custodia-client encrypted secrets CLI
+
+- Added `cmd/custodia-client` for local encrypted secret put/get/share/version workflows.
+- Added local X25519 key generation and public-key file handling for application-controlled recipient resolution.
+- Updated packaging to ship the Go `custodia-client` binary instead of exposing the Bash helper as the primary `/usr/bin/custodia-client`.
+- Added `docs/CUSTODIA_CLIENT_CLI.md` and linked the CLI from the client library matrix.
+
+Verification:
+
+```bash
+go test ./cmd/custodia-client
+make check
+```
