@@ -1671,3 +1671,17 @@ Recommended verification:
 go test ./cmd/custodia-client
 make check
 ```
+
+## Patch 862 - custodia-client destructive lifecycle UX
+
+- Added `custodia-client secret access revoke` for explicit future access revocation.
+- Added `custodia-client secret delete` for explicit destructive secret deletion.
+- Required `--yes` for destructive client CLI operations before any transport call.
+- Updated client CLI documentation to distinguish future access revocation from strong revocation via new encrypted versions.
+
+Validation:
+
+```bash
+go test ./cmd/custodia-client
+make check
+```

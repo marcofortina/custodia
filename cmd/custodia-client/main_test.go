@@ -125,7 +125,7 @@ func TestHelpMentionsEncryptedSecretCommands(t *testing.T) {
 		t.Fatalf("help failed: %d %s", code, stderr.String())
 	}
 	body := stdout.String()
-	for _, token := range []string{"secret put", "secret get", "secret share", "secret version put", "secret versions", "secret access list", "Secret payloads are encrypted/decrypted locally"} {
+	for _, token := range []string{"secret put", "secret get", "secret share", "secret delete", "secret version put", "secret versions", "secret access list", "secret access revoke", "Secret payloads are encrypted/decrypted locally"} {
 		if !strings.Contains(body, token) {
 			t.Fatalf("help missing %q: %s", token, body)
 		}
@@ -150,6 +150,44 @@ func TestMetadataListCommandsRequireSecretIDBeforeTransport(t *testing.T) {
 				t.Fatalf("expected secret id error, got: %s", stderr.String())
 			}
 		})
+	}
+}
+
+func TestDestructiveSecretCommandsRequireExplicitConfirmation(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "secret delete", args: []string{"secret", "delete", "--secret-id", "00000000-0000-0000-0000-000000000001"}, want: "--yes is required to delete a secret"},
+		{name: "access revoke", args: []string{"secret", "access", "revoke", "--secret-id", "00000000-0000-0000-0000-000000000001", "--target-client-id", "client_bob"}, want: "--yes is required to revoke secret access"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			code := (&app{stdout: &stdout, stderr: &stderr}).run(tc.args)
+			if code != 2 {
+				t.Fatalf("expected confirmation failure, got %d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+			}
+			if !strings.Contains(stderr.String(), tc.want) {
+				t.Fatalf("expected %q, got: %s", tc.want, stderr.String())
+			}
+		})
+	}
+}
+
+func TestDestructiveSecretCommandsRequireTransportAfterConfirmation(t *testing.T) {
+	for _, args := range [][]string{
+		{"secret", "delete", "--secret-id", "00000000-0000-0000-0000-000000000001", "--yes"},
+		{"secret", "access", "revoke", "--secret-id", "00000000-0000-0000-0000-000000000001", "--target-client-id", "client_bob", "--yes"},
+	} {
+		var stdout, stderr bytes.Buffer
+		code := (&app{stdout: &stdout, stderr: &stderr}).run(args)
+		if code != 1 {
+			t.Fatalf("expected transport failure, got %d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+		}
+		if !strings.Contains(stderr.String(), "--server-url, --cert, --key and --ca are required") {
+			t.Fatalf("expected mTLS option error, got: %s", stderr.String())
+		}
 	}
 }
 

@@ -30,7 +30,7 @@ If you are not sure what to choose, use the package install path. It covers Debi
 - Minimal admin CLI for metadata operations exposed by the API.
 - Go, Python and Node.js / TypeScript client libraries with raw transport helpers; all three include high-level client-side crypto wrappers that keep plaintext, DEKs and private keys outside the server.
 - Java, C++ and Rust client libraries with raw transport helpers plus high-level client-side crypto wrappers that use the shared AES-256-GCM/HPKE-v1 vectors.
-- Go `custodia-client` CLI for encrypted put/get/share/version workflows plus a Bash transport helper for CI, smoke tests and operations.
+- Go `custodia-client` CLI for encrypted put/get/share/version, access revoke/delete workflows plus a Bash transport helper for CI, smoke tests and operations.
 - Docker, Compose, Helm and Lite single-node deployment examples.
 - Dedicated `custodia-signer` service for admin-only client CSR signing.
 - Custodia Lite profile with YAML config, SQLite build-tag artifact, local CA bootstrap, backup helper and Lite-to-Full readiness checks.

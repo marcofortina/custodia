@@ -116,6 +116,8 @@ func (a *app) usage() {
   custodia-client secret version put --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --secret-id ID --value-file FILE [--recipient ID=PUBLIC.json]
   custodia-client secret versions --server-url URL --cert FILE --key FILE --ca FILE --secret-id ID [--limit N]
   custodia-client secret access list --server-url URL --cert FILE --key FILE --ca FILE --secret-id ID [--limit N]
+  custodia-client secret access revoke --server-url URL --cert FILE --key FILE --ca FILE --secret-id ID --target-client-id ID --yes
+  custodia-client secret delete --server-url URL --cert FILE --key FILE --ca FILE --secret-id ID --yes
   custodia-client secret list --server-url URL --cert FILE --key FILE --ca FILE [--limit N]
 
 Secret payloads are encrypted/decrypted locally. Custodia receives only ciphertext, crypto_metadata and opaque recipient envelopes.`)
@@ -207,6 +209,8 @@ func (a *app) runSecret(args []string) int {
 		return a.runSecretGet(args[1:])
 	case "share":
 		return a.runSecretShare(args[1:])
+	case "delete":
+		return a.runSecretDelete(args[1:])
 	case "version":
 		return a.runSecretVersion(args[1:])
 	case "versions":
@@ -289,6 +293,34 @@ func (a *app) runSecretGet(args []string) int {
 		fmt.Fprintf(a.stdout, "wrote %s\n", *out)
 	}
 	return 0
+}
+
+func (a *app) runSecretDelete(args []string) int {
+	fs := newFlagSet("custodia-client secret delete", a.stderr)
+	transport := registerTransportFlags(fs)
+	secretID := fs.String("secret-id", "", "secret id")
+	confirmed := fs.Bool("yes", false, "confirm destructive secret deletion")
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	if strings.TrimSpace(*secretID) == "" {
+		fmt.Fprintln(a.stderr, "--secret-id is required")
+		return 2
+	}
+	if !*confirmed {
+		fmt.Fprintln(a.stderr, "--yes is required to delete a secret")
+		return 2
+	}
+	client, err := buildTransportClient(transport)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	if err := client.DeleteSecret(*secretID); err != nil {
+		fmt.Fprintf(a.stderr, "delete secret: %v\n", err)
+		return 1
+	}
+	return writeJSON(a.stdout, map[string]string{"secret_id": *secretID, "status": "deleted"})
 }
 
 func (a *app) runSecretShare(args []string) int {
@@ -391,11 +423,15 @@ func (a *app) runSecretAccess(args []string) int {
 		fmt.Fprintln(a.stderr, "missing secret access subcommand")
 		return 2
 	}
-	if args[0] != "list" {
+	switch args[0] {
+	case "list":
+		return a.runSecretAccessList(args[1:])
+	case "revoke":
+		return a.runSecretAccessRevoke(args[1:])
+	default:
 		fmt.Fprintf(a.stderr, "unknown secret access subcommand: %s\n", args[0])
 		return 2
 	}
-	return a.runSecretAccessList(args[1:])
 }
 
 func (a *app) runSecretAccessList(args []string) int {
@@ -421,6 +457,35 @@ func (a *app) runSecretAccessList(args []string) int {
 		return 1
 	}
 	return writeJSON(a.stdout, map[string]any{"access": access})
+}
+
+func (a *app) runSecretAccessRevoke(args []string) int {
+	fs := newFlagSet("custodia-client secret access revoke", a.stderr)
+	transport := registerTransportFlags(fs)
+	secretID := fs.String("secret-id", "", "secret id")
+	targetClientID := fs.String("target-client-id", "", "target client id whose future access is revoked")
+	confirmed := fs.Bool("yes", false, "confirm access revocation")
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	if strings.TrimSpace(*secretID) == "" || strings.TrimSpace(*targetClientID) == "" {
+		fmt.Fprintln(a.stderr, "--secret-id and --target-client-id are required")
+		return 2
+	}
+	if !*confirmed {
+		fmt.Fprintln(a.stderr, "--yes is required to revoke secret access")
+		return 2
+	}
+	client, err := buildTransportClient(transport)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	if err := client.RevokeAccess(*secretID, *targetClientID); err != nil {
+		fmt.Fprintf(a.stderr, "revoke secret access: %v\n", err)
+		return 1
+	}
+	return writeJSON(a.stdout, map[string]string{"secret_id": *secretID, "target_client_id": *targetClientID, "status": "revoked"})
 }
 
 func (a *app) runSecretList(args []string) int {

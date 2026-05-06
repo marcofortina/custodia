@@ -162,6 +162,35 @@ custodia-client secret access list \
   --limit 50
 ```
 
+## Revoke a client's future access
+
+Revoke a target client's future server-side access to a secret. This does not make already downloaded ciphertext/envelope material undecryptable; for strong revocation, create a new encrypted version with only the remaining authorized recipients.
+
+```bash
+custodia-client secret access revoke \
+  --server-url https://localhost:8443 \
+  --cert client_alice.crt \
+  --key client_alice.key \
+  --ca /etc/custodia/ca.crt \
+  --secret-id <secret_id> \
+  --target-client-id client_bob \
+  --yes
+```
+
+## Delete a secret
+
+Delete a secret from future server-side reads. This is a destructive metadata operation and requires explicit confirmation.
+
+```bash
+custodia-client secret delete \
+  --server-url https://localhost:8443 \
+  --cert client_alice.crt \
+  --key client_alice.key \
+  --ca /etc/custodia/ca.crt \
+  --secret-id <secret_id> \
+  --yes
+```
+
 ## Security notes
 
 - mTLS private keys identify the client to Custodia.
