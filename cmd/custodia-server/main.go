@@ -10,6 +10,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -19,6 +20,7 @@ import (
 	"syscall"
 	"time"
 
+	"custodia/internal/build"
 	"custodia/internal/config"
 	"custodia/internal/httpapi"
 	"custodia/internal/model"
@@ -30,6 +32,9 @@ import (
 // main wires the runtime boundary: opaque secret storage, mTLS identity,
 // rate limiting, and web MFA all terminate in the HTTP API layer below.
 func main() {
+	if handled, code := handleInfoCommand(os.Args[1:], os.Stdout); handled {
+		os.Exit(code)
+	}
 	cfg, err := config.LoadWithArgs(os.Args[1:])
 	if err != nil {
 		log.Fatalf("config load failed: %v", err)
@@ -137,6 +142,33 @@ func main() {
 	}
 	shutdownServer(shutdownCtx, webServer)
 	shutdownServer(shutdownCtx, healthServer)
+}
+
+const serverUsage = `Usage:
+  custodia-server [configuration flags]
+  custodia-server version
+  custodia-server --version
+  custodia-server help
+
+Runs the Custodia vault API and web console. Runtime configuration is loaded
+from environment variables, config files, and supported config flags.
+`
+
+func handleInfoCommand(args []string, stdout io.Writer) (bool, int) {
+	if len(args) != 1 {
+		return false, 0
+	}
+	switch strings.TrimSpace(args[0]) {
+	case "version", "--version", "-version":
+		info := build.Current()
+		fmt.Fprintf(stdout, "%s %s %s\n", info.Version, info.Commit, info.Date)
+		return true, 0
+	case "help", "--help", "-h":
+		fmt.Fprint(stdout, serverUsage)
+		return true, 0
+	default:
+		return false, 0
+	}
 }
 
 func buildRuntimeServer(addr string, handler http.Handler, cfg config.Config) *http.Server {

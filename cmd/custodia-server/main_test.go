@@ -8,6 +8,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"log"
 	"os"
@@ -19,6 +20,38 @@ import (
 	"custodia/internal/model"
 	"custodia/internal/store"
 )
+
+func TestServerInfoCommandsDoNotLoadRuntimeConfig(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "version", args: []string{"version"}, want: "dev unknown unknown\n"},
+		{name: "long version", args: []string{"--version"}, want: "dev unknown unknown\n"},
+		{name: "help", args: []string{"help"}, want: "Usage:\n  custodia-server"},
+		{name: "short help", args: []string{"-h"}, want: "Usage:\n  custodia-server"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var out bytes.Buffer
+			handled, code := handleInfoCommand(tc.args, &out)
+			if !handled || code != 0 {
+				t.Fatalf("handled=%v code=%d", handled, code)
+			}
+			if !strings.Contains(out.String(), tc.want) {
+				t.Fatalf("expected %q in %q", tc.want, out.String())
+			}
+		})
+	}
+}
+
+func TestServerInfoCommandsIgnoreRuntimeArgs(t *testing.T) {
+	var out bytes.Buffer
+	handled, code := handleInfoCommand([]string{"--config", "missing.yaml"}, &out)
+	if handled || code != 0 || out.Len() != 0 {
+		t.Fatalf("unexpected info handling: handled=%v code=%d out=%q", handled, code, out.String())
+	}
+}
 
 func TestBootstrapClientsCreatesMissingAndIgnoresExisting(t *testing.T) {
 	ctx := context.Background()

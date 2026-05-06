@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -21,6 +22,7 @@ import (
 	"syscall"
 	"time"
 
+	"custodia/internal/build"
 	"custodia/internal/crldist"
 	"custodia/internal/id"
 	"custodia/internal/mtls"
@@ -59,6 +61,9 @@ type signerServer struct {
 }
 
 func main() {
+	if handled, code := handleInfoCommand(os.Args[1:], os.Stdout); handled {
+		os.Exit(code)
+	}
 	cfg := loadConfig()
 	clientSigner, err := signing.LoadClientCertificateSignerWithOptions(cfg.keyProvider, cfg.caCertFile, cfg.caKeyFile, cfg.pkcs11SignCommand, cfg.caKeyPassphraseFile)
 	if err != nil {
@@ -110,6 +115,33 @@ func main() {
 	defer cancel()
 	if err := httpServer.Shutdown(ctx); err != nil {
 		log.Printf("signer graceful shutdown failed: %v", err)
+	}
+}
+
+const signerUsage = `Usage:
+  custodia-signer
+  custodia-signer version
+  custodia-signer --version
+  custodia-signer help
+
+Runs the Custodia CA signer service. Runtime configuration is loaded from
+CUSTODIA_SIGNER_* environment variables.
+`
+
+func handleInfoCommand(args []string, stdout io.Writer) (bool, int) {
+	if len(args) != 1 {
+		return false, 0
+	}
+	switch strings.TrimSpace(args[0]) {
+	case "version", "--version", "-version":
+		info := build.Current()
+		fmt.Fprintf(stdout, "%s %s %s\n", info.Version, info.Commit, info.Date)
+		return true, 0
+	case "help", "--help", "-h":
+		fmt.Fprint(stdout, signerUsage)
+		return true, 0
+	default:
+		return false, 0
 	}
 }
 
