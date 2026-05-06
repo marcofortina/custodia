@@ -1737,3 +1737,16 @@ Suggested verification:
 go test ./cmd/custodia-admin
 make check
 ```
+
+## Patch 872 - Makefile default all target
+
+- Added an explicit `all` target as the default Make goal.
+- Made `make` run the Go test suite and build the main binaries via `all: test build`.
+- Updated README and quickstart wording so `make`, `make test` and `make check` have clear scopes.
+
+Suggested verification:
+
+```bash
+make
+make test
+```

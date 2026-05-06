@@ -11,6 +11,11 @@ COMMIT ?= unknown
 DATE ?= unknown
 LDFLAGS := -X custodia/internal/build.Version=$(VERSION) -X custodia/internal/build.Commit=$(COMMIT) -X custodia/internal/build.Date=$(DATE)
 
+.DEFAULT_GOAL := all
+
+.PHONY: all
+all: test build
+
 .PHONY: test
 test:
 	$(GO) test -p=1 -timeout 60s ./...

@@ -168,7 +168,13 @@ git clone https://github.com/marcofortina/custodia.git
 cd custodia
 ```
 
-Run the local checks that do not require production external services:
+Run the default local build/test pass:
+
+```bash
+make
+```
+
+The default `make` target is `all`, which runs the Go test suite and builds the main binaries. For the broader multi-language check used before releases, run:
 
 ```bash
 make license-check
@@ -179,7 +185,6 @@ make test-java-client
 make test-cpp-client
 make test-rust-client
 make test-bash-client
-go test -p=1 -timeout 60s ./...
 ```
 
 Build Lite-capable binaries. The `sqlite` build tag is required for the single-node Lite profile:
