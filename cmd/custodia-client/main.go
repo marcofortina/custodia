@@ -41,10 +41,11 @@ type app struct {
 }
 
 type transportFlags struct {
-	serverURL string
-	certFile  string
-	keyFile   string
-	caFile    string
+	configFile string
+	serverURL  string
+	certFile   string
+	keyFile    string
+	caFile     string
 }
 
 type cryptoFlags struct {
@@ -78,6 +79,15 @@ type publicKeyFile struct {
 	Fingerprint  string `json:"fingerprint,omitempty"`
 }
 
+type clientConfigFile struct {
+	ServerURL string `json:"server_url"`
+	CertFile  string `json:"cert_file"`
+	KeyFile   string `json:"key_file"`
+	CAFile    string `json:"ca_file"`
+	ClientID  string `json:"client_id,omitempty"`
+	CryptoKey string `json:"crypto_key,omitempty"`
+}
+
 func main() {
 	os.Exit((&app{stdout: os.Stdout, stderr: os.Stderr}).run(os.Args[1:]))
 }
@@ -93,6 +103,8 @@ func (a *app) run(args []string) int {
 		return 0
 	case "key":
 		return a.runKey(args[1:])
+	case "config":
+		return a.runConfig(args[1:])
 	case "secret":
 		return a.runSecret(args[1:])
 	case "version":
@@ -110,6 +122,7 @@ func (a *app) usage() {
 	fmt.Fprintln(a.stdout, `Usage:
   custodia-client key generate --client-id ID --private-key-out FILE --public-key-out FILE
   custodia-client key public --client-id ID --private-key FILE --public-key-out FILE
+  custodia-client config write --out FILE --server-url URL --cert FILE --key FILE --ca FILE [--client-id ID --crypto-key FILE]
   custodia-client secret put --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --name NAME --value-file FILE [--recipient ID=PUBLIC.json]
   custodia-client secret get --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --secret-id ID [--out FILE]
   custodia-client secret share --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --secret-id ID --target-client-id ID --recipient ID=PUBLIC.json
@@ -120,7 +133,48 @@ func (a *app) usage() {
   custodia-client secret delete --server-url URL --cert FILE --key FILE --ca FILE --secret-id ID --yes
   custodia-client secret list --server-url URL --cert FILE --key FILE --ca FILE [--limit N]
 
+Common options may be stored in a JSON config file and loaded with --config FILE or CUSTODIA_CLIENT_CONFIG.
+
 Secret payloads are encrypted/decrypted locally. Custodia receives only ciphertext, crypto_metadata and opaque recipient envelopes.`)
+}
+
+func (a *app) runConfig(args []string) int {
+	if len(args) == 0 {
+		fmt.Fprintln(a.stderr, "missing config subcommand")
+		return 2
+	}
+	switch args[0] {
+	case "write":
+		return a.runConfigWrite(args[1:])
+	default:
+		fmt.Fprintf(a.stderr, "unknown config subcommand: %s\n", args[0])
+		return 2
+	}
+}
+
+func (a *app) runConfigWrite(args []string) int {
+	fs := newFlagSet("custodia-client config write", a.stderr)
+	out := fs.String("out", "", "client config output JSON")
+	serverURL := fs.String("server-url", "", "Custodia API base URL")
+	certFile := fs.String("cert", "", "mTLS client certificate")
+	keyFile := fs.String("key", "", "mTLS client private key")
+	caFile := fs.String("ca", "", "Custodia CA certificate")
+	clientID := fs.String("client-id", "", "local client id")
+	cryptoKey := fs.String("crypto-key", "", "local X25519 private key JSON")
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	if strings.TrimSpace(*out) == "" || strings.TrimSpace(*serverURL) == "" || strings.TrimSpace(*certFile) == "" || strings.TrimSpace(*keyFile) == "" || strings.TrimSpace(*caFile) == "" {
+		fmt.Fprintln(a.stderr, "--out, --server-url, --cert, --key and --ca are required")
+		return 2
+	}
+	config := clientConfigFile{ServerURL: strings.TrimSpace(*serverURL), CertFile: strings.TrimSpace(*certFile), KeyFile: strings.TrimSpace(*keyFile), CAFile: strings.TrimSpace(*caFile), ClientID: strings.TrimSpace(*clientID), CryptoKey: strings.TrimSpace(*cryptoKey)}
+	if err := writeJSONFileExclusive(*out, config, keyFileMode); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	fmt.Fprintf(a.stdout, "wrote %s\n", *out)
+	return 0
 }
 
 func (a *app) runKey(args []string) int {
@@ -527,6 +581,7 @@ func parseFlags(fs *flag.FlagSet, args []string, stderr io.Writer) bool {
 
 func registerTransportFlags(fs *flag.FlagSet) transportFlags {
 	var flags transportFlags
+	fs.StringVar(&flags.configFile, "config", envDefault("CUSTODIA_CLIENT_CONFIG", ""), "Custodia client config JSON")
 	fs.StringVar(&flags.serverURL, "server-url", envDefault("CUSTODIA_BASE_URL", ""), "Custodia API base URL")
 	fs.StringVar(&flags.certFile, "cert", envDefault("CUSTODIA_CLIENT_CERT", ""), "mTLS client certificate")
 	fs.StringVar(&flags.keyFile, "key", envDefault("CUSTODIA_CLIENT_KEY", ""), "mTLS client private key")
@@ -548,6 +603,9 @@ func registerCryptoFlagsNoRecipients(fs *flag.FlagSet) cryptoFlags {
 }
 
 func buildTransportClient(transport transportFlags) (*sdk.Client, error) {
+	if err := applyClientConfig(&transport, nil); err != nil {
+		return nil, err
+	}
 	if strings.TrimSpace(transport.serverURL) == "" || strings.TrimSpace(transport.certFile) == "" || strings.TrimSpace(transport.keyFile) == "" || strings.TrimSpace(transport.caFile) == "" {
 		return nil, fmt.Errorf("--server-url, --cert, --key and --ca are required")
 	}
@@ -559,6 +617,9 @@ func buildTransportClient(transport transportFlags) (*sdk.Client, error) {
 }
 
 func buildCryptoClient(transport transportFlags, crypto cryptoFlags) (*sdk.CryptoClient, []string, error) {
+	if err := applyClientConfig(&transport, &crypto); err != nil {
+		return nil, nil, err
+	}
 	if strings.TrimSpace(crypto.cryptoKey) == "" {
 		return nil, nil, fmt.Errorf("--crypto-key is required")
 	}
@@ -601,6 +662,45 @@ func buildCryptoClient(transport transportFlags, crypto cryptoFlags) (*sdk.Crypt
 		return nil, nil, fmt.Errorf("create crypto client: %w", err)
 	}
 	return cryptoClient, recipientIDs, nil
+}
+
+func applyClientConfig(transport *transportFlags, crypto *cryptoFlags) error {
+	if transport == nil || strings.TrimSpace(transport.configFile) == "" {
+		return nil
+	}
+	config, err := readClientConfigFile(transport.configFile)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(transport.serverURL) == "" {
+		transport.serverURL = config.ServerURL
+	}
+	if strings.TrimSpace(transport.certFile) == "" {
+		transport.certFile = config.CertFile
+	}
+	if strings.TrimSpace(transport.keyFile) == "" {
+		transport.keyFile = config.KeyFile
+	}
+	if strings.TrimSpace(transport.caFile) == "" {
+		transport.caFile = config.CAFile
+	}
+	if crypto != nil {
+		if strings.TrimSpace(crypto.clientID) == "" {
+			crypto.clientID = config.ClientID
+		}
+		if strings.TrimSpace(crypto.cryptoKey) == "" {
+			crypto.cryptoKey = config.CryptoKey
+		}
+	}
+	return nil
+}
+
+func readClientConfigFile(path string) (clientConfigFile, error) {
+	var config clientConfigFile
+	if err := readJSONFile(path, &config); err != nil {
+		return clientConfigFile{}, err
+	}
+	return config, nil
 }
 
 type staticResolver map[string]sdk.RecipientPublicKey

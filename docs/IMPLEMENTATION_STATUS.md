@@ -1685,3 +1685,18 @@ Validation:
 go test ./cmd/custodia-client
 make check
 ```
+
+
+## Patch 863 - custodia-client reusable config profiles
+
+- Added `custodia-client config write` to create a local JSON config file for repeated mTLS and crypto path options.
+- Added `--config FILE` and `CUSTODIA_CLIENT_CONFIG` support for secret commands.
+- Preserved precedence so explicit flags and environment values override config file values.
+- Added tests for config writing, merge behavior and explicit override safety.
+
+Suggested verification:
+
+```bash
+go test ./cmd/custodia-client
+make check
+```

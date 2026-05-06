@@ -118,6 +118,86 @@ func TestWritePublicKeyUsesDocumentedJSONShape(t *testing.T) {
 	}
 }
 
+func TestConfigWriteCreatesReusableClientConfig(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "client.json")
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{
+		"config", "write",
+		"--out", configPath,
+		"--server-url", "https://vault.example:8443",
+		"--cert", "client.crt",
+		"--key", "client.key",
+		"--ca", "ca.crt",
+		"--client-id", "client_alice",
+		"--crypto-key", "client_alice.x25519.json",
+	})
+	if code != 0 {
+		t.Fatalf("config write failed with %d: %s", code, stderr.String())
+	}
+	config, err := readClientConfigFile(configPath)
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	if config.ServerURL != "https://vault.example:8443" || config.CertFile != "client.crt" || config.KeyFile != "client.key" || config.CAFile != "ca.crt" || config.ClientID != "client_alice" || config.CryptoKey != "client_alice.x25519.json" {
+		t.Fatalf("unexpected config payload: %+v", config)
+	}
+	info, err := os.Stat(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != keyFileMode {
+		t.Fatalf("config mode = %v, want %v", got, keyFileMode)
+	}
+}
+
+func TestConfigFileMergesMissingTransportAndCryptoOptions(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "client.json")
+	config := clientConfigFile{
+		ServerURL: "https://vault.example:8443",
+		CertFile:  "client.crt",
+		KeyFile:   "client.key",
+		CAFile:    "ca.crt",
+		ClientID:  "client_alice",
+		CryptoKey: "client_alice.x25519.json",
+	}
+	if err := writeJSONFileExclusive(configPath, config, keyFileMode); err != nil {
+		t.Fatal(err)
+	}
+	transport := transportFlags{configFile: configPath}
+	crypto := cryptoFlags{}
+	if err := applyClientConfig(&transport, &crypto); err != nil {
+		t.Fatalf("apply config: %v", err)
+	}
+	if transport.serverURL != config.ServerURL || transport.certFile != config.CertFile || transport.keyFile != config.KeyFile || transport.caFile != config.CAFile {
+		t.Fatalf("transport config not merged: %+v", transport)
+	}
+	if crypto.clientID != config.ClientID || crypto.cryptoKey != config.CryptoKey {
+		t.Fatalf("crypto config not merged: %+v", crypto)
+	}
+}
+
+func TestConfigFileDoesNotOverrideExplicitOptions(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "client.json")
+	config := clientConfigFile{ServerURL: "https://config.example:8443", CertFile: "config.crt", KeyFile: "config.key", CAFile: "config-ca.crt", ClientID: "config_client", CryptoKey: "config.x25519.json"}
+	if err := writeJSONFileExclusive(configPath, config, keyFileMode); err != nil {
+		t.Fatal(err)
+	}
+	transport := transportFlags{configFile: configPath, serverURL: "https://flag.example:8443", certFile: "flag.crt", keyFile: "flag.key", caFile: "flag-ca.crt"}
+	crypto := cryptoFlags{clientID: "flag_client", cryptoKey: "flag.x25519.json"}
+	if err := applyClientConfig(&transport, &crypto); err != nil {
+		t.Fatalf("apply config: %v", err)
+	}
+	if transport.serverURL != "https://flag.example:8443" || transport.certFile != "flag.crt" || transport.keyFile != "flag.key" || transport.caFile != "flag-ca.crt" {
+		t.Fatalf("explicit transport options were overwritten: %+v", transport)
+	}
+	if crypto.clientID != "flag_client" || crypto.cryptoKey != "flag.x25519.json" {
+		t.Fatalf("explicit crypto options were overwritten: %+v", crypto)
+	}
+}
+
 func TestHelpMentionsEncryptedSecretCommands(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{"help"})
@@ -125,7 +205,7 @@ func TestHelpMentionsEncryptedSecretCommands(t *testing.T) {
 		t.Fatalf("help failed: %d %s", code, stderr.String())
 	}
 	body := stdout.String()
-	for _, token := range []string{"secret put", "secret get", "secret share", "secret delete", "secret version put", "secret versions", "secret access list", "secret access revoke", "Secret payloads are encrypted/decrypted locally"} {
+	for _, token := range []string{"config write", "--config FILE", "secret put", "secret get", "secret share", "secret delete", "secret version put", "secret versions", "secret access list", "secret access revoke", "Secret payloads are encrypted/decrypted locally"} {
 		if !strings.Contains(body, token) {
 			t.Fatalf("help missing %q: %s", token, body)
 		}

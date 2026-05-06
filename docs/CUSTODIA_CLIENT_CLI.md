@@ -41,6 +41,37 @@ export CUSTODIA_CLIENT_ID=client_alice
 export CUSTODIA_CRYPTO_KEY=client_alice.x25519.json
 ```
 
+
+## Reusable client config
+
+To avoid repeating the same mTLS and local crypto paths on every command, write a local JSON config file:
+
+```bash
+custodia-client config write \
+  --out client_alice.config.json \
+  --server-url https://localhost:8443 \
+  --cert client_alice.crt \
+  --key client_alice.key \
+  --ca /etc/custodia/ca.crt \
+  --client-id client_alice \
+  --crypto-key client_alice.x25519.json
+```
+
+The config file stores paths and identifiers, not private key material, but it is still written with mode `0600` because it references local secret-bearing files. Use it with:
+
+```bash
+custodia-client secret list --config client_alice.config.json
+custodia-client secret get --config client_alice.config.json --secret-id <secret_id> --out secret.readback.txt
+```
+
+You can also set:
+
+```bash
+export CUSTODIA_CLIENT_CONFIG=client_alice.config.json
+```
+
+Explicit flags and environment variables override values loaded from the config file.
+
 ## Put an encrypted secret
 
 Create a plaintext file locally:
