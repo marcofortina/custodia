@@ -35,6 +35,9 @@ func main() {
 	if handled, code := handleInfoCommand(os.Args[1:], os.Stdout); handled {
 		os.Exit(code)
 	}
+	if handled, code := handleConfigCommand(os.Args[1:], os.Stdout, os.Stderr); handled {
+		os.Exit(code)
+	}
 	cfg, err := config.LoadWithArgs(os.Args[1:])
 	if err != nil {
 		log.Fatalf("config load failed: %v", err)
@@ -146,6 +149,7 @@ func main() {
 
 const serverUsage = `Usage:
   custodia-server [configuration flags]
+  custodia-server config validate --config FILE
   custodia-server version
   custodia-server --version
   custodia-server help
@@ -169,6 +173,87 @@ func handleInfoCommand(args []string, stdout io.Writer) (bool, int) {
 	default:
 		return false, 0
 	}
+}
+
+func handleConfigCommand(args []string, stdout, stderr io.Writer) (bool, int) {
+	if len(args) == 0 || strings.TrimSpace(args[0]) != "config" {
+		return false, 0
+	}
+	if len(args) < 2 {
+		fmt.Fprintln(stderr, "missing config subcommand")
+		return true, 2
+	}
+	switch strings.TrimSpace(args[1]) {
+	case "validate":
+		path, err := parseConfigValidatePath(args[2:])
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return true, 2
+		}
+		cfg, err := config.LoadFile(path)
+		if err != nil {
+			fmt.Fprintf(stderr, "config validate failed: %v\n", err)
+			return true, 1
+		}
+		if err := validateConfigForOfflineCheck(cfg); err != nil {
+			fmt.Fprintf(stderr, "config validate failed: %v\n", err)
+			return true, 1
+		}
+		fmt.Fprintf(stdout, "configuration ok: %s\n", path)
+		return true, 0
+	default:
+		fmt.Fprintf(stderr, "unknown config subcommand: %s\n", args[1])
+		return true, 2
+	}
+}
+
+func parseConfigValidatePath(args []string) (string, error) {
+	for index := 0; index < len(args); index++ {
+		arg := strings.TrimSpace(args[index])
+		switch {
+		case arg == "--config":
+			if index+1 >= len(args) || strings.TrimSpace(args[index+1]) == "" {
+				return "", errors.New("--config requires a path")
+			}
+			return strings.TrimSpace(args[index+1]), nil
+		case strings.HasPrefix(arg, "--config="):
+			value := strings.TrimSpace(strings.TrimPrefix(arg, "--config="))
+			if value == "" {
+				return "", errors.New("--config requires a path")
+			}
+			return value, nil
+		default:
+			return "", fmt.Errorf("unknown config validate argument: %s", arg)
+		}
+	}
+	return "", errors.New("--config is required")
+}
+
+func validateConfigForOfflineCheck(cfg config.Config) error {
+	if cfg.StoreBackend != "memory" && cfg.StoreBackend != "sqlite" && cfg.StoreBackend != "postgres" {
+		return fmt.Errorf("unsupported store backend: %s", cfg.StoreBackend)
+	}
+	if cfg.RateLimitBackend != "memory" && cfg.RateLimitBackend != "valkey" {
+		return fmt.Errorf("unsupported rate limit backend: %s", cfg.RateLimitBackend)
+	}
+	if cfg.APIAddr == "" || cfg.WebAddr == "" {
+		return errors.New("api and web listener addresses are required")
+	}
+	if err := validateDedicatedWebListener(cfg.APIAddr, cfg.WebAddr); err != nil {
+		return err
+	}
+	if cfg.StoreBackend == "sqlite" || cfg.StoreBackend == "postgres" {
+		if strings.TrimSpace(cfg.DatabaseURL) == "" {
+			return fmt.Errorf("database_url is required for %s store backend", cfg.StoreBackend)
+		}
+	}
+	if !cfg.DevInsecureHTTP && (cfg.TLSCertFile == "" || cfg.TLSKeyFile == "" || cfg.ClientCAFile == "") {
+		return errors.New("tls cert, tls key and client CA files are required unless dev insecure HTTP is enabled")
+	}
+	if err := validateAdminClientIDs(cfg.AdminClientIDs); err != nil {
+		return err
+	}
+	return nil
 }
 
 func buildRuntimeServer(addr string, handler http.Handler, cfg config.Config) *http.Server {

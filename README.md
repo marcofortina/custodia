@@ -359,3 +359,11 @@ Source install smoke:
 ```bash
 make install-smoke
 ```
+
+
+Validate runtime configuration without starting daemons:
+
+```bash
+custodia-server config validate --config /etc/custodia/custodia-server.yaml
+custodia-signer config validate --config /etc/custodia/custodia-signer.yaml
+```

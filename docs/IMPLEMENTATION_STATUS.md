@@ -1970,3 +1970,9 @@ make package-smoke
 
 - Added `scripts/install-smoke.sh` and `make install-smoke` to install into a temporary `DESTDIR` and verify installed binaries and manpages.
 - The smoke test runs the installed `version` command for every installed binary so runtime-info commands remain config-free.
+
+
+## Patch 904 - runtime config validation commands
+
+- Added `custodia-server config validate --config FILE` and `custodia-signer config validate --config FILE`.
+- Validation parses structured YAML and performs offline semantic checks without opening listeners, stores, logs or CA keys.

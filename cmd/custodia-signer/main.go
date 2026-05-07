@@ -66,6 +66,9 @@ func main() {
 	if handled, code := handleInfoCommand(os.Args[1:], os.Stdout); handled {
 		os.Exit(code)
 	}
+	if handled, code := handleConfigCommand(os.Args[1:], os.Stdout, os.Stderr); handled {
+		os.Exit(code)
+	}
 	cfg, err := loadConfigWithArgs(os.Args[1:])
 	if err != nil {
 		log.Fatalf("config load failed: %v", err)
@@ -125,6 +128,7 @@ func main() {
 
 const signerUsage = `Usage:
   custodia-signer [--config FILE]
+  custodia-signer config validate --config FILE
   custodia-signer version
   custodia-signer --version
   custodia-signer help
@@ -149,6 +153,82 @@ func handleInfoCommand(args []string, stdout io.Writer) (bool, int) {
 	default:
 		return false, 0
 	}
+}
+
+func handleConfigCommand(args []string, stdout, stderr io.Writer) (bool, int) {
+	if len(args) == 0 || strings.TrimSpace(args[0]) != "config" {
+		return false, 0
+	}
+	if len(args) < 2 {
+		fmt.Fprintln(stderr, "missing config subcommand")
+		return true, 2
+	}
+	switch strings.TrimSpace(args[1]) {
+	case "validate":
+		path, err := parseConfigValidatePath(args[2:])
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return true, 2
+		}
+		cfg, err := loadConfigFile(path)
+		if err != nil {
+			fmt.Fprintf(stderr, "config validate failed: %v\n", err)
+			return true, 1
+		}
+		if err := validateSignerConfigForOfflineCheck(cfg); err != nil {
+			fmt.Fprintf(stderr, "config validate failed: %v\n", err)
+			return true, 1
+		}
+		fmt.Fprintf(stdout, "configuration ok: %s\n", path)
+		return true, 0
+	default:
+		fmt.Fprintf(stderr, "unknown config subcommand: %s\n", args[1])
+		return true, 2
+	}
+}
+
+func parseConfigValidatePath(args []string) (string, error) {
+	for index := 0; index < len(args); index++ {
+		arg := strings.TrimSpace(args[index])
+		switch {
+		case arg == "--config":
+			if index+1 >= len(args) || strings.TrimSpace(args[index+1]) == "" {
+				return "", errors.New("--config requires a path")
+			}
+			return strings.TrimSpace(args[index+1]), nil
+		case strings.HasPrefix(arg, "--config="):
+			value := strings.TrimSpace(strings.TrimPrefix(arg, "--config="))
+			if value == "" {
+				return "", errors.New("--config requires a path")
+			}
+			return value, nil
+		default:
+			return "", fmt.Errorf("unknown config validate argument: %s", arg)
+		}
+	}
+	return "", errors.New("--config is required")
+}
+
+func validateSignerConfigForOfflineCheck(cfg signerConfig) error {
+	if strings.TrimSpace(cfg.addr) == "" {
+		return errors.New("signer addr is required")
+	}
+	if len(cfg.adminSubjects) == 0 {
+		return errors.New("at least one admin subject is required")
+	}
+	if cfg.keyProvider != signing.KeyProviderFile && cfg.keyProvider != signing.KeyProviderPKCS11 {
+		return fmt.Errorf("unsupported key provider: %s", cfg.keyProvider)
+	}
+	if !cfg.devInsecureHTTP && (cfg.tlsCertFile == "" || cfg.tlsKeyFile == "" || cfg.clientCAFile == "") {
+		return errors.New("tls cert, tls key and client CA files are required unless dev insecure HTTP is enabled")
+	}
+	if cfg.keyProvider == signing.KeyProviderFile && (cfg.caCertFile == "" || cfg.caKeyFile == "") {
+		return errors.New("CA cert and key files are required for file key provider")
+	}
+	if cfg.keyProvider == signing.KeyProviderPKCS11 && strings.TrimSpace(cfg.pkcs11SignCommand) == "" {
+		return errors.New("pkcs11 sign command is required for pkcs11 key provider")
+	}
+	return nil
 }
 
 type contextKey string
@@ -376,15 +456,24 @@ func loadConfigWithArgs(args []string) (signerConfig, error) {
 	}
 	cfg := signerDefaults()
 	if configFile != "" {
-		values, err := loadSignerSimpleYAML(configFile)
+		cfg, err = loadConfigFile(configFile)
 		if err != nil {
-			return signerConfig{}, err
-		}
-		if err := applySignerValues(&cfg, values); err != nil {
 			return signerConfig{}, err
 		}
 	}
 	applySignerEnv(&cfg)
+	return cfg, nil
+}
+
+func loadConfigFile(path string) (signerConfig, error) {
+	cfg := signerDefaults()
+	values, err := loadSignerSimpleYAML(path)
+	if err != nil {
+		return signerConfig{}, err
+	}
+	if err := applySignerValues(&cfg, values); err != nil {
+		return signerConfig{}, err
+	}
 	return cfg, nil
 }
 

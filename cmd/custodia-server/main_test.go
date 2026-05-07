@@ -155,3 +155,22 @@ func TestResolvedBackendsReflectImplicitPersistentConfig(t *testing.T) {
 		t.Fatalf("expected valkey backend, got %q", got)
 	}
 }
+
+func TestConfigValidateCommandAcceptsStructuredExample(t *testing.T) {
+	var stdout, stderr strings.Builder
+	handled, code := handleConfigCommand([]string{"config", "validate", "--config", "../../deploy/examples/custodia-server.lite.yaml"}, &stdout, &stderr)
+	if !handled || code != 0 {
+		t.Fatalf("expected config validate success, handled=%v code=%d stdout=%q stderr=%q", handled, code, stdout.String(), stderr.String())
+	}
+}
+
+func TestConfigValidateCommandRejectsMissingConfig(t *testing.T) {
+	var stdout, stderr strings.Builder
+	handled, code := handleConfigCommand([]string{"config", "validate"}, &stdout, &stderr)
+	if !handled || code != 2 {
+		t.Fatalf("expected config validate usage failure, handled=%v code=%d", handled, code)
+	}
+	if !strings.Contains(stderr.String(), "--config is required") {
+		t.Fatalf("unexpected stderr: %s", stderr.String())
+	}
+}

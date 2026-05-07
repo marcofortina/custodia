@@ -132,3 +132,13 @@ custodia-admin migration plan \
 ```
 
 The command is offline and read-only. It validates the source/target profiles and storage backends, then reports readiness findings or manual downgrade warnings.
+
+
+## Offline validation
+
+Validate runtime configuration files without opening listeners, stores, logs or CA keys:
+
+```bash
+custodia-server config validate --config /etc/custodia/custodia-server.yaml
+custodia-signer config validate --config /etc/custodia/custodia-signer.yaml
+```
