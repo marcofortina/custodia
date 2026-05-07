@@ -340,7 +340,7 @@ Server-side authorization invariants have executable Go model tests and a TLA+ m
 
 ### Production readiness gate
 
-Validate production environment files before promotion:
+Validate offline production readiness/evidence environment files before promotion:
 
 ```bash
 custodia-admin production check --env-file .env.production

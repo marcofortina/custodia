@@ -158,6 +158,7 @@ stage_server() {
   install -d "$stage/usr/bin" \
     "$stage/usr/lib/systemd/system" \
     "$stage/usr/share/custodia/examples" \
+    "$stage/usr/share/custodia/examples/checks" \
     "$stage/usr/share/doc/custodia-server" \
     "$stage/etc/custodia" \
     "$stage/var/lib/custodia" \
@@ -169,7 +170,8 @@ stage_server() {
   install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia-server/"
   install -m 0644 docs/QUICKSTART.md docs/LITE_PROFILE.md docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md "$stage/usr/share/doc/custodia-server/"
   install_manpages "$stage" custodia-admin custodia-server custodia-signer
-  install -m 0644 deploy/examples/custodia-server.lite.yaml deploy/examples/custodia-server.full.yaml deploy/examples/lite.env.example deploy/examples/production.env.example deploy/examples/custodia-signer.service deploy/examples/custodia-signer.yaml "$stage/usr/share/custodia/examples/"
+  install -m 0644 deploy/examples/custodia-server.lite.yaml deploy/examples/custodia-server.full.yaml deploy/examples/custodia-signer.service deploy/examples/custodia-signer.yaml "$stage/usr/share/custodia/examples/"
+  install -m 0644 deploy/examples/checks/lite-upgrade-source.env.example deploy/examples/checks/lite-upgrade-target-full.env.example deploy/examples/checks/production-readiness.env.example "$stage/usr/share/custodia/examples/checks/"
 
   cat > "$stage/usr/lib/systemd/system/custodia-server.service" <<'SERVICE'
 [Unit]

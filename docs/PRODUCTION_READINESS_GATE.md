@@ -1,6 +1,6 @@
 # Custodia production readiness gate
 
-`custodia-admin production check` validates a production environment file before a deployment is promoted.
+`custodia-admin production check` validates a production environment file before a deployment is promoted. The `.env` file is an offline gate input, not a `systemd` runtime config file.
 
 The gate is intentionally conservative: it rejects unsafe development defaults and requires the external dependencies expected by the Fort Knox roadmap.
 
@@ -45,7 +45,7 @@ The readiness gate does not prove that a cloud bucket is WORM, that an HSM exist
 A production-readiness template is available at:
 
 ```bash
-deploy/examples/production.env.example
+deploy/examples/checks/production-readiness.env.example
 ```
 
 Copy it to a private environment file, replace every placeholder, then run:

@@ -618,7 +618,7 @@ Any future implementation patch must update this file or an explicitly linked st
 
 ## Patch 386 - production env readiness example
 
-- Added `deploy/examples/production.env.example` with production-readiness inputs for API, signer, HA metadata and audit shipment.
+- Added `deploy/examples/checks/production-readiness.env.example` with production-readiness inputs for API, signer, HA metadata and audit shipment.
 
 ## Patch 387 - production env example docs
 
@@ -1118,7 +1118,7 @@ The repository still does not claim to implement physical HSM hardware, external
 
 ## Patch 609 - Full upgrade target env example
 
-- Added `deploy/examples/full-upgrade-target.env.example` as a concrete target-side migration planning template.
+- Added `deploy/examples/checks/lite-upgrade-target-full.env.example` as a concrete target-side migration planning template.
 
 ## Patch 610 - Lite to Full upgrade readiness docs
 
@@ -1894,4 +1894,17 @@ Recommended verification:
 go test ./internal/config ./cmd/custodia-signer ./internal/certutil ./cmd/custodia-admin
 make
 make check
+```
+
+## Patch 893 - clarify checker env examples
+
+- Renamed readiness and upgrade `.env.example` files under `deploy/examples/checks/` to make clear they are offline checker inputs, not runtime configuration.
+- Added explicit headers warning that runtime configuration lives in `custodia-server.yaml` and `custodia-signer.yaml`.
+- Updated docs, packaging and package smoke checks to use the non-runtime checker paths.
+
+Suggested verification:
+
+```bash
+bash -n scripts/package-linux.sh scripts/package-smoke.sh
+grep -R "deploy/examples/.*env.example" -n README.md docs scripts deploy
 ```

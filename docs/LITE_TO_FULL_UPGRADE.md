@@ -16,19 +16,19 @@ configuration changes plus explicit data/infrastructure migration steps.
 
 ## Readiness check
 
-Before planning the data move, compare the source Lite environment and target Full environment:
+Before planning the data move, compare the source Lite environment and target Full environment. These files are checker inputs only; runtime server/signer configuration remains in `custodia-server.yaml` and `custodia-signer.yaml`:
 
 ```bash
 custodia-admin lite upgrade-check \
-  --lite-env-file deploy/examples/lite.env.example \
-  --full-env-file deploy/examples/full-upgrade-target.env.example
+  --lite-env-file deploy/examples/checks/lite-upgrade-source.env.example \
+  --full-env-file deploy/examples/checks/lite-upgrade-target-full.env.example
 ```
 
 or through Make:
 
 ```bash
-CUSTODIA_LITE_ENV_FILE=deploy/examples/lite.env.example \
-CUSTODIA_FULL_ENV_FILE=deploy/examples/full-upgrade-target.env.example \
+CUSTODIA_LITE_ENV_FILE=deploy/examples/checks/lite-upgrade-source.env.example \
+CUSTODIA_FULL_ENV_FILE=deploy/examples/checks/lite-upgrade-target-full.env.example \
 make lite-upgrade-check
 ```
 

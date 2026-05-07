@@ -2,7 +2,7 @@
 
 Custodia can verify the repository, binaries and configuration baseline locally, but the Fort Knox design also requires evidence from infrastructure that does not live inside this repository.
 
-`custodia-admin production evidence-check --env-file FILE` verifies that the production environment file points to every required external evidence artifact.
+`custodia-admin production evidence-check --env-file FILE` verifies that the production environment file points to every required external evidence artifact. The `.env` template is not runtime configuration; it is an offline evidence/check input used before promotion.
 
 ## Required evidence files
 
@@ -25,8 +25,8 @@ The checker intentionally validates references, not the confidential content of 
 
 ```bash
 make release-check
-CUSTODIA_PRODUCTION_ENV_FILE=deploy/examples/production.env.example make production-check
-CUSTODIA_PRODUCTION_ENV_FILE=deploy/examples/production.env.example make production-evidence-check
+CUSTODIA_PRODUCTION_ENV_FILE=deploy/examples/checks/production-readiness.env.example make production-check
+CUSTODIA_PRODUCTION_ENV_FILE=deploy/examples/checks/production-readiness.env.example make production-evidence-check
 ```
 
 A release is not Fort Knox production-ready until both production configuration and external evidence gates pass.

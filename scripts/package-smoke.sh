@@ -49,6 +49,9 @@ smoke_extracted_tree() {
       require_file "$root" usr/share/custodia/examples/custodia-server.full.yaml
       require_file "$root" usr/share/custodia/examples/custodia-signer.service
       require_file "$root" usr/share/custodia/examples/custodia-signer.yaml
+      require_file "$root" usr/share/custodia/examples/checks/lite-upgrade-source.env.example
+      require_file "$root" usr/share/custodia/examples/checks/lite-upgrade-target-full.env.example
+      require_file "$root" usr/share/custodia/examples/checks/production-readiness.env.example
       require_file "$root" usr/share/doc/custodia-server/README.md
       "$root/usr/bin/custodia-admin" version >/dev/null
       ;;
