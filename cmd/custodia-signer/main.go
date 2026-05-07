@@ -64,7 +64,10 @@ func main() {
 	if handled, code := handleInfoCommand(os.Args[1:], os.Stdout); handled {
 		os.Exit(code)
 	}
-	cfg := loadConfig()
+	cfg, err := loadConfigWithArgs(os.Args[1:])
+	if err != nil {
+		log.Fatalf("config load failed: %v", err)
+	}
 	clientSigner, err := signing.LoadClientCertificateSignerWithOptions(cfg.keyProvider, cfg.caCertFile, cfg.caKeyFile, cfg.pkcs11SignCommand, cfg.caKeyPassphraseFile)
 	if err != nil {
 		log.Fatalf("signer init failed: %v", err)
@@ -119,13 +122,14 @@ func main() {
 }
 
 const signerUsage = `Usage:
-  custodia-signer
+  custodia-signer [--config FILE]
   custodia-signer version
   custodia-signer --version
   custodia-signer help
 
 Runs the Custodia CA signer service. Runtime configuration is loaded from
-CUSTODIA_SIGNER_* environment variables.
+profile defaults, an optional flat YAML config file, then CUSTODIA_SIGNER_*
+environment overrides.
 `
 
 func handleInfoCommand(args []string, stdout io.Writer) (bool, int) {
@@ -356,23 +360,138 @@ func writeError(w http.ResponseWriter, status int, code string) {
 }
 
 func loadConfig() signerConfig {
-	return signerConfig{
-		addr:                env("CUSTODIA_SIGNER_ADDR", ":9444"),
-		tlsCertFile:         os.Getenv("CUSTODIA_SIGNER_TLS_CERT_FILE"),
-		tlsKeyFile:          os.Getenv("CUSTODIA_SIGNER_TLS_KEY_FILE"),
-		clientCAFile:        os.Getenv("CUSTODIA_SIGNER_CLIENT_CA_FILE"),
-		caCertFile:          os.Getenv("CUSTODIA_SIGNER_CA_CERT_FILE"),
-		caKeyFile:           os.Getenv("CUSTODIA_SIGNER_CA_KEY_FILE"),
-		caKeyPassphraseFile: os.Getenv("CUSTODIA_SIGNER_CA_KEY_PASSPHRASE_FILE"),
-		keyProvider:         env("CUSTODIA_SIGNER_KEY_PROVIDER", signing.KeyProviderFile),
-		pkcs11SignCommand:   os.Getenv("CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND"),
-		adminSubjects:       envSet("CUSTODIA_SIGNER_ADMIN_SUBJECTS"),
-		defaultTTLHours:     envInt("CUSTODIA_SIGNER_DEFAULT_TTL_HOURS", int(signing.DefaultClientCertificateTTL/time.Hour)),
-		devInsecureHTTP:     envBool("CUSTODIA_SIGNER_DEV_INSECURE_HTTP", false),
-		shutdownTimeout:     time.Duration(envInt("CUSTODIA_SIGNER_SHUTDOWN_TIMEOUT_SECONDS", 10)) * time.Second,
-		auditLogFile:        os.Getenv("CUSTODIA_SIGNER_AUDIT_LOG_FILE"),
-		crlFile:             os.Getenv("CUSTODIA_SIGNER_CRL_FILE"),
+	cfg, err := loadConfigWithArgs(nil)
+	if err != nil {
+		return signerDefaults()
 	}
+	return cfg
+}
+
+func loadConfigWithArgs(args []string) (signerConfig, error) {
+	configFile, err := parseSignerConfigArgs(args)
+	if err != nil {
+		return signerConfig{}, err
+	}
+	cfg := signerDefaults()
+	if configFile != "" {
+		values, err := loadSignerSimpleYAML(configFile)
+		if err != nil {
+			return signerConfig{}, err
+		}
+		if err := applySignerValues(&cfg, values); err != nil {
+			return signerConfig{}, err
+		}
+	}
+	applySignerEnv(&cfg)
+	return cfg, nil
+}
+
+func signerDefaults() signerConfig {
+	return signerConfig{
+		addr:            ":9444",
+		keyProvider:     signing.KeyProviderFile,
+		adminSubjects:   map[string]bool{},
+		defaultTTLHours: int(signing.DefaultClientCertificateTTL / time.Hour),
+		shutdownTimeout: 10 * time.Second,
+	}
+}
+
+func parseSignerConfigArgs(args []string) (string, error) {
+	for index := 0; index < len(args); index++ {
+		arg := strings.TrimSpace(args[index])
+		if arg == "--config" {
+			if index+1 >= len(args) || strings.TrimSpace(args[index+1]) == "" {
+				return "", errors.New("--config requires a path")
+			}
+			return strings.TrimSpace(args[index+1]), nil
+		}
+		if strings.HasPrefix(arg, "--config=") {
+			value := strings.TrimSpace(strings.TrimPrefix(arg, "--config="))
+			if value == "" {
+				return "", errors.New("--config requires a path")
+			}
+			return value, nil
+		}
+	}
+	return "", nil
+}
+
+func applySignerEnv(cfg *signerConfig) {
+	setStringEnv(&cfg.addr, "CUSTODIA_SIGNER_ADDR")
+	setStringEnv(&cfg.tlsCertFile, "CUSTODIA_SIGNER_TLS_CERT_FILE")
+	setStringEnv(&cfg.tlsKeyFile, "CUSTODIA_SIGNER_TLS_KEY_FILE")
+	setStringEnv(&cfg.clientCAFile, "CUSTODIA_SIGNER_CLIENT_CA_FILE")
+	setStringEnv(&cfg.caCertFile, "CUSTODIA_SIGNER_CA_CERT_FILE")
+	setStringEnv(&cfg.caKeyFile, "CUSTODIA_SIGNER_CA_KEY_FILE")
+	setStringEnv(&cfg.caKeyPassphraseFile, "CUSTODIA_SIGNER_CA_KEY_PASSPHRASE_FILE")
+	setStringEnv(&cfg.keyProvider, "CUSTODIA_SIGNER_KEY_PROVIDER")
+	setStringEnv(&cfg.pkcs11SignCommand, "CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND")
+	setStringEnv(&cfg.auditLogFile, "CUSTODIA_SIGNER_AUDIT_LOG_FILE")
+	setStringEnv(&cfg.crlFile, "CUSTODIA_SIGNER_CRL_FILE")
+	if value := strings.TrimSpace(os.Getenv("CUSTODIA_SIGNER_ADMIN_SUBJECTS")); value != "" {
+		cfg.adminSubjects = parseSubjectSet(value)
+	}
+	if value, ok := parsePositiveEnvInt("CUSTODIA_SIGNER_DEFAULT_TTL_HOURS"); ok {
+		cfg.defaultTTLHours = value
+	}
+	if value, ok := parseEnvBool("CUSTODIA_SIGNER_DEV_INSECURE_HTTP"); ok {
+		cfg.devInsecureHTTP = value
+	}
+	if value, ok := parsePositiveEnvInt("CUSTODIA_SIGNER_SHUTDOWN_TIMEOUT_SECONDS"); ok {
+		cfg.shutdownTimeout = time.Duration(value) * time.Second
+	}
+}
+
+func applySignerValues(cfg *signerConfig, values map[string]string) error {
+	for key, value := range values {
+		switch strings.ToLower(strings.TrimSpace(key)) {
+		case "addr":
+			cfg.addr = value
+		case "tls_cert_file":
+			cfg.tlsCertFile = value
+		case "tls_key_file":
+			cfg.tlsKeyFile = value
+		case "client_ca_file":
+			cfg.clientCAFile = value
+		case "ca_cert_file":
+			cfg.caCertFile = value
+		case "ca_key_file":
+			cfg.caKeyFile = value
+		case "ca_key_passphrase_file":
+			cfg.caKeyPassphraseFile = value
+		case "key_provider":
+			cfg.keyProvider = value
+		case "pkcs11_sign_command":
+			cfg.pkcs11SignCommand = value
+		case "admin_subjects":
+			cfg.adminSubjects = parseSubjectSet(value)
+		case "default_ttl_hours":
+			parsed, err := parsePositiveInt(value)
+			if err != nil {
+				return fmt.Errorf("default_ttl_hours: %w", err)
+			}
+			cfg.defaultTTLHours = parsed
+		case "dev_insecure_http":
+			parsed, err := strconv.ParseBool(value)
+			if err != nil {
+				return fmt.Errorf("dev_insecure_http: %w", err)
+			}
+			cfg.devInsecureHTTP = parsed
+		case "shutdown_timeout_seconds":
+			parsed, err := parsePositiveInt(value)
+			if err != nil {
+				return fmt.Errorf("shutdown_timeout_seconds: %w", err)
+			}
+			cfg.shutdownTimeout = time.Duration(parsed) * time.Second
+		case "audit_log_file":
+			cfg.auditLogFile = value
+		case "crl_file":
+			cfg.crlFile = value
+		default:
+			return fmt.Errorf("unknown signer config key %q", key)
+		}
+	}
+	return nil
 }
 
 func buildAuditRecorder(path string) (signeraudit.Recorder, error) {
@@ -383,45 +502,105 @@ func buildAuditRecorder(path string) (signeraudit.Recorder, error) {
 	return signeraudit.NewJSONLRecorder(path)
 }
 
-func env(key, fallback string) string {
-	value := strings.TrimSpace(os.Getenv(key))
-	if value == "" {
-		return fallback
+func setStringEnv(target *string, key string) {
+	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+		*target = value
 	}
-	return value
 }
 
-func envInt(key string, fallback int) int {
+func parsePositiveEnvInt(key string) (int, bool) {
 	value := strings.TrimSpace(os.Getenv(key))
 	if value == "" {
-		return fallback
+		return 0, false
 	}
-	parsed, err := strconv.Atoi(value)
-	if err != nil || parsed <= 0 {
-		return fallback
+	parsed, err := parsePositiveInt(value)
+	if err != nil {
+		return 0, false
 	}
-	return parsed
+	return parsed, true
 }
 
-func envBool(key string, fallback bool) bool {
+func parseEnvBool(key string) (bool, bool) {
 	value := strings.TrimSpace(os.Getenv(key))
 	if value == "" {
-		return fallback
+		return false, false
 	}
 	parsed, err := strconv.ParseBool(value)
 	if err != nil {
-		return fallback
+		return false, false
 	}
-	return parsed
+	return parsed, true
 }
 
-func envSet(key string) map[string]bool {
+func parsePositiveInt(value string) (int, error) {
+	parsed, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil || parsed <= 0 {
+		return 0, fmt.Errorf("must be a positive integer")
+	}
+	return parsed, nil
+}
+
+func parseSubjectSet(value string) map[string]bool {
 	set := make(map[string]bool)
-	for _, part := range strings.Split(os.Getenv(key), ",") {
-		value := strings.TrimSpace(part)
-		if value != "" {
-			set[value] = true
+	for _, part := range strings.Split(value, ",") {
+		entry := strings.TrimSpace(part)
+		if entry != "" {
+			set[entry] = true
 		}
 	}
 	return set
+}
+
+func loadSignerSimpleYAML(path string) (map[string]string, error) {
+	payload, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	values := make(map[string]string)
+	for lineNumber, raw := range strings.Split(string(payload), "\n") {
+		line := strings.TrimSpace(stripSignerComment(raw))
+		if line == "" || line == "---" {
+			continue
+		}
+		if strings.HasPrefix(line, "-") || strings.HasSuffix(line, ":") {
+			return nil, fmt.Errorf("unsupported YAML syntax on line %d", lineNumber+1)
+		}
+		key, value, ok := strings.Cut(line, ":")
+		if !ok || strings.TrimSpace(key) == "" {
+			return nil, fmt.Errorf("invalid YAML line %d", lineNumber+1)
+		}
+		values[strings.TrimSpace(key)] = unquoteSignerValue(strings.TrimSpace(value))
+	}
+	return values, nil
+}
+
+func stripSignerComment(line string) string {
+	inSingle := false
+	inDouble := false
+	for index, char := range line {
+		switch char {
+		case '\'':
+			if !inDouble {
+				inSingle = !inSingle
+			}
+		case '"':
+			if !inSingle {
+				inDouble = !inDouble
+			}
+		case '#':
+			if !inSingle && !inDouble {
+				return line[:index]
+			}
+		}
+	}
+	return line
+}
+
+func unquoteSignerValue(value string) string {
+	if len(value) >= 2 {
+		if (value[0] == '"' && value[len(value)-1] == '"') || (value[0] == '\'' && value[len(value)-1] == '\'') {
+			return value[1 : len(value)-1]
+		}
+	}
+	return value
 }

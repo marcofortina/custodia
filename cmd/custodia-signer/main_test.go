@@ -214,6 +214,69 @@ func TestSignerAuditsCertificateRequests(t *testing.T) {
 	}
 }
 
+func TestLoadConfigWithArgsReadsSignerYAMLAndEnvOverrides(t *testing.T) {
+	path := t.TempDir() + "/custodia-signer.yaml"
+	payload := []byte(`addr: ":9444"
+tls_cert_file: /etc/custodia/server.crt
+tls_key_file: /etc/custodia/server.key
+client_ca_file: /etc/custodia/client-ca.crt
+ca_cert_file: /etc/custodia/ca.crt
+ca_key_file: /etc/custodia/ca.key
+ca_key_passphrase_file: /etc/custodia/ca.pass
+key_provider: file
+admin_subjects: admin, signer_admin
+default_ttl_hours: 12
+dev_insecure_http: false
+shutdown_timeout_seconds: 7
+audit_log_file: /var/log/custodia/signer-audit.jsonl
+crl_file: /etc/custodia/client.crl.pem
+`)
+	if err := os.WriteFile(path, payload, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CUSTODIA_SIGNER_ADDR", ":9555")
+	t.Setenv("CUSTODIA_SIGNER_KEY_PROVIDER", signing.KeyProviderPKCS11)
+	cfg, err := loadConfigWithArgs([]string{"--config", path})
+	if err != nil {
+		t.Fatalf("loadConfigWithArgs() error = %v", err)
+	}
+	if cfg.addr != ":9555" {
+		t.Fatalf("env addr override = %q", cfg.addr)
+	}
+	if cfg.keyProvider != signing.KeyProviderPKCS11 {
+		t.Fatalf("env key provider override = %q", cfg.keyProvider)
+	}
+	if cfg.tlsCertFile != "/etc/custodia/server.crt" || cfg.caKeyPassphraseFile != "/etc/custodia/ca.pass" || cfg.auditLogFile != "/var/log/custodia/signer-audit.jsonl" || cfg.crlFile != "/etc/custodia/client.crl.pem" {
+		t.Fatalf("unexpected file config: %+v", cfg)
+	}
+	if !cfg.adminSubjects["admin"] || !cfg.adminSubjects["signer_admin"] {
+		t.Fatalf("unexpected admin subjects: %+v", cfg.adminSubjects)
+	}
+	if cfg.defaultTTLHours != 12 || cfg.shutdownTimeout != 7*time.Second {
+		t.Fatalf("unexpected durations: ttl=%d shutdown=%s", cfg.defaultTTLHours, cfg.shutdownTimeout)
+	}
+}
+
+func TestLoadConfigWithArgsRejectsUnsupportedSignerYAML(t *testing.T) {
+	path := t.TempDir() + "/custodia-signer.yaml"
+	if err := os.WriteFile(path, []byte("nested:\n  value: no\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadConfigWithArgs([]string{"--config", path}); err == nil {
+		t.Fatal("expected unsupported YAML error")
+	}
+}
+
+func TestLoadConfigWithArgsRejectsUnknownSignerKey(t *testing.T) {
+	path := t.TempDir() + "/custodia-signer.yaml"
+	if err := os.WriteFile(path, []byte("unknown_key: nope\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadConfigWithArgs([]string{"--config", path}); err == nil || !strings.Contains(err.Error(), "unknown signer config key") {
+		t.Fatalf("expected unknown key error, got %v", err)
+	}
+}
+
 func TestLoadConfigDefaultsSignerKeyProviderToFile(t *testing.T) {
 	t.Setenv("CUSTODIA_SIGNER_KEY_PROVIDER", "")
 	cfg := loadConfig()
