@@ -132,3 +132,33 @@ func writeDoctorFile(t *testing.T, path string, mode os.FileMode) {
 		t.Fatal(err)
 	}
 }
+
+func TestNormalizeDoctorDialAddr(t *testing.T) {
+	for _, tc := range []struct {
+		addr string
+		want string
+	}{
+		{addr: ":8443", want: "127.0.0.1:8443"},
+		{addr: "0.0.0.0:9444", want: "127.0.0.1:9444"},
+		{addr: "localhost:9443", want: "localhost:9443"},
+	} {
+		got, err := normalizeDoctorDialAddr(tc.addr)
+		if err != nil {
+			t.Fatalf("normalizeDoctorDialAddr(%q) error = %v", tc.addr, err)
+		}
+		if got != tc.want {
+			t.Fatalf("normalizeDoctorDialAddr(%q) = %q, want %q", tc.addr, got, tc.want)
+		}
+	}
+}
+
+func TestRunDoctorOfflineDoesNotCheckSystemdOrNetworkByDefault(t *testing.T) {
+	var out bytes.Buffer
+	err := runDoctorWithOptions(doctorOptions{serverConfig: "", signerConfig: "", out: &out})
+	if err == nil {
+		t.Fatal("expected doctor failure for missing configs")
+	}
+	if strings.Contains(out.String(), "systemd") || strings.Contains(out.String(), "listener") {
+		t.Fatalf("offline doctor unexpectedly checked systemd/network: %s", out.String())
+	}
+}

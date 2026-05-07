@@ -11,9 +11,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	serverconfig "custodia/internal/config"
 
@@ -51,6 +54,10 @@ type doctorSignerConfig struct {
 type doctorOptions struct {
 	serverConfig string
 	signerConfig string
+	systemd      bool
+	network      bool
+	serverUnit   string
+	signerUnit   string
 	out          io.Writer
 }
 
@@ -58,8 +65,12 @@ func runDoctor(args []string) error {
 	cmd := flag.NewFlagSet("doctor", flag.ExitOnError)
 	serverConfig := cmd.String("server-config", "/etc/custodia/custodia-server.yaml", "custodia-server YAML config")
 	signerConfig := cmd.String("signer-config", "/etc/custodia/custodia-signer.yaml", "custodia-signer YAML config")
+	systemd := cmd.Bool("systemd", false, "check custodia systemd unit status")
+	network := cmd.Bool("network", false, "check configured local TCP listeners")
+	serverUnit := cmd.String("server-unit", "custodia-server.service", "custodia-server systemd unit")
+	signerUnit := cmd.String("signer-unit", "custodia-signer.service", "custodia-signer systemd unit")
 	_ = cmd.Parse(args)
-	return runDoctorWithOptions(doctorOptions{serverConfig: *serverConfig, signerConfig: *signerConfig, out: os.Stdout})
+	return runDoctorWithOptions(doctorOptions{serverConfig: *serverConfig, signerConfig: *signerConfig, systemd: *systemd, network: *network, serverUnit: *serverUnit, signerUnit: *signerUnit, out: os.Stdout})
 }
 
 func runDoctorWithOptions(opts doctorOptions) error {
@@ -67,6 +78,12 @@ func runDoctorWithOptions(opts doctorOptions) error {
 		opts.out = io.Discard
 	}
 	findings := collectDoctorOfflineFindings(strings.TrimSpace(opts.serverConfig), strings.TrimSpace(opts.signerConfig))
+	if opts.systemd {
+		findings = append(findings, collectDoctorSystemdFindings(opts.serverUnit, opts.signerUnit)...)
+	}
+	if opts.network {
+		findings = append(findings, collectDoctorNetworkFindings(strings.TrimSpace(opts.serverConfig), strings.TrimSpace(opts.signerConfig))...)
+	}
 	writeDoctorFindings(opts.out, findings)
 	if doctorHasFailure(findings) {
 		return fmt.Errorf("doctor failed")
@@ -102,6 +119,91 @@ func collectDoctorOfflineFindings(serverConfigPath, signerConfigPath string) []d
 		}
 	}
 	return findings
+}
+
+func collectDoctorSystemdFindings(serverUnit, signerUnit string) []doctorFinding {
+	if _, err := exec.LookPath("systemctl"); err != nil {
+		return []doctorFinding{{Status: doctorWarn, Name: "systemd", Message: "systemctl not available"}}
+	}
+	serverUnit = strings.TrimSpace(serverUnit)
+	if serverUnit == "" {
+		serverUnit = "custodia-server.service"
+	}
+	signerUnit = strings.TrimSpace(signerUnit)
+	if signerUnit == "" {
+		signerUnit = "custodia-signer.service"
+	}
+	return []doctorFinding{
+		checkSystemdUnit("server unit", serverUnit),
+		checkSystemdUnit("signer unit", signerUnit),
+	}
+}
+
+func checkSystemdUnit(name, unit string) doctorFinding {
+	active := exec.Command("systemctl", "is-active", "--quiet", unit).Run()
+	if active != nil {
+		return doctorFinding{Status: doctorFail, Name: name, Message: unit + " is not active", Hint: "run: systemctl status " + unit + " --no-pager"}
+	}
+	enabled := exec.Command("systemctl", "is-enabled", "--quiet", unit).Run()
+	if enabled != nil {
+		return doctorFinding{Status: doctorWarn, Name: name, Message: unit + " is active but not enabled"}
+	}
+	return doctorFinding{Status: doctorOK, Name: name, Message: unit + " active/enabled"}
+}
+
+func collectDoctorNetworkFindings(serverConfigPath, signerConfigPath string) []doctorFinding {
+	findings := []doctorFinding{}
+	if serverConfigPath != "" {
+		cfg, err := serverconfig.LoadFile(serverConfigPath)
+		if err != nil {
+			findings = append(findings, doctorFinding{Status: doctorFail, Name: "server network config", Message: err.Error()})
+		} else {
+			findings = append(findings, checkTCPListener("server API listener", cfg.APIAddr))
+			if strings.TrimSpace(cfg.WebAddr) != "" {
+				findings = append(findings, checkTCPListener("server web listener", cfg.WebAddr))
+			}
+		}
+	}
+	if signerConfigPath != "" {
+		cfg, err := loadDoctorSignerConfig(signerConfigPath)
+		if err != nil {
+			findings = append(findings, doctorFinding{Status: doctorFail, Name: "signer network config", Message: err.Error()})
+		} else {
+			findings = append(findings, checkTCPListener("signer listener", cfg.Addr))
+		}
+	}
+	return findings
+}
+
+func checkTCPListener(name, addr string) doctorFinding {
+	dialAddr, err := normalizeDoctorDialAddr(addr)
+	if err != nil {
+		return doctorFinding{Status: doctorFail, Name: name, Message: err.Error()}
+	}
+	conn, err := net.DialTimeout("tcp", dialAddr, 2*time.Second)
+	if err != nil {
+		return doctorFinding{Status: doctorFail, Name: name, Message: fmt.Sprintf("%s: %v", dialAddr, err)}
+	}
+	_ = conn.Close()
+	return doctorFinding{Status: doctorOK, Name: name, Message: dialAddr}
+}
+
+func normalizeDoctorDialAddr(addr string) (string, error) {
+	addr = strings.TrimSpace(addr)
+	if addr == "" {
+		return "", fmt.Errorf("listener address is empty")
+	}
+	if strings.HasPrefix(addr, ":") {
+		return "127.0.0.1" + addr, nil
+	}
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(host) == "" || host == "0.0.0.0" || host == "::" {
+		host = "127.0.0.1"
+	}
+	return net.JoinHostPort(host, port), nil
 }
 
 func serverConfigFindings(cfg serverconfig.Config) []doctorFinding {
