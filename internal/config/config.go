@@ -185,33 +185,154 @@ func parseConfigArgs(args []string) (string, error) {
 	return "", nil
 }
 
-// loadSimpleYAML intentionally supports only flat key/value files used by Custodia examples.
-// Rejecting nested YAML keeps configuration parsing auditable and avoids silently ignoring complex structures.
+// loadSimpleYAML supports the auditable subset used by Custodia examples:
+// flat scalar values plus explicit list/map forms for bootstrap/admin identities.
+// It intentionally does not implement general YAML so unsupported structures fail closed.
 func loadSimpleYAML(path string) (map[string]string, error) {
 	payload, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
+	lines := strings.Split(string(payload), "\n")
 	values := make(map[string]string)
-	for lineNumber, raw := range strings.Split(string(payload), "\n") {
-		line := strings.TrimSpace(stripComment(raw))
+	for index := 0; index < len(lines); index++ {
+		raw := stripComment(lines[index])
+		line := strings.TrimSpace(raw)
 		if line == "" || line == "---" {
 			continue
 		}
-		if strings.HasPrefix(line, "-") || strings.HasSuffix(line, ":") {
-			return nil, fmt.Errorf("unsupported YAML syntax on line %d", lineNumber+1)
+		if leadingSpaces(raw) > 0 || strings.HasPrefix(line, "-") {
+			return nil, fmt.Errorf("unsupported YAML syntax on line %d", index+1)
 		}
 		key, value, ok := strings.Cut(line, ":")
 		if !ok {
-			return nil, fmt.Errorf("invalid YAML line %d", lineNumber+1)
+			return nil, fmt.Errorf("invalid YAML line %d", index+1)
 		}
 		key = strings.TrimSpace(key)
 		if key == "" {
-			return nil, fmt.Errorf("invalid YAML line %d", lineNumber+1)
+			return nil, fmt.Errorf("invalid YAML line %d", index+1)
 		}
-		values[key] = unquote(strings.TrimSpace(value))
+		value = strings.TrimSpace(value)
+		if value != "" {
+			values[key] = unquote(value)
+			continue
+		}
+
+		switch key {
+		case "admin_client_ids":
+			parsed, next, err := parseYAMLStringList(lines, index+1)
+			if err != nil {
+				return nil, err
+			}
+			values[key] = strings.Join(parsed, ",")
+			index = next - 1
+		case "bootstrap_clients":
+			parsed, next, err := parseYAMLBootstrapClients(lines, index+1)
+			if err != nil {
+				return nil, err
+			}
+			values[key] = strings.Join(parsed, ",")
+			index = next - 1
+		default:
+			return nil, fmt.Errorf("unsupported YAML syntax on line %d", index+1)
+		}
 	}
 	return values, nil
+}
+
+func parseYAMLStringList(lines []string, start int) ([]string, int, error) {
+	values := []string{}
+	for index := start; index < len(lines); index++ {
+		raw := stripComment(lines[index])
+		line := strings.TrimSpace(raw)
+		if line == "" {
+			continue
+		}
+		if leadingSpaces(raw) == 0 {
+			return values, index, nil
+		}
+		if !strings.HasPrefix(line, "- ") {
+			return nil, 0, fmt.Errorf("unsupported YAML syntax on line %d", index+1)
+		}
+		value := strings.TrimSpace(strings.TrimPrefix(line, "- "))
+		if value == "" {
+			return nil, 0, fmt.Errorf("unsupported YAML syntax on line %d", index+1)
+		}
+		values = append(values, unquote(value))
+	}
+	return values, len(lines), nil
+}
+
+func parseYAMLBootstrapClients(lines []string, start int) ([]string, int, error) {
+	items := []string{}
+	current := map[string]string{}
+	flush := func() error {
+		if len(current) == 0 {
+			return nil
+		}
+		clientID := strings.TrimSpace(current["client_id"])
+		subject := strings.TrimSpace(current["mtls_subject"])
+		if clientID == "" || subject == "" {
+			return fmt.Errorf("bootstrap_clients entries require client_id and mtls_subject")
+		}
+		items = append(items, clientID+":"+subject)
+		current = map[string]string{}
+		return nil
+	}
+
+	for index := start; index < len(lines); index++ {
+		raw := stripComment(lines[index])
+		line := strings.TrimSpace(raw)
+		if line == "" {
+			continue
+		}
+		if leadingSpaces(raw) == 0 {
+			if err := flush(); err != nil {
+				return nil, 0, err
+			}
+			return items, index, nil
+		}
+		if strings.HasPrefix(line, "- ") {
+			if err := flush(); err != nil {
+				return nil, 0, err
+			}
+			entry := strings.TrimSpace(strings.TrimPrefix(line, "- "))
+			if entry == "" {
+				continue
+			}
+			key, value, ok := strings.Cut(entry, ":")
+			if !ok {
+				return nil, 0, fmt.Errorf("invalid YAML line %d", index+1)
+			}
+			current[strings.TrimSpace(key)] = unquote(strings.TrimSpace(value))
+			continue
+		}
+		key, value, ok := strings.Cut(line, ":")
+		if !ok || strings.TrimSpace(key) == "" {
+			return nil, 0, fmt.Errorf("invalid YAML line %d", index+1)
+		}
+		switch strings.TrimSpace(key) {
+		case "client_id", "mtls_subject":
+			current[strings.TrimSpace(key)] = unquote(strings.TrimSpace(value))
+		default:
+			return nil, 0, fmt.Errorf("unsupported bootstrap_clients key %q on line %d", strings.TrimSpace(key), index+1)
+		}
+	}
+	if err := flush(); err != nil {
+		return nil, 0, err
+	}
+	return items, len(lines), nil
+}
+
+func leadingSpaces(line string) int {
+	count := 0
+	for _, char := range line {
+		if char != ' ' {
+			return count
+		}
+		count++
+	}
+	return count
 }
 
 func stripComment(line string) string {

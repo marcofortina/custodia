@@ -136,6 +136,44 @@ admin_client_ids: admin,ops
 	}
 }
 
+func TestLoadStructuredYAMLConfigWithIdentityLists(t *testing.T) {
+	path := t.TempDir() + "/custodia.yaml"
+	writeConfigTestFile(t, path, `profile: lite
+api_addr: ":9443"
+bootstrap_clients:
+  - client_id: admin
+    mtls_subject: admin
+  - client_id: ops
+    mtls_subject: ops-admin
+admin_client_ids:
+  - admin
+  - ops
+`)
+	cfg, err := LoadWithArgs([]string{"--config", path})
+	if err != nil {
+		t.Fatalf("LoadWithArgs() error = %v", err)
+	}
+	if cfg.BootstrapClients["admin"] != "admin" || cfg.BootstrapClients["ops"] != "ops-admin" {
+		t.Fatalf("unexpected bootstrap clients: %+v", cfg.BootstrapClients)
+	}
+	if !cfg.AdminClientIDs["admin"] || !cfg.AdminClientIDs["ops"] {
+		t.Fatalf("unexpected admin ids: %+v", cfg.AdminClientIDs)
+	}
+}
+
+func TestLoadStructuredYAMLRejectsIncompleteBootstrapClient(t *testing.T) {
+	path := t.TempDir() + "/custodia.yaml"
+	writeConfigTestFile(t, path, `profile: lite
+bootstrap_clients:
+  - client_id: admin
+admin_client_ids:
+  - admin
+`)
+	if _, err := LoadWithArgs([]string{"--config", path}); err == nil {
+		t.Fatal("expected incomplete bootstrap client error")
+	}
+}
+
 func TestLoadWithArgsRejectsUnsupportedYAML(t *testing.T) {
 	path := t.TempDir() + "/custodia.yaml"
 	writeConfigTestFile(t, path, "profile:\n  name: lite\n")
