@@ -222,25 +222,25 @@ func handleConfigCommand(args []string, stdout, stderr io.Writer) (bool, int) {
 }
 
 func parseConfigRenderProfile(args []string) (string, error) {
-	for index := 0; index < len(args); index++ {
-		arg := strings.TrimSpace(args[index])
-		switch {
-		case arg == "--profile":
-			if index+1 >= len(args) || strings.TrimSpace(args[index+1]) == "" {
-				return "", errors.New("--profile requires lite or full")
-			}
-			return strings.TrimSpace(args[index+1]), nil
-		case strings.HasPrefix(arg, "--profile="):
-			value := strings.TrimSpace(strings.TrimPrefix(arg, "--profile="))
-			if value == "" {
-				return "", errors.New("--profile requires lite or full")
-			}
-			return value, nil
-		default:
-			return "", fmt.Errorf("unknown config render argument: %s", arg)
-		}
+	if len(args) == 0 {
+		return "", errors.New("--profile is required")
 	}
-	return "", errors.New("--profile is required")
+	arg := strings.TrimSpace(args[0])
+	switch {
+	case arg == "--profile":
+		if len(args) < 2 || strings.TrimSpace(args[1]) == "" {
+			return "", errors.New("--profile requires lite or full")
+		}
+		return strings.TrimSpace(args[1]), nil
+	case strings.HasPrefix(arg, "--profile="):
+		value := strings.TrimSpace(strings.TrimPrefix(arg, "--profile="))
+		if value == "" {
+			return "", errors.New("--profile requires lite or full")
+		}
+		return value, nil
+	default:
+		return "", fmt.Errorf("unknown config render argument: %s", arg)
+	}
 }
 
 func renderServerConfigTemplate(profile string) (string, error) {
@@ -343,25 +343,25 @@ admin_client_ids:
 `
 
 func parseConfigValidatePath(args []string) (string, error) {
-	for index := 0; index < len(args); index++ {
-		arg := strings.TrimSpace(args[index])
-		switch {
-		case arg == "--config":
-			if index+1 >= len(args) || strings.TrimSpace(args[index+1]) == "" {
-				return "", errors.New("--config requires a path")
-			}
-			return strings.TrimSpace(args[index+1]), nil
-		case strings.HasPrefix(arg, "--config="):
-			value := strings.TrimSpace(strings.TrimPrefix(arg, "--config="))
-			if value == "" {
-				return "", errors.New("--config requires a path")
-			}
-			return value, nil
-		default:
-			return "", fmt.Errorf("unknown config validate argument: %s", arg)
-		}
+	if len(args) == 0 {
+		return "", errors.New("--config is required")
 	}
-	return "", errors.New("--config is required")
+	arg := strings.TrimSpace(args[0])
+	switch {
+	case arg == "--config":
+		if len(args) < 2 || strings.TrimSpace(args[1]) == "" {
+			return "", errors.New("--config requires a path")
+		}
+		return strings.TrimSpace(args[1]), nil
+	case strings.HasPrefix(arg, "--config="):
+		value := strings.TrimSpace(strings.TrimPrefix(arg, "--config="))
+		if value == "" {
+			return "", errors.New("--config requires a path")
+		}
+		return value, nil
+	default:
+		return "", fmt.Errorf("unknown config validate argument: %s", arg)
+	}
 }
 
 func validateConfigForOfflineCheck(cfg config.Config) error {
