@@ -376,3 +376,10 @@ custodia-server config render --profile lite
 custodia-server config render --profile full
 custodia-signer config render
 ```
+
+
+Audit log permission guardrail:
+
+```bash
+make audit-log-permissions-check
+```

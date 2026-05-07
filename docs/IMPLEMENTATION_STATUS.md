@@ -1982,3 +1982,9 @@ make package-smoke
 
 - Added `custodia-server config render --profile lite|full` and `custodia-signer config render`.
 - Render commands emit structured YAML templates only; they do not generate secrets, certificates, keys or passwords.
+
+
+## Patch 907 - audit log permission guardrails
+
+- Added `scripts/check-audit-log-permissions.sh` and `make audit-log-permissions-check`.
+- The guardrail verifies signer audit logs stay under `/var/log/custodia`, signer systemd write access remains scoped to that directory, and JSONL audit files are created with mode `0600`.

@@ -57,8 +57,12 @@ release: release-metadata-check all
 systemd-hardening-check:
 	./scripts/check-systemd-hardening.sh
 
+.PHONY: audit-log-permissions-check
+audit-log-permissions-check:
+	./scripts/check-audit-log-permissions.sh
+
 .PHONY: check
-check: license-check systemd-hardening-check test build test-python-client test-node-client test-java-client test-cpp-client test-rust-client test-bash-client
+check: license-check systemd-hardening-check audit-log-permissions-check test build test-python-client test-node-client test-java-client test-cpp-client test-rust-client test-bash-client
 	python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py clients/python/custodia_client/crypto.py
 	node --check clients/node/src/index.js
 	node --check clients/node/src/crypto.js

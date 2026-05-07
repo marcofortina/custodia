@@ -11,6 +11,7 @@ Recommended package/runtime ownership:
 | `/etc/custodia` | `root:custodia` | `0750` | Runtime configuration and public CA/certificate files. |
 | `/var/lib/custodia` | `custodia:custodia` | `0750` | SQLite database, local runtime state and future migration staging. |
 | `/var/log/custodia` | `custodia:custodia` | `0750` | Server and signer logs/audit logs. |
+| `/var/log/custodia/signer-audit.jsonl` | `custodia:custodia` | `0600` | Signer security audit JSONL; created by `custodia-signer`. |
 
 Create or repair them with:
 
