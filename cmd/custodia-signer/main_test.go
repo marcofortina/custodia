@@ -257,14 +257,42 @@ crl_file: /etc/custodia/client.crl.pem
 	}
 }
 
+func TestLoadConfigWithArgsReadsDeployExampleSignerYAML(t *testing.T) {
+	cfg, err := loadConfigWithArgs([]string{"--config", "../../deploy/examples/custodia-signer.yaml"})
+	if err != nil {
+		t.Fatalf("loadConfigWithArgs() error = %v", err)
+	}
+	if cfg.addr != ":9444" || cfg.tlsCertFile == "" || cfg.tlsKeyFile == "" || cfg.clientCAFile == "" {
+		t.Fatalf("expected listener and TLS fields from deploy example: %+v", cfg)
+	}
+	if !cfg.adminSubjects["admin"] || cfg.caCertFile == "" || cfg.caKeyFile == "" || cfg.auditLogFile == "" || cfg.crlFile == "" {
+		t.Fatalf("unexpected deploy example signer config: %+v", cfg)
+	}
+}
+
 func TestLoadConfigWithArgsReadsStructuredSignerYAML(t *testing.T) {
 	path := t.TempDir() + "/custodia-signer.yaml"
-	payload := []byte(`addr: ":9444"
-admin_subjects:
-  - admin
-  - signer_admin
-key_provider: file
-ca_cert_file: /etc/custodia/ca.crt
+	payload := []byte(`server:
+  addr: ":9444"
+  default_ttl_hours: 12
+  shutdown_timeout_seconds: 7
+tls:
+  cert_file: /etc/custodia/server.crt
+  key_file: /etc/custodia/server.key
+  client_ca_file: /etc/custodia/client-ca.crt
+admin:
+  subjects:
+    - admin
+    - signer_admin
+ca:
+  key_provider: file
+  cert_file: /etc/custodia/ca.crt
+  key_file: /etc/custodia/ca.key
+  key_passphrase_file: /etc/custodia/ca.pass
+audit:
+  log_file: /var/log/custodia/signer-audit.jsonl
+revocation:
+  crl_file: /etc/custodia/client.crl.pem
 `)
 	if err := os.WriteFile(path, payload, 0o600); err != nil {
 		t.Fatal(err)
@@ -273,11 +301,20 @@ ca_cert_file: /etc/custodia/ca.crt
 	if err != nil {
 		t.Fatalf("loadConfigWithArgs() error = %v", err)
 	}
+	if cfg.addr != ":9444" || cfg.defaultTTLHours != 12 || cfg.shutdownTimeout != 7*time.Second {
+		t.Fatalf("unexpected server config: %+v", cfg)
+	}
+	if cfg.tlsCertFile != "/etc/custodia/server.crt" || cfg.tlsKeyFile != "/etc/custodia/server.key" || cfg.clientCAFile != "/etc/custodia/client-ca.crt" {
+		t.Fatalf("unexpected tls config: %+v", cfg)
+	}
 	if !cfg.adminSubjects["admin"] || !cfg.adminSubjects["signer_admin"] {
 		t.Fatalf("unexpected admin subjects: %+v", cfg.adminSubjects)
 	}
-	if cfg.caCertFile != "/etc/custodia/ca.crt" || cfg.keyProvider != signing.KeyProviderFile {
-		t.Fatalf("unexpected signer config: %+v", cfg)
+	if cfg.caCertFile != "/etc/custodia/ca.crt" || cfg.caKeyFile != "/etc/custodia/ca.key" || cfg.caKeyPassphraseFile != "/etc/custodia/ca.pass" || cfg.keyProvider != signing.KeyProviderFile {
+		t.Fatalf("unexpected ca config: %+v", cfg)
+	}
+	if cfg.auditLogFile != "/var/log/custodia/signer-audit.jsonl" || cfg.crlFile != "/etc/custodia/client.crl.pem" {
+		t.Fatalf("unexpected audit/revocation config: %+v", cfg)
 	}
 }
 

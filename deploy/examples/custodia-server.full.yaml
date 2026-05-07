@@ -6,31 +6,43 @@
 # See the accompanying LICENSE file for details.
 
 profile: full
-api_addr: ":8443"
-web_addr: ":9443"
-log_file: /var/log/custodia/custodia.log
 
-store_backend: postgres
-database_url: postgresql://custodia@db.example.com:5432/custodia?sslmode=require
-rate_limit_backend: valkey
-valkey_url: rediss://valkey.example.com:6379/0
+server:
+  api_addr: ":8443"
+  web_addr: ":9443"
+  log_file: /var/log/custodia/custodia.log
 
-deployment_mode: production
-database_ha_target: cockroachdb-multi-region
-audit_shipment_sink: s3-object-lock://custodia-audit-prod
+storage:
+  backend: postgres
+  database_url: "postgresql://custodia@db.example.com:5432/custodia?sslmode=require"
 
-web_mfa_required: true
-web_passkey_enabled: true
-web_passkey_assertion_verify_command: /usr/local/bin/verify-passkey-assertion
+rate_limit:
+  backend: valkey
+  valkey_url: "rediss://valkey.example.com:6379/0"
 
-client_ca_file: /etc/custodia/client-ca.crt
-client_crl_file: /etc/custodia/client.crl.pem
-tls_cert_file: /etc/custodia/server.crt
-tls_key_file: /etc/custodia/server.key
+http:
+  shutdown_timeout_seconds: 10
 
-signer_key_provider: pkcs11
-signer_ca_cert_file: /etc/custodia/ca.crt
-signer_pkcs11_sign_command: /usr/local/bin/custodia-pkcs11-sign
+web:
+  mfa_required: true
+  passkey_enabled: true
+  passkey_assertion_verify_command: /usr/local/bin/verify-passkey-assertion
+
+tls:
+  client_ca_file: /etc/custodia/client-ca.crt
+  client_crl_file: /etc/custodia/client.crl.pem
+  cert_file: /etc/custodia/server.crt
+  key_file: /etc/custodia/server.key
+
+deployment:
+  mode: production
+  database_ha_target: cockroachdb-multi-region
+  audit_shipment_sink: s3-object-lock://custodia-audit-prod
+
+signer:
+  key_provider: pkcs11
+  ca_cert_file: /etc/custodia/ca.crt
+  pkcs11_sign_command: /usr/local/bin/custodia-pkcs11-sign
 
 # Configure production admin mTLS identities explicitly.
 admin_client_ids:

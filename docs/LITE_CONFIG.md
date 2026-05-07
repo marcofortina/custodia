@@ -18,20 +18,30 @@ Example:
 custodia-server --config /etc/custodia/custodia-server.yaml
 ```
 
-The YAML format uses scalar fields plus structured lists for identity settings such as `bootstrap_clients`, `admin_client_ids` and signer `admin_subjects`. Unsupported nested structures still fail closed so the file cannot drift into a second config schema.
+The recommended YAML format groups runtime settings into explicit sections such as `server`, `storage`, `rate_limit`, `web`, `tls`, `deployment` and `signer`. Legacy flat scalar keys remain accepted for compatibility, while unknown sections and unknown keys still fail closed.
 
 ## Lite profile
 
 ```yaml
 profile: lite
-store_backend: sqlite
-database_url: file:/var/lib/custodia/custodia.db
-rate_limit_backend: memory
-deployment_mode: lite-single-node
-database_ha_target: none
-web_mfa_required: true
-web_passkey_enabled: false
-signer_key_provider: file
+
+storage:
+  backend: sqlite
+  database_url: "file:/var/lib/custodia/custodia.db"
+
+rate_limit:
+  backend: memory
+
+web:
+  mfa_required: true
+  passkey_enabled: false
+
+deployment:
+  mode: lite-single-node
+  database_ha_target: none
+
+signer:
+  key_provider: file
 ```
 
 See `deploy/examples/custodia-server.lite.yaml` for a complete example.
@@ -40,10 +50,18 @@ See `deploy/examples/custodia-server.lite.yaml` for a complete example.
 
 ```yaml
 profile: full
-store_backend: postgres
-rate_limit_backend: valkey
-deployment_mode: production
-signer_key_provider: pkcs11
+
+storage:
+  backend: postgres
+
+rate_limit:
+  backend: valkey
+
+deployment:
+  mode: production
+
+signer:
+  key_provider: pkcs11
 ```
 
 See `deploy/examples/custodia-server.full.yaml` for a complete example.

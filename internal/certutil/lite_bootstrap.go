@@ -197,45 +197,75 @@ func randomSerial() (*big.Int, error) {
 
 func liteBootstrapConfigYAML(adminClientID string) []byte {
 	return []byte(`profile: lite
-api_addr: ":8443"
-web_addr: ":9443"
-log_file: /var/log/custodia/custodia.log
-store_backend: sqlite
-database_url: file:/var/lib/custodia/custodia.db
-rate_limit_backend: memory
-deployment_mode: lite-single-node
-database_ha_target: none
-web_mfa_required: true
-web_passkey_enabled: false
-client_ca_file: /etc/custodia/client-ca.crt
-client_crl_file: /etc/custodia/client.crl.pem
-tls_cert_file: /etc/custodia/server.crt
-tls_key_file: /etc/custodia/server.key
-signer_key_provider: file
-signer_ca_cert_file: /etc/custodia/ca.crt
-signer_ca_key_file: /etc/custodia/ca.key
-signer_ca_key_passphrase_file: /etc/custodia/ca.pass
+
+server:
+  api_addr: ":8443"
+  web_addr: ":9443"
+  log_file: /var/log/custodia/custodia.log
+
+storage:
+  backend: sqlite
+  database_url: "file:/var/lib/custodia/custodia.db"
+
+rate_limit:
+  backend: memory
+
+http:
+  shutdown_timeout_seconds: 10
+
+web:
+  mfa_required: true
+  passkey_enabled: false
+
+tls:
+  client_ca_file: /etc/custodia/client-ca.crt
+  client_crl_file: /etc/custodia/client.crl.pem
+  cert_file: /etc/custodia/server.crt
+  key_file: /etc/custodia/server.key
+
+deployment:
+  mode: lite-single-node
+  database_ha_target: none
+
+signer:
+  key_provider: file
+  ca_cert_file: /etc/custodia/ca.crt
+  ca_key_file: /etc/custodia/ca.key
+  ca_key_passphrase_file: /etc/custodia/ca.pass
+
 bootstrap_clients:
   - client_id: ` + adminClientID + `
     mtls_subject: ` + adminClientID + `
+
 admin_client_ids:
   - ` + adminClientID + `
 `)
 }
 
 func liteBootstrapSignerConfigYAML(adminClientID string) []byte {
-	return []byte(`addr: ":9444"
-tls_cert_file: /etc/custodia/server.crt
-tls_key_file: /etc/custodia/server.key
-client_ca_file: /etc/custodia/client-ca.crt
-admin_subjects:
-  - ` + adminClientID + `
-key_provider: file
-ca_cert_file: /etc/custodia/ca.crt
-ca_key_file: /etc/custodia/ca.key
-ca_key_passphrase_file: /etc/custodia/ca.pass
-crl_file: /etc/custodia/client.crl.pem
-audit_log_file: /var/log/custodia/signer-audit.jsonl
-shutdown_timeout_seconds: 10
+	return []byte(`server:
+  addr: ":9444"
+  shutdown_timeout_seconds: 10
+
+tls:
+  cert_file: /etc/custodia/server.crt
+  key_file: /etc/custodia/server.key
+  client_ca_file: /etc/custodia/client-ca.crt
+
+admin:
+  subjects:
+    - ` + adminClientID + `
+
+ca:
+  key_provider: file
+  cert_file: /etc/custodia/ca.crt
+  key_file: /etc/custodia/ca.key
+  key_passphrase_file: /etc/custodia/ca.pass
+
+revocation:
+  crl_file: /etc/custodia/client.crl.pem
+
+audit:
+  log_file: /var/log/custodia/signer-audit.jsonl
 `)
 }

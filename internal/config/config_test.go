@@ -108,6 +108,35 @@ func TestLoadFullProfileDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadDeployExampleServerConfigs(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		path         string
+		profile      string
+		storeBackend string
+		rateBackend  string
+	}{
+		{name: "lite", path: "../../deploy/examples/custodia-server.lite.yaml", profile: ProfileLite, storeBackend: "sqlite", rateBackend: "memory"},
+		{name: "full", path: "../../deploy/examples/custodia-server.full.yaml", profile: ProfileFull, storeBackend: "postgres", rateBackend: "valkey"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg, err := LoadWithArgs([]string{"--config", tc.path})
+			if err != nil {
+				t.Fatalf("LoadWithArgs() error = %v", err)
+			}
+			if cfg.Profile != tc.profile || cfg.StoreBackend != tc.storeBackend || cfg.RateLimitBackend != tc.rateBackend {
+				t.Fatalf("unexpected deploy example config: %+v", cfg)
+			}
+			if cfg.APIAddr == "" || cfg.WebAddr == "" || cfg.TLSCertFile == "" || cfg.TLSKeyFile == "" || cfg.ClientCAFile == "" {
+				t.Fatalf("expected listener and TLS fields from deploy example: %+v", cfg)
+			}
+			if tc.name == "lite" && (cfg.BootstrapClients["admin"] != "admin" || !cfg.AdminClientIDs["admin"]) {
+				t.Fatalf("expected lite admin bootstrap identity: %+v", cfg)
+			}
+		})
+	}
+}
+
 func TestLoadYAMLConfigWithEnvOverride(t *testing.T) {
 	path := t.TempDir() + "/custodia.yaml"
 	writeConfigTestFile(t, path, `profile: lite
@@ -133,6 +162,96 @@ admin_client_ids: admin,ops
 	}
 	if !cfg.AdminClientIDs["admin"] || !cfg.AdminClientIDs["ops"] {
 		t.Fatalf("expected admin client ids from yaml: %+v", cfg.AdminClientIDs)
+	}
+}
+
+func TestLoadStructuredYAMLConfigSections(t *testing.T) {
+	path := t.TempDir() + "/custodia.yaml"
+	writeConfigTestFile(t, path, `profile: lite
+server:
+  api_addr: ":8444"
+  web_addr: ":9444"
+  log_file: /tmp/custodia.log
+storage:
+  backend: sqlite
+  database_url: "file:/tmp/custodia.db"
+rate_limit:
+  backend: memory
+  client_per_second: 11
+  global_per_second: 22
+  ip_per_second: 33
+http:
+  read_timeout_seconds: 10
+  write_timeout_seconds: 20
+  idle_timeout_seconds: 30
+  shutdown_timeout_seconds: 40
+tls:
+  cert_file: /etc/custodia/server.crt
+  key_file: /etc/custodia/server.key
+  client_ca_file: /etc/custodia/client-ca.crt
+  client_crl_file: /etc/custodia/client.crl.pem
+web:
+  mfa_required: true
+  passkey_enabled: false
+  session_ttl_seconds: 120
+deployment:
+  mode: lite-single-node
+  database_ha_target: none
+  audit_shipment_sink: s3://audit
+signer:
+  key_provider: file
+  ca_cert_file: /etc/custodia/ca.crt
+  ca_key_file: /etc/custodia/ca.key
+  ca_key_passphrase_file: /etc/custodia/ca.pass
+limits:
+  max_envelopes_per_secret: 55
+bootstrap_clients:
+  - client_id: admin
+    mtls_subject: admin
+admin_client_ids:
+  - admin
+`)
+	cfg, err := LoadWithArgs([]string{"--config", path})
+	if err != nil {
+		t.Fatalf("LoadWithArgs() error = %v", err)
+	}
+	if cfg.APIAddr != ":8444" || cfg.WebAddr != ":9444" || cfg.LogFile != "/tmp/custodia.log" {
+		t.Fatalf("unexpected server section config: %+v", cfg)
+	}
+	if cfg.StoreBackend != "sqlite" || cfg.DatabaseURL != "file:/tmp/custodia.db" || cfg.RateLimitBackend != "memory" {
+		t.Fatalf("unexpected storage/rate config: %+v", cfg)
+	}
+	if cfg.ClientRateLimitPerSecond != 11 || cfg.GlobalRateLimitPerSecond != 22 || cfg.IPRateLimitPerSecond != 33 {
+		t.Fatalf("unexpected rate limits: %+v", cfg)
+	}
+	if cfg.HTTPReadTimeoutSeconds != 10 || cfg.HTTPWriteTimeoutSeconds != 20 || cfg.HTTPIdleTimeoutSeconds != 30 || cfg.ShutdownTimeoutSeconds != 40 {
+		t.Fatalf("unexpected http timeouts: %+v", cfg)
+	}
+	if cfg.TLSCertFile != "/etc/custodia/server.crt" || cfg.TLSKeyFile != "/etc/custodia/server.key" || cfg.ClientCAFile != "/etc/custodia/client-ca.crt" || cfg.ClientCRLFile != "/etc/custodia/client.crl.pem" {
+		t.Fatalf("unexpected tls config: %+v", cfg)
+	}
+	if !cfg.WebMFARequired || cfg.WebPasskeyEnabled || cfg.WebSessionTTLSeconds != 120 {
+		t.Fatalf("unexpected web config: %+v", cfg)
+	}
+	if cfg.DeploymentMode != "lite-single-node" || cfg.DatabaseHATarget != "none" || cfg.AuditShipmentSink != "s3://audit" {
+		t.Fatalf("unexpected deployment config: %+v", cfg)
+	}
+	if cfg.SignerKeyProvider != "file" || cfg.SignerCACertFile != "/etc/custodia/ca.crt" || cfg.SignerCAKeyFile != "/etc/custodia/ca.key" || cfg.SignerCAKeyPassphraseFile != "/etc/custodia/ca.pass" {
+		t.Fatalf("unexpected signer config: %+v", cfg)
+	}
+	if cfg.MaxEnvelopesPerSecret != 55 || cfg.BootstrapClients["admin"] != "admin" || !cfg.AdminClientIDs["admin"] {
+		t.Fatalf("unexpected limits/identity config: %+v", cfg)
+	}
+}
+
+func TestLoadStructuredYAMLRejectsUnknownSectionKey(t *testing.T) {
+	path := t.TempDir() + "/custodia.yaml"
+	writeConfigTestFile(t, path, `profile: lite
+storage:
+  made_up: nope
+`)
+	if _, err := LoadWithArgs([]string{"--config", path}); err == nil {
+		t.Fatal("expected unknown section key error")
 	}
 }
 

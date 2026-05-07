@@ -5,18 +5,27 @@
 # Custodia is distributed under the GNU Affero General Public License v3.0.
 # See the accompanying LICENSE file for details.
 
-addr: ":9444"
-tls_cert_file: /etc/custodia/server.crt
-tls_key_file: /etc/custodia/server.key
-client_ca_file: /etc/custodia/client-ca.crt
+server:
+  addr: ":9444"
+  shutdown_timeout_seconds: 10
 
-admin_subjects:
-  - admin
+tls:
+  cert_file: /etc/custodia/server.crt
+  key_file: /etc/custodia/server.key
+  client_ca_file: /etc/custodia/client-ca.crt
 
-key_provider: file
-ca_cert_file: /etc/custodia/ca.crt
-ca_key_file: /etc/custodia/ca.key
-ca_key_passphrase_file: /etc/custodia/ca.pass
-crl_file: /etc/custodia/client.crl.pem
-audit_log_file: /var/log/custodia/signer-audit.jsonl
-shutdown_timeout_seconds: 10
+admin:
+  subjects:
+    - admin
+
+ca:
+  key_provider: file
+  cert_file: /etc/custodia/ca.crt
+  key_file: /etc/custodia/ca.key
+  key_passphrase_file: /etc/custodia/ca.pass
+
+revocation:
+  crl_file: /etc/custodia/client.crl.pem
+
+audit:
+  log_file: /var/log/custodia/signer-audit.jsonl

@@ -22,6 +22,8 @@ import (
 	"syscall"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"custodia/internal/build"
 	"custodia/internal/crldist"
 	"custodia/internal/id"
@@ -556,38 +558,161 @@ func loadSignerSimpleYAML(path string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	lines := strings.Split(string(payload), "\n")
+	root := map[string]any{}
+	if err := yaml.Unmarshal(payload, &root); err != nil {
+		return nil, err
+	}
 	values := make(map[string]string)
-	for index := 0; index < len(lines); index++ {
-		raw := stripSignerComment(lines[index])
-		line := strings.TrimSpace(raw)
-		if line == "" || line == "---" {
-			continue
-		}
-		if leadingSignerSpaces(raw) > 0 || strings.HasPrefix(line, "-") {
-			return nil, fmt.Errorf("unsupported YAML syntax on line %d", index+1)
-		}
-		key, value, ok := strings.Cut(line, ":")
-		if !ok || strings.TrimSpace(key) == "" {
-			return nil, fmt.Errorf("invalid YAML line %d", index+1)
-		}
+	for key, raw := range root {
 		key = strings.TrimSpace(key)
-		value = strings.TrimSpace(value)
-		if value != "" {
-			values[key] = unquoteSignerValue(value)
+		if key == "" || raw == nil {
 			continue
 		}
-		if key != "admin_subjects" {
-			return nil, fmt.Errorf("unsupported YAML syntax on line %d", index+1)
+		if section, ok := signerConfigSections[key]; ok {
+			if err := flattenSignerYAMLSection(values, key, raw, section); err != nil {
+				return nil, err
+			}
+			continue
 		}
-		parsed, next, err := parseSignerYAMLStringList(lines, index+1)
-		if err != nil {
-			return nil, err
+		switch key {
+		case "admin_subjects":
+			parsed, err := signerYAMLStringList(raw, key)
+			if err != nil {
+				return nil, err
+			}
+			values[key] = strings.Join(parsed, ",")
+		default:
+			if !supportedSignerScalarKeys[key] {
+				return nil, fmt.Errorf("unknown signer config key %q", key)
+			}
+			value, err := signerYAMLScalar(raw, key)
+			if err != nil {
+				return nil, err
+			}
+			values[key] = value
 		}
-		values[key] = strings.Join(parsed, ",")
-		index = next - 1
 	}
 	return values, nil
+}
+
+var supportedSignerScalarKeys = map[string]bool{
+	"addr":                     true,
+	"tls_cert_file":            true,
+	"tls_key_file":             true,
+	"client_ca_file":           true,
+	"ca_cert_file":             true,
+	"ca_key_file":              true,
+	"ca_key_passphrase_file":   true,
+	"key_provider":             true,
+	"pkcs11_sign_command":      true,
+	"default_ttl_hours":        true,
+	"dev_insecure_http":        true,
+	"shutdown_timeout_seconds": true,
+	"audit_log_file":           true,
+	"crl_file":                 true,
+}
+
+var signerConfigSections = map[string]map[string]string{
+	"server": {
+		"addr":                     "addr",
+		"default_ttl_hours":        "default_ttl_hours",
+		"dev_insecure_http":        "dev_insecure_http",
+		"shutdown_timeout_seconds": "shutdown_timeout_seconds",
+	},
+	"tls": {
+		"cert_file":      "tls_cert_file",
+		"key_file":       "tls_key_file",
+		"client_ca_file": "client_ca_file",
+	},
+	"ca": {
+		"key_provider":        "key_provider",
+		"cert_file":           "ca_cert_file",
+		"key_file":            "ca_key_file",
+		"key_passphrase_file": "ca_key_passphrase_file",
+		"pkcs11_sign_command": "pkcs11_sign_command",
+	},
+	"admin": {
+		"subjects": "admin_subjects",
+	},
+	"audit": {
+		"log_file": "audit_log_file",
+	},
+	"revocation": {
+		"crl_file": "crl_file",
+	},
+}
+
+func flattenSignerYAMLSection(values map[string]string, sectionName string, raw any, aliases map[string]string) error {
+	section, ok := signerYAMLMap(raw)
+	if !ok {
+		return fmt.Errorf("signer config section %q must be a mapping", sectionName)
+	}
+	for key, rawValue := range section {
+		mapped, ok := aliases[key]
+		if !ok {
+			return fmt.Errorf("unsupported signer config key %q in section %q", key, sectionName)
+		}
+		if mapped == "admin_subjects" {
+			parsed, err := signerYAMLStringList(rawValue, sectionName+"."+key)
+			if err != nil {
+				return err
+			}
+			values[mapped] = strings.Join(parsed, ",")
+			continue
+		}
+		value, err := signerYAMLScalar(rawValue, sectionName+"."+key)
+		if err != nil {
+			return err
+		}
+		values[mapped] = value
+	}
+	return nil
+}
+
+func signerYAMLStringList(raw any, key string) ([]string, error) {
+	switch value := raw.(type) {
+	case string:
+		return []string{value}, nil
+	case []any:
+		items := []string{}
+		for _, item := range value {
+			text, err := signerYAMLScalar(item, key)
+			if err != nil {
+				return nil, err
+			}
+			items = append(items, text)
+		}
+		return items, nil
+	default:
+		return nil, fmt.Errorf("%s must be a string or list of strings", key)
+	}
+}
+
+func signerYAMLMap(raw any) (map[string]any, bool) {
+	mapped, ok := raw.(map[string]any)
+	return mapped, ok
+}
+
+func signerYAMLScalar(raw any, key string) (string, error) {
+	switch value := raw.(type) {
+	case string:
+		return value, nil
+	case bool:
+		return strconv.FormatBool(value), nil
+	case int:
+		return strconv.Itoa(value), nil
+	case int64:
+		return strconv.FormatInt(value, 10), nil
+	case uint64:
+		return strconv.FormatUint(value, 10), nil
+	case float64:
+		if value == float64(int64(value)) {
+			return strconv.FormatInt(int64(value), 10), nil
+		}
+		return "", fmt.Errorf("%s must be a scalar string, bool or integer", key)
+	default:
+		return "", fmt.Errorf("%s must be a scalar string, bool or integer", key)
+	}
 }
 
 func parseSignerYAMLStringList(lines []string, start int) ([]string, int, error) {

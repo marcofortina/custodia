@@ -1879,3 +1879,19 @@ Suggested verification:
 go test ./internal/config ./cmd/custodia-signer ./cmd/custodia-admin ./internal/certutil
 bash -n scripts/package-linux.sh scripts/package-smoke.sh
 ```
+
+## Patch 892 - real structured YAML config sections
+
+- Added parser support for named nested server config sections: `server`, `storage`, `rate_limit`, `http`, `tls`, `web`, `deployment`, `signer`, `limits` and `security`.
+- Added parser support for named nested signer config sections: `server`, `tls`, `admin`, `ca`, `audit` and `revocation`.
+- Kept legacy flat YAML keys supported for compatibility while making nested YAML the recommended example format.
+- Rewrote `deploy/examples/custodia-server.lite.yaml`, `deploy/examples/custodia-server.full.yaml`, generated Lite bootstrap YAML and `deploy/examples/custodia-signer.yaml` to use readable nested YAML sections.
+- Added guardrail tests that parse the packaged deploy examples directly.
+
+Recommended verification:
+
+```bash
+go test ./internal/config ./cmd/custodia-signer ./internal/certutil ./cmd/custodia-admin
+make
+make check
+```

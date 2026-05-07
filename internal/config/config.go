@@ -13,6 +13,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -186,58 +188,269 @@ func parseConfigArgs(args []string) (string, error) {
 }
 
 // loadSimpleYAML supports the auditable subset used by Custodia examples:
-// flat scalar values plus explicit list/map forms for bootstrap/admin identities.
-// It intentionally does not implement general YAML so unsupported structures fail closed.
+// flat scalar values for backward compatibility plus named nested sections for
+// readable server configuration. Unsupported sections and keys still fail closed.
 func loadSimpleYAML(path string) (map[string]string, error) {
 	payload, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	lines := strings.Split(string(payload), "\n")
+	root := map[string]any{}
+	if err := yaml.Unmarshal(payload, &root); err != nil {
+		return nil, err
+	}
 	values := make(map[string]string)
-	for index := 0; index < len(lines); index++ {
-		raw := stripComment(lines[index])
-		line := strings.TrimSpace(raw)
-		if line == "" || line == "---" {
-			continue
-		}
-		if leadingSpaces(raw) > 0 || strings.HasPrefix(line, "-") {
-			return nil, fmt.Errorf("unsupported YAML syntax on line %d", index+1)
-		}
-		key, value, ok := strings.Cut(line, ":")
-		if !ok {
-			return nil, fmt.Errorf("invalid YAML line %d", index+1)
-		}
+	for key, raw := range root {
 		key = strings.TrimSpace(key)
-		if key == "" {
-			return nil, fmt.Errorf("invalid YAML line %d", index+1)
-		}
-		value = strings.TrimSpace(value)
-		if value != "" {
-			values[key] = unquote(value)
+		if key == "" || raw == nil {
 			continue
 		}
-
+		if section, ok := serverConfigSections[key]; ok {
+			if err := flattenYAMLSection(values, key, raw, section); err != nil {
+				return nil, err
+			}
+			continue
+		}
 		switch key {
-		case "admin_client_ids":
-			parsed, next, err := parseYAMLStringList(lines, index+1)
-			if err != nil {
-				return nil, err
-			}
-			values[key] = strings.Join(parsed, ",")
-			index = next - 1
 		case "bootstrap_clients":
-			parsed, next, err := parseYAMLBootstrapClients(lines, index+1)
+			parsed, err := yamlBootstrapClients(raw)
 			if err != nil {
 				return nil, err
 			}
 			values[key] = strings.Join(parsed, ",")
-			index = next - 1
+		case "admin_client_ids":
+			parsed, err := yamlStringList(raw, key)
+			if err != nil {
+				return nil, err
+			}
+			values[key] = strings.Join(parsed, ",")
 		default:
-			return nil, fmt.Errorf("unsupported YAML syntax on line %d", index+1)
+			if !supportedServerScalarKeys[key] {
+				return nil, fmt.Errorf("unsupported config key %q", key)
+			}
+			value, err := yamlScalar(raw, key)
+			if err != nil {
+				return nil, err
+			}
+			values[key] = value
 		}
 	}
 	return values, nil
+}
+
+var supportedServerScalarKeys = map[string]bool{
+	"profile":                              true,
+	"api_addr":                             true,
+	"health_addr":                          true,
+	"web_addr":                             true,
+	"log_file":                             true,
+	"store_backend":                        true,
+	"database_url":                         true,
+	"tls_cert_file":                        true,
+	"tls_key_file":                         true,
+	"client_ca_file":                       true,
+	"client_crl_file":                      true,
+	"dev_insecure_http":                    true,
+	"max_envelopes_per_secret":             true,
+	"rate_limit_backend":                   true,
+	"valkey_url":                           true,
+	"client_rate_limit_per_second":         true,
+	"global_rate_limit_per_second":         true,
+	"ip_rate_limit_per_second":             true,
+	"http_read_timeout_seconds":            true,
+	"http_write_timeout_seconds":           true,
+	"http_idle_timeout_seconds":            true,
+	"shutdown_timeout_seconds":             true,
+	"web_mfa_required":                     true,
+	"web_totp_secret":                      true,
+	"web_session_secret":                   true,
+	"web_session_ttl_seconds":              true,
+	"web_passkey_enabled":                  true,
+	"web_passkey_rp_id":                    true,
+	"web_passkey_rp_name":                  true,
+	"web_passkey_challenge_ttl_seconds":    true,
+	"web_passkey_assertion_verify_command": true,
+	"deployment_mode":                      true,
+	"database_ha_target":                   true,
+	"audit_shipment_sink":                  true,
+	"signer_key_provider":                  true,
+	"signer_ca_cert_file":                  true,
+	"signer_ca_key_file":                   true,
+	"signer_ca_key_passphrase_file":        true,
+	"signer_pkcs11_sign_command":           true,
+}
+
+var serverConfigSections = map[string]map[string]string{
+	"server": {
+		"api_addr":    "api_addr",
+		"health_addr": "health_addr",
+		"web_addr":    "web_addr",
+		"log_file":    "log_file",
+	},
+	"storage": {
+		"backend":      "store_backend",
+		"database_url": "database_url",
+	},
+	"rate_limit": {
+		"backend":           "rate_limit_backend",
+		"valkey_url":        "valkey_url",
+		"client_per_second": "client_rate_limit_per_second",
+		"global_per_second": "global_rate_limit_per_second",
+		"ip_per_second":     "ip_rate_limit_per_second",
+	},
+	"http": {
+		"read_timeout_seconds":     "http_read_timeout_seconds",
+		"write_timeout_seconds":    "http_write_timeout_seconds",
+		"idle_timeout_seconds":     "http_idle_timeout_seconds",
+		"shutdown_timeout_seconds": "shutdown_timeout_seconds",
+	},
+	"tls": {
+		"cert_file":       "tls_cert_file",
+		"key_file":        "tls_key_file",
+		"client_ca_file":  "client_ca_file",
+		"client_crl_file": "client_crl_file",
+	},
+	"web": {
+		"mfa_required":                     "web_mfa_required",
+		"totp_secret":                      "web_totp_secret",
+		"session_secret":                   "web_session_secret",
+		"session_ttl_seconds":              "web_session_ttl_seconds",
+		"passkey_enabled":                  "web_passkey_enabled",
+		"passkey_rp_id":                    "web_passkey_rp_id",
+		"passkey_rp_name":                  "web_passkey_rp_name",
+		"passkey_challenge_ttl_seconds":    "web_passkey_challenge_ttl_seconds",
+		"passkey_assertion_verify_command": "web_passkey_assertion_verify_command",
+	},
+	"deployment": {
+		"mode":                "deployment_mode",
+		"database_ha_target":  "database_ha_target",
+		"audit_shipment_sink": "audit_shipment_sink",
+	},
+	"signer": {
+		"key_provider":           "signer_key_provider",
+		"ca_cert_file":           "signer_ca_cert_file",
+		"ca_key_file":            "signer_ca_key_file",
+		"ca_key_passphrase_file": "signer_ca_key_passphrase_file",
+		"pkcs11_sign_command":    "signer_pkcs11_sign_command",
+	},
+	"limits": {
+		"max_envelopes_per_secret": "max_envelopes_per_secret",
+	},
+	"security": {
+		"dev_insecure_http": "dev_insecure_http",
+	},
+}
+
+func flattenYAMLSection(values map[string]string, sectionName string, raw any, aliases map[string]string) error {
+	section, ok := yamlMap(raw)
+	if !ok {
+		return fmt.Errorf("config section %q must be a mapping", sectionName)
+	}
+	for key, rawValue := range section {
+		mapped, ok := aliases[key]
+		if !ok {
+			return fmt.Errorf("unsupported config key %q in section %q", key, sectionName)
+		}
+		value, err := yamlScalar(rawValue, sectionName+"."+key)
+		if err != nil {
+			return err
+		}
+		values[mapped] = value
+	}
+	return nil
+}
+
+func yamlBootstrapClients(raw any) ([]string, error) {
+	switch value := raw.(type) {
+	case string:
+		return []string{value}, nil
+	case []any:
+		items := []string{}
+		for _, item := range value {
+			entry, ok := yamlMap(item)
+			if !ok {
+				return nil, fmt.Errorf("bootstrap_clients entries must be mappings")
+			}
+			clientID, err := yamlRequiredScalar(entry, "client_id", "bootstrap_clients")
+			if err != nil {
+				return nil, err
+			}
+			subject, err := yamlRequiredScalar(entry, "mtls_subject", "bootstrap_clients")
+			if err != nil {
+				return nil, err
+			}
+			for key := range entry {
+				if key != "client_id" && key != "mtls_subject" {
+					return nil, fmt.Errorf("unsupported bootstrap_clients key %q", key)
+				}
+			}
+			items = append(items, clientID+":"+subject)
+		}
+		return items, nil
+	default:
+		return nil, fmt.Errorf("bootstrap_clients must be a string or list of mappings")
+	}
+}
+
+func yamlStringList(raw any, key string) ([]string, error) {
+	switch value := raw.(type) {
+	case string:
+		return []string{value}, nil
+	case []any:
+		items := []string{}
+		for _, item := range value {
+			text, err := yamlScalar(item, key)
+			if err != nil {
+				return nil, err
+			}
+			items = append(items, text)
+		}
+		return items, nil
+	default:
+		return nil, fmt.Errorf("%s must be a string or list of strings", key)
+	}
+}
+
+func yamlRequiredScalar(values map[string]any, key, parent string) (string, error) {
+	raw, ok := values[key]
+	if !ok {
+		return "", fmt.Errorf("%s entries require %s", parent, key)
+	}
+	text, err := yamlScalar(raw, parent+"."+key)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(text) == "" {
+		return "", fmt.Errorf("%s entries require %s", parent, key)
+	}
+	return text, nil
+}
+
+func yamlMap(raw any) (map[string]any, bool) {
+	mapped, ok := raw.(map[string]any)
+	return mapped, ok
+}
+
+func yamlScalar(raw any, key string) (string, error) {
+	switch value := raw.(type) {
+	case string:
+		return value, nil
+	case bool:
+		return strconv.FormatBool(value), nil
+	case int:
+		return strconv.Itoa(value), nil
+	case int64:
+		return strconv.FormatInt(value, 10), nil
+	case uint64:
+		return strconv.FormatUint(value, 10), nil
+	case float64:
+		if value == float64(int64(value)) {
+			return strconv.FormatInt(int64(value), 10), nil
+		}
+		return "", fmt.Errorf("%s must be a scalar string, bool or integer", key)
+	default:
+		return "", fmt.Errorf("%s must be a scalar string, bool or integer", key)
+	}
 }
 
 func parseYAMLStringList(lines []string, start int) ([]string, int, error) {
