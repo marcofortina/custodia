@@ -1917,3 +1917,17 @@ grep -R "deploy/examples/.*env.example" -n README.md docs scripts deploy
 - Linked the reference from README, quickstart, Lite config and signer docs.
 
 Documentation-only patch; no runtime tests required.
+
+
+## Patch 896 - package smoke structured config guardrails
+
+- Extended package smoke checks to validate that packaged runtime YAML examples use structured sections.
+- Added stale flat-key guards for shipped server and signer YAML examples.
+- Added a package-smoke guard that checker `.env.example` files carry the non-runtime warning.
+
+Suggested verification:
+
+```bash
+bash -n scripts/package-smoke.sh
+make package-smoke
+```

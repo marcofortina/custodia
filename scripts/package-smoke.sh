@@ -28,6 +28,24 @@ require_file() {
   [ -e "$root/$path" ] || fail "missing $path in $root"
 }
 
+require_contains() {
+  local root="$1"
+  local path="$2"
+  local needle="$3"
+  require_file "$root" "$path"
+  grep -Fq -- "$needle" "$root/$path" || fail "$path does not contain expected text: $needle"
+}
+
+require_not_contains() {
+  local root="$1"
+  local path="$2"
+  local needle="$3"
+  require_file "$root" "$path"
+  if grep -Fq -- "$needle" "$root/$path"; then
+    fail "$path contains stale text: $needle"
+  fi
+}
+
 require_executable() {
   local root="$1"
   local path="$2"
@@ -52,6 +70,16 @@ smoke_extracted_tree() {
       require_file "$root" usr/share/custodia/examples/checks/lite-upgrade-source.env.example
       require_file "$root" usr/share/custodia/examples/checks/lite-upgrade-target-full.env.example
       require_file "$root" usr/share/custodia/examples/checks/production-readiness.env.example
+      require_contains "$root" usr/share/custodia/examples/custodia-server.lite.yaml "server:"
+      require_contains "$root" usr/share/custodia/examples/custodia-server.lite.yaml "storage:"
+      require_contains "$root" usr/share/custodia/examples/custodia-server.lite.yaml "bootstrap_clients:"
+      require_not_contains "$root" usr/share/custodia/examples/custodia-server.lite.yaml "store_backend:"
+      require_contains "$root" usr/share/custodia/examples/custodia-server.full.yaml "storage:"
+      require_not_contains "$root" usr/share/custodia/examples/custodia-server.full.yaml "rate_limit_backend:"
+      require_contains "$root" usr/share/custodia/examples/custodia-signer.yaml "admin:"
+      require_contains "$root" usr/share/custodia/examples/custodia-signer.yaml "subjects:"
+      require_not_contains "$root" usr/share/custodia/examples/custodia-signer.yaml "admin_subjects:"
+      require_contains "$root" usr/share/custodia/examples/checks/production-readiness.env.example "This is NOT a runtime configuration file."
       require_file "$root" usr/share/doc/custodia-server/README.md
       "$root/usr/bin/custodia-admin" version >/dev/null
       ;;
