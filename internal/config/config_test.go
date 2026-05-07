@@ -9,6 +9,7 @@ package config
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -135,6 +136,54 @@ func TestLoadDeployExampleServerConfigs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDeployExampleServerConfigsAvoidLegacyFlatRuntimeKeys(t *testing.T) {
+	legacyTopLevelKeys := []string{
+		"api_addr:",
+		"web_addr:",
+		"log_file:",
+		"store_backend:",
+		"database_url:",
+		"rate_limit_backend:",
+		"valkey_url:",
+		"web_mfa_required:",
+		"web_passkey_enabled:",
+		"client_ca_file:",
+		"client_crl_file:",
+		"tls_cert_file:",
+		"tls_key_file:",
+		"deployment_mode:",
+		"database_ha_target:",
+		"audit_shipment_sink:",
+		"signer_key_provider:",
+		"signer_ca_cert_file:",
+		"signer_ca_key_file:",
+		"signer_ca_key_passphrase_file:",
+		"signer_pkcs11_sign_command:",
+	}
+	for _, path := range []string{"../../deploy/examples/custodia-server.lite.yaml", "../../deploy/examples/custodia-server.full.yaml"} {
+		t.Run(path, func(t *testing.T) {
+			payload, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("ReadFile() error = %v", err)
+			}
+			for _, key := range legacyTopLevelKeys {
+				if hasTopLevelYAMLKey(string(payload), key) {
+					t.Fatalf("deploy example %s still uses legacy flat key %q:\n%s", path, key, payload)
+				}
+			}
+		})
+	}
+}
+
+func hasTopLevelYAMLKey(payload, key string) bool {
+	for _, line := range strings.Split(payload, "\n") {
+		if strings.HasPrefix(line, key) {
+			return true
+		}
+	}
+	return false
 }
 
 func TestLoadYAMLConfigWithEnvOverride(t *testing.T) {

@@ -270,6 +270,42 @@ func TestLoadConfigWithArgsReadsDeployExampleSignerYAML(t *testing.T) {
 	}
 }
 
+func TestDeployExampleSignerConfigAvoidsLegacyFlatRuntimeKeys(t *testing.T) {
+	payload, err := os.ReadFile("../../deploy/examples/custodia-signer.yaml")
+	if err != nil {
+		t.Fatalf("ReadFile() error = %v", err)
+	}
+	for _, key := range []string{
+		"addr:",
+		"tls_cert_file:",
+		"tls_key_file:",
+		"client_ca_file:",
+		"ca_cert_file:",
+		"ca_key_file:",
+		"ca_key_passphrase_file:",
+		"key_provider:",
+		"pkcs11_sign_command:",
+		"admin_subjects:",
+		"default_ttl_hours:",
+		"shutdown_timeout_seconds:",
+		"audit_log_file:",
+		"crl_file:",
+	} {
+		if hasTopLevelSignerYAMLKey(string(payload), key) {
+			t.Fatalf("deploy signer example still uses legacy flat key %q:\n%s", key, payload)
+		}
+	}
+}
+
+func hasTopLevelSignerYAMLKey(payload, key string) bool {
+	for _, line := range strings.Split(payload, "\n") {
+		if strings.HasPrefix(line, key) {
+			return true
+		}
+	}
+	return false
+}
+
 func TestLoadConfigWithArgsReadsStructuredSignerYAML(t *testing.T) {
 	path := t.TempDir() + "/custodia-signer.yaml"
 	payload := []byte(`server:
