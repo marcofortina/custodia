@@ -1061,7 +1061,7 @@ The repository still does not claim to implement physical HSM hardware, external
 
 ## Patch 582 - Lite systemd unit example
 
-- Added a hardened `custodia-server.service` example using `custodia-server --config /etc/custodia/config.yaml`.
+- Added a hardened `custodia-server.service` example using `custodia-server --config /etc/custodia/custodia-server.yaml`.
 
 ## Patch 583 - Lite Docker Compose example
 
@@ -1090,7 +1090,7 @@ The repository still does not claim to implement physical HSM hardware, external
 
 ## Patch 595 - Lite local CA bootstrap generator
 
-- Added a Lite bootstrap generator that creates a local self-signed CA, server certificate, admin client certificate, empty CRL and `config.lite.yaml`.
+- Added a Lite bootstrap generator that creates a local self-signed CA, server certificate, admin client certificate, empty CRL and `custodia-server.lite.yaml`.
 - The generated CA key can be encrypted when a passphrase is provided.
 
 ## Patch 597 - Lite local CA bootstrap command
@@ -1848,3 +1848,11 @@ make -n
 make -n man
 make -n install
 ```
+
+
+## Patch 886 - generic runtime config file names
+
+- Renamed packaged server config examples to `custodia-server.lite.yaml` and `custodia-server.full.yaml`.
+- Standardized live runtime config paths on `/etc/custodia/custodia-server.yaml` and `/etc/custodia/custodia-signer.yaml`.
+- Extended Lite bootstrap output to include both server and signer YAML files.
+- Updated systemd examples, package smoke checks and install docs for the generic server/signer config filenames.

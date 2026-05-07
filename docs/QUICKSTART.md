@@ -247,7 +247,8 @@ Expected files:
 /etc/custodia/ca.pass
 /etc/custodia/client-ca.crt
 /etc/custodia/client.crl.pem
-/etc/custodia/config.lite.yaml
+/etc/custodia/custodia-server.yaml
+/etc/custodia/custodia-signer.yaml
 /etc/custodia/server.crt
 /etc/custodia/server.key
 ```
@@ -256,10 +257,10 @@ For a public DNS name, replace `localhost` with the DNS name clients will use. T
 
 ## 6. Create the runtime config
 
-Start from the generated Lite config:
+The bootstrap command already wrote `/etc/custodia/custodia-server.yaml`. Review it before appending runtime-only secrets:
 
 ```bash
-sudo install -m 0640 -o custodia -g custodia /etc/custodia/config.lite.yaml /etc/custodia/config.yaml
+sudo editor /etc/custodia/custodia-server.yaml
 ```
 
 Generate the Web TOTP secret with `custodia-admin`, then append it to the runtime config:
@@ -271,7 +272,7 @@ printf '%s\n' "${TOTP_OUTPUT}"
 TOTP_SECRET="$(printf '%s' "${TOTP_OUTPUT}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["totp_secret"])')"
 SESSION_SECRET="$(openssl rand -base64 48)"
 
-sudo tee -a /etc/custodia/config.yaml >/dev/null <<CONFIG
+sudo tee -a /etc/custodia/custodia-server.yaml >/dev/null <<CONFIG
 web_totp_secret: "${TOTP_SECRET}"
 web_session_secret: "${SESSION_SECRET}"
 CONFIG
@@ -313,7 +314,7 @@ Common startup failures:
 | --- | --- | --- |
 | `permission denied` under `/etc/custodia` | bootstrap files are not readable by the `custodia` service user | check ownership and modes with `sudo ls -la /etc/custodia` |
 | SQLite backend is unknown | binary was built without SQLite support | install the release package or rebuild with the default `make` target |
-| TLS certificate error on startup | `tls_cert_file` or `tls_key_file` path is wrong | compare `/etc/custodia/config.yaml` with files in `/etc/custodia` |
+| TLS certificate error on startup | `tls_cert_file` or `tls_key_file` path is wrong | compare `/etc/custodia/custodia-server.yaml` with files in `/etc/custodia` |
 | `mfa_not_configured` in logs | web MFA secrets were not added to config | repeat step 6 and restart the service |
 | `custodia-signer` is not listening on `9444` | signer service was not enabled or failed to read CA material | run `sudo systemctl status custodia-signer --no-pager` and check `/etc/custodia/ca.*` ownership/modes |
 
@@ -379,7 +380,7 @@ The web console is metadata-only. It does not decrypt or display secret plaintex
 | --- | --- | --- |
 | `ERR_BAD_SSL_CLIENT_AUTH_CERT` or similar | the browser did not present the admin client certificate | import `/tmp/custodia-admin.p12`, restart the browser if needed, and choose the `Custodia Admin` certificate |
 | HTTP `403` on `/web/login` | the client certificate was missing, expired or not signed by the configured CA | recreate/import the PKCS#12 bundle from `/etc/custodia/admin.crt` and `/etc/custodia/admin.key` |
-| `mfa_not_configured` | `web_totp_secret` or `web_session_secret` is missing from `/etc/custodia/config.yaml` | repeat step 6 and restart `custodia` |
+| `mfa_not_configured` | `web_totp_secret` or `web_session_secret` is missing from `/etc/custodia/custodia-server.yaml` | repeat step 6 and restart `custodia` |
 | TOTP code rejected | clock drift or wrong secret in the authenticator app | check host time sync and re-add the printed TOTP secret manually |
 
 ## 10. Optional firewall rules
@@ -447,7 +448,7 @@ sudo -u custodia custodia-admin \
   status read >/tmp/custodia-status.json
 
 test -s /tmp/custodia-status.json
-sudo test -f /etc/custodia/config.yaml
+sudo test -f /etc/custodia/custodia-server.yaml
 sudo test -f /etc/custodia/admin.crt
 sudo test -f /etc/custodia/admin.key
 sudo test -f /etc/custodia/ca.crt

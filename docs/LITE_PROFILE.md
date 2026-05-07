@@ -61,7 +61,7 @@ Lite does not disable the security model:
 `custodia-server` supports a shared YAML configuration path for Lite and full deployments:
 
 ```bash
-custodia-server --config /etc/custodia/config.yaml
+custodia-server --config /etc/custodia/custodia-server.yaml
 ```
 
 Configuration precedence:

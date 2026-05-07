@@ -34,15 +34,16 @@ type LiteBootstrapRequest struct {
 
 // LiteBootstrapArtifacts are generated for single-node bootstrap and should be moved into restricted paths immediately.
 type LiteBootstrapArtifacts struct {
-	CACertPEM     []byte
-	CAKeyPEM      []byte
-	ServerCertPEM []byte
-	ServerKeyPEM  []byte
-	AdminCertPEM  []byte
-	AdminKeyPEM   []byte
-	ClientCRLPEM  []byte
-	ConfigYAML    []byte
-	PassphraseSet bool
+	CACertPEM        []byte
+	CAKeyPEM         []byte
+	ServerCertPEM    []byte
+	ServerKeyPEM     []byte
+	AdminCertPEM     []byte
+	AdminKeyPEM      []byte
+	ClientCRLPEM     []byte
+	ConfigYAML       []byte
+	SignerConfigYAML []byte
+	PassphraseSet    bool
 }
 
 // GenerateLiteBootstrap creates a local CA, server certificate, admin client certificate and empty CRL for first-run Lite installs.
@@ -84,15 +85,16 @@ func GenerateLiteBootstrap(req LiteBootstrapRequest) (*LiteBootstrapArtifacts, e
 		return nil, err
 	}
 	return &LiteBootstrapArtifacts{
-		CACertPEM:     caCertPEM,
-		CAKeyPEM:      caKeyPEM,
-		ServerCertPEM: serverCertPEM,
-		ServerKeyPEM:  serverKeyPEM,
-		AdminCertPEM:  adminCertPEM,
-		AdminKeyPEM:   adminKeyPEM,
-		ClientCRLPEM:  crlPEM,
-		ConfigYAML:    liteBootstrapConfigYAML(adminClientID),
-		PassphraseSet: len(req.Passphrase) > 0,
+		CACertPEM:        caCertPEM,
+		CAKeyPEM:         caKeyPEM,
+		ServerCertPEM:    serverCertPEM,
+		ServerKeyPEM:     serverKeyPEM,
+		AdminCertPEM:     adminCertPEM,
+		AdminKeyPEM:      adminKeyPEM,
+		ClientCRLPEM:     crlPEM,
+		ConfigYAML:       liteBootstrapConfigYAML(adminClientID),
+		SignerConfigYAML: liteBootstrapSignerConfigYAML(adminClientID),
+		PassphraseSet:    len(req.Passphrase) > 0,
 	}, nil
 }
 
@@ -215,5 +217,21 @@ signer_ca_key_file: /etc/custodia/ca.key
 signer_ca_key_passphrase_file: /etc/custodia/ca.pass
 bootstrap_clients: ` + adminClientID + `:` + adminClientID + `
 admin_client_ids: ` + adminClientID + `
+`)
+}
+
+func liteBootstrapSignerConfigYAML(adminClientID string) []byte {
+	return []byte(`addr: ":9444"
+tls_cert_file: /etc/custodia/server.crt
+tls_key_file: /etc/custodia/server.key
+client_ca_file: /etc/custodia/client-ca.crt
+admin_subjects: ` + adminClientID + `
+key_provider: file
+ca_cert_file: /etc/custodia/ca.crt
+ca_key_file: /etc/custodia/ca.key
+ca_key_passphrase_file: /etc/custodia/ca.pass
+crl_file: /etc/custodia/client.crl.pem
+audit_log_file: /var/log/custodia/signer-audit.jsonl
+shutdown_timeout_seconds: 10
 `)
 }

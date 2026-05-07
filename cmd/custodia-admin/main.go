@@ -175,7 +175,7 @@ func runWebTOTPGenerate(args []string, out io.Writer) error {
 
 	switch strings.ToLower(strings.TrimSpace(*format)) {
 	case "text":
-		_, err = fmt.Fprintf(out, "TOTP secret: %s\nProvisioning URI: %s\n\nAdd this to /etc/custodia/config.yaml:\nweb_totp_secret: \"%s\"\n", secret, uri, secret)
+		_, err = fmt.Fprintf(out, "TOTP secret: %s\nProvisioning URI: %s\n\nAdd this to /etc/custodia/custodia-server.yaml:\nweb_totp_secret: \"%s\"\n", secret, uri, secret)
 		return err
 	case "yaml":
 		_, err = fmt.Fprintf(out, "web_totp_secret: \"%s\"\n", secret)
@@ -372,7 +372,8 @@ func runCABootstrapLocal(args []string) error {
 		{"server.key", artifacts.ServerKeyPEM, 0o600},
 		{"admin.crt", artifacts.AdminCertPEM, 0o644},
 		{"admin.key", artifacts.AdminKeyPEM, 0o600},
-		{"config.lite.yaml", artifacts.ConfigYAML, 0o640},
+		{"custodia-server.yaml", artifacts.ConfigYAML, 0o640},
+		{"custodia-signer.yaml", artifacts.SignerConfigYAML, 0o640},
 	}
 	for _, file := range files {
 		if err := writeExclusive(strings.TrimRight(*outDir, "/")+"/"+file.name, file.data, file.perm); err != nil {

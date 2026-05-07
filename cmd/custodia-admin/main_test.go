@@ -640,12 +640,12 @@ func TestRunCABootstrapLocalWritesLiteArtifacts(t *testing.T) {
 	if err := runCABootstrapLocal([]string{"--out-dir", outDir, "--admin-client-id", "admin", "--server-name", "localhost", "--generate-ca-passphrase"}); err != nil {
 		t.Fatalf("runCABootstrapLocal() error = %v", err)
 	}
-	for _, name := range []string{"ca.crt", "ca.key", "ca.pass", "client-ca.crt", "client.crl.pem", "server.crt", "server.key", "admin.crt", "admin.key", "config.lite.yaml"} {
+	for _, name := range []string{"ca.crt", "ca.key", "ca.pass", "client-ca.crt", "client.crl.pem", "server.crt", "server.key", "admin.crt", "admin.key", "custodia-server.yaml", "custodia-signer.yaml"} {
 		if _, err := os.Stat(filepath.Join(outDir, name)); err != nil {
 			t.Fatalf("missing generated %s: %v", name, err)
 		}
 	}
-	configPayload, err := os.ReadFile(filepath.Join(outDir, "config.lite.yaml"))
+	configPayload, err := os.ReadFile(filepath.Join(outDir, "custodia-server.yaml"))
 	if err != nil {
 		t.Fatalf("ReadFile(config) error = %v", err)
 	}

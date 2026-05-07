@@ -15,7 +15,7 @@ configuration vocabulary as Full deployments and avoids parallel names such as
 Example:
 
 ```bash
-custodia-server --config /etc/custodia/config.yaml
+custodia-server --config /etc/custodia/custodia-server.yaml
 ```
 
 The YAML format is intentionally flat and maps directly to the existing config
@@ -36,7 +36,7 @@ web_passkey_enabled: false
 signer_key_provider: file
 ```
 
-See `deploy/examples/config.lite.yaml` for a complete example.
+See `deploy/examples/custodia-server.lite.yaml` for a complete example.
 
 ## Full profile
 
@@ -48,7 +48,7 @@ deployment_mode: production
 signer_key_provider: pkcs11
 ```
 
-See `deploy/examples/config.full.yaml` for a complete example.
+See `deploy/examples/custodia-server.full.yaml` for a complete example.
 
 ## Security note
 

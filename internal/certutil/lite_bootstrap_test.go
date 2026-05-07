@@ -22,14 +22,15 @@ func TestGenerateLiteBootstrapCreatesExpectedArtifacts(t *testing.T) {
 		t.Fatalf("GenerateLiteBootstrap() error = %v", err)
 	}
 	for name, payload := range map[string][]byte{
-		"ca cert":     artifacts.CACertPEM,
-		"ca key":      artifacts.CAKeyPEM,
-		"server cert": artifacts.ServerCertPEM,
-		"server key":  artifacts.ServerKeyPEM,
-		"admin cert":  artifacts.AdminCertPEM,
-		"admin key":   artifacts.AdminKeyPEM,
-		"client crl":  artifacts.ClientCRLPEM,
-		"config":      artifacts.ConfigYAML,
+		"ca cert":       artifacts.CACertPEM,
+		"ca key":        artifacts.CAKeyPEM,
+		"server cert":   artifacts.ServerCertPEM,
+		"server key":    artifacts.ServerKeyPEM,
+		"admin cert":    artifacts.AdminCertPEM,
+		"admin key":     artifacts.AdminKeyPEM,
+		"client crl":    artifacts.ClientCRLPEM,
+		"server config": artifacts.ConfigYAML,
+		"signer config": artifacts.SignerConfigYAML,
 	} {
 		if len(payload) == 0 {
 			t.Fatalf("empty %s artifact", name)
@@ -46,6 +47,12 @@ func TestGenerateLiteBootstrapCreatesExpectedArtifacts(t *testing.T) {
 	for _, expected := range []string{"profile: lite", "bootstrap_clients: admin:admin", "admin_client_ids: admin"} {
 		if !strings.Contains(configYAML, expected) {
 			t.Fatalf("expected config yaml to contain %q: %s", expected, configYAML)
+		}
+	}
+	signerConfigYAML := string(artifacts.SignerConfigYAML)
+	for _, expected := range []string{`addr: ":9444"`, "admin_subjects: admin", "ca_key_passphrase_file: /etc/custodia/ca.pass"} {
+		if !strings.Contains(signerConfigYAML, expected) {
+			t.Fatalf("expected signer config yaml to contain %q: %s", expected, signerConfigYAML)
 		}
 	}
 }

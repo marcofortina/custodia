@@ -169,7 +169,7 @@ stage_server() {
   install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia-server/"
   install -m 0644 docs/QUICKSTART.md docs/LITE_PROFILE.md docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md "$stage/usr/share/doc/custodia-server/"
   install_manpages "$stage" custodia-admin custodia-server custodia-signer
-  install -m 0644 deploy/examples/config.lite.yaml deploy/examples/config.full.yaml deploy/examples/lite.env.example deploy/examples/production.env.example deploy/examples/custodia-signer.service "$stage/usr/share/custodia/examples/"
+  install -m 0644 deploy/examples/custodia-server.lite.yaml deploy/examples/custodia-server.full.yaml deploy/examples/lite.env.example deploy/examples/production.env.example deploy/examples/custodia-signer.service deploy/examples/custodia-signer.yaml "$stage/usr/share/custodia/examples/"
 
   cat > "$stage/usr/lib/systemd/system/custodia-server.service" <<'SERVICE'
 [Unit]
@@ -181,7 +181,7 @@ Wants=network-online.target
 Type=simple
 User=custodia
 Group=custodia
-ExecStart=/usr/bin/custodia-server --config /etc/custodia/config.yaml
+ExecStart=/usr/bin/custodia-server --config /etc/custodia/custodia-server.yaml
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true

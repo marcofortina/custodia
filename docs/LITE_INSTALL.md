@@ -55,9 +55,9 @@ Use `--ca-passphrase-file FILE` when you already have a passphrase file managed 
 Start from the sample profile:
 
 ```bash
-sudo cp /usr/share/custodia/examples/config.lite.yaml /etc/custodia/config.yaml
-sudo chown custodia:custodia /etc/custodia/config.yaml
-sudo chmod 0640 /etc/custodia/config.yaml
+sudo cp /usr/share/custodia/examples/custodia-server.lite.yaml /etc/custodia/custodia-server.yaml
+sudo chown custodia:custodia /etc/custodia/custodia-server.yaml
+sudo chmod 0640 /etc/custodia/custodia-server.yaml
 ```
 
 Review every certificate path before starting the service.
@@ -67,7 +67,7 @@ Review every certificate path before starting the service.
 Use the systemd unit examples in `deploy/examples/custodia-server.service` and `deploy/examples/custodia-signer.service`, or run the vault manually for a first smoke test:
 
 ```bash
-custodia-server --config /etc/custodia/config.yaml
+custodia-server --config /etc/custodia/custodia-server.yaml
 ```
 
 The Lite signer is a separate process. Start it when you need to issue additional client mTLS certificates after bootstrap:

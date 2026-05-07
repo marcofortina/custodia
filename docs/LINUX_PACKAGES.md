@@ -97,12 +97,12 @@ For a guided install on a clean Debian, Ubuntu or Fedora host, use [`docs/QUICKS
 
 Package install scripts create a system user/group named `custodia` when the package manager supports the usual `useradd`/`adduser` flow.
 
-The package does **not** install a live `/etc/custodia/config.yaml` by default, to avoid silently starting with unsafe local settings. Copy and review an example first:
+The package does **not** install a live `/etc/custodia/custodia-server.yaml` by default, to avoid silently starting with unsafe local settings. Copy and review an example first:
 
 ```bash
 sudo install -d -m 0750 -o root -g custodia /etc/custodia
-sudo cp /usr/share/custodia/examples/config.lite.yaml /etc/custodia/config.yaml
-sudo editor /etc/custodia/config.yaml
+sudo cp /usr/share/custodia/examples/custodia-server.lite.yaml /etc/custodia/custodia-server.yaml
+sudo editor /etc/custodia/custodia-server.yaml
 sudo systemctl enable --now custodia-server custodia-signer
 ```
 

@@ -45,7 +45,7 @@ read-only verification and rollback evidence.
 
 ## Configuration transition
 
-Start from `deploy/examples/config.full.yaml`, then explicitly copy over only the
+Start from `deploy/examples/custodia-server.full.yaml`, then explicitly copy over only the
 values that remain valid in the target environment.
 
 ## Gates
