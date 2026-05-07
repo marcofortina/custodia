@@ -128,7 +128,7 @@ const signerUsage = `Usage:
   custodia-signer help
 
 Runs the Custodia CA signer service. Runtime configuration is loaded from
-profile defaults, an optional flat YAML config file, then CUSTODIA_SIGNER_*
+profile defaults, an optional YAML config file, then CUSTODIA_SIGNER_*
 environment overrides.
 `
 
@@ -556,22 +556,61 @@ func loadSignerSimpleYAML(path string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	lines := strings.Split(string(payload), "\n")
 	values := make(map[string]string)
-	for lineNumber, raw := range strings.Split(string(payload), "\n") {
-		line := strings.TrimSpace(stripSignerComment(raw))
+	for index := 0; index < len(lines); index++ {
+		raw := stripSignerComment(lines[index])
+		line := strings.TrimSpace(raw)
 		if line == "" || line == "---" {
 			continue
 		}
-		if strings.HasPrefix(line, "-") || strings.HasSuffix(line, ":") {
-			return nil, fmt.Errorf("unsupported YAML syntax on line %d", lineNumber+1)
+		if leadingSignerSpaces(raw) > 0 || strings.HasPrefix(line, "-") {
+			return nil, fmt.Errorf("unsupported YAML syntax on line %d", index+1)
 		}
 		key, value, ok := strings.Cut(line, ":")
 		if !ok || strings.TrimSpace(key) == "" {
-			return nil, fmt.Errorf("invalid YAML line %d", lineNumber+1)
+			return nil, fmt.Errorf("invalid YAML line %d", index+1)
 		}
-		values[strings.TrimSpace(key)] = unquoteSignerValue(strings.TrimSpace(value))
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		if value != "" {
+			values[key] = unquoteSignerValue(value)
+			continue
+		}
+		if key != "admin_subjects" {
+			return nil, fmt.Errorf("unsupported YAML syntax on line %d", index+1)
+		}
+		parsed, next, err := parseSignerYAMLStringList(lines, index+1)
+		if err != nil {
+			return nil, err
+		}
+		values[key] = strings.Join(parsed, ",")
+		index = next - 1
 	}
 	return values, nil
+}
+
+func parseSignerYAMLStringList(lines []string, start int) ([]string, int, error) {
+	values := []string{}
+	for index := start; index < len(lines); index++ {
+		raw := stripSignerComment(lines[index])
+		line := strings.TrimSpace(raw)
+		if line == "" {
+			continue
+		}
+		if leadingSignerSpaces(raw) == 0 {
+			return values, index, nil
+		}
+		if !strings.HasPrefix(line, "- ") {
+			return nil, 0, fmt.Errorf("unsupported YAML syntax on line %d", index+1)
+		}
+		value := strings.TrimSpace(strings.TrimPrefix(line, "- "))
+		if value == "" {
+			return nil, 0, fmt.Errorf("unsupported YAML syntax on line %d", index+1)
+		}
+		values = append(values, unquoteSignerValue(value))
+	}
+	return values, len(lines), nil
 }
 
 func stripSignerComment(line string) string {
@@ -594,6 +633,17 @@ func stripSignerComment(line string) string {
 		}
 	}
 	return line
+}
+
+func leadingSignerSpaces(line string) int {
+	count := 0
+	for _, char := range line {
+		if char != ' ' {
+			return count
+		}
+		count++
+	}
+	return count
 }
 
 func unquoteSignerValue(value string) string {

@@ -257,6 +257,40 @@ crl_file: /etc/custodia/client.crl.pem
 	}
 }
 
+func TestLoadConfigWithArgsReadsStructuredSignerYAML(t *testing.T) {
+	path := t.TempDir() + "/custodia-signer.yaml"
+	payload := []byte(`addr: ":9444"
+admin_subjects:
+  - admin
+  - signer_admin
+key_provider: file
+ca_cert_file: /etc/custodia/ca.crt
+`)
+	if err := os.WriteFile(path, payload, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := loadConfigWithArgs([]string{"--config", path})
+	if err != nil {
+		t.Fatalf("loadConfigWithArgs() error = %v", err)
+	}
+	if !cfg.adminSubjects["admin"] || !cfg.adminSubjects["signer_admin"] {
+		t.Fatalf("unexpected admin subjects: %+v", cfg.adminSubjects)
+	}
+	if cfg.caCertFile != "/etc/custodia/ca.crt" || cfg.keyProvider != signing.KeyProviderFile {
+		t.Fatalf("unexpected signer config: %+v", cfg)
+	}
+}
+
+func TestLoadConfigWithArgsRejectsUnsupportedStructuredSignerYAML(t *testing.T) {
+	path := t.TempDir() + "/custodia-signer.yaml"
+	if err := os.WriteFile(path, []byte("key_provider:\n  name: file\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadConfigWithArgs([]string{"--config", path}); err == nil {
+		t.Fatal("expected unsupported structured signer yaml error")
+	}
+}
+
 func TestLoadConfigWithArgsRejectsUnsupportedSignerYAML(t *testing.T) {
 	path := t.TempDir() + "/custodia-signer.yaml"
 	if err := os.WriteFile(path, []byte("nested:\n  value: no\n"), 0o600); err != nil {
