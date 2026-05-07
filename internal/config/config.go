@@ -205,7 +205,7 @@ func parseConfigArgs(args []string) (string, error) {
 }
 
 // loadSimpleYAML supports the auditable subset used by Custodia examples:
-// flat scalar values for backward compatibility plus named nested sections for
+// flat scalar values plus named nested sections for
 // readable server configuration. Unsupported sections and keys still fail closed.
 func loadSimpleYAML(path string) (map[string]string, error) {
 	payload, err := os.ReadFile(path)

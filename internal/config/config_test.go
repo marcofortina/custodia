@@ -139,7 +139,7 @@ func TestLoadDeployExampleServerConfigs(t *testing.T) {
 }
 
 func TestDeployExampleServerConfigsAvoidLegacyFlatRuntimeKeys(t *testing.T) {
-	legacyTopLevelKeys := []string{
+	flatTopLevelKeys := []string{
 		"api_addr:",
 		"web_addr:",
 		"log_file:",
@@ -168,9 +168,9 @@ func TestDeployExampleServerConfigsAvoidLegacyFlatRuntimeKeys(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ReadFile() error = %v", err)
 			}
-			for _, key := range legacyTopLevelKeys {
+			for _, key := range flatTopLevelKeys {
 				if hasTopLevelYAMLKey(string(payload), key) {
-					t.Fatalf("deploy example %s still uses legacy flat key %q:\n%s", path, key, payload)
+					t.Fatalf("deploy example %s still uses flat scalar key %q:\n%s", path, key, payload)
 				}
 			}
 		})

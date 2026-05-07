@@ -1,6 +1,6 @@
 # Custodia formal verification scope
 
-Custodia now ships both an executable Go invariant model and a TLA+ access-control model. These artifacts cover server-side authorization state transitions, not client-side cryptography.
+Custodia ships both an executable Go invariant model and a TLA+ access-control model. These artifacts cover server-side authorization state transitions, not client-side cryptography.
 
 ## Implemented artifacts
 

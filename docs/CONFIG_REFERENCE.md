@@ -76,7 +76,7 @@ Complete examples live in:
 - `deploy/examples/custodia-server.lite.yaml`
 - `deploy/examples/custodia-server.full.yaml`
 
-The legacy flat scalar form is still accepted for compatibility, but the structured form above is the documented format and the only format used by shipped examples.
+The flat scalar form is accepted as an alternate pre-release input format, but the structured form above is the documented format and the only format used by shipped examples.
 
 ## Signer YAML
 
@@ -109,7 +109,7 @@ audit:
   log_file: /var/log/custodia/signer-audit.jsonl
 ```
 
-The complete example lives in `deploy/examples/custodia-signer.yaml`. The legacy flat signer form is still accepted for compatibility, but new installs should use the structured form.
+The complete example lives in `deploy/examples/custodia-signer.yaml`. The flat signer form is accepted as an alternate pre-release input format, but packaged runtime examples use the structured form.
 
 ## Runtime versus checker inputs
 

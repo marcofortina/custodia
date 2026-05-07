@@ -181,7 +181,7 @@ This API is part of the passkey verification boundary. It parses authenticator d
 
 When `authenticator_data` is supplied to `/web/passkey/register/verify` or `/web/passkey/authenticate/verify`, the server validates the RP ID hash against the configured passkey RP ID, requires user presence and requires user verification. Authentication responses with non-increasing signature counters are rejected.
 
-This API now accepts COSE credential-key metadata and, when configured, delegates authenticator signature verification to the external assertion verifier command.
+This API accepts COSE credential-key metadata and, when configured, delegates authenticator signature verification to the external assertion verifier command.
 
 ### Passkey credential-key metadata
 

@@ -26,9 +26,9 @@ custodia-admin migration plan \
 
 The command detects Lite/SQLite -> Full/PostgreSQL plans and reuses the Lite-to-Full readiness findings. It also recognizes Full/PostgreSQL -> Lite/SQLite as a manual downgrade path and prints warnings instead of pretending the data move can be automated safely. The command does not copy data, mutate configs or touch live services.
 
-## Legacy checker input readiness check
+## Env-style checker input readiness check
 
-The older offline checker still accepts explicit env-style checker input files. These files are not runtime config. Compare the source Lite environment and target Full environment with:
+The offline readiness checker accepts explicit env-style checker input files. These files are not runtime config. Compare the source Lite environment and target Full environment with:
 
 ```bash
 custodia-admin lite upgrade-check \

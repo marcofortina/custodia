@@ -2,7 +2,7 @@
 
 Custodia client libraries allow applications to talk to the Custodia API while preserving the end-to-end crypto boundary. The server authenticates and authorizes clients, but it never receives plaintext, DEKs, private keys, or application-level decryption material.
 
-This document is the canonical repository-level client specification after Phase 5 closure. Earlier external planning notes that described Go/Python as transport-only, or Node.js/TypeScript, Java, C++ and Rust as merely planned, are historical and superseded by the implementation and verification matrix below.
+This document is the canonical repository-level client specification for the implemented SDK and CLI surfaces. Use the implementation and verification matrix below as the source of truth for repository status.
 
 The repository contains two client layers:
 
@@ -163,7 +163,7 @@ Use these repository documents as the current source of truth:
 - [`PHASE5_CLOSURE.md`](PHASE5_CLOSURE.md): repository-level closure status.
 - [`SDK_RELEASE_POLICY.md`](SDK_RELEASE_POLICY.md): official SDK and public package release criteria.
 
-Design notes outside the repository are useful historical context, but they must not override the closed Phase 5 matrix unless they are re-synchronized into these documents.
+Design notes outside the repository are non-authoritative until they are synchronized into this matrix and the SDK-specific documents.
 
 ## Verification targets
 

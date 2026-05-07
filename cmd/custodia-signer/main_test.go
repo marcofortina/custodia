@@ -292,7 +292,7 @@ func TestDeployExampleSignerConfigAvoidsLegacyFlatRuntimeKeys(t *testing.T) {
 		"crl_file:",
 	} {
 		if hasTopLevelSignerYAMLKey(string(payload), key) {
-			t.Fatalf("deploy signer example still uses legacy flat key %q:\n%s", key, payload)
+			t.Fatalf("deploy signer example still uses flat scalar key %q:\n%s", key, payload)
 		}
 	}
 }

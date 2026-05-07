@@ -163,7 +163,7 @@ func (c *Client) ListAuditEvents(filters AuditEventFilters) ([]model.AuditEvent,
 	return response.AuditEvents, err
 }
 
-// ExportAuditEvents is a monorepo compatibility helper. External consumers should use ExportAuditEventArtifact when they need export metadata.
+// ExportAuditEvents returns only the audit JSONL body. External consumers should use ExportAuditEventArtifact when they need response metadata.
 func (c *Client) ExportAuditEvents(filters AuditEventFilters) ([]byte, error) {
 	artifact, err := c.ExportAuditEventsWithMetadata(filters)
 	if err != nil {
@@ -172,7 +172,7 @@ func (c *Client) ExportAuditEvents(filters AuditEventFilters) ([]byte, error) {
 	return artifact.Body, nil
 }
 
-// ExportAuditEventsWithMetadata is a monorepo compatibility helper. External consumers should use ExportAuditEventArtifact.
+// ExportAuditEventsWithMetadata returns the audit JSONL body plus export metadata. ExportAuditEventArtifact is the preferred public helper.
 func (c *Client) ExportAuditEventsWithMetadata(filters AuditEventFilters) (AuditExportArtifact, error) {
 	if err := validateAuditEventFilters(filters); err != nil {
 		return AuditExportArtifact{}, err
@@ -331,7 +331,7 @@ func (c *Client) RevocationStatus() (model.RevocationStatus, error) {
 	return response, c.doJSON(http.MethodGet, "/v1/revocation/status", nil, &response)
 }
 
-// RevocationSerialStatus is a monorepo compatibility helper. External consumers should use RevocationSerialStatusInfo.
+// RevocationSerialStatus returns revocation metadata for a certificate serial. RevocationSerialStatusInfo is the preferred public helper.
 func (c *Client) RevocationSerialStatus(serialHex string) (RevocationSerialStatus, error) {
 	var response RevocationSerialStatus
 	path := "/v1/revocation/serial?serial_hex=" + url.QueryEscape(strings.TrimSpace(serialHex))

@@ -65,7 +65,7 @@ The metadata-only web console can require admin mTLS plus a TOTP-backed signed w
 
 ## Phase 3 closure boundary
 
-The repository now includes a production readiness gate and operational artifacts for Phase 3, but the following claims remain deliberately external:
+The repository includes a production readiness gate and operational artifacts for Phase 3, but the following claims remain deliberately external:
 
 - `pkcs11` signer provider is the production target and readiness requirement; actual HSM/PKCS#11 integration must be validated in the deployment environment.
 - Audit archive shipment is verified before handoff; legal WORM immutability is provided by the external sink.

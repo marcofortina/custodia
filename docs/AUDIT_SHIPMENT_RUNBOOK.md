@@ -1,6 +1,6 @@
 # Custodia audit shipment runbook
 
-Custodia can now verify an audit archive bundle and copy it into a sink directory with a shipment manifest.
+Custodia can verify an audit archive bundle and copy it into a sink directory with a shipment manifest.
 
 ## Inputs
 

@@ -1,6 +1,6 @@
 # PKCS#11 and SoftHSM signer bridge
 
-Custodia's repository now supports a concrete PKCS#11 signing boundary without adding HSM private-key material to the vault API process.
+Custodia supports a concrete PKCS#11 signing boundary without adding HSM private-key material to the vault API process.
 
 ## Runtime model
 

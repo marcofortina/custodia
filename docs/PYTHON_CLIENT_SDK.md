@@ -4,7 +4,7 @@
 
 ## Current scope
 
-The Python client is importable and speaks the Custodia REST API over mTLS. It now has two layers:
+The Python client is importable and speaks the Custodia REST API over mTLS. It has two layers:
 
 - raw transport helpers for callers that already provide opaque ciphertext and envelopes;
 - a high-level crypto wrapper that encrypts/decrypts locally, creates HPKE-v1 envelopes and uses application-provided key resolvers.
