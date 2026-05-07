@@ -1994,3 +1994,17 @@ make package-smoke
 
 - Added `docs/REPRODUCIBLE_BUILDS.md` with release metadata and `SOURCE_DATE_EPOCH` guidance.
 - The Makefile now derives `DATE` from `SOURCE_DATE_EPOCH` when `DATE` is not explicitly provided.
+
+
+## Patch 910-912 - read-only doctor diagnostics
+
+- Added `custodia-admin doctor` offline diagnostics for server/signer config parsing, profile/backend coherence, required files, sensitive key modes and runtime directories.
+- Added optional `custodia-admin doctor --systemd --network` checks for packaged unit state and configured local TCP listeners.
+- Added `custodia-client doctor --config FILE [--online]` for reusable client profile diagnostics, mTLS pair validation, CA bundle validation, local crypto-key fingerprinting and optional server reachability.
+
+Suggested verification:
+
+```bash
+go test ./cmd/custodia-admin ./cmd/custodia-client
+make check
+```

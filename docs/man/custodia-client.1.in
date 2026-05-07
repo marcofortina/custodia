@@ -40,6 +40,13 @@ Derive and write a local public key file from a private key file.
 .B key inspect --key FILE
 Print key metadata and public-key fingerprint without exposing private material.
 .TP
+.B doctor --config FILE [--online]
+Run read-only diagnostics for a local client profile. The default mode validates
+local profile, mTLS files, CA bundle and crypto key without contacting the server.
+Pass
+.B --online
+for an mTLS reachability/version check.
+.TP
 .B secret put --config FILE --name NAME --value-file FILE
 Encrypt a plaintext file locally and create a secret.
 .TP

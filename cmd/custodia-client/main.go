@@ -108,6 +108,8 @@ func (a *app) run(args []string) int {
 		return a.runKey(args[1:])
 	case "config":
 		return a.runConfig(args[1:])
+	case "doctor":
+		return a.runDoctor(args[1:])
 	case "secret":
 		return a.runSecret(args[1:])
 	case "version":
@@ -128,6 +130,7 @@ func (a *app) usage() {
   custodia-client key inspect --key FILE
   custodia-client config write --out FILE --server-url URL --cert FILE --key FILE --ca FILE [--client-id ID --crypto-key FILE]
   custodia-client config check --config FILE
+  custodia-client doctor --config FILE [--online]
   custodia-client secret put --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --name NAME --value-file FILE [--recipient ID=PUBLIC.json]
   custodia-client secret get --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --secret-id ID [--out FILE]
   custodia-client secret share --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --secret-id ID --target-client-id ID --recipient ID=PUBLIC.json

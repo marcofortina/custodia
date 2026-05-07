@@ -73,6 +73,12 @@ Verify exported audit body/digest/count artifacts.
 .TP
 .B production check
 Run production configuration checks from an environment file.
+.TP
+.B doctor --server-config FILE --signer-config FILE [--systemd] [--network]
+Run read-only installation diagnostics. The default mode is offline and checks
+configuration parsing, profile/backend coherence, required files, key modes and
+runtime directories. Optional flags add systemd unit checks and TCP listener
+reachability checks.
 .SH GLOBAL OPTIONS
 .TP
 .BI --server-url " URL"
