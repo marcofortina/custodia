@@ -267,13 +267,9 @@ TEST_CUSTODIA_POSTGRES_URL=postgres://user:pass@localhost:5432/custodia_test?ssl
 
 Use `custodia-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS client to inspect runtime metadata. The diagnostics output is metadata-only and never includes secret payloads or client-side cryptographic material.
 
-For install diagnostics, use read-only doctor commands:
-
-```bash
-custodia-admin doctor --server-config /etc/custodia/custodia-server.yaml --signer-config /etc/custodia/custodia-signer.yaml
-custodia-admin doctor --server-config /etc/custodia/custodia-server.yaml --signer-config /etc/custodia/custodia-signer.yaml --systemd --network
-custodia-client doctor --config client_alice.config.json
-```
+For install diagnostics, use read-only doctor commands. See the dedicated
+[doctor diagnostics runbook](docs/DOCTOR.md) for offline, systemd, network and
+client-profile examples.
 
 
 ### Operational runbooks
@@ -299,6 +295,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 - [Custodia Lite profile](docs/LITE_PROFILE.md)
 - [Custodia Lite configuration](docs/LITE_CONFIG.md)
 - [Configuration reference](docs/CONFIG_REFERENCE.md)
+- [Doctor diagnostics](docs/DOCTOR.md)
 - [Lite installation guide](docs/LITE_INSTALL.md)
 - [Lite SQLite store](docs/LITE_SQLITE_STORE.md)
 - [Lite local CA bootstrap](docs/LITE_CA_BOOTSTRAP.md)

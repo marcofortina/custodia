@@ -171,6 +171,7 @@ Runtime or API failure.
 .B 2
 Usage error.
 .SH SEE ALSO
+.IR docs/DOCTOR.md ,
 .BR custodia-client (1),
 .BR custodia-server (1),
 .BR custodia-signer (1)

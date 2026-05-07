@@ -168,7 +168,7 @@ stage_server() {
   install -m 0755 "$WORK_DIR/bin/custodia-admin" "$stage/usr/bin/custodia-admin"
   install -m 0755 "$WORK_DIR/bin/custodia-signer" "$stage/usr/bin/custodia-signer"
   install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia-server/"
-  install -m 0644 docs/QUICKSTART.md docs/LITE_PROFILE.md docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md "$stage/usr/share/doc/custodia-server/"
+  install -m 0644 docs/QUICKSTART.md docs/DOCTOR.md docs/LITE_PROFILE.md docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md "$stage/usr/share/doc/custodia-server/"
   install_manpages "$stage" custodia-admin custodia-server custodia-signer
   install -m 0644 deploy/examples/custodia-server.lite.yaml deploy/examples/custodia-server.full.yaml deploy/examples/custodia-signer.service deploy/examples/custodia-signer.yaml "$stage/usr/share/custodia/examples/"
   install -m 0644 deploy/examples/checks/lite-upgrade-source.env.example deploy/examples/checks/lite-upgrade-target-full.env.example deploy/examples/checks/production-readiness.env.example "$stage/usr/share/custodia/examples/checks/"
@@ -239,7 +239,7 @@ copy_client_tree() {
   find "$stage/usr/share/custodia/clients" -type f \( -name '*.pyc' -o -name '*.class' \) -delete
   install -m 0755 "$WORK_DIR/bin/custodia-client" "$stage/usr/bin/custodia-client"
   install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia-clients/"
-  install -m 0644 docs/CLIENT_LIBRARIES.md docs/CLIENT_CRYPTO_SPEC.md docs/CUSTODIA_CLIENT_CLI.md docs/GO_CLIENT_SDK.md docs/PYTHON_CLIENT_SDK.md docs/NODE_CLIENT_SDK.md docs/JAVA_CLIENT_SDK.md docs/CPP_CLIENT_SDK.md docs/RUST_CLIENT_SDK.md docs/BASH_TRANSPORT_HELPER.md "$stage/usr/share/doc/custodia-clients/"
+  install -m 0644 docs/CLIENT_LIBRARIES.md docs/CLIENT_CRYPTO_SPEC.md docs/CUSTODIA_CLIENT_CLI.md docs/DOCTOR.md docs/GO_CLIENT_SDK.md docs/PYTHON_CLIENT_SDK.md docs/NODE_CLIENT_SDK.md docs/JAVA_CLIENT_SDK.md docs/CPP_CLIENT_SDK.md docs/RUST_CLIENT_SDK.md docs/BASH_TRANSPORT_HELPER.md "$stage/usr/share/doc/custodia-clients/"
   install_manpages "$stage" custodia-client
 }
 

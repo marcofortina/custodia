@@ -506,7 +506,19 @@ Before considering the node ready for real data:
 - audit export/verify was scheduled;
 - remote firewall exposure was reviewed.
 
-## 15. What to read next
+## 15. Diagnose the installation
+
+Run the read-only doctor after the server and signer are configured:
+
+```bash
+sudo -u custodia custodia-admin doctor \
+  --server-config /etc/custodia/custodia-server.yaml \
+  --signer-config /etc/custodia/custodia-signer.yaml
+```
+
+For systemd, network and client-profile checks, see [`docs/DOCTOR.md`](DOCTOR.md).
+
+## 16. What to read next
 
 - Lite profile: `docs/LITE_PROFILE.md`
 - Lite configuration: `docs/LITE_CONFIG.md`
@@ -514,6 +526,7 @@ Before considering the node ready for real data:
 - File ownership and permissions: `docs/FILE_PERMISSIONS.md`
 - Client certificate lifecycle: `docs/CLIENT_CERTIFICATE_LIFECYCLE.md`
 - Client CLI: `docs/CUSTODIA_CLIENT_CLI.md`
+- Doctor diagnostics: `docs/DOCTOR.md`
 - Alice/Bob encrypted smoke test: `docs/CUSTODIA_ALICE_BOB_SMOKE.md`
 - Lite CA bootstrap: `docs/LITE_CA_BOOTSTRAP.md`
 - Linux packages: `docs/LINUX_PACKAGES.md`

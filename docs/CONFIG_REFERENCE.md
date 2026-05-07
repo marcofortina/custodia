@@ -153,3 +153,7 @@ custodia-server config render --profile lite > custodia-server.yaml
 custodia-server config render --profile full > custodia-server.yaml
 custodia-signer config render > custodia-signer.yaml
 ```
+
+## Validation and diagnostics
+
+Use `custodia-server config validate` and `custodia-signer config validate` for single-file parse checks. Use [`DOCTOR.md`](DOCTOR.md) for installation-level diagnostics across server config, signer config, file permissions, systemd and optional network reachability.
