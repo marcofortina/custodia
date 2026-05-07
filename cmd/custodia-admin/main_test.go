@@ -26,6 +26,27 @@ import (
 	"custodia/internal/auditarchive"
 )
 
+func TestUsageMentionsDoctorCommand(t *testing.T) {
+	oldStderr := os.Stderr
+	readPipe, writePipe, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stderr = writePipe
+	usage()
+	if err := writePipe.Close(); err != nil {
+		t.Fatal(err)
+	}
+	os.Stderr = oldStderr
+	body, err := io.ReadAll(readPipe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), "custodia-admin doctor --server-config FILE --signer-config FILE") {
+		t.Fatalf("usage does not mention doctor command: %s", string(body))
+	}
+}
+
 func TestRunWebTOTPGenerateOutputsJSON(t *testing.T) {
 	var out bytes.Buffer
 	if err := runWebTOTPGenerate([]string{"--issuer", "Custodia", "--account", "admin", "--format", "json"}, &out); err != nil {

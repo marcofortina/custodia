@@ -13,3 +13,4 @@ usr/share/custodia/clients/rust/Cargo.toml
 usr/share/custodia/testdata/client-crypto/v1/create_secret_single_recipient.json
 usr/share/doc/custodia-clients/CLIENT_LIBRARIES.md
 usr/share/doc/custodia-clients/CUSTODIA_CLIENT_CLI.md
+usr/share/doc/custodia-clients/DOCTOR.md

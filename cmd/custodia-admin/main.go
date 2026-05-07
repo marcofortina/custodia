@@ -1460,6 +1460,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, `usage:
   custodia-admin [global flags] status read
   custodia-admin [global flags] version server
+  custodia-admin doctor --server-config FILE --signer-config FILE [--systemd] [--network]
   custodia-admin [global flags] client whoami
   custodia-admin [global flags] client list
   custodia-admin [global flags] client get --client-id ID
