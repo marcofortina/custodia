@@ -28,14 +28,14 @@ The response contains only the signed mTLS client certificate and validity windo
 
 ## Production authentication
 
-Production mode requires mTLS:
+Production mode requires mTLS. Prefer `custodia-signer --config /etc/custodia/custodia-signer.yaml` and reserve `CUSTODIA_SIGNER_*` variables for explicit overrides:
 
 - `CUSTODIA_SIGNER_TLS_CERT_FILE`
 - `CUSTODIA_SIGNER_TLS_KEY_FILE`
 - `CUSTODIA_SIGNER_CLIENT_CA_FILE`
 - `CUSTODIA_SIGNER_ADMIN_SUBJECTS`
 
-Only admin certificate subjects listed in `CUSTODIA_SIGNER_ADMIN_SUBJECTS` may submit CSR signing requests.
+Only admin certificate subjects listed in `admin_subjects` / `CUSTODIA_SIGNER_ADMIN_SUBJECTS` may submit CSR signing requests.
 
 ## CA material and key providers
 
@@ -82,7 +82,7 @@ CA key unseal workflow, production HSM attestation, CRL publication automation a
 
 ## Audit trail
 
-`custodia-signer` can append JSONL audit events when `CUSTODIA_SIGNER_AUDIT_LOG_FILE` is set. Certificate signing attempts record:
+`custodia-signer` can append JSONL audit events when `audit_log_file` / `CUSTODIA_SIGNER_AUDIT_LOG_FILE` is set. Certificate signing attempts record:
 
 - action `certificate.sign`;
 - outcome `success` or `failure`;
@@ -95,4 +95,4 @@ The signer audit file is intentionally separate from the vault API audit chain. 
 
 ## CRL distribution
 
-When `CUSTODIA_SIGNER_CRL_FILE` is configured, the signer serves the PEM CRL at `/v1/crl.pem`. This lets internal clients and operators retrieve the same revocation artifact used by the vault API. OCSP remains a separate production hardening step.
+When `crl_file` / `CUSTODIA_SIGNER_CRL_FILE` is configured, the signer serves the PEM CRL at `/v1/crl.pem`. This lets internal clients and operators retrieve the same revocation artifact used by the vault API. OCSP remains a separate production hardening step.

@@ -5,6 +5,7 @@
 custodia-signer \- run the Custodia client certificate signing service
 .SH SYNOPSIS
 .SY custodia-signer
+.OP --config FILE
 .YS
 .SY custodia-signer
 .B version
@@ -21,7 +22,10 @@ runs the dedicated Custodia certificate signing service. It signs approved
 client mTLS CSRs and keeps CA signing concerns separate from the vault server.
 .PP
 The signer is optional for purely manual certificate workflows, but it is the
-recommended Lite path when using the admin client issue shortcut.
+recommended Lite path when using the admin client issue shortcut. Packaged
+installs should use a YAML config file at
+.I /etc/custodia/custodia-signer.yaml
+with environment variables reserved for overrides.
 .SH COMMANDS
 .TP
 .B version
@@ -33,6 +37,10 @@ Alias for
 .TP
 .B help, -h, --help
 Print usage information and exit before runtime initialization.
+.SH OPTIONS
+.TP
+.BI --config " FILE"
+Load flat YAML signer configuration before applying environment overrides.
 .SH ENVIRONMENT
 .TP
 .B CUSTODIA_SIGNER_ADDR
@@ -70,6 +78,9 @@ Optional CRL file path.
 .B CUSTODIA_SIGNER_AUDIT_LOG_FILE
 Signer audit JSONL path.
 .SH FILES
+.TP
+.I /etc/custodia/custodia-signer.yaml
+Default packaged signer configuration.
 .TP
 .I /etc/custodia/ca.crt
 Default Lite CA certificate.
@@ -114,15 +125,7 @@ plaintext, DEKs, or application encryption keys.
 Run the Lite file-backed signer manually:
 .PP
 .EX
-CUSTODIA_SIGNER_ADDR=:9444 \\
-CUSTODIA_SIGNER_TLS_CERT_FILE=/etc/custodia/server.crt \\
-CUSTODIA_SIGNER_TLS_KEY_FILE=/etc/custodia/server.key \\
-CUSTODIA_SIGNER_CLIENT_CA_FILE=/etc/custodia/client-ca.crt \\
-CUSTODIA_SIGNER_ADMIN_SUBJECTS=admin \\
-CUSTODIA_SIGNER_KEY_PROVIDER=file \\
-CUSTODIA_SIGNER_CA_CERT_FILE=/etc/custodia/ca.crt \\
-CUSTODIA_SIGNER_CA_KEY_FILE=/etc/custodia/ca.key \\
-custodia-signer
+custodia-signer --config /etc/custodia/custodia-signer.yaml
 .EE
 .PP
 Check build metadata without CA/key initialization:

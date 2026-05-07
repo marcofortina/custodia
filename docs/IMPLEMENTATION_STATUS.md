@@ -1856,3 +1856,11 @@ make -n install
 - Standardized live runtime config paths on `/etc/custodia/custodia-server.yaml` and `/etc/custodia/custodia-signer.yaml`.
 - Extended Lite bootstrap output to include both server and signer YAML files.
 - Updated systemd examples, package smoke checks and install docs for the generic server/signer config filenames.
+
+
+## Patch 887 - package signer config and manpage sync
+
+- Updated packaged `custodia-signer.service` to run `custodia-signer --config /etc/custodia/custodia-signer.yaml`.
+- Updated package install docs to copy both server and signer YAML examples into `/etc/custodia`.
+- Updated server/signer manpages for the generic runtime config paths.
+- Documented signer YAML config as the primary packaged configuration path, with environment variables retained as overrides.

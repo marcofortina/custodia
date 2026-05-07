@@ -102,7 +102,11 @@ The package does **not** install a live `/etc/custodia/custodia-server.yaml` by 
 ```bash
 sudo install -d -m 0750 -o root -g custodia /etc/custodia
 sudo cp /usr/share/custodia/examples/custodia-server.lite.yaml /etc/custodia/custodia-server.yaml
+sudo cp /usr/share/custodia/examples/custodia-signer.yaml /etc/custodia/custodia-signer.yaml
+sudo chown custodia:custodia /etc/custodia/custodia-server.yaml /etc/custodia/custodia-signer.yaml
+sudo chmod 0640 /etc/custodia/custodia-server.yaml /etc/custodia/custodia-signer.yaml
 sudo editor /etc/custodia/custodia-server.yaml
+sudo editor /etc/custodia/custodia-signer.yaml
 sudo systemctl enable --now custodia-server custodia-signer
 ```
 

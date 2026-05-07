@@ -74,7 +74,7 @@ Log file path. Packaged installs default under
 .IR /var/log/custodia .
 .SH FILES
 .TP
-.I /etc/custodia/config.yaml
+.I /etc/custodia/custodia-server.yaml
 Default packaged server configuration.
 .TP
 .I /etc/custodia/server.crt

@@ -207,18 +207,7 @@ Wants=network-online.target
 Type=simple
 User=custodia
 Group=custodia
-Environment=CUSTODIA_SIGNER_ADDR=:9444
-Environment=CUSTODIA_SIGNER_TLS_CERT_FILE=/etc/custodia/server.crt
-Environment=CUSTODIA_SIGNER_TLS_KEY_FILE=/etc/custodia/server.key
-Environment=CUSTODIA_SIGNER_CLIENT_CA_FILE=/etc/custodia/client-ca.crt
-Environment=CUSTODIA_SIGNER_ADMIN_SUBJECTS=admin
-Environment=CUSTODIA_SIGNER_KEY_PROVIDER=file
-Environment=CUSTODIA_SIGNER_CA_CERT_FILE=/etc/custodia/ca.crt
-Environment=CUSTODIA_SIGNER_CA_KEY_FILE=/etc/custodia/ca.key
-Environment=CUSTODIA_SIGNER_CA_KEY_PASSPHRASE_FILE=/etc/custodia/ca.pass
-Environment=CUSTODIA_SIGNER_CRL_FILE=/etc/custodia/client.crl.pem
-Environment=CUSTODIA_SIGNER_AUDIT_LOG_FILE=/var/log/custodia/signer-audit.jsonl
-ExecStart=/usr/bin/custodia-signer
+ExecStart=/usr/bin/custodia-signer --config /etc/custodia/custodia-signer.yaml
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true
