@@ -44,13 +44,13 @@ func TestGenerateLiteBootstrapCreatesExpectedArtifacts(t *testing.T) {
 		t.Fatalf("expected encrypted CA key PEM, got %v", block)
 	}
 	configYAML := string(artifacts.ConfigYAML)
-	for _, expected := range []string{"profile: lite", "bootstrap_clients: admin:admin", "admin_client_ids: admin"} {
+	for _, expected := range []string{"profile: lite", "bootstrap_clients:", "client_id: admin", "mtls_subject: admin", "admin_client_ids:", "- admin"} {
 		if !strings.Contains(configYAML, expected) {
 			t.Fatalf("expected config yaml to contain %q: %s", expected, configYAML)
 		}
 	}
 	signerConfigYAML := string(artifacts.SignerConfigYAML)
-	for _, expected := range []string{`addr: ":9444"`, "admin_subjects: admin", "ca_key_passphrase_file: /etc/custodia/ca.pass"} {
+	for _, expected := range []string{`addr: ":9444"`, "admin_subjects:", "- admin", "ca_key_passphrase_file: /etc/custodia/ca.pass"} {
 		if !strings.Contains(signerConfigYAML, expected) {
 			t.Fatalf("expected signer config yaml to contain %q: %s", expected, signerConfigYAML)
 		}

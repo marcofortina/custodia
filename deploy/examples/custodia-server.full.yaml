@@ -1,0 +1,37 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
+profile: full
+api_addr: ":8443"
+web_addr: ":9443"
+log_file: /var/log/custodia/custodia.log
+
+store_backend: postgres
+database_url: postgresql://custodia@db.example.com:5432/custodia?sslmode=require
+rate_limit_backend: valkey
+valkey_url: rediss://valkey.example.com:6379/0
+
+deployment_mode: production
+database_ha_target: cockroachdb-multi-region
+audit_shipment_sink: s3-object-lock://custodia-audit-prod
+
+web_mfa_required: true
+web_passkey_enabled: true
+web_passkey_assertion_verify_command: /usr/local/bin/verify-passkey-assertion
+
+client_ca_file: /etc/custodia/client-ca.crt
+client_crl_file: /etc/custodia/client.crl.pem
+tls_cert_file: /etc/custodia/server.crt
+tls_key_file: /etc/custodia/server.key
+
+signer_key_provider: pkcs11
+signer_ca_cert_file: /etc/custodia/ca.crt
+signer_pkcs11_sign_command: /usr/local/bin/custodia-pkcs11-sign
+
+# Configure production admin mTLS identities explicitly.
+admin_client_ids:
+  - admin

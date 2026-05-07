@@ -1,0 +1,22 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
+addr: ":9444"
+tls_cert_file: /etc/custodia/server.crt
+tls_key_file: /etc/custodia/server.key
+client_ca_file: /etc/custodia/client-ca.crt
+
+admin_subjects:
+  - admin
+
+key_provider: file
+ca_cert_file: /etc/custodia/ca.crt
+ca_key_file: /etc/custodia/ca.key
+ca_key_passphrase_file: /etc/custodia/ca.pass
+crl_file: /etc/custodia/client.crl.pem
+audit_log_file: /var/log/custodia/signer-audit.jsonl
+shutdown_timeout_seconds: 10

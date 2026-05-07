@@ -983,7 +983,7 @@ The repository still does not claim to implement physical HSM hardware, external
 ## Patch 552 - profile-driven config loader
 
 - Added `CUSTODIA_PROFILE=lite|full|custom` defaults to the shared config loader.
-- Added flat YAML `--config` parsing support with environment-variable overrides.
+- Added YAML `--config` parsing support with environment-variable overrides.
 
 ## Patch 554 - custodia-server config file loading
 
@@ -1005,7 +1005,7 @@ The repository still does not claim to implement physical HSM hardware, external
 
 ## Patch 560 - Lite and Full YAML examples
 
-- Added flat YAML config examples for Lite and Full profiles.
+- Added YAML config examples for Lite and Full profiles.
 
 ## Patch 561 - Lite config guide
 
@@ -1864,3 +1864,18 @@ make -n install
 - Updated package install docs to copy both server and signer YAML examples into `/etc/custodia`.
 - Updated server/signer manpages for the generic runtime config paths.
 - Documented signer YAML config as the primary packaged configuration path, with environment variables retained as overrides.
+
+
+## Patch 891 - structured YAML config examples
+
+- Renamed packaged server examples to `custodia-server.lite.yaml` and `custodia-server.full.yaml` where missing.
+- Added `deploy/examples/custodia-signer.yaml` using structured `admin_subjects`.
+- Updated Lite bootstrap output to emit structured `bootstrap_clients`, `admin_client_ids` and signer `admin_subjects`.
+- Updated docs/manpage wording to describe supported structured YAML instead of flat-only YAML.
+
+Suggested verification:
+
+```bash
+go test ./internal/config ./cmd/custodia-signer ./cmd/custodia-admin ./internal/certutil
+bash -n scripts/package-linux.sh scripts/package-smoke.sh
+```

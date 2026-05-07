@@ -215,8 +215,11 @@ signer_key_provider: file
 signer_ca_cert_file: /etc/custodia/ca.crt
 signer_ca_key_file: /etc/custodia/ca.key
 signer_ca_key_passphrase_file: /etc/custodia/ca.pass
-bootstrap_clients: ` + adminClientID + `:` + adminClientID + `
-admin_client_ids: ` + adminClientID + `
+bootstrap_clients:
+  - client_id: ` + adminClientID + `
+    mtls_subject: ` + adminClientID + `
+admin_client_ids:
+  - ` + adminClientID + `
 `)
 }
 
@@ -225,7 +228,8 @@ func liteBootstrapSignerConfigYAML(adminClientID string) []byte {
 tls_cert_file: /etc/custodia/server.crt
 tls_key_file: /etc/custodia/server.key
 client_ca_file: /etc/custodia/client-ca.crt
-admin_subjects: ` + adminClientID + `
+admin_subjects:
+  - ` + adminClientID + `
 key_provider: file
 ca_cert_file: /etc/custodia/ca.crt
 ca_key_file: /etc/custodia/ca.key

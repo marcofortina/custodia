@@ -40,7 +40,7 @@ Print usage information and exit before runtime initialization.
 .SH OPTIONS
 .TP
 .BI --config " FILE"
-Load flat YAML signer configuration before applying environment overrides.
+Load YAML signer configuration before applying environment overrides.
 .SH ENVIRONMENT
 .TP
 .B CUSTODIA_SIGNER_ADDR

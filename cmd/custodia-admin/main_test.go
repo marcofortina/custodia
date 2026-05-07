@@ -649,7 +649,7 @@ func TestRunCABootstrapLocalWritesLiteArtifacts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadFile(config) error = %v", err)
 	}
-	for _, expected := range [][]byte{[]byte("profile: lite"), []byte("bootstrap_clients: admin:admin"), []byte("admin_client_ids: admin")} {
+	for _, expected := range [][]byte{[]byte("profile: lite"), []byte("bootstrap_clients:"), []byte("client_id: admin"), []byte("mtls_subject: admin"), []byte("admin_client_ids:"), []byte("- admin")} {
 		if !bytes.Contains(configPayload, expected) {
 			t.Fatalf("expected config payload to contain %q: %s", string(expected), string(configPayload))
 		}

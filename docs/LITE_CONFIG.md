@@ -18,9 +18,7 @@ Example:
 custodia-server --config /etc/custodia/custodia-server.yaml
 ```
 
-The YAML format is intentionally flat and maps directly to the existing config
-fields. Nested YAML is rejected so the file cannot drift into a second config
-schema.
+The YAML format uses scalar fields plus structured lists for identity settings such as `bootstrap_clients`, `admin_client_ids` and signer `admin_subjects`. Unsupported nested structures still fail closed so the file cannot drift into a second config schema.
 
 ## Lite profile
 
