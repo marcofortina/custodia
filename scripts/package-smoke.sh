@@ -53,11 +53,24 @@ require_executable() {
   [ -x "$root/$path" ] || fail "$path is not executable in $root"
 }
 
+require_manifest() {
+  local root="$1"
+  local manifest="$2"
+  require_file "$root_dir" "$manifest"
+  while IFS= read -r path || [ -n "$path" ]; do
+    case "$path" in
+      ''|'#'*) continue ;;
+    esac
+    require_file "$root" "$path"
+  done < "$root_dir/$manifest"
+}
+
 smoke_extracted_tree() {
   local root="$1"
   local package_name="$2"
   case "$package_name" in
     custodia-server)
+      require_manifest "$root" scripts/package-manifest-custodia-server.expected
       require_executable "$root" usr/bin/custodia-server
       require_executable "$root" usr/bin/custodia-admin
       require_executable "$root" usr/bin/custodia-signer
@@ -94,6 +107,7 @@ smoke_extracted_tree() {
       "$root/usr/bin/custodia-admin" version >/dev/null
       ;;
     custodia-clients)
+      require_manifest "$root" scripts/package-manifest-custodia-clients.expected
       require_executable "$root" usr/bin/custodia-client
       require_file "$root" usr/share/custodia/clients/go/go.mod
       require_file "$root" usr/share/custodia/clients/go/pkg/client/client.go

@@ -1957,3 +1957,10 @@ make package-smoke
 - Added `internal/config.LoadFile` so offline planning compares explicit runtime YAML files without environment overrides.
 - Kept the existing env-file `lite upgrade-check` for checker inputs, but documented runtime YAML migration planning as the preferred path.
 - Added Full-to-Lite downgrade warnings without pretending data migration is automatic.
+
+
+## Patch 902 - package manifest guardrails
+
+- Added explicit expected package payload manifests for `custodia-server` and `custodia-clients`.
+- `scripts/package-smoke.sh` now checks every manifest path in extracted DEB/RPM payloads before running deeper package smoke assertions.
+- This prevents accidental removal or renaming of binaries, manpages, systemd units, config examples, client SDK snapshots, or documentation payloads.
