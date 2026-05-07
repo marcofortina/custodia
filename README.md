@@ -225,7 +225,7 @@ custodia-admin audit verify --limit 500
 custodia-admin access activate --secret-id SECRET --client-id client_bob --envelope-file bob.envelope
 ```
 
-Client creation registers metadata only. Certificate issuance/signing remains outside the vault server and belongs to the dedicated `custodia-signer` service. Lite package installs include `custodia-signer.service`; source installs can copy `deploy/examples/custodia-signer-lite.service`.
+Client creation registers metadata only. Certificate issuance/signing remains outside the vault server and belongs to the dedicated `custodia-signer` service. Lite package installs include `custodia-signer.service`; source installs can copy `deploy/examples/custodia-signer.service`.
 
 Development signer example:
 
