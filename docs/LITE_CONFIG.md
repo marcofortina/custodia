@@ -44,7 +44,7 @@ signer:
   key_provider: file
 ```
 
-See `deploy/examples/custodia-server.lite.yaml` for a complete example.
+See `deploy/examples/custodia-server.lite.yaml` for a complete example and `docs/CONFIG_REFERENCE.md` for the full structured YAML reference.
 
 ## Full profile
 

@@ -28,7 +28,7 @@ The response contains only the signed mTLS client certificate and validity windo
 
 ## Production authentication
 
-Production mode requires mTLS. Prefer `custodia-signer --config /etc/custodia/custodia-signer.yaml` and reserve `CUSTODIA_SIGNER_*` variables for explicit overrides:
+Production mode requires mTLS. Prefer `custodia-signer --config /etc/custodia/custodia-signer.yaml` and reserve `CUSTODIA_SIGNER_*` variables for explicit overrides. See `docs/CONFIG_REFERENCE.md` for the structured signer YAML schema:
 
 - `CUSTODIA_SIGNER_TLS_CERT_FILE`
 - `CUSTODIA_SIGNER_TLS_KEY_FILE`

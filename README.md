@@ -290,6 +290,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 - [Custodia quickstart for Lite installs](docs/QUICKSTART.md)
 - [Custodia Lite profile](docs/LITE_PROFILE.md)
 - [Custodia Lite configuration](docs/LITE_CONFIG.md)
+- [Configuration reference](docs/CONFIG_REFERENCE.md)
 - [Lite installation guide](docs/LITE_INSTALL.md)
 - [Lite SQLite store](docs/LITE_SQLITE_STORE.md)
 - [Lite local CA bootstrap](docs/LITE_CA_BOOTSTRAP.md)

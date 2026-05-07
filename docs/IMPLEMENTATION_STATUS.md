@@ -1908,3 +1908,12 @@ Suggested verification:
 bash -n scripts/package-linux.sh scripts/package-smoke.sh
 grep -R "deploy/examples/.*env.example" -n README.md docs scripts deploy
 ```
+
+
+## Patch 895 - structured YAML configuration reference
+
+- Added `docs/CONFIG_REFERENCE.md` covering structured server and signer YAML schemas.
+- Clarified runtime YAML files versus offline `.env.example` checker inputs.
+- Linked the reference from README, quickstart, Lite config and signer docs.
+
+Documentation-only patch; no runtime tests required.
