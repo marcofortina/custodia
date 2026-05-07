@@ -53,8 +53,12 @@ release-metadata-check:
 .PHONY: release
 release: release-metadata-check all
 
+.PHONY: systemd-hardening-check
+systemd-hardening-check:
+	./scripts/check-systemd-hardening.sh
+
 .PHONY: check
-check: license-check test build test-python-client test-node-client test-java-client test-cpp-client test-rust-client test-bash-client
+check: license-check systemd-hardening-check test build test-python-client test-node-client test-java-client test-cpp-client test-rust-client test-bash-client
 	python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py clients/python/custodia_client/crypto.py
 	node --check clients/node/src/index.js
 	node --check clients/node/src/crypto.js

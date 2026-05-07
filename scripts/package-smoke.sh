@@ -63,6 +63,16 @@ smoke_extracted_tree() {
       require_executable "$root" usr/bin/custodia-signer
       require_file "$root" usr/lib/systemd/system/custodia-server.service
       require_file "$root" usr/lib/systemd/system/custodia-signer.service
+      require_contains "$root" usr/lib/systemd/system/custodia-server.service "NoNewPrivileges=true"
+      require_contains "$root" usr/lib/systemd/system/custodia-server.service "ProtectSystem=strict"
+      require_contains "$root" usr/lib/systemd/system/custodia-server.service "ProtectHome=true"
+      require_contains "$root" usr/lib/systemd/system/custodia-server.service "ReadWritePaths=/var/lib/custodia /var/log/custodia"
+      require_contains "$root" usr/lib/systemd/system/custodia-server.service "CapabilityBoundingSet=CAP_NET_BIND_SERVICE"
+      require_contains "$root" usr/lib/systemd/system/custodia-signer.service "NoNewPrivileges=true"
+      require_contains "$root" usr/lib/systemd/system/custodia-signer.service "ProtectSystem=strict"
+      require_contains "$root" usr/lib/systemd/system/custodia-signer.service "ProtectHome=true"
+      require_contains "$root" usr/lib/systemd/system/custodia-signer.service "ReadWritePaths=/var/log/custodia"
+      require_contains "$root" usr/lib/systemd/system/custodia-signer.service "CapabilityBoundingSet="
       require_file "$root" usr/share/custodia/examples/custodia-server.lite.yaml
       require_file "$root" usr/share/custodia/examples/custodia-server.full.yaml
       require_file "$root" usr/share/custodia/examples/custodia-signer.service

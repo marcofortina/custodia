@@ -1938,3 +1938,9 @@ make package-smoke
 - Added `make release-metadata-check` and `make release`.
 - Updated local Makefile builds to derive `COMMIT` and `DATE` automatically while keeping `VERSION=dev` unless explicitly set.
 - Documented the release metadata gate in README and build metadata docs.
+
+## Patch 898 - systemd hardening guardrails
+
+- Added `scripts/check-systemd-hardening.sh` for deploy example unit hardening.
+- Added `make systemd-hardening-check` and wired it into `make check`.
+- Expanded package smoke checks so packaged systemd units retain the expected hardening lines.
