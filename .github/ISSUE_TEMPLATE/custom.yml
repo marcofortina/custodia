@@ -6,7 +6,7 @@
 # See the accompanying LICENSE file for details.
 
 name: Custom issue
-description: Use this for documentation, packaging, CI or maintenance topics that are not bugs or features.
+description: Use this for documentation, maintenance or questions that do not fit another template.
 title: "chore: "
 labels: [needs-triage]
 body:
@@ -18,28 +18,11 @@ body:
     id: summary
     attributes:
       label: Summary
-    validations:
-      required: true
-  - type: dropdown
-    id: area
-    attributes:
-      label: Area
-      options:
-        - documentation
-        - packaging
-        - CI / release
-        - tests
-        - examples
-        - maintenance
-        - question
-        - other
+      description: What should maintainers know?
     validations:
       required: true
   - type: textarea
     id: details
     attributes:
-      label: Details
-  - type: textarea
-    id: acceptance
-    attributes:
-      label: Suggested resolution or acceptance criteria
+      label: Details or suggested outcome
+      description: Add links, context, proposed wording, commands or acceptance criteria if useful.

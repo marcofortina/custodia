@@ -17,31 +17,15 @@ body:
   - type: textarea
     id: problem
     attributes:
-      label: Problem statement
+      label: Problem
       description: What user, operator or integrator problem should this solve?
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
-      label: Proposed solution
+      label: Proposed behavior
       description: Describe the behavior, API, CLI, package or documentation change.
-    validations:
-      required: true
-  - type: dropdown
-    id: component
-    attributes:
-      label: Component
-      options:
-        - server
-        - signer
-        - custodia-admin
-        - SDK
-        - packaging
-        - deployment
-        - CI / release
-        - documentation
-        - other
     validations:
       required: true
   - type: checkboxes
@@ -54,10 +38,12 @@ body:
         - label: This proposal does not require server-side DEK/private-key handling or server-managed public-key trust.
           required: true
   - type: textarea
-    id: alternatives
+    id: acceptance
     attributes:
-      label: Alternatives considered
+      label: Acceptance criteria or tests
+      description: Optional. Add concrete checks, commands or behavior that would make this complete.
   - type: textarea
-    id: tests
+    id: context
     attributes:
-      label: Suggested tests or acceptance criteria
+      label: Additional context
+      description: Optional. Add alternatives considered, links, screenshots or implementation notes.

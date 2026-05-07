@@ -13,44 +13,21 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting a bug. Do not include secrets, private keys, DEKs, tokens, production certificates or vulnerability details in public issues.
+        Thanks for reporting a bug. Do not include secrets, private keys, DEKs, tokens, production certificates, customer data or vulnerability details in public issues. Use SECURITY.md for private reports.
   - type: checkboxes
     id: safety
     attributes:
       label: Safety check
       options:
-        - label: This is not a security vulnerability or sensitive disclosure. I will use SECURITY.md for private reports.
+        - label: This is not a security vulnerability or sensitive disclosure.
           required: true
         - label: I removed secrets, keys, tokens, certificates and customer data from this report.
           required: true
-  - type: input
-    id: version
+  - type: textarea
+    id: what_happened
     attributes:
-      label: Version or commit
-      description: Tag, commit SHA or package version where the issue occurs.
-      placeholder: "0.1.0 / commit SHA"
-    validations:
-      required: true
-  - type: dropdown
-    id: component
-    attributes:
-      label: Component
-      options:
-        - server
-        - signer
-        - custodia-admin
-        - Go SDK
-        - Python SDK
-        - Node.js / TypeScript SDK
-        - Java SDK
-        - C++ SDK
-        - Rust SDK
-        - Bash helper
-        - packaging
-        - Docker / Compose
-        - Helm / Kubernetes
-        - documentation
-        - other
+      label: What happened?
+      description: Describe the defect and the user-visible behavior.
     validations:
       required: true
   - type: textarea
@@ -60,16 +37,10 @@ body:
     validations:
       required: true
   - type: textarea
-    id: actual
-    attributes:
-      label: Actual behavior
-    validations:
-      required: true
-  - type: textarea
     id: reproduce
     attributes:
-      label: Minimal reproduction steps
-      description: Include exact commands, sanitized config and relevant logs.
+      label: Steps to reproduce
+      description: Include exact commands or minimal sanitized config when useful.
       placeholder: |
         1. ...
         2. ...
@@ -80,8 +51,8 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: OS, architecture, Go/Python/Node/Rust versions, package type and deployment mode.
-      placeholder: "Ubuntu 24.04, amd64, Go 1.26, Lite profile, .deb package"
+      description: OS, architecture, package/source install, deployment mode and relevant tool versions.
+      placeholder: "Ubuntu 24.04, amd64, Lite profile, source install"
   - type: textarea
     id: logs
     attributes:

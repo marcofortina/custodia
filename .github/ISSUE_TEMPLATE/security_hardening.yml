@@ -1,0 +1,39 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
+name: Security hardening
+description: Track public hardening work that does not disclose a vulnerability.
+title: "hardening: "
+labels: [security, hardening, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this only for public hardening work. Do not disclose vulnerabilities, exploit paths, private keys, credentials, certificates, customer data or sensitive operational details here. Use SECURITY.md for private reports.
+  - type: checkboxes
+    id: disclosure
+    attributes:
+      label: Disclosure safety
+      options:
+        - label: This issue does not disclose an exploitable vulnerability or sensitive operational detail.
+          required: true
+        - label: This issue preserves the server-side opaque-secret boundary.
+          required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Hardening summary
+      description: What should be made safer, clearer or more fail-closed?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Include tests, docs, operator warnings or fail-closed behavior expected from the change.
+    validations:
+      required: true

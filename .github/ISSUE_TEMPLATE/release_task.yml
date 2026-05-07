@@ -1,0 +1,40 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
+name: Release task
+description: Track release, packaging, install or verification work.
+title: "release: "
+labels: [release, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for release-readiness, package validation, install flow, CI/release checks and documentation alignment.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What release task needs to be completed?
+    validations:
+      required: true
+  - type: textarea
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Add concrete checks or commands.
+      placeholder: |
+        - [ ] make release-check
+        - [ ] VERSION=... REVISION=... make package-linux
+        - [ ] make package-smoke
+        - [ ] README/docs/Wiki updated
+    validations:
+      required: true
+  - type: textarea
+    id: residual_risk
+    attributes:
+      label: Residual risk or follow-up
+      description: State what is intentionally out of scope for this release task.
