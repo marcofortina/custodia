@@ -545,3 +545,17 @@ func TestSignerConfigValidateCommandRejectsMissingConfig(t *testing.T) {
 		t.Fatalf("unexpected stderr: %s", stderr.String())
 	}
 }
+
+func TestSignerConfigRenderCommandEmitsStructuredYAML(t *testing.T) {
+	var stdout, stderr strings.Builder
+	handled, code := handleConfigCommand([]string{"config", "render"}, &stdout, &stderr)
+	if !handled || code != 0 {
+		t.Fatalf("expected config render success, handled=%v code=%d stderr=%q", handled, code, stderr.String())
+	}
+	body := stdout.String()
+	for _, want := range []string{"server:", "tls:", "admin:", "subjects:", "ca:"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("rendered config missing %q: %s", want, body)
+		}
+	}
+}

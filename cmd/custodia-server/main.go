@@ -150,6 +150,7 @@ func main() {
 const serverUsage = `Usage:
   custodia-server [configuration flags]
   custodia-server config validate --config FILE
+  custodia-server config render --profile lite|full
   custodia-server version
   custodia-server --version
   custodia-server help
@@ -201,11 +202,145 @@ func handleConfigCommand(args []string, stdout, stderr io.Writer) (bool, int) {
 		}
 		fmt.Fprintf(stdout, "configuration ok: %s\n", path)
 		return true, 0
+	case "render":
+		profile, err := parseConfigRenderProfile(args[2:])
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return true, 2
+		}
+		content, err := renderServerConfigTemplate(profile)
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return true, 2
+		}
+		fmt.Fprint(stdout, content)
+		return true, 0
 	default:
 		fmt.Fprintf(stderr, "unknown config subcommand: %s\n", args[1])
 		return true, 2
 	}
 }
+
+func parseConfigRenderProfile(args []string) (string, error) {
+	for index := 0; index < len(args); index++ {
+		arg := strings.TrimSpace(args[index])
+		switch {
+		case arg == "--profile":
+			if index+1 >= len(args) || strings.TrimSpace(args[index+1]) == "" {
+				return "", errors.New("--profile requires lite or full")
+			}
+			return strings.TrimSpace(args[index+1]), nil
+		case strings.HasPrefix(arg, "--profile="):
+			value := strings.TrimSpace(strings.TrimPrefix(arg, "--profile="))
+			if value == "" {
+				return "", errors.New("--profile requires lite or full")
+			}
+			return value, nil
+		default:
+			return "", fmt.Errorf("unknown config render argument: %s", arg)
+		}
+	}
+	return "", errors.New("--profile is required")
+}
+
+func renderServerConfigTemplate(profile string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(profile)) {
+	case "lite":
+		return serverLiteConfigTemplate, nil
+	case "full":
+		return serverFullConfigTemplate, nil
+	default:
+		return "", fmt.Errorf("unsupported profile: %s", profile)
+	}
+}
+
+const serverLiteConfigTemplate = `profile: lite
+
+server:
+  api_addr: ":8443"
+  web_addr: ":9443"
+  log_file: /var/log/custodia/custodia.log
+
+storage:
+  backend: sqlite
+  database_url: "file:/var/lib/custodia/custodia.db"
+
+rate_limit:
+  backend: memory
+
+web:
+  mfa_required: true
+  passkey_enabled: false
+
+tls:
+  client_ca_file: /etc/custodia/client-ca.crt
+  client_crl_file: /etc/custodia/client.crl.pem
+  cert_file: /etc/custodia/server.crt
+  key_file: /etc/custodia/server.key
+
+deployment:
+  mode: lite-single-node
+  database_ha_target: none
+
+signer:
+  key_provider: file
+  ca_cert_file: /etc/custodia/ca.crt
+  ca_key_file: /etc/custodia/ca.key
+  ca_key_passphrase_file: /etc/custodia/ca.pass
+
+bootstrap_clients:
+  - client_id: admin
+    mtls_subject: admin
+
+admin_client_ids:
+  - admin
+`
+
+const serverFullConfigTemplate = `profile: full
+
+server:
+  api_addr: ":8443"
+  web_addr: ":9443"
+  log_file: /var/log/custodia/custodia.log
+
+storage:
+  backend: postgres
+  database_url: "postgres://custodia:custodia@postgres.example.internal:5432/custodia?sslmode=require"
+
+rate_limit:
+  backend: valkey
+  valkey_url: "redis://valkey.example.internal:6379/0"
+
+web:
+  mfa_required: true
+  passkey_enabled: false
+
+tls:
+  client_ca_file: /etc/custodia/client-ca.crt
+  client_crl_file: /etc/custodia/client.crl.pem
+  cert_file: /etc/custodia/server.crt
+  key_file: /etc/custodia/server.key
+
+deployment:
+  mode: production
+  database_ha_target: external
+
+audit:
+  shipment_sink: none
+
+signer:
+  key_provider: file
+  ca_cert_file: /etc/custodia/ca.crt
+  ca_key_file: /etc/custodia/ca.key
+  ca_key_passphrase_file: /etc/custodia/ca.pass
+
+bootstrap_clients:
+  - client_id: admin
+    mtls_subject: admin
+
+admin_client_ids:
+  - admin
+`
 
 func parseConfigValidatePath(args []string) (string, error) {
 	for index := 0; index < len(args); index++ {

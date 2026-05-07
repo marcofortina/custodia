@@ -1976,3 +1976,9 @@ make package-smoke
 
 - Added `custodia-server config validate --config FILE` and `custodia-signer config validate --config FILE`.
 - Validation parses structured YAML and performs offline semantic checks without opening listeners, stores, logs or CA keys.
+
+
+## Patch 906 - runtime config template rendering
+
+- Added `custodia-server config render --profile lite|full` and `custodia-signer config render`.
+- Render commands emit structured YAML templates only; they do not generate secrets, certificates, keys or passwords.

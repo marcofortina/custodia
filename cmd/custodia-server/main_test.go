@@ -174,3 +174,17 @@ func TestConfigValidateCommandRejectsMissingConfig(t *testing.T) {
 		t.Fatalf("unexpected stderr: %s", stderr.String())
 	}
 }
+
+func TestConfigRenderCommandEmitsStructuredLiteYAML(t *testing.T) {
+	var stdout, stderr strings.Builder
+	handled, code := handleConfigCommand([]string{"config", "render", "--profile", "lite"}, &stdout, &stderr)
+	if !handled || code != 0 {
+		t.Fatalf("expected config render success, handled=%v code=%d stderr=%q", handled, code, stderr.String())
+	}
+	body := stdout.String()
+	for _, want := range []string{"profile: lite", "server:", "storage:", "bootstrap_clients:", "admin_client_ids:"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("rendered config missing %q: %s", want, body)
+		}
+	}
+}

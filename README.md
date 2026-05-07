@@ -367,3 +367,12 @@ Validate runtime configuration without starting daemons:
 custodia-server config validate --config /etc/custodia/custodia-server.yaml
 custodia-signer config validate --config /etc/custodia/custodia-signer.yaml
 ```
+
+
+Render starter runtime configuration templates:
+
+```bash
+custodia-server config render --profile lite
+custodia-server config render --profile full
+custodia-signer config render
+```

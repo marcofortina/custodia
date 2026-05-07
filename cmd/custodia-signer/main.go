@@ -129,6 +129,7 @@ func main() {
 const signerUsage = `Usage:
   custodia-signer [--config FILE]
   custodia-signer config validate --config FILE
+  custodia-signer config render
   custodia-signer version
   custodia-signer --version
   custodia-signer help
@@ -181,11 +182,44 @@ func handleConfigCommand(args []string, stdout, stderr io.Writer) (bool, int) {
 		}
 		fmt.Fprintf(stdout, "configuration ok: %s\n", path)
 		return true, 0
+	case "render":
+		if len(args) != 2 {
+			fmt.Fprintln(stderr, "config render does not accept arguments")
+			return true, 2
+		}
+		fmt.Fprint(stdout, signerConfigTemplate)
+		return true, 0
 	default:
 		fmt.Fprintf(stderr, "unknown config subcommand: %s\n", args[1])
 		return true, 2
 	}
 }
+
+const signerConfigTemplate = `server:
+  addr: ":9444"
+  shutdown_timeout_seconds: 10
+
+tls:
+  cert_file: /etc/custodia/server.crt
+  key_file: /etc/custodia/server.key
+  client_ca_file: /etc/custodia/client-ca.crt
+
+admin:
+  subjects:
+    - admin
+
+ca:
+  key_provider: file
+  cert_file: /etc/custodia/ca.crt
+  key_file: /etc/custodia/ca.key
+  key_passphrase_file: /etc/custodia/ca.pass
+
+revocation:
+  crl_file: /etc/custodia/client.crl.pem
+
+audit:
+  log_file: /var/log/custodia/signer-audit.jsonl
+`
 
 func parseConfigValidatePath(args []string) (string, error) {
 	for index := 0; index < len(args); index++ {

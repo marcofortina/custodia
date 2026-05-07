@@ -142,3 +142,14 @@ Validate runtime configuration files without opening listeners, stores, logs or 
 custodia-server config validate --config /etc/custodia/custodia-server.yaml
 custodia-signer config validate --config /etc/custodia/custodia-signer.yaml
 ```
+
+
+## Template rendering
+
+Render starter structured YAML without generating secrets or certificates:
+
+```bash
+custodia-server config render --profile lite > custodia-server.yaml
+custodia-server config render --profile full > custodia-server.yaml
+custodia-signer config render > custodia-signer.yaml
+```
