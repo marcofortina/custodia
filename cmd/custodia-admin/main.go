@@ -66,6 +66,13 @@ func main() {
 		fmt.Fprintf(os.Stdout, "%s %s %s\n", info.Version, info.Commit, info.Date)
 		return
 	}
+	if len(args) >= 1 && args[0] == "doctor" {
+		if err := runDoctor(args[1:]); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(args) < 2 {
 		usage()
 		os.Exit(2)
