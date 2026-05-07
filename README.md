@@ -352,3 +352,10 @@ The command fails on unsafe development defaults and missing external production
 ### Revocation serial status
 
 `custodia-signer` exposes a CRL-backed JSON revocation responder at `/v1/revocation/serial`. Use `custodia-admin revocation check-serial --serial-hex HEX` for operator drills. See `docs/CRL_OCSP_RUNBOOK.md`.
+
+
+Source install smoke:
+
+```bash
+make install-smoke
+```

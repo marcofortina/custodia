@@ -1964,3 +1964,9 @@ make package-smoke
 - Added explicit expected package payload manifests for `custodia-server` and `custodia-clients`.
 - `scripts/package-smoke.sh` now checks every manifest path in extracted DEB/RPM payloads before running deeper package smoke assertions.
 - This prevents accidental removal or renaming of binaries, manpages, systemd units, config examples, client SDK snapshots, or documentation payloads.
+
+
+## Patch 903 - install smoke guardrail
+
+- Added `scripts/install-smoke.sh` and `make install-smoke` to install into a temporary `DESTDIR` and verify installed binaries and manpages.
+- The smoke test runs the installed `version` command for every installed binary so runtime-info commands remain config-free.

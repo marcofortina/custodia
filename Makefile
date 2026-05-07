@@ -124,6 +124,10 @@ man:
 .PHONY: install
 install: build install-binaries install-man
 
+.PHONY: install-smoke
+install-smoke:
+	./scripts/install-smoke.sh
+
 .PHONY: install-binaries
 install-binaries:
 	$(INSTALL) -d "$(DESTDIR)$(BINDIR)"
