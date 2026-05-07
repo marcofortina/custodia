@@ -1931,3 +1931,10 @@ Suggested verification:
 bash -n scripts/package-smoke.sh
 make package-smoke
 ```
+
+## Patch 897 - release build metadata guardrails
+
+- Added `scripts/check-build-metadata.sh` to block release builds with placeholder version metadata.
+- Added `make release-metadata-check` and `make release`.
+- Updated local Makefile builds to derive `COMMIT` and `DATE` automatically while keeping `VERSION=dev` unless explicitly set.
+- Documented the release metadata gate in README and build metadata docs.

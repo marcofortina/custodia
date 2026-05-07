@@ -7,8 +7,10 @@
 
 GO ?= go
 VERSION ?= dev
-COMMIT ?= unknown
-DATE ?= unknown
+GIT_COMMIT := $(shell git rev-parse --short=12 HEAD 2>/dev/null || printf unknown)
+BUILD_DATE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+COMMIT ?= $(GIT_COMMIT)
+DATE ?= $(BUILD_DATE)
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 MANDIR ?= $(PREFIX)/share/man
@@ -43,6 +45,13 @@ clean:
 .PHONY: license-check
 license-check:
 	./scripts/check-license-headers.sh
+
+.PHONY: release-metadata-check
+release-metadata-check:
+	VERSION="$(VERSION)" COMMIT="$(COMMIT)" DATE="$(DATE)" ./scripts/check-build-metadata.sh
+
+.PHONY: release
+release: release-metadata-check all
 
 .PHONY: check
 check: license-check test build test-python-client test-node-client test-java-client test-cpp-client test-rust-client test-bash-client

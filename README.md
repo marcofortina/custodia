@@ -147,7 +147,7 @@ The development mode uses the in-memory store and insecure HTTP only when `CUSTO
 
 ## Build metadata
 
-Release builds can stamp version, commit and date into every binary. The values are exposed through `GET /v1/status`, `/web/status`, `custodia-admin version`, `custodia-client version`, `custodia-server version` and `custodia-signer version`. Development builds print `dev unknown unknown` until release `-ldflags` are supplied. See `docs/BUILD_METADATA.md`.
+Release builds can stamp version, commit and date into every binary. Use `make release-metadata-check VERSION=0.1.0` before publishing artifacts, or `make release VERSION=0.1.0` to run the metadata guardrail plus the default build/test/manpage flow. The values are exposed through `GET /v1/status`, `/web/status`, `custodia-admin version`, `custodia-client version`, `custodia-server version` and `custodia-signer version`. Development builds print `dev unknown unknown` until release `-ldflags` are supplied. See `docs/BUILD_METADATA.md`.
 
 ## Audit export integrity
 

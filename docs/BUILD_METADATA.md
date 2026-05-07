@@ -11,7 +11,7 @@ Custodia binaries expose build metadata through:
 
 `custodia-server help` and `custodia-signer help` also run before runtime initialization, so they are safe on a machine without `/var/log/custodia` or CA files.
 
-Default development values are `dev`, `unknown`, `unknown`; those are compile-time fallbacks from `internal/build` when no release `-ldflags` are supplied. Release builds should set:
+Default development values are `dev`, `unknown`, `unknown`; those are compile-time fallbacks from `internal/build` when no release `-ldflags` are supplied. The Makefile now derives `COMMIT` and `DATE` from the local Git checkout/time for normal local builds, but `VERSION` intentionally remains `dev` unless a release value is provided. Release builds should set:
 
 ```bash
 make build VERSION=v0.1.0 COMMIT=$(git rev-parse --short HEAD) DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -26,3 +26,15 @@ docker build \
   --build-arg CUSTODIA_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
   -f deploy/Dockerfile .
 ```
+
+
+## Release metadata guardrail
+
+Use the release metadata gate before tagging or publishing artifacts:
+
+```bash
+make release-metadata-check VERSION=0.1.0
+make release VERSION=0.1.0
+```
+
+The gate fails if `VERSION` is still `dev`/`unknown`, if `COMMIT` is missing, or if `DATE` is missing/non-RFC3339. This prevents accidentally publishing binaries or packages that report `dev unknown unknown`.
