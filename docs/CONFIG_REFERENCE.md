@@ -1,6 +1,6 @@
 # Custodia configuration reference
 
-Custodia runtime daemons use explicit YAML configuration files:
+Custodia runtime daemons use explicit YAML configuration files. File ownership and modes for these files are documented in [`FILE_PERMISSIONS.md`](FILE_PERMISSIONS.md):
 
 - `custodia-server --config /etc/custodia/custodia-server.yaml`
 - `custodia-signer --config /etc/custodia/custodia-signer.yaml`

@@ -1944,3 +1944,9 @@ make package-smoke
 - Added `scripts/check-systemd-hardening.sh` for deploy example unit hardening.
 - Added `make systemd-hardening-check` and wired it into `make check`.
 - Expanded package smoke checks so packaged systemd units retain the expected hardening lines.
+
+## Patch 899 - file permission reference
+
+- Added `docs/FILE_PERMISSIONS.md` for runtime config, TLS, CA, signer, admin and client handoff material.
+- Linked the permissions reference from README, quickstart, Linux package docs and config reference.
+- Documented package post-install expectations and safe `custodia-admin client issue` ownership handoff.

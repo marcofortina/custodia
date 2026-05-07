@@ -511,6 +511,7 @@ Before considering the node ready for real data:
 - Lite profile: `docs/LITE_PROFILE.md`
 - Lite configuration: `docs/LITE_CONFIG.md`
 - Configuration reference: `docs/CONFIG_REFERENCE.md`
+- File ownership and permissions: `docs/FILE_PERMISSIONS.md`
 - Client certificate lifecycle: `docs/CLIENT_CERTIFICATE_LIFECYCLE.md`
 - Client CLI: `docs/CUSTODIA_CLIENT_CLI.md`
 - Alice/Bob encrypted smoke test: `docs/CUSTODIA_ALICE_BOB_SMOKE.md`

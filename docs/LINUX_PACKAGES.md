@@ -183,3 +183,8 @@ To publish a GitHub release, run the workflow with:
 - `prerelease`: `true` only for prerelease builds.
 
 The workflow creates or updates tag release `vVERSION` and uploads the package artifacts plus checksum files.
+
+
+## Runtime file permissions
+
+Packages create the `custodia` user and the main runtime directories. Install runtime YAML, certificates and private keys with the ownership and modes documented in [`FILE_PERMISSIONS.md`](FILE_PERMISSIONS.md).
