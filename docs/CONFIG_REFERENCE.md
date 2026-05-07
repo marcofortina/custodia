@@ -119,3 +119,16 @@ Runtime config files are YAML:
 - `/etc/custodia/custodia-signer.yaml`
 
 The `.env.example` files under `deploy/examples/checks/` are **not** runtime configuration. They are offline checker inputs for production readiness, evidence collection and Lite-to-Full planning.
+
+
+## Migration planning
+
+Use runtime YAML files directly when planning Lite/FULL transitions:
+
+```bash
+custodia-admin migration plan \
+  --source-config /etc/custodia/custodia-server.yaml \
+  --target-config ./custodia-server.full.yaml
+```
+
+The command is offline and read-only. It validates the source/target profiles and storage backends, then reports readiness findings or manual downgrade warnings.

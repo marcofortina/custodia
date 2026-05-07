@@ -80,6 +80,23 @@ func Load() Config {
 
 // LoadWithArgs applies the configuration precedence used in production: profile defaults, optional YAML, then env overrides.
 // Keeping this order centralized prevents Lite/FULL profile drift between binaries.
+
+// LoadFile resolves a server configuration file without applying environment overrides.
+// It is used by offline planning tools that compare two explicit config files.
+func LoadFile(path string) (Config, error) {
+	fileValues, err := loadSimpleYAML(path)
+	if err != nil {
+		return Config{}, err
+	}
+	profile := strings.ToLower(strings.TrimSpace(fileValues["profile"]))
+	cfg := profileDefaults(profile)
+	cfg.ConfigFile = path
+	if err := applyValues(&cfg, fileValues); err != nil {
+		return Config{}, err
+	}
+	return cfg, nil
+}
+
 func LoadWithArgs(args []string) (Config, error) {
 	configFile, err := parseConfigArgs(args)
 	if err != nil {

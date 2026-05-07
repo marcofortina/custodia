@@ -14,9 +14,21 @@ configuration changes plus explicit data/infrastructure migration steps.
 7. Manual checks -> production readiness and evidence gates.
 
 
-## Readiness check
+## Runtime config migration plan
 
-Before planning the data move, compare the source Lite environment and target Full environment. These files are checker inputs only; runtime server/signer configuration remains in `custodia-server.yaml` and `custodia-signer.yaml`:
+For new structured runtime YAML files, compare the actual source and target `custodia-server.yaml` files directly:
+
+```bash
+custodia-admin migration plan \
+  --source-config /etc/custodia/custodia-server.yaml \
+  --target-config ./custodia-server.full.yaml
+```
+
+The command detects Lite/SQLite -> Full/PostgreSQL plans and reuses the Lite-to-Full readiness findings. It also recognizes Full/PostgreSQL -> Lite/SQLite as a manual downgrade path and prints warnings instead of pretending the data move can be automated safely. The command does not copy data, mutate configs or touch live services.
+
+## Legacy checker input readiness check
+
+The older offline checker still accepts explicit env-style checker input files. These files are not runtime config. Compare the source Lite environment and target Full environment with:
 
 ```bash
 custodia-admin lite upgrade-check \
@@ -32,7 +44,7 @@ CUSTODIA_FULL_ENV_FILE=deploy/examples/checks/lite-upgrade-target-full.env.examp
 make lite-upgrade-check
 ```
 
-The check validates that the source is actually Lite/SQLite and that the target is PostgreSQL/Full-oriented with Valkey, PKCS#11 and audit shipment planned. Warnings are allowed for staged upgrades; critical findings must be resolved before migration.
+Both checks validate that the source is actually Lite/SQLite and that the target is PostgreSQL/Full-oriented with Valkey, PKCS#11 and audit shipment planned. Warnings are allowed for staged upgrades; critical findings must be resolved before migration.
 
 When the helper script is used instead of calling the binary directly, set `CUSTODIA_ADMIN_BIN` to point at a non-standard admin binary path.
 

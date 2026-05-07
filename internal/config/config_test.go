@@ -391,3 +391,21 @@ signer_ca_cert_file: /etc/custodia/ca.crt
 		t.Fatalf("unexpected env override signer settings: %+v", cfg)
 	}
 }
+
+func TestLoadFileIgnoresEnvironmentOverrides(t *testing.T) {
+	t.Setenv("CUSTODIA_PROFILE", "full")
+	t.Setenv("CUSTODIA_STORE_BACKEND", "postgres")
+	path := t.TempDir() + "/custodia.yaml"
+	writeConfigTestFile(t, path, `profile: lite
+storage:
+  backend: sqlite
+  database_url: "file:/tmp/custodia.db"
+`)
+	cfg, err := LoadFile(path)
+	if err != nil {
+		t.Fatalf("LoadFile() error = %v", err)
+	}
+	if cfg.Profile != ProfileLite || cfg.StoreBackend != "sqlite" {
+		t.Fatalf("LoadFile applied environment overrides: %+v", cfg)
+	}
+}

@@ -676,6 +676,78 @@ func TestRunCABootstrapLocalRefusesOverwrite(t *testing.T) {
 	}
 }
 
+func TestRunMigrationPlanAcceptsLiteToFullConfigs(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "lite.yaml")
+	target := filepath.Join(dir, "full.yaml")
+	writeAdminTestFile(t, source, `profile: lite
+storage:
+  backend: sqlite
+  database_url: "file:/var/lib/custodia/custodia.db"
+signer:
+  key_provider: file
+`)
+	writeAdminTestFile(t, target, `profile: full
+storage:
+  backend: postgres
+  database_url: "postgres://custodia@db/custodia"
+rate_limit:
+  backend: valkey
+  valkey_url: "rediss://valkey:6379/0"
+deployment:
+  database_ha_target: cockroachdb-multi-region
+  audit_shipment_sink: s3-object-lock://custodia-audit
+signer:
+  key_provider: pkcs11
+`)
+	if err := runMigrationPlan([]string{"--source-config", source, "--target-config", target}); err != nil {
+		t.Fatalf("runMigrationPlan() error = %v", err)
+	}
+}
+
+func TestRunMigrationPlanWarnsForFullToLiteConfigs(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "full.yaml")
+	target := filepath.Join(dir, "lite.yaml")
+	writeAdminTestFile(t, source, `profile: full
+storage:
+  backend: postgres
+  database_url: "postgres://custodia@db/custodia"
+`)
+	writeAdminTestFile(t, target, `profile: lite
+storage:
+  backend: sqlite
+  database_url: "file:/var/lib/custodia/custodia.db"
+`)
+	if err := runMigrationPlan([]string{"--source-config", source, "--target-config", target}); err != nil {
+		t.Fatalf("runMigrationPlan() full-to-lite warning path returned error: %v", err)
+	}
+}
+
+func TestRunMigrationPlanRejectsUnsupportedDirection(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "source.yaml")
+	target := filepath.Join(dir, "target.yaml")
+	writeAdminTestFile(t, source, `profile: lite
+storage:
+  backend: memory
+`)
+	writeAdminTestFile(t, target, `profile: lite
+storage:
+  backend: sqlite
+`)
+	if err := runMigrationPlan([]string{"--source-config", source, "--target-config", target}); err == nil {
+		t.Fatal("expected unsupported direction error")
+	}
+}
+
+func writeAdminTestFile(t *testing.T, path string, body string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatalf("WriteFile(%s) error = %v", path, err)
+	}
+}
+
 func TestRunLiteUpgradeCheckAcceptsPlannedEnvironment(t *testing.T) {
 	dir := t.TempDir()
 	liteEnv := filepath.Join(dir, "lite.env")

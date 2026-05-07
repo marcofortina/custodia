@@ -1950,3 +1950,10 @@ make package-smoke
 - Added `docs/FILE_PERMISSIONS.md` for runtime config, TLS, CA, signer, admin and client handoff material.
 - Linked the permissions reference from README, quickstart, Linux package docs and config reference.
 - Documented package post-install expectations and safe `custodia-admin client issue` ownership handoff.
+
+## Patch 900 - runtime config migration planning
+
+- Added `custodia-admin migration plan --source-config FILE --target-config FILE`.
+- Added `internal/config.LoadFile` so offline planning compares explicit runtime YAML files without environment overrides.
+- Kept the existing env-file `lite upgrade-check` for checker inputs, but documented runtime YAML migration planning as the preferred path.
+- Added Full-to-Lite downgrade warnings without pretending data migration is automatic.

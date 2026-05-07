@@ -34,6 +34,7 @@ import (
 	"custodia/internal/auditshipper"
 	"custodia/internal/build"
 	"custodia/internal/certutil"
+	serverconfig "custodia/internal/config"
 	"custodia/internal/liteupgrade"
 	"custodia/internal/model"
 	"custodia/internal/mtls"
@@ -97,6 +98,8 @@ func main() {
 		err = runProductionEvidenceCheck(args[2:])
 	case "lite upgrade-check":
 		err = runLiteUpgradeCheck(args[2:])
+	case "migration plan":
+		err = runMigrationPlan(args[2:])
 	case "certificate sign":
 		err = runCertificateSign(&cfg, args[2:])
 	case "certificate extract":
@@ -250,6 +253,76 @@ func runProductionEvidenceCheck(args []string) error {
 		return fmt.Errorf("production external evidence check failed")
 	}
 	return nil
+}
+
+func runMigrationPlan(args []string) error {
+	cmd := flag.NewFlagSet("migration plan", flag.ExitOnError)
+	sourceConfig := cmd.String("source-config", "", "source custodia-server YAML config")
+	targetConfig := cmd.String("target-config", "", "target custodia-server YAML config")
+	_ = cmd.Parse(args)
+	if strings.TrimSpace(*sourceConfig) == "" {
+		return fmt.Errorf("--source-config is required")
+	}
+	if strings.TrimSpace(*targetConfig) == "" {
+		return fmt.Errorf("--target-config is required")
+	}
+	source, err := serverconfig.LoadFile(*sourceConfig)
+	if err != nil {
+		return fmt.Errorf("load source config: %w", err)
+	}
+	target, err := serverconfig.LoadFile(*targetConfig)
+	if err != nil {
+		return fmt.Errorf("load target config: %w", err)
+	}
+	direction := migrationDirection(source, target)
+	switch direction {
+	case "lite-to-full":
+		findings := liteupgrade.Check(configToUpgradeEnv(source), configToUpgradeEnv(target))
+		if len(findings) == 0 {
+			fmt.Fprintln(os.Stdout, "lite to full migration plan: ok")
+			return nil
+		}
+		for _, finding := range findings {
+			fmt.Fprintf(os.Stdout, "%s\t%s\t%s\n", finding.Severity, finding.Code, finding.Message)
+		}
+		if productioncheck.HasCritical(findings) {
+			return fmt.Errorf("lite to full migration plan failed")
+		}
+		return nil
+	case "full-to-lite":
+		fmt.Fprintln(os.Stdout, "warning\tfull_to_lite_manual\tFull to Lite is a downgrade path and cannot be automated safely; plan explicit data export, reduced availability and signer/key-provider changes.")
+		fmt.Fprintln(os.Stdout, "warning\tfull_to_lite_store\tTarget Lite config must use SQLite and only data that fits single-node operation should be imported.")
+		return nil
+	default:
+		return fmt.Errorf("unsupported migration direction: source profile=%s store=%s target profile=%s store=%s", source.Profile, source.StoreBackend, target.Profile, target.StoreBackend)
+	}
+}
+
+func migrationDirection(source, target serverconfig.Config) string {
+	sourceProfile := strings.ToLower(strings.TrimSpace(source.Profile))
+	sourceStore := strings.ToLower(strings.TrimSpace(source.StoreBackend))
+	targetProfile := strings.ToLower(strings.TrimSpace(target.Profile))
+	targetStore := strings.ToLower(strings.TrimSpace(target.StoreBackend))
+	if (sourceProfile == serverconfig.ProfileLite || sourceProfile == serverconfig.ProfileCustom) && sourceStore == "sqlite" && (targetProfile == serverconfig.ProfileFull || targetProfile == serverconfig.ProfileCustom) && targetStore == "postgres" {
+		return "lite-to-full"
+	}
+	if (sourceProfile == serverconfig.ProfileFull || sourceProfile == serverconfig.ProfileCustom) && sourceStore == "postgres" && (targetProfile == serverconfig.ProfileLite || targetProfile == serverconfig.ProfileCustom) && targetStore == "sqlite" {
+		return "full-to-lite"
+	}
+	return ""
+}
+
+func configToUpgradeEnv(cfg serverconfig.Config) map[string]string {
+	return map[string]string{
+		"CUSTODIA_PROFILE":             cfg.Profile,
+		"CUSTODIA_STORE_BACKEND":       cfg.StoreBackend,
+		"CUSTODIA_DATABASE_URL":        cfg.DatabaseURL,
+		"CUSTODIA_RATE_LIMIT_BACKEND":  cfg.RateLimitBackend,
+		"CUSTODIA_VALKEY_URL":          cfg.ValkeyURL,
+		"CUSTODIA_SIGNER_KEY_PROVIDER": cfg.SignerKeyProvider,
+		"CUSTODIA_AUDIT_SHIPMENT_SINK": cfg.AuditShipmentSink,
+		"CUSTODIA_DATABASE_HA_TARGET":  cfg.DatabaseHATarget,
+	}
 }
 
 func runLiteUpgradeCheck(args []string) error {
@@ -1399,6 +1472,7 @@ func usage() {
   custodia-admin [global flags] access activate --secret-id ID --client-id ID --envelope-file FILE
   custodia-admin [global flags] access revoke --secret-id ID --client-id ID
   custodia-admin [global flags] lite upgrade-check --lite-env-file FILE --full-env-file FILE
+  custodia-admin migration plan --source-config FILE --target-config FILE
   custodia-admin ca bootstrap-local [--out-dir DIR] [--admin-client-id ID] [--server-name NAME] [--generate-ca-passphrase]
   custodia-admin web totp generate [--issuer NAME] [--account NAME] [--format text|yaml|json]
 
