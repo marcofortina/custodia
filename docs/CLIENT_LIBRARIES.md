@@ -11,9 +11,9 @@ The repository contains two client layers:
 
 The Go `custodia-client` command is the repository-provided encrypted secrets CLI for end-user put/get/share/version, access revoke/delete, metadata inspection and reusable JSON config profiles. The Bash helper is intentionally different: it is a transport helper with an optional external crypto-provider bridge. It does not implement native Bash cryptography.
 
-## Repository status after Phase 5 closure
+## Repository status
 
-Phase 5 is complete at repository level for Go, Python, Node.js/TypeScript, Java, C++ and Rust transport plus high-level crypto. Bash is included as a transport helper for CI, smoke tests and operational scripts; encrypted Bash flows require an external crypto provider executable.
+Go, Python, Node.js/TypeScript, Java, C++ and Rust provide repository-level transport plus high-level crypto surfaces. Bash is included as a transport helper for CI, smoke tests and operational scripts; encrypted Bash flows require an external crypto provider executable.
 
 The public registry publication status remains separate from repository implementation status. Until release channels are published, language packages are monorepo source snapshots governed by the SDK release policy.
 
@@ -160,7 +160,7 @@ Use these repository documents as the current source of truth:
 - [`CLIENT_LIBRARIES.md`](CLIENT_LIBRARIES.md): SDK capability and boundary matrix.
 - [`CUSTODIA_CLIENT_CLI.md`](CUSTODIA_CLIENT_CLI.md): encrypted secrets CLI usage.
 - [`CLIENT_CRYPTO_SPEC.md`](CLIENT_CRYPTO_SPEC.md): shared crypto metadata, AAD, AEAD and envelope contract.
-- [`PHASE5_CLOSURE.md`](PHASE5_CLOSURE.md): repository-level closure status.
+- [Project History Wiki](https://github.com/marcofortina/custodia/wiki/Project-History): development-history notes and phase closure records.
 - [`SDK_RELEASE_POLICY.md`](SDK_RELEASE_POLICY.md): official SDK and public package release criteria.
 
 Design notes outside the repository are non-authoritative until they are synchronized into this matrix and the SDK-specific documents.

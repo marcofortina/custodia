@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/marcofortina/custodia/actions/workflows/ci.yml/badge.svg)](https://github.com/marcofortina/custodia/actions/workflows/ci.yml)
 [![Release artifacts](https://github.com/marcofortina/custodia/actions/workflows/release.yml/badge.svg)](https://github.com/marcofortina/custodia/actions/workflows/release.yml)
+[![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](LICENSE)
+[![Wiki](https://img.shields.io/badge/wiki-project%20portal-forestgreen.svg)](https://github.com/marcofortina/custodia/wiki)
 
 Custodia is a REST vault for encrypted secrets. The server authenticates clients with mTLS, authorizes access, stores opaque encrypted blobs and returns only the caller's opaque envelope. Encryption, decryption, key discovery, key rotation and key trust stay outside the server.
 
@@ -283,11 +285,12 @@ The operational documentation is grouped by the workflow it supports, rather tha
 - [Production external evidence gate](docs/PRODUCTION_EVIDENCE.md)
 - [Release check](docs/RELEASE_CHECK.md)
 - [Formal verification scope](docs/FORMAL_VERIFICATION.md)
-- [Phase 1 closure summary](docs/PHASE1_CLOSURE.md)
-- [Phase 2 closure summary](docs/PHASE2_CLOSURE.md)
-- [Phase 3 closure boundary](docs/PHASE3_CLOSURE.md)
-- [Phase 4 closure summary](docs/PHASE4_CLOSURE.md)
-- [Phase 5 closure tracker](docs/PHASE5_CLOSURE.md)
+
+**Project planning and history**
+
+- [Project history index](docs/PROJECT_HISTORY.md)
+- [Custodia Wiki](https://github.com/marcofortina/custodia/wiki)
+- [GitHub Project roadmap](https://github.com/marcofortina/custodia/projects)
 
 **Lite deployment and upgrade path**
 

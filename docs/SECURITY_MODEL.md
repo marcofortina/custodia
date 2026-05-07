@@ -63,7 +63,7 @@ These gaps must not be closed by moving client-side encryption keys, public-key 
 The metadata-only web console can require admin mTLS plus a TOTP-backed signed web session. Passkey challenge/options, metadata validation and external assertion-verifier delegation are available for WebAuthn integration. TOTP should stay enabled until the configured external verifier is deployed, tested and independently reviewed. Web authentication never changes the vault cryptographic boundary: plaintext, ciphertext, envelopes and client-side key material are not rendered or processed by the web console.
 
 
-## Phase 3 closure boundary
+## Production readiness boundary
 
 The repository includes a production readiness gate and operational artifacts for Phase 3, but the following claims remain deliberately external:
 

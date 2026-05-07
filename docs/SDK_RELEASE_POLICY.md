@@ -64,7 +64,7 @@ A change to canonical AAD, ciphertext format, envelope format or crypto metadata
 - `docs/CLIENT_CRYPTO_SPEC.md`;
 - vector fixtures;
 - Go/Python/Node/Java/C++/Rust vector tests;
-- `docs/PHASE5_CLOSURE.md` or the current phase closure document.
+- the GitHub Wiki project-history pages when the change only affects development-history notes.
 
 ## Release checklist
 
