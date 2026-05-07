@@ -8,7 +8,7 @@
 GO ?= go
 VERSION ?= dev
 GIT_COMMIT := $(shell git rev-parse --short=12 HEAD 2>/dev/null || printf unknown)
-BUILD_DATE := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+BUILD_DATE := $(shell if [ -n "$(SOURCE_DATE_EPOCH)" ]; then date -u -d "@$(SOURCE_DATE_EPOCH)" +%Y-%m-%dT%H:%M:%SZ; else date -u +%Y-%m-%dT%H:%M:%SZ; fi)
 COMMIT ?= $(GIT_COMMIT)
 DATE ?= $(BUILD_DATE)
 PREFIX ?= /usr/local

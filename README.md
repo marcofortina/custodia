@@ -383,3 +383,5 @@ Audit log permission guardrail:
 ```bash
 make audit-log-permissions-check
 ```
+
+- Reproducible build notes: [`docs/REPRODUCIBLE_BUILDS.md`](docs/REPRODUCIBLE_BUILDS.md)

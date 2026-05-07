@@ -38,3 +38,6 @@ make release VERSION=0.1.0
 ```
 
 The gate fails if `VERSION` is still `dev`/`unknown`, if `COMMIT` is missing, or if `DATE` is missing/non-RFC3339. This prevents accidentally publishing binaries or packages that report `dev unknown unknown`.
+
+
+For reproducible release metadata and `SOURCE_DATE_EPOCH` usage, see [`REPRODUCIBLE_BUILDS.md`](REPRODUCIBLE_BUILDS.md).

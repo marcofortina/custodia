@@ -1988,3 +1988,9 @@ make package-smoke
 
 - Added `scripts/check-audit-log-permissions.sh` and `make audit-log-permissions-check`.
 - The guardrail verifies signer audit logs stay under `/var/log/custodia`, signer systemd write access remains scoped to that directory, and JSONL audit files are created with mode `0600`.
+
+
+## Patch 909 - reproducible build notes
+
+- Added `docs/REPRODUCIBLE_BUILDS.md` with release metadata and `SOURCE_DATE_EPOCH` guidance.
+- The Makefile now derives `DATE` from `SOURCE_DATE_EPOCH` when `DATE` is not explicitly provided.
