@@ -2,12 +2,13 @@
 
 Custodia can build local Linux installation packages without introducing an external packaging tool such as `fpm`.
 
-The repository produces two package families. Server packages are universal by default: the packaging script builds Go binaries with `SERVER_BUILD_TAGS="sqlite postgres"` unless explicitly overridden. Lite and Full behavior are selected by runtime configuration, not by installing different server products:
+The repository produces three package families. Server packages are universal by default: the packaging script builds Go binaries with `SERVER_BUILD_TAGS="sqlite postgres"` unless explicitly overridden. Lite and Full behavior are selected by runtime configuration, not by installing different server products:
 
 | Package | Architecture | Contents | Intended use |
 | --- | --- | --- | --- |
 | `custodia-server` | host arch | `custodia-server`, `custodia-admin`, `custodia-signer`, systemd unit, examples and server docs | Install and operate a Custodia node. |
-| `custodia-clients` | `all` / `noarch` | encrypted `/usr/bin/custodia-client` CLI, SDK source snapshots, shared crypto vectors, SDK docs and Bash helper | Developer/CI/ops client integration. |
+| `custodia-client` | host arch | encrypted `/usr/bin/custodia-client` CLI and Bash transport helper | Operator workstations, CI and client-side smoke tests. |
+| `custodia-sdk` | `all` / `noarch` | SDK source snapshots, shared crypto vectors and SDK docs | Application developers integrating Custodia. |
 
 This split is intentional. Operating-system packages are good for deployable binaries and local source snapshots. Language SDK distribution should still use language-native channels when the project starts publishing real public packages:
 
@@ -18,7 +19,7 @@ This split is intentional. Operating-system packages are good for deployable bin
 - CMake/vcpkg/conan package;
 - Cargo crate.
 
-Creating one `.deb`/`.rpm` per SDK language would add distro-package maintenance overhead before those registry workflows exist. The current `custodia-clients` package keeps the repository installable while avoiding premature package names that would look officially published.
+Creating one `.deb`/`.rpm` per SDK language would add distro-package maintenance overhead before those registry workflows exist. The `custodia-sdk` package keeps source snapshots, shared vectors and SDK documentation installable while avoiding premature language-registry package names that would look officially published.
 
 ## Build DEB packages
 
@@ -38,7 +39,8 @@ Expected files:
 
 ```text
 custodia-server_<version>-<revision>_<arch>.deb
-custodia-clients_<version>-<revision>_all.deb
+custodia-client_<version>-<revision>_<arch>.deb
+custodia-sdk_<version>-<revision>_all.deb
 ```
 
 ## Build RPM packages
@@ -53,7 +55,8 @@ Expected files:
 
 ```text
 custodia-server-<version>-<revision>.<arch>.rpm
-custodia-clients-<version>-<revision>.noarch.rpm
+custodia-client-<version>-<revision>.<arch>.rpm
+custodia-sdk-<version>-<revision>.noarch.rpm
 ```
 
 ## Build both formats
@@ -112,16 +115,28 @@ sudo systemctl enable --now custodia-server custodia-signer
 
 ## Client package layout
 
-`custodia-clients` installs:
+`custodia-client` installs:
 
 ```text
 /usr/bin/custodia-client
-/usr/share/custodia/clients/
-/usr/share/custodia/testdata/client-crypto/
-/usr/share/doc/custodia-clients/
+/usr/share/man/man1/custodia-client.1.gz
+/usr/share/custodia/clients/bash/custodia.sh
+/usr/share/doc/custodia-client/
 ```
 
-The Go source snapshot includes `go.mod`, `pkg/client` and the internal client-crypto package required by that public Go SDK surface. `/usr/bin/custodia-client` is the Go encrypted secrets CLI for local put/get/share/version workflows. The Bash transport helper is still shipped under `/usr/share/custodia/clients/bash/custodia.sh` for CI and raw REST/mTLS smoke tests.
+`/usr/bin/custodia-client` is the Go encrypted secrets CLI for local put/get/share/version workflows. The Bash transport helper is shipped under `/usr/share/custodia/clients/bash/custodia.sh` for CI and raw REST/mTLS smoke tests.
+
+## SDK package layout
+
+`custodia-sdk` installs:
+
+```text
+/usr/share/custodia/sdk/
+/usr/share/custodia/sdk/testdata/client-crypto/
+/usr/share/doc/custodia-sdk/
+```
+
+The Go source snapshot includes `go.mod`, `pkg/client` and the internal client-crypto package required by that public Go SDK surface. Other language SDK source snapshots are installed under `/usr/share/custodia/sdk/clients/`.
 
 ## CI
 

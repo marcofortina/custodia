@@ -131,7 +131,8 @@ For a clean machine first run, start with **[`docs/QUICKSTART.md`](docs/QUICKSTA
 The package split is:
 
 - `custodia-server`: server, admin CLI, signer, systemd unit and deployment examples;
-- `custodia-clients`: encrypted `custodia-client` CLI, SDK source snapshots, shared vectors, docs and the Bash transport helper.
+- `custodia-client`: encrypted `custodia-client` CLI and Bash transport helper.
+- `custodia-sdk`: SDK source snapshots, shared vectors and SDK docs.
 
 See [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md).
 
@@ -143,7 +144,7 @@ make
 make run-dev
 ```
 
-The default `make` target runs `make all`, which executes the Go test suite, builds the main binaries and generates local manual pages. Use `make test` when you only want the Go tests, `make build` when you only want binaries, `make man` when you only want manual pages, and `make check` for the full multi-language/release-like verification pass. Install the locally built binaries and manual pages with `sudo make install`; override `PREFIX`, `BINDIR`, `MANDIR` or `DESTDIR` for staged installs.
+The default `make` target runs `make all`, which executes the Go test suite, builds the main binaries and generates local manual pages. Use `make test` when you only want the Go tests, `make build` when you only want binaries, `make man` when you only want manual pages, and `make check` for the full multi-language/release-like verification pass. Install all locally built server, client and SDK artifacts plus manual pages with `sudo make install`; use `sudo make install-server`, `sudo make install-client` or `sudo make install-sdk` for partial installs. Override `PREFIX`, `BINDIR`, `MANDIR`, `SHAREDIR`, `DOCDIR`, `SYSTEMDUNITDIR` or `DESTDIR` for staged installs.
 
 The development mode uses the in-memory store and insecure HTTP only when `CUSTODIA_DEV_INSECURE_HTTP=true` is set. Production must use `CUSTODIA_TLS_CERT_FILE`, `CUSTODIA_TLS_KEY_FILE` and `CUSTODIA_CLIENT_CA_FILE`. Set `CUSTODIA_CLIENT_CRL_FILE` to a PEM CRL signed by the configured client CA to fail closed on revoked client certificate serials.
 

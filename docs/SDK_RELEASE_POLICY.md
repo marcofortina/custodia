@@ -33,7 +33,7 @@ A language SDK can be marked official only when it has all of the following in t
 | Rust | Monorepo source | crates.io package pending | Transport + high-level crypto |
 | Bash | Monorepo source and Linux client package helper | Linux package helper only | Transport + optional external crypto provider bridge |
 
-The Linux `custodia-clients` package installs the encrypted Go `custodia-client` CLI, source snapshots and the Bash helper. It is not a replacement for native language package registries.
+The Linux `custodia-client` package installs the encrypted Go `custodia-client` CLI and Bash helper. The Linux `custodia-sdk` package installs SDK source snapshots, shared crypto vectors and SDK documentation. It is not a replacement for native language package registries.
 
 ## Versioning
 
@@ -72,7 +72,7 @@ Before publishing SDK artifacts:
 
 ```bash
 make release-check
-VERSION=0.1.0 REVISION=1 make package-linux
+VERSION=0.1.0 REVISION=1 PACKAGE_NAMES="server client sdk" make package-linux
 VERSION=0.1.0 REVISION=1 make package-checksums
 make package-smoke
 VERSION=0.1.0 make sbom

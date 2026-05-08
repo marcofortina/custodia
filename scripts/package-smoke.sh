@@ -106,19 +106,23 @@ smoke_extracted_tree() {
       require_file "$root" usr/share/doc/custodia-server/README.md
       "$root/usr/bin/custodia-admin" version >/dev/null
       ;;
-    custodia-clients)
-      require_manifest "$root" scripts/package-manifest-custodia-clients.expected
+    custodia-client)
+      require_manifest "$root" scripts/package-manifest-custodia-client.expected
       require_executable "$root" usr/bin/custodia-client
-      require_file "$root" usr/share/custodia/clients/go/go.mod
-      require_file "$root" usr/share/custodia/clients/go/pkg/client/client.go
-      require_file "$root" usr/share/custodia/clients/go/internal/clientcrypto/metadata.go
-      require_file "$root" usr/share/custodia/clients/python/custodia_client/__init__.py
-      require_file "$root" usr/share/custodia/clients/node/src/index.js
-      require_file "$root" usr/share/custodia/clients/java/src/main/java/dev/custodia/client/CustodiaClient.java
-      require_file "$root" usr/share/custodia/clients/cpp/include/custodia/client.hpp
-      require_file "$root" usr/share/custodia/clients/rust/Cargo.toml
-      require_file "$root" usr/share/custodia/testdata/client-crypto/v1/create_secret_single_recipient.json
+      require_executable "$root" usr/share/custodia/clients/bash/custodia.sh
       "$root/usr/bin/custodia-client" help >/dev/null
+      ;;
+    custodia-sdk)
+      require_manifest "$root" scripts/package-manifest-custodia-sdk.expected
+      require_file "$root" usr/share/custodia/sdk/clients/go/go.mod
+      require_file "$root" usr/share/custodia/sdk/clients/go/pkg/client/client.go
+      require_file "$root" usr/share/custodia/sdk/clients/go/internal/clientcrypto/metadata.go
+      require_file "$root" usr/share/custodia/sdk/clients/python/custodia_client/__init__.py
+      require_file "$root" usr/share/custodia/sdk/clients/node/src/index.js
+      require_file "$root" usr/share/custodia/sdk/clients/java/src/main/java/dev/custodia/client/CustodiaClient.java
+      require_file "$root" usr/share/custodia/sdk/clients/cpp/include/custodia/client.hpp
+      require_file "$root" usr/share/custodia/sdk/clients/rust/Cargo.toml
+      require_file "$root" usr/share/custodia/sdk/testdata/client-crypto/v1/create_secret_single_recipient.json
       ;;
     *)
       fail "unknown package tree: $package_name"
@@ -130,7 +134,8 @@ package_name_from_artifact() {
   local artifact="$1"
   case "$(basename "$artifact")" in
     custodia-server_*.deb|custodia-server-*.rpm) printf custodia-server ;;
-    custodia-clients_*.deb|custodia-clients-*.rpm) printf custodia-clients ;;
+    custodia-client_*.deb|custodia-client-*.rpm) printf custodia-client ;;
+    custodia-sdk_*.deb|custodia-sdk-*.rpm) printf custodia-sdk ;;
     *) return 1 ;;
   esac
 }

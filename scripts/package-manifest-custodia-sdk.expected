@@ -1,0 +1,14 @@
+# Expected installed payload for the custodia-sdk package.
+# Paths are relative to the extracted package root and must exist.
+usr/share/custodia/sdk/clients/go/go.mod
+usr/share/custodia/sdk/clients/go/pkg/client/client.go
+usr/share/custodia/sdk/clients/go/internal/clientcrypto/metadata.go
+usr/share/custodia/sdk/clients/python/custodia_client/__init__.py
+usr/share/custodia/sdk/clients/node/src/index.js
+usr/share/custodia/sdk/clients/java/src/main/java/dev/custodia/client/CustodiaClient.java
+usr/share/custodia/sdk/clients/cpp/include/custodia/client.hpp
+usr/share/custodia/sdk/clients/rust/Cargo.toml
+usr/share/custodia/sdk/testdata/client-crypto/v1/create_secret_single_recipient.json
+usr/share/doc/custodia-sdk/CLIENT_LIBRARIES.md
+usr/share/doc/custodia-sdk/CLIENT_CRYPTO_SPEC.md
+usr/share/doc/custodia-sdk/SDK_RELEASE_POLICY.md

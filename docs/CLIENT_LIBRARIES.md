@@ -144,12 +144,13 @@ The provider, not Bash, is responsible for cryptography and must follow the shar
 
 ## Package layout
 
-Linux packages provide two installable groups:
+Linux packages provide three installable groups:
 
 | Package | Contents |
 | --- | --- |
 | `custodia-server` | server binaries, `custodia-admin`, signer, systemd unit, server docs and examples. |
-| `custodia-clients` | `custodia-client` encrypted secrets CLI, SDK source snapshots, Bash helper, shared crypto vectors, and SDK docs. |
+| `custodia-client` | `custodia-client` encrypted secrets CLI and Bash transport helper. |
+| `custodia-sdk` | SDK source snapshots, shared crypto vectors, and SDK docs. |
 
 External language registry publishing remains future release work.
 
