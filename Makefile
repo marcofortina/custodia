@@ -14,6 +14,9 @@ DATE ?= $(BUILD_DATE)
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 MANDIR ?= $(PREFIX)/share/man
+SHAREDIR ?= $(PREFIX)/share/custodia
+DOCDIR ?= $(PREFIX)/share/doc
+SYSTEMDUNITDIR ?= /etc/systemd/system
 INSTALL ?= install
 SERVER_BUILD_TAGS ?= sqlite postgres
 SERVER_BUILD_TAGS_FLAG = $(if $(strip $(SERVER_BUILD_TAGS)),-tags "$(SERVER_BUILD_TAGS)")
@@ -22,7 +25,7 @@ LDFLAGS := -X custodia/internal/build.Version=$(VERSION) -X custodia/internal/bu
 .DEFAULT_GOAL := all
 
 .PHONY: all
-all: test build man
+all: test build man build-sdk
 
 .PHONY: test
 test:
@@ -39,7 +42,7 @@ fmt:
 
 .PHONY: clean
 clean:
-	rm -rf bin build/man dist custodia-server custodia-admin custodia-signer custodia-client clients/rust/target
+	rm -rf bin build/man build/sdk dist custodia-server custodia-admin custodia-signer custodia-client clients/rust/target
 	rm -f ./*.test coverage.out
 
 .PHONY: license-check
@@ -115,37 +118,105 @@ run-dev:
 	$(GO) run ./cmd/custodia-server
 
 .PHONY: build
-build: sqlite-driver-download
+build: build-server build-client
+
+.PHONY: build-server
+build-server: sqlite-driver-download
 	$(GO) build $(SERVER_BUILD_TAGS_FLAG) -ldflags "$(LDFLAGS)" ./cmd/custodia-server
 	$(GO) build $(SERVER_BUILD_TAGS_FLAG) -ldflags "$(LDFLAGS)" -o custodia-admin ./cmd/custodia-admin
 	$(GO) build $(SERVER_BUILD_TAGS_FLAG) -ldflags "$(LDFLAGS)" ./cmd/custodia-signer
+
+.PHONY: build-client
+build-client:
 	$(GO) build -ldflags "$(LDFLAGS)" ./cmd/custodia-client
+
+.PHONY: build-sdk
+build-sdk:
+	./scripts/build-sdk-snapshot.sh build/sdk
 
 .PHONY: man
 man:
 	VERSION="$(VERSION)" COMMIT="$(COMMIT)" DATE="$(DATE)" ./scripts/build-manpages.sh
 
 .PHONY: install
-install: build install-binaries install-man
+install: install-server install-client install-sdk
 
 .PHONY: install-smoke
 install-smoke:
 	./scripts/install-smoke.sh
 
+.PHONY: install-server
+install-server: install-server-binaries install-server-man install-server-systemd
+
+.PHONY: install-client
+install-client: install-client-binaries install-client-man install-client-helper
+
+.PHONY: install-sdk
+install-sdk: install-sdk-tree install-sdk-docs
+
 .PHONY: install-binaries
-install-binaries:
+install-binaries: install-server-binaries install-client-binaries
+
+.PHONY: install-server-binaries
+install-server-binaries:
+	@for binary in custodia-server custodia-admin custodia-signer; do \
+		[ -x "$$binary" ] || { echo "missing built binary $$binary; run make as a normal user before sudo make install" >&2; exit 2; }; \
+	done
 	$(INSTALL) -d "$(DESTDIR)$(BINDIR)"
 	$(INSTALL) -m 0755 custodia-server "$(DESTDIR)$(BINDIR)/custodia-server"
 	$(INSTALL) -m 0755 custodia-admin "$(DESTDIR)$(BINDIR)/custodia-admin"
 	$(INSTALL) -m 0755 custodia-signer "$(DESTDIR)$(BINDIR)/custodia-signer"
+
+.PHONY: install-server-systemd
+install-server-systemd:
+	$(INSTALL) -d "$(DESTDIR)$(SYSTEMDUNITDIR)"
+	sed 's|/usr/local/bin|$(BINDIR)|g' deploy/examples/custodia-server.service > "$(DESTDIR)$(SYSTEMDUNITDIR)/custodia-server.service"
+	sed 's|/usr/local/bin|$(BINDIR)|g' deploy/examples/custodia-signer.service > "$(DESTDIR)$(SYSTEMDUNITDIR)/custodia-signer.service"
+	chmod 0644 "$(DESTDIR)$(SYSTEMDUNITDIR)/custodia-server.service" "$(DESTDIR)$(SYSTEMDUNITDIR)/custodia-signer.service"
+
+.PHONY: install-client-binaries
+install-client-binaries:
+	@[ -x custodia-client ] || { echo "missing built binary custodia-client; run make build-client as a normal user before sudo make install-client" >&2; exit 2; }
+	$(INSTALL) -d "$(DESTDIR)$(BINDIR)"
 	$(INSTALL) -m 0755 custodia-client "$(DESTDIR)$(BINDIR)/custodia-client"
 
 .PHONY: install-man
-install-man: man
-	$(INSTALL) -d "$(DESTDIR)$(MANDIR)/man1"
-	for page in build/man/man1/*.1; do \
-		$(INSTALL) -m 0644 "$$page" "$(DESTDIR)$(MANDIR)/man1/$$(basename "$$page")"; \
+install-man: install-server-man install-client-man
+
+.PHONY: install-server-man
+install-server-man:
+	@for page in custodia-admin custodia-server custodia-signer; do \
+		[ -f "build/man/man1/$$page.1" ] || { echo "missing manpage build/man/man1/$$page.1; run make man before sudo make install-server" >&2; exit 2; }; \
 	done
+	$(INSTALL) -d "$(DESTDIR)$(MANDIR)/man1"
+	for page in custodia-admin custodia-server custodia-signer; do \
+		$(INSTALL) -m 0644 "build/man/man1/$$page.1" "$(DESTDIR)$(MANDIR)/man1/$$page.1"; \
+	done
+
+.PHONY: install-client-man
+install-client-man:
+	@[ -f build/man/man1/custodia-client.1 ] || { echo "missing manpage build/man/man1/custodia-client.1; run make man before sudo make install-client" >&2; exit 2; }
+	$(INSTALL) -d "$(DESTDIR)$(MANDIR)/man1"
+	$(INSTALL) -m 0644 build/man/man1/custodia-client.1 "$(DESTDIR)$(MANDIR)/man1/custodia-client.1"
+
+.PHONY: install-client-helper
+install-client-helper:
+	$(INSTALL) -d "$(DESTDIR)$(SHAREDIR)/clients" "$(DESTDIR)$(DOCDIR)/custodia-client"
+	rm -rf "$(DESTDIR)$(SHAREDIR)/clients/bash"
+	cp -R clients/bash "$(DESTDIR)$(SHAREDIR)/clients/bash"
+	$(INSTALL) -m 0644 LICENSE README.md docs/CUSTODIA_CLIENT_CLI.md docs/BASH_TRANSPORT_HELPER.md docs/DOCTOR.md "$(DESTDIR)$(DOCDIR)/custodia-client/"
+
+.PHONY: install-sdk-tree
+install-sdk-tree:
+	@[ -d build/sdk/clients/go/pkg/client ] || { echo "missing SDK snapshot build/sdk; run make build-sdk before sudo make install-sdk" >&2; exit 2; }
+	rm -rf "$(DESTDIR)$(SHAREDIR)/sdk"
+	$(INSTALL) -d "$(DESTDIR)$(SHAREDIR)/sdk"
+	cp -R build/sdk/. "$(DESTDIR)$(SHAREDIR)/sdk/"
+
+.PHONY: install-sdk-docs
+install-sdk-docs:
+	$(INSTALL) -d "$(DESTDIR)$(DOCDIR)/custodia-sdk"
+	$(INSTALL) -m 0644 LICENSE README.md docs/CLIENT_LIBRARIES.md docs/CLIENT_CRYPTO_SPEC.md docs/SDK_RELEASE_POLICY.md docs/GO_CLIENT_SDK.md docs/PYTHON_CLIENT_SDK.md docs/NODE_CLIENT_SDK.md docs/JAVA_CLIENT_SDK.md docs/CPP_CLIENT_SDK.md docs/RUST_CLIENT_SDK.md "$(DESTDIR)$(DOCDIR)/custodia-sdk/"
 
 .PHONY: build-postgres
 build-postgres:
