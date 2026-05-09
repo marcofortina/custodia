@@ -11,9 +11,9 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 
 New to Custodia? Start with the step-by-step quickstart:
 
-**[`docs/QUICKSTART.md` — install Custodia Lite from packages or from source](docs/QUICKSTART.md)**
+**[`docs/QUICKSTART.md` — install Custodia from packages or from source](docs/QUICKSTART.md)**
 
-If you are not sure what to choose, use the package install path. It covers Debian/Ubuntu `.deb`, Fedora `.rpm`, Lite bootstrap, admin certificate setup, Web TOTP and the first API check.
+If you are not sure what to choose, use the package install path. It covers Debian/Ubuntu `.deb`, Fedora `.rpm`, the server/client/SDK package split, Lite bootstrap, admin certificate setup, Web TOTP, the first API check and the first encrypted client smoke test.
 
 ## What is implemented
 
@@ -32,7 +32,7 @@ If you are not sure what to choose, use the package install path. It covers Debi
 - Minimal admin CLI for metadata operations exposed by the API.
 - Go, Python and Node.js / TypeScript client libraries with raw transport helpers; all three include high-level client-side crypto wrappers that keep plaintext, DEKs and private keys outside the server.
 - Java, C++ and Rust client libraries with raw transport helpers plus high-level client-side crypto wrappers that use the shared AES-256-GCM/HPKE-v1 vectors.
-- Go `custodia-client` CLI for encrypted put/get/share/version, access revoke/delete workflows, reusable JSON client profiles plus a Bash transport helper for CI, smoke tests and operations.
+- Go `custodia-client` CLI for encrypted put/get/share/version, access revoke/delete workflows, reusable JSON client profiles and client-side mTLS CSR generation.
 - Docker, Compose, Helm and Lite single-node deployment examples.
 - Dedicated `custodia-signer` service for admin-only client CSR signing.
 - Custodia Lite profile with YAML config, SQLite build-tag artifact, local CA bootstrap, backup helper and Lite-to-Full readiness checks.
@@ -91,11 +91,11 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 - Rust transport and crypto: [`docs/RUST_CLIENT_SDK.md`](docs/RUST_CLIENT_SDK.md)
 - Encrypted client CLI: [`docs/CUSTODIA_CLIENT_CLI.md`](docs/CUSTODIA_CLIENT_CLI.md)
 - Alice/Bob first encrypted secret smoke test: [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](docs/CUSTODIA_ALICE_BOB_SMOKE.md)
-- Bash transport helper: [`docs/BASH_TRANSPORT_HELPER.md`](docs/BASH_TRANSPORT_HELPER.md)
+- Bash SDK helper: [`docs/BASH_SDK.md`](docs/BASH_SDK.md)
 - Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
 - SDK release policy: [`docs/SDK_RELEASE_POLICY.md`](docs/SDK_RELEASE_POLICY.md)
 - Linux DEB/RPM packaging: [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md)
-- Start here / Lite quickstart: [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
+- Start here / install quickstart: [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
 - SBOM artifacts: [`docs/SBOM.md`](docs/SBOM.md)
 
 ## Linux packages
@@ -131,7 +131,7 @@ For a clean machine first run, start with **[`docs/QUICKSTART.md`](docs/QUICKSTA
 The package split is:
 
 - `custodia-server`: server, admin CLI, signer, systemd unit and deployment examples;
-- `custodia-client`: encrypted `custodia-client` CLI and Bash transport helper.
+- `custodia-client`: encrypted `custodia-client` CLI.
 - `custodia-sdk`: SDK source snapshots, shared vectors and SDK docs.
 
 See [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md).
@@ -295,7 +295,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 
 **Lite deployment and upgrade path**
 
-- [Custodia quickstart for Lite installs](docs/QUICKSTART.md)
+- [Custodia install quickstart](docs/QUICKSTART.md)
 - [Custodia Lite profile](docs/LITE_PROFILE.md)
 - [Custodia Lite configuration](docs/LITE_CONFIG.md)
 - [Configuration reference](docs/CONFIG_REFERENCE.md)
@@ -317,7 +317,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 **Identity, certificates and web authentication**
 
 - [CA signing service design](docs/CA_SIGNING_SERVICE.md)
-- [Client certificate lifecycle](docs/CLIENT_CERTIFICATE_LIFECYCLE.md) — includes the `custodia-admin client issue` shortcut
+- [Client certificate lifecycle](docs/CLIENT_CERTIFICATE_LIFECYCLE.md) — includes client-side CSR generation and server-side CSR signing
 - [CRL and OCSP operations](docs/CRL_OCSP_RUNBOOK.md)
 - [PKCS#11 and SoftHSM signer bridge](docs/PKCS11_SOFTHSM.md)
 - [Web MFA](docs/WEB_MFA.md)
@@ -341,7 +341,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 - [Java client SDK](docs/JAVA_CLIENT_SDK.md)
 - [C++ client SDK](docs/CPP_CLIENT_SDK.md)
 - [Rust client SDK](docs/RUST_CLIENT_SDK.md)
-- [Bash transport helper](docs/BASH_TRANSPORT_HELPER.md)
+- [Bash SDK helper](docs/BASH_SDK.md)
 
 
 ### Formal verification

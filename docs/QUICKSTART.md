@@ -1,51 +1,26 @@
 # Custodia quickstart
 
-This guide is the first-run path for a clean Linux host. It covers two supported ways to start Custodia Lite:
+This guide is the first-run path for a clean Linux host. It covers both supported install methods:
 
-1. install the release package on Debian, Ubuntu or Fedora;
-2. clone the GitHub repository, build from source and install a local Lite node.
+1. install DEB/RPM packages;
+2. clone the repository, build from source, and install locally.
 
-If you are not developing Custodia, use the package install path. The source install path is for contributors, packagers and local build testing.
+Custodia uses the same binaries for Lite, Full and custom deployments. Lite or Full behavior is selected by YAML/environment configuration, not by installing different server products.
 
-The quickstart intentionally uses the single-node Lite profile. Lite keeps the Custodia security model: API mTLS, client-side cryptography, opaque ciphertext/envelope storage, Web MFA and audit integrity. It only removes mandatory external services such as PostgreSQL, Valkey, HSM and WORM shipment.
+The guided runtime path below uses the single-node Lite profile because it is the smallest honest first run. Lite keeps the Custodia security model: API mTLS, client-side cryptography, opaque ciphertext/envelope storage, Web MFA and audit integrity. Full/custom deployments use the same binaries but require real external infrastructure such as PostgreSQL/CockroachDB, Valkey, HSM/PKCS#11, WORM/SIEM shipment and production evidence gates.
 
 ## 1. Choose an install path
-
-Use the package path for a normal machine install. Use the source path only when you are developing Custodia, testing patches or building packages yourself.
 
 | Path | Best for | Installs to |
 | --- | --- | --- |
 | Package install | Operators and first-time users | `/usr/bin`, `/etc/custodia`, `/var/lib/custodia` |
-| Source install | Developers, packagers and local testing | `/usr/local/bin`, `/etc/custodia`, `/var/lib/custodia` |
+| Source install | Maintainers, developers, packagers and local testing | `/usr/local/bin`, `/usr/local/share/custodia`, `/etc/custodia`, `/var/lib/custodia` |
 
-Recommended first run: install the package, complete the Lite bootstrap, verify the API, then open the web console.
+Pick one install path, then continue with the common runtime setup.
 
-Both paths converge at [Prepare the Lite runtime directories](#4-prepare-the-lite-runtime-directories).
+## 2. Install from DEB/RPM packages
 
-## 2. Install package-path prerequisites
-
-Install only these prerequisites when you are following the recommended package install path. The source build path has its own larger dependency set in [Clone, build and install from source](#3b-clone-build-and-install-from-source).
-
-### Debian or Ubuntu
-
-```bash
-sudo apt update
-sudo apt install -y ca-certificates curl openssl sqlite3 python3
-```
-
-### Fedora
-
-```bash
-sudo dnf install -y ca-certificates curl openssl sqlite python3
-```
-
-## 3. Install Custodia
-
-Custodia can be installed either from release packages or from a source checkout. Pick one of the two paths below.
-
-### 3A. Install from release packages
-
-Package install does not require a cloned repository. Download the release artifacts from GitHub into one directory on the target host. Replace `0.1.0` and `1` with the release values you want to install:
+Package install does not require a cloned repository. Download the release artifacts from GitHub into one directory on the target host. Replace `0.1.0` and `1` with the release values you want to install.
 
 ```bash
 OWNER=marcofortina
@@ -53,104 +28,107 @@ REPO=custodia
 VERSION=0.1.0
 REVISION=1
 BASE_URL="https://github.com/${OWNER}/${REPO}/releases/download/v${VERSION}"
-
-# Debian/Ubuntu packages
-curl -fLO "${BASE_URL}/custodia-server_${VERSION}-${REVISION}_amd64.deb"
-curl -fLO "${BASE_URL}/custodia-clients_${VERSION}-${REVISION}_all.deb"
-
-# Fedora packages
-curl -fLO "${BASE_URL}/custodia-server-${VERSION}-${REVISION}.x86_64.rpm"
-curl -fLO "${BASE_URL}/custodia-clients-${VERSION}-${REVISION}.noarch.rpm"
-
-curl -fLO "${BASE_URL}/SHA256SUMS"
-curl -fLO "${BASE_URL}/artifacts-manifest.json"
 ```
-
-Verify the downloaded artifacts before installing them. `--ignore-missing` keeps the check usable when you downloaded only the package for your distribution:
-
-```bash
-sha256sum --ignore-missing -c SHA256SUMS
-```
-
-The package file you are about to install must report `OK`.
 
 ### Debian or Ubuntu
 
-Run the command from the directory that contains the downloaded `.deb` file:
-
 ```bash
+sudo apt update
+sudo apt install -y ca-certificates curl openssl sqlite3 python3
+
+curl -fLO "${BASE_URL}/custodia-server_${VERSION}-${REVISION}_amd64.deb"
+curl -fLO "${BASE_URL}/custodia-client_${VERSION}-${REVISION}_amd64.deb"
+curl -fLO "${BASE_URL}/custodia-sdk_${VERSION}-${REVISION}_all.deb"
+curl -fLO "${BASE_URL}/SHA256SUMS"
+curl -fLO "${BASE_URL}/artifacts-manifest.json"
+
+sha256sum --ignore-missing -c SHA256SUMS
+
 sudo apt install -y \
   "./custodia-server_${VERSION}-${REVISION}_amd64.deb" \
-  "./custodia-clients_${VERSION}-${REVISION}_all.deb"
+  "./custodia-client_${VERSION}-${REVISION}_amd64.deb" \
+  "./custodia-sdk_${VERSION}-${REVISION}_all.deb"
 ```
 
 ### Fedora
 
-Run the command from the directory that contains the downloaded `.rpm` file:
-
 ```bash
+sudo dnf install -y ca-certificates curl openssl sqlite python3
+
+curl -fLO "${BASE_URL}/custodia-server-${VERSION}-${REVISION}.x86_64.rpm"
+curl -fLO "${BASE_URL}/custodia-client-${VERSION}-${REVISION}.x86_64.rpm"
+curl -fLO "${BASE_URL}/custodia-sdk-${VERSION}-${REVISION}.noarch.rpm"
+curl -fLO "${BASE_URL}/SHA256SUMS"
+curl -fLO "${BASE_URL}/artifacts-manifest.json"
+
+sha256sum --ignore-missing -c SHA256SUMS
+
 sudo dnf install -y \
   "./custodia-server-${VERSION}-${REVISION}.x86_64.rpm" \
-  "./custodia-clients-${VERSION}-${REVISION}.noarch.rpm"
+  "./custodia-client-${VERSION}-${REVISION}.x86_64.rpm" \
+  "./custodia-sdk-${VERSION}-${REVISION}.noarch.rpm"
 ```
 
-The server package installs:
+Package split:
 
-```text
-/usr/bin/custodia-server
-/usr/bin/custodia-admin
-/usr/bin/custodia-signer
-/usr/lib/systemd/system/custodia-server.service
-/usr/lib/systemd/system/custodia-signer.service
-/usr/share/custodia/examples/
-/etc/custodia/
-/var/lib/custodia/
-/var/log/custodia/
-```
+| Package | Installs |
+| --- | --- |
+| `custodia-server` | `custodia-server`, `custodia-admin`, `custodia-signer`, systemd units, examples and server docs. |
+| `custodia-client` | `custodia-client` CLI and its manpage. |
+| `custodia-sdk` | SDK source snapshots, the sourceable Bash SDK helper, shared crypto test vectors and SDK docs. |
 
-The client package installs:
+Continue with [Configure the server profile](#4-configure-the-server-profile).
 
-```text
-/usr/bin/custodia-client
-/usr/share/custodia/clients/
-/usr/share/custodia/testdata/client-crypto/
-/usr/share/doc/custodia-clients/
-```
+## 3. Install from source
 
-Continue with [Prepare the Lite runtime directories](#4-prepare-the-lite-runtime-directories).
+Use this path when you intentionally want to build the binaries yourself. It installs the same Custodia artifacts used by package installs: server tools, client tools, SDK snapshots and manpages.
 
-### 3B. Clone, build and install from source
-
-This is the advanced path. Use it when you want to build the binaries yourself or validate local changes before packaging.
-
-Install the full source-build dependency set before cloning and testing the repository.
+### 3.1 Source prerequisites
 
 #### Debian or Ubuntu
 
 ```bash
 sudo apt update
-sudo apt install -y ca-certificates curl git make openssl sqlite3 python3 python3-pip python3-cryptography python3-requests nodejs npm golang-go openjdk-21-jdk g++ pkg-config libcurl4-openssl-dev libssl-dev rpm cpio
+sudo apt install -y ca-certificates curl git make openssl sqlite3 python3 golang-go
 ```
 
 #### Fedora
 
 ```bash
-sudo dnf install -y ca-certificates curl git make openssl sqlite python3 python3-pip python3-cryptography python3-requests nodejs npm golang java-devel gcc-c++ pkgconf-pkg-config libcurl-devel openssl-devel rpm-build cpio dpkg
+sudo dnf install -y ca-certificates curl git make openssl sqlite python3 golang
 ```
 
-Fedora keeps the default JDK behind the generic `java-devel` virtual provide. Avoid pinning a specific OpenJDK package in this quickstart because Fedora releases may retire older JDK streams.
-
-The Python SDK tests import the client directly from the source tree, but they still need the runtime dependencies declared by `clients/python/pyproject.toml`. The distro packages above provide `requests` and `cryptography` without requiring a system-wide `pip install`.
-
-Custodia source builds require Go `1.25.x` or newer, matching `go.mod`. Some distribution `golang-go` packages may lag behind; install a newer Go toolchain or allow Go's toolchain download mechanism before running the source build commands:
+Custodia source builds require Go `1.25.x` or newer, matching `go.mod`. Some distribution packages may lag behind. Check before building:
 
 ```bash
 go version
 ```
 
-#### Rust toolchain for source builds
+If your system Go is older, either install Go `1.25.x` or allow Go's toolchain download mechanism. In offline or proxied environments, prepare the Go toolchain before running the build targets.
 
-Rust is only required when you want to run all SDK tests from source. Install it with your distro package manager or with `rustup`:
+### 3.2 Optional full SDK/package validation extras
+
+Skip this section for a normal source install of Custodia itself. These packages are only for maintainers who want the same checkout to run the full non-Go SDK test matrix or build DEB/RPM artifacts.
+
+#### Debian or Ubuntu
+
+```bash
+sudo apt install -y \
+  python3-pip python3-cryptography python3-requests \
+  nodejs npm openjdk-21-jdk g++ pkg-config \
+  libcurl4-openssl-dev libssl-dev rpm cpio
+```
+
+#### Fedora
+
+```bash
+sudo dnf install -y \
+  python3-pip python3-cryptography python3-requests \
+  nodejs npm java-devel gcc-c++ pkgconf-pkg-config \
+  libcurl-devel openssl-devel rpm-build cpio dpkg
+```
+
+Rust is only required for Rust SDK tests:
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -159,44 +137,55 @@ rustc --version
 cargo --version
 ```
 
-Custodia currently supports Cargo/Rust `1.86` or newer.
-
-Clone the repository:
+### 3.3 Clone, build and install
 
 ```bash
 git clone https://github.com/marcofortina/custodia.git
 cd custodia
 ```
 
-Run the default local build/test pass:
+Build the artifacts you want to install. For a server node plus local client smoke tests:
 
 ```bash
-make
+make build-server build-client man
+sudo make install-server PREFIX=/usr/local
+sudo make install-client PREFIX=/usr/local
 ```
 
-The default `make` target is `all`, which runs the Go test suite and builds the main binaries. For the broader multi-language check used before releases, run:
+For a client-only workstation:
 
 ```bash
-make license-check
-make test-client-crypto
-make test-python-client
-make test-node-client
-make test-java-client
-make test-cpp-client
-make test-rust-client
-make test-bash-client
+make build-client man
+sudo make install-client PREFIX=/usr/local
 ```
 
-Build and install the binaries. The default Makefile build is universal and includes both SQLite and PostgreSQL store support; Lite or Full behavior is selected by configuration. The Makefile install target installs only the four binaries; the service units and runtime directories are still managed explicitly below.
+For SDK source snapshots:
 
 ```bash
-make
+make build-sdk
+sudo make install-sdk PREFIX=/usr/local
+```
+
+To install everything from source:
+
+```bash
+make build-server build-client build-sdk man
 sudo make install PREFIX=/usr/local
-sudo install -m 0644 deploy/examples/custodia-server.service /etc/systemd/system/custodia-server.service
-sudo install -m 0644 deploy/examples/custodia-signer.service /etc/systemd/system/custodia-signer.service
 ```
 
-Create the service user if it does not exist yet:
+`make install` does not build as root. If it reports missing binaries, manpages or SDK snapshots, run the relevant build target as your normal user first. Maintainers can still run `make` to execute the Go test suite, build all default artifacts, generate manpages and prepare the SDK source snapshot.
+
+To build local DEB/RPM packages from the checkout instead of installing directly:
+
+```bash
+VERSION=0.1.0 REVISION=1 PACKAGE_NAMES="server client sdk" make package-linux
+VERSION=0.1.0 REVISION=1 make package-checksums
+cd dist/packages && sha256sum -c SHA256SUMS
+```
+
+Then install the generated packages and follow [Install from DEB/RPM packages](#2-install-from-debrpm-packages).
+
+### 3.4 Prepare server runtime directories for source installs
 
 ```bash
 if ! id custodia >/dev/null 2>&1; then
@@ -205,35 +194,31 @@ if ! id custodia >/dev/null 2>&1; then
 fi
 ```
 
-Generate release-style packages from the clone when you want artifacts instead of a direct `/usr/local` install:
-
 ```bash
-VERSION=0.1.0 REVISION=1 make package-linux
-VERSION=0.1.0 REVISION=1 make package-checksums
-cd dist/packages && sha256sum -c SHA256SUMS
+sudo install -d -m 0750 -o custodia -g custodia \
+  /etc/custodia /var/lib/custodia /var/log/custodia
 ```
 
-Then install the generated `.deb` or `.rpm` and follow [Install from release packages](#3a-install-from-release-packages). If you keep the direct `/usr/local` install, continue with the runtime setup below.
+## 4. Configure the server profile
 
-## 4. Prepare the Lite runtime directories
+The same installed binaries can run Lite, Full or custom profiles. This quickstart configures Lite.
 
-The package path creates the directories for you, while the source path may not. The first local CA bootstrap writes certificate material, so let the `custodia` service user own the configuration directory during the first setup:
+Set the name clients and browsers will use to reach the server. For local-only tests use `localhost`. For a remote server, use its IP address or DNS hostname; the value is embedded into the server certificate SAN.
 
 ```bash
-sudo install -d -m 0750 -o custodia -g custodia /etc/custodia /var/lib/custodia /var/log/custodia
+CUSTODIA_SERVER_NAME=localhost
+# Example for a remote host:
+# CUSTODIA_SERVER_NAME=custodia.example.internal
+# CUSTODIA_SERVER_NAME=192.0.2.10
 ```
 
-This is acceptable for a single-node Lite bootstrap. After the first setup, keep `/etc/custodia` readable only by trusted operators and the `custodia` service user.
-
-## 5. Bootstrap local CA and admin certificates
-
-Generate a self-managed local CA, server TLS certificate, initial admin mTLS certificate, empty CRL and Lite YAML config:
+Generate a self-managed CA, server TLS certificate, initial admin mTLS certificate, empty CRL and Lite YAML config:
 
 ```bash
 sudo -u custodia custodia-admin ca bootstrap-local \
   --out-dir /etc/custodia \
   --admin-client-id admin \
-  --server-name localhost \
+  --server-name "$CUSTODIA_SERVER_NAME" \
   --generate-ca-passphrase
 ```
 
@@ -253,39 +238,21 @@ Expected files:
 /etc/custodia/server.key
 ```
 
-For a public DNS name, replace `localhost` with the DNS name clients will use. The value is embedded into the server certificate SAN.
+For Full/custom deployments, keep the same binaries and replace the runtime configuration. Start from `/usr/share/custodia/examples/custodia-server.full.yaml` or `deploy/examples/custodia-server.full.yaml`, then configure real external dependencies such as PostgreSQL/CockroachDB, Valkey, PKCS#11/HSM signer material, audit shipment/WORM evidence and production readiness checks. Do not treat Lite's SQLite/memory defaults as Full production settings.
 
-## 6. Create the runtime config
+## 5. Configure first admin web access
 
-The bootstrap command already wrote `/etc/custodia/custodia-server.yaml`. Review it before appending runtime-only secrets:
-
-```bash
-sudo editor /etc/custodia/custodia-server.yaml
-```
-
-Generate the Web TOTP secret with `custodia-admin`, then append it to the runtime config:
+The bootstrap command wrote `/etc/custodia/custodia-server.yaml`. Generate Web MFA material and append it once:
 
 ```bash
-TOTP_OUTPUT="$(custodia-admin web totp generate --account admin --format json)"
-printf '%s\n' "${TOTP_OUTPUT}"
-
-TOTP_SECRET="$(printf '%s' "${TOTP_OUTPUT}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["totp_secret"])')"
-SESSION_SECRET="$(openssl rand -base64 48)"
-
-sudo tee -a /etc/custodia/custodia-server.yaml >/dev/null <<CONFIG
-web_totp_secret: "${TOTP_SECRET}"
-web_session_secret: "${SESSION_SECRET}"
-CONFIG
-
-printf 'Add this TOTP secret to your authenticator app: %s\n' "${TOTP_SECRET}"
-unset TOTP_OUTPUT TOTP_SECRET SESSION_SECRET
+sudo custodia-admin web totp configure \
+  --config /etc/custodia/custodia-server.yaml \
+  --account admin
 ```
 
-The JSON output also contains an `otpauth://` provisioning URI. Use manual entry in Google Authenticator, Aegis, 1Password, Bitwarden or another TOTP-compatible authenticator if your app cannot scan/import that URI directly. Treat the TOTP secret like an admin credential.
+The command always prints the TOTP secret and provisioning URI. If `qrencode` is installed, it also prints an ANSI terminal QR code; otherwise it prints a hint and continues. The TOTP secret and provisioning URI are sensitive. Do not commit, paste or share install logs containing them.
 
-## 7. Start Custodia services
-
-Start the vault API/Web process and the separate Lite signer process:
+Start services:
 
 ```bash
 sudo systemctl daemon-reload
@@ -294,11 +261,7 @@ sudo systemctl status custodia-server --no-pager
 sudo systemctl status custodia-signer --no-pager
 ```
 
-The signer listens on `:9444` only when `custodia-signer.service` is running. It is intentionally separate from `custodia-server` so the vault API process does not own the CA private key.
-
-Custodia mirrors service logs to both systemd/journald and `/var/log/custodia/custodia.log`. Journald remains the primary service manager log stream, while the file gives operators a simple local artifact to copy, tail or archive. The signer audit log is written to `/var/log/custodia/signer-audit.jsonl` when the Lite signer unit is used.
-
-If either service fails, inspect the logs:
+If startup fails:
 
 ```bash
 sudo journalctl -u custodia-server -n 100 --no-pager
@@ -306,25 +269,28 @@ sudo journalctl -u custodia-signer -n 100 --no-pager
 sudo tail -n 100 /var/log/custodia/custodia.log
 ```
 
-If the vault service fails before file logging is initialized, the error will be in `journalctl`. After initialization, the same application log lines are mirrored to `/var/log/custodia/custodia.log`.
+## 6. Verify the admin API
 
-Common startup failures:
+Use the same host name or IP embedded in the server certificate:
 
-| Symptom | Likely cause | Fix |
-| --- | --- | --- |
-| `permission denied` under `/etc/custodia` | bootstrap files are not readable by the `custodia` service user | check ownership and modes with `sudo ls -la /etc/custodia` |
-| SQLite backend is unknown | binary was built without SQLite support | install the release package or rebuild with the default `make` target |
-| TLS certificate error on startup | `tls_cert_file` or `tls_key_file` path is wrong | compare `/etc/custodia/custodia-server.yaml` with files in `/etc/custodia` |
-| `mfa_not_configured` in logs | web MFA secrets were not added to config | repeat step 6 and restart the service |
-| `custodia-signer` is not listening on `9444` | signer service was not enabled or failed to read CA material | run `sudo systemctl status custodia-signer --no-pager` and check `/etc/custodia/ca.*` ownership/modes |
+```bash
+CUSTODIA_API="https://${CUSTODIA_SERVER_NAME}:8443"
+CUSTODIA_SIGNER="https://${CUSTODIA_SERVER_NAME}:9444"
+```
 
-## 8. Verify the API with the admin mTLS certificate
+Run the read-only doctor after the server and signer are configured:
 
-The generated admin certificate is a client certificate. When the admin key lives under `/etc/custodia`, run `custodia-admin` as the `custodia` service user so the command uses the same restricted account that owns the local key material:
+```bash
+sudo -u custodia custodia-admin doctor \
+  --server-config /etc/custodia/custodia-server.yaml \
+  --signer-config /etc/custodia/custodia-signer.yaml
+```
+
+Read API status with the generated admin mTLS certificate:
 
 ```bash
 sudo -u custodia custodia-admin \
-  --server-url https://localhost:8443 \
+  --server-url "$CUSTODIA_API" \
   --cert /etc/custodia/admin.crt \
   --key /etc/custodia/admin.key \
   --ca /etc/custodia/ca.crt \
@@ -333,20 +299,20 @@ sudo -u custodia custodia-admin \
 
 Expected result: JSON status metadata. It must not contain plaintext secrets, DEKs, private keys or envelopes.
 
-You can also inspect runtime diagnostics:
+Diagnostics:
 
 ```bash
 sudo -u custodia custodia-admin \
-  --server-url https://localhost:8443 \
+  --server-url "$CUSTODIA_API" \
   --cert /etc/custodia/admin.crt \
   --key /etc/custodia/admin.key \
   --ca /etc/custodia/ca.crt \
   diagnostics read
 ```
 
-## 9. Open the web console
+## 7. Open the Web Console
 
-Custodia's web console also requires admin mTLS and TOTP. Create a temporary browser-importable PKCS#12 bundle:
+Custodia's Web Console requires admin mTLS and TOTP. Create a temporary browser-importable PKCS#12 bundle:
 
 ```bash
 sudo openssl pkcs12 -export \
@@ -360,59 +326,229 @@ sudo chown "$USER:$USER" /tmp/custodia-admin.p12
 chmod 0600 /tmp/custodia-admin.p12
 ```
 
-Import `/tmp/custodia-admin.p12` into your browser certificate store, then open the dedicated web listener:
+Import `/tmp/custodia-admin.p12` into your browser certificate store, then open:
+
+```text
+https://SERVER_IP_OR_HOSTNAME:9443/web/login
+```
+
+Replace `SERVER_IP_OR_HOSTNAME` with the same value used as `CUSTODIA_SERVER_NAME`. For a local-only install, use:
 
 ```text
 https://localhost:9443/web/login
 ```
 
-After import, remove the temporary bundle:
+After importing it into the browser, remove the temporary bundle:
 
 ```bash
 rm -f /tmp/custodia-admin.p12
 ```
 
-The web console is metadata-only. It does not decrypt or display secret plaintext.
+The Web Console is metadata-only. It does not decrypt or display secret plaintext.
 
-### First web login troubleshooting
+## 8. Configure two clients and run an encrypted smoke test
 
-| Browser or server error | Meaning | Fix |
-| --- | --- | --- |
-| `ERR_BAD_SSL_CLIENT_AUTH_CERT` or similar | the browser did not present the admin client certificate | import `/tmp/custodia-admin.p12`, restart the browser if needed, and choose the `Custodia Admin` certificate |
-| HTTP `403` on `/web/login` | the client certificate was missing, expired or not signed by the configured CA | recreate/import the PKCS#12 bundle from `/etc/custodia/admin.crt` and `/etc/custodia/admin.key` |
-| `mfa_not_configured` | `web_totp_secret` or `web_session_secret` is missing from `/etc/custodia/custodia-server.yaml` | repeat step 6 and restart `custodia` |
-| TOTP code rejected | clock drift or wrong secret in the authenticator app | check host time sync and re-add the printed TOTP secret manually |
+The preferred remote-client flow generates each client mTLS private key and CSR on the client workstation. The server signs only the CSR. When the client is on a separate host, transfer the CSR to the server/admin host, then transfer the signed certificate and public CA certificate back to the client.
 
-## 10. Optional firewall rules
-
-For a first local test on the same machine, no firewall rule is required. If remote clients must connect, expose only the required ports and prefer a private network or hardened reverse proxy.
-
-### Debian or Ubuntu with UFW
+Create persistent local work directories outside `/tmp` for the smoke test:
 
 ```bash
-sudo ufw allow 8443/tcp
-sudo ufw allow 9443/tcp
-# Optional: expose the signer only to trusted admin hosts when remote CSR signing is required.
-# sudo ufw allow from ADMIN_IP to any port 9444 proto tcp
+export WORK="$HOME/.config/custodia/quickstart-smoke"
+export ISSUE_ROOT="/var/lib/custodia/client-issue"
+export ALICE_ID=client_alice
+export BOB_ID=client_bob
+
+rm -rf "$WORK"
+install -d -m 0700 "$WORK/alice" "$WORK/bob"
+sudo install -o "$USER" -g "$USER" -m 0644 /etc/custodia/ca.crt "$WORK/ca.crt"
 ```
 
-### Fedora with firewalld
+Generate Alice's mTLS private key and CSR on Alice's workstation:
 
 ```bash
-sudo firewall-cmd --permanent --add-port=8443/tcp
-sudo firewall-cmd --permanent --add-port=9443/tcp
-# Optional: expose the signer only to trusted admin hosts when remote CSR signing is required.
-# sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="ADMIN_IP" port port="9444" protocol="tcp" accept'
-sudo firewall-cmd --reload
+custodia-client mtls generate-csr \
+  --client-id "$ALICE_ID" \
+  --private-key-out "$WORK/alice/$ALICE_ID.key" \
+  --csr-out "$WORK/alice/$ALICE_ID.csr"
 ```
 
-Do not expose a fresh Lite node directly to the Internet without a network access policy, firewall review, backup plan and certificate rotation process.
+Transfer `$WORK/alice/$ALICE_ID.csr` to the server/admin host when Alice is remote. Sign Alice's CSR on the server/admin host:
 
-## 11. Basic backup check
+```bash
+ALICE_ISSUE_DIR="$ISSUE_ROOT/$ALICE_ID"
+sudo rm -rf "$ALICE_ISSUE_DIR"
+sudo install -d -o custodia -g custodia -m 0700 "$ALICE_ISSUE_DIR"
+sudo install -o custodia -g custodia -m 0644 "$WORK/alice/$ALICE_ID.csr" "$ALICE_ISSUE_DIR/$ALICE_ID.csr"
 
-SQLite backups should use an online backup flow, not blind file copies of the live database. Run the backup as the `custodia` service user so the backup is created with the same access boundary as the running service.
+sudo -u custodia custodia-admin \
+  --server-url "$CUSTODIA_API" \
+  --cert /etc/custodia/admin.crt \
+  --key /etc/custodia/admin.key \
+  --ca /etc/custodia/ca.crt \
+  client sign-csr \
+  --signer-url "$CUSTODIA_SIGNER" \
+  --client-id "$ALICE_ID" \
+  --csr-file "$ALICE_ISSUE_DIR/$ALICE_ID.csr" \
+  --certificate-out "$ALICE_ISSUE_DIR/$ALICE_ID.crt"
 
-With only the installed package, use SQLite's online `.backup` command:
+sudo install -o "$USER" -g "$USER" -m 0644 "$ALICE_ISSUE_DIR/$ALICE_ID.crt" "$WORK/alice/$ALICE_ID.crt"
+sudo rm -rf "$ALICE_ISSUE_DIR"
+```
+
+Transfer `$ALICE_ID.crt` and `ca.crt` back to Alice when Alice is remote. Configure Alice's local application encryption key and reusable client profile:
+
+```bash
+custodia-client key generate \
+  --client-id "$ALICE_ID" \
+  --private-key-out "$WORK/alice/$ALICE_ID.x25519.json" \
+  --public-key-out "$WORK/alice/$ALICE_ID.x25519.pub.json"
+
+ALICE_CONFIG="$WORK/alice/$ALICE_ID.config.json"
+
+custodia-client config write \
+  --out "$ALICE_CONFIG" \
+  --server-url "$CUSTODIA_API" \
+  --cert "$WORK/alice/$ALICE_ID.crt" \
+  --key "$WORK/alice/$ALICE_ID.key" \
+  --ca "$WORK/ca.crt" \
+  --client-id "$ALICE_ID" \
+  --crypto-key "$WORK/alice/$ALICE_ID.x25519.json"
+
+custodia-client config check --config "$ALICE_CONFIG"
+custodia-client doctor --config "$ALICE_CONFIG" --online
+```
+
+Create and read back an encrypted secret as Alice:
+
+```bash
+printf 'super secret demo value' > "$WORK/alice/secret.txt"
+chmod 600 "$WORK/alice/secret.txt"
+
+custodia-client secret put \
+  --config "$ALICE_CONFIG" \
+  --name smoke-demo \
+  --value-file "$WORK/alice/secret.txt" \
+  > "$WORK/alice/secret.create.json"
+
+SECRET_ID="$(python3 - <<'PY'
+import json, os
+print(json.load(open(os.environ['WORK'] + '/alice/secret.create.json'))['secret_id'])
+PY
+)"
+
+custodia-client secret get \
+  --config "$ALICE_CONFIG" \
+  --secret-id "$SECRET_ID" \
+  --out "$WORK/alice/readback.txt"
+
+cat "$WORK/alice/readback.txt"
+```
+
+Expected output:
+
+```text
+super secret demo value
+```
+
+Generate Bob's mTLS private key and CSR on Bob's workstation:
+
+```bash
+custodia-client mtls generate-csr \
+  --client-id "$BOB_ID" \
+  --private-key-out "$WORK/bob/$BOB_ID.key" \
+  --csr-out "$WORK/bob/$BOB_ID.csr"
+```
+
+Transfer `$WORK/bob/$BOB_ID.csr` to the server/admin host when Bob is remote. Sign Bob's CSR on the server/admin host:
+
+```bash
+BOB_ISSUE_DIR="$ISSUE_ROOT/$BOB_ID"
+sudo rm -rf "$BOB_ISSUE_DIR"
+sudo install -d -o custodia -g custodia -m 0700 "$BOB_ISSUE_DIR"
+sudo install -o custodia -g custodia -m 0644 "$WORK/bob/$BOB_ID.csr" "$BOB_ISSUE_DIR/$BOB_ID.csr"
+
+sudo -u custodia custodia-admin \
+  --server-url "$CUSTODIA_API" \
+  --cert /etc/custodia/admin.crt \
+  --key /etc/custodia/admin.key \
+  --ca /etc/custodia/ca.crt \
+  client sign-csr \
+  --signer-url "$CUSTODIA_SIGNER" \
+  --client-id "$BOB_ID" \
+  --csr-file "$BOB_ISSUE_DIR/$BOB_ID.csr" \
+  --certificate-out "$BOB_ISSUE_DIR/$BOB_ID.crt"
+
+sudo install -o "$USER" -g "$USER" -m 0644 "$BOB_ISSUE_DIR/$BOB_ID.crt" "$WORK/bob/$BOB_ID.crt"
+sudo rm -rf "$BOB_ISSUE_DIR"
+```
+
+Transfer `$BOB_ID.crt` and `ca.crt` back to Bob when Bob is remote. Configure Bob's local application encryption key and reusable client profile:
+
+```bash
+custodia-client key generate \
+  --client-id "$BOB_ID" \
+  --private-key-out "$WORK/bob/$BOB_ID.x25519.json" \
+  --public-key-out "$WORK/bob/$BOB_ID.x25519.pub.json"
+
+BOB_CONFIG="$WORK/bob/$BOB_ID.config.json"
+
+custodia-client config write \
+  --out "$BOB_CONFIG" \
+  --server-url "$CUSTODIA_API" \
+  --cert "$WORK/bob/$BOB_ID.crt" \
+  --key "$WORK/bob/$BOB_ID.key" \
+  --ca "$WORK/ca.crt" \
+  --client-id "$BOB_ID" \
+  --crypto-key "$WORK/bob/$BOB_ID.x25519.json"
+
+custodia-client config check --config "$BOB_CONFIG"
+custodia-client doctor --config "$BOB_CONFIG" --online
+```
+
+Transfer Bob's public key `$WORK/bob/$BOB_ID.x25519.pub.json` to Alice through a trusted channel. Alice can then share the secret with Bob:
+
+```bash
+custodia-client secret share \
+  --config "$ALICE_CONFIG" \
+  --secret-id "$SECRET_ID" \
+  --target-client-id "$BOB_ID" \
+  --recipient "$BOB_ID=$WORK/bob/$BOB_ID.x25519.pub.json" \
+  --permissions 4
+```
+
+Transfer the `SECRET_ID` value to Bob when Bob is remote. Bob can now read and decrypt the secret locally:
+
+```bash
+custodia-client secret get \
+  --config "$BOB_CONFIG" \
+  --secret-id "$SECRET_ID" \
+  --out "$WORK/bob/readback.txt"
+
+cat "$WORK/bob/readback.txt"
+```
+
+Expected output:
+
+```text
+super secret demo value
+```
+
+Delete the smoke secret when the test is complete:
+
+```bash
+custodia-client secret delete \
+  --config "$ALICE_CONFIG" \
+  --secret-id "$SECRET_ID" \
+  --yes
+```
+
+The vault received only ciphertext, crypto metadata and opaque envelopes. Plaintext, mTLS private keys and application private keys stayed local to each client. Deletion prevents future server-side reads; material already downloaded by authorized clients remains outside server control.
+
+For a complete two-client version/revoke workflow, follow [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](CUSTODIA_ALICE_BOB_SMOKE.md).
+
+## 9. Basic backup check for Lite
+
+SQLite backups should use an online backup flow, not blind file copies of the live database:
 
 ```bash
 sudo install -d -m 0750 -o custodia -g custodia /var/lib/custodia/backups
@@ -422,91 +558,35 @@ sudo -u custodia sqlite3 /var/lib/custodia/custodia.db \
 sudo chmod 0640 "${BACKUP_PATH}"
 ```
 
-From a cloned repository, you can also use the included helper. Run it as `custodia` and use the helper's `CUSTODIA_SQLITE_DB` / `CUSTODIA_SQLITE_BACKUP_DIR` variables:
+From a cloned repository, you can also use the helper:
 
 ```bash
-sudo install -d -m 0750 -o custodia -g custodia /var/lib/custodia/backups
 sudo -u custodia env \
   CUSTODIA_SQLITE_DB=/var/lib/custodia/custodia.db \
   CUSTODIA_SQLITE_BACKUP_DIR=/var/lib/custodia/backups \
   ./scripts/sqlite-backup.sh
 ```
 
-## 12. Copy/paste validation block
-
-After the service starts, this block should complete without errors:
-
-```bash
-sudo systemctl is-active --quiet custodia-server
-sudo systemctl is-active --quiet custodia-signer
-
-sudo -u custodia custodia-admin \
-  --server-url https://localhost:8443 \
-  --cert /etc/custodia/admin.crt \
-  --key /etc/custodia/admin.key \
-  --ca /etc/custodia/ca.crt \
-  status read >/tmp/custodia-status.json
-
-test -s /tmp/custodia-status.json
-sudo test -f /etc/custodia/custodia-server.yaml
-sudo test -f /etc/custodia/admin.crt
-sudo test -f /etc/custodia/admin.key
-sudo test -f /etc/custodia/ca.crt
-sudo test -f /etc/custodia/ca.key
-sudo test -f /etc/custodia/ca.pass
-sudo test -d /var/lib/custodia
-sudo test -d /var/log/custodia
-rm -f /tmp/custodia-status.json
-```
-
-If this block passes, the API side of the Lite node is ready for first use. Complete the web login test separately because browser certificate import is interactive.
-
-## 13. Verify the client CLI and run an encrypted smoke test
-
-The package install path installs `custodia-client` through the `custodia-clients` package. The source install path installs it to `/usr/local/bin/custodia-client` in step 3B. Verify it is available before testing encrypted put/get/share workflows:
-
-```bash
-custodia-client help >/dev/null
-custodia-client key generate --help >/dev/null
-```
-
-Issue a first local mTLS client bundle through the vault and signer. This shortcut performs client metadata registration, CSR generation, CSR signing, certificate extraction and local ZIP bundling; application encryption keys are still generated separately by `custodia-client`:
-
-```bash
-sudo rm -rf /tmp/custodia-client-alice
-sudo install -d -o custodia -g custodia -m 0700 /tmp/custodia-client-alice
-
-sudo -u custodia custodia-admin \
-  --server-url https://localhost:8443 \
-  --cert /etc/custodia/admin.crt \
-  --key /etc/custodia/admin.key \
-  --ca /etc/custodia/ca.crt \
-  client issue \
-  --signer-url https://localhost:9444 \
-  --client-id client_alice \
-  --out-dir /tmp/custodia-client-alice
-
-sudo chown -R "$USER:$USER" /tmp/custodia-client-alice
-```
-
-For a complete copy/paste test with two clients, local X25519 application keys, encrypted `put`, encrypted `get`, Alice-to-Bob `share`, version rotation and access revocation, follow [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](CUSTODIA_ALICE_BOB_SMOKE.md).
-
-## 14. First-run checklist
+## 10. First-run checklist
 
 Before considering the node ready for real data:
 
 - `systemctl status custodia-server` is healthy;
 - `systemctl status custodia-signer` is healthy when you need client certificate issuance;
+- `custodia-admin doctor` passes against the server and signer configs;
 - `custodia-admin status read` succeeds with the admin certificate;
+- the Web Console opens through the configured host name/IP and requires TOTP;
+- `custodia-client config check` succeeds for Alice and Bob;
+- `custodia-client doctor --online` succeeds for Alice and Bob;
+- encrypted `secret put`, `secret share`, `secret get` and `secret delete` work;
 - `/etc/custodia` is mode `0750` or stricter;
 - private keys under `/etc/custodia` are mode `0600`;
 - the CA passphrase file is backed up or the CA key is moved offline;
 - the admin browser PKCS#12 bundle was removed after import;
 - SQLite backup/restore was tested;
-- audit export/verify was scheduled;
 - remote firewall exposure was reviewed.
 
-## 15. Diagnose the installation
+## 11. Diagnose the installation
 
 Run the read-only doctor after the server and signer are configured:
 
@@ -516,42 +596,29 @@ sudo -u custodia custodia-admin doctor \
   --signer-config /etc/custodia/custodia-signer.yaml
 ```
 
-For systemd, network and client-profile checks, see [`docs/DOCTOR.md`](DOCTOR.md).
-
-## 16. What to read next
-
-- Lite profile: `docs/LITE_PROFILE.md`
-- Lite configuration: `docs/LITE_CONFIG.md`
-- Configuration reference: `docs/CONFIG_REFERENCE.md`
-- File ownership and permissions: `docs/FILE_PERMISSIONS.md`
-- Client certificate lifecycle: `docs/CLIENT_CERTIFICATE_LIFECYCLE.md`
-- Client CLI: `docs/CUSTODIA_CLIENT_CLI.md`
-- Doctor diagnostics: `docs/DOCTOR.md`
-- Alice/Bob encrypted smoke test: `docs/CUSTODIA_ALICE_BOB_SMOKE.md`
-- Lite CA bootstrap: `docs/LITE_CA_BOOTSTRAP.md`
-- Linux packages: `docs/LINUX_PACKAGES.md`
-- Web MFA: `docs/WEB_MFA.md`
-- Backup and restore: `docs/LITE_BACKUP_RESTORE.md`
-- Upgrade to Full: `docs/LITE_TO_FULL_UPGRADE.md`
-
-
-Client certificate shortcut after installing the signer:
+For client-side checks:
 
 ```bash
-sudo rm -rf /tmp/custodia-client-alice
-sudo install -d -o custodia -g custodia -m 0700 /tmp/custodia-client-alice
-
-sudo -u custodia custodia-admin \
-  --cert /etc/custodia/admin.crt \
-  --key /etc/custodia/admin.key \
-  --ca /etc/custodia/ca.crt \
-  client issue \
-  --vault-url https://localhost:8443 \
-  --signer-url https://localhost:9444 \
-  --client-id client_alice \
-  --out-dir /tmp/custodia-client-alice
-
-sudo chown -R "$USER:$USER" /tmp/custodia-client-alice
+custodia-client doctor --config "$ALICE_CONFIG"
 ```
 
-This creates local mTLS material and `client_alice-mtls.zip`; application encryption keys are still generated separately with `custodia-client key generate`.
+For an online mTLS reachability check with the non-admin client identity:
+
+```bash
+custodia-client doctor --config "$ALICE_CONFIG" --online
+```
+
+## 12. What to read next
+
+- Lite profile: [`docs/LITE_PROFILE.md`](LITE_PROFILE.md)
+- Lite configuration: [`docs/LITE_CONFIG.md`](LITE_CONFIG.md)
+- Configuration reference: [`docs/CONFIG_REFERENCE.md`](CONFIG_REFERENCE.md)
+- File ownership and permissions: [`docs/FILE_PERMISSIONS.md`](FILE_PERMISSIONS.md)
+- Client certificate lifecycle: [`docs/CLIENT_CERTIFICATE_LIFECYCLE.md`](CLIENT_CERTIFICATE_LIFECYCLE.md)
+- Client CLI: [`docs/CUSTODIA_CLIENT_CLI.md`](CUSTODIA_CLIENT_CLI.md)
+- Alice/Bob encrypted smoke test: [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](CUSTODIA_ALICE_BOB_SMOKE.md)
+- Linux packages: [`docs/LINUX_PACKAGES.md`](LINUX_PACKAGES.md)
+- Web MFA: [`docs/WEB_MFA.md`](WEB_MFA.md)
+- Bash SDK helper: [`docs/BASH_SDK.md`](BASH_SDK.md)
+- Backup and restore: [`docs/LITE_BACKUP_RESTORE.md`](LITE_BACKUP_RESTORE.md)
+- Upgrade to Full: [`docs/LITE_TO_FULL_UPGRADE.md`](LITE_TO_FULL_UPGRADE.md)
