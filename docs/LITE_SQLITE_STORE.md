@@ -35,21 +35,19 @@ The store enables:
 
 ## Backup
 
-Use the SQLite backup API through the `sqlite3` CLI:
+Use the installed `custodia-sqlite-backup` helper for online SQLite backups:
 
 ```bash
-sqlite3 /var/lib/custodia/custodia.db ".backup '/backup/custodia-$(date +%Y%m%d-%H%M%S).db'"
+if [ -x /usr/local/sbin/custodia-sqlite-backup ]; then
+  CUSTODIA_SQLITE_BACKUP=/usr/local/sbin/custodia-sqlite-backup
+else
+  CUSTODIA_SQLITE_BACKUP=/usr/sbin/custodia-sqlite-backup
+fi
+
+sudo -u custodia env \
+  CUSTODIA_SQLITE_DB=/var/lib/custodia/custodia.db \
+  CUSTODIA_SQLITE_BACKUP_DIR=/var/lib/custodia/backups \
+  "$CUSTODIA_SQLITE_BACKUP"
 ```
 
-Stop Custodia before restoring a backup.
-
-
-## Backup helper
-
-Use the Lite backup helper for online SQLite backups:
-
-```bash
-CUSTODIA_SQLITE_DB=/var/lib/custodia/custodia.db CUSTODIA_SQLITE_BACKUP_DIR=/var/lib/custodia/backups make sqlite-backup
-```
-
-The helper requires the `sqlite3` CLI and uses SQLite `.backup` rather than raw file copies.
+The helper requires the `sqlite3` CLI and uses SQLite `.backup` rather than raw file copies. Stop Custodia before restoring a backup.

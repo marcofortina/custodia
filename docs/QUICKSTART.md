@@ -73,7 +73,7 @@ Package split:
 
 | Package | Installs |
 | --- | --- |
-| `custodia-server` | `custodia-server`, `custodia-admin`, `custodia-signer`, systemd units, examples and server docs. |
+| `custodia-server` | `custodia-server`, `custodia-admin`, `custodia-signer`, systemd units, server docs, YAML examples and the SQLite backup helper. |
 | `custodia-client` | `custodia-client` CLI and its manpage. |
 | `custodia-sdk` | SDK source snapshots, the sourceable Bash SDK helper, shared crypto test vectors and SDK docs. |
 
@@ -196,18 +196,19 @@ fi
 
 ```bash
 sudo install -d -m 0750 -o custodia -g custodia \
-  /etc/custodia /var/lib/custodia /var/log/custodia
+  /etc/custodia /var/lib/custodia /var/lib/custodia/backups /var/log/custodia
 ```
 
 ## 4. Configure the server profile
 
 The same installed binaries can run Lite, Full or custom profiles. This quickstart configures Lite.
 
-Set the name clients and browsers will use to reach the server. For local-only tests use `localhost`. For a remote server, use its IP address or DNS hostname; the value is embedded into the server certificate SAN.
+Set the name clients and browsers will use to reach the server. The value is embedded into the server certificate SAN. Use the DNS name or IP address that browsers and clients will actually use.
 
 ```bash
-CUSTODIA_SERVER_NAME=localhost
-# Example for a remote host:
+CUSTODIA_SERVER_NAME="$(hostname -f)"
+# Examples:
+# CUSTODIA_SERVER_NAME=localhost
 # CUSTODIA_SERVER_NAME=custodia.example.internal
 # CUSTODIA_SERVER_NAME=192.0.2.10
 ```
@@ -238,7 +239,7 @@ Expected files:
 /etc/custodia/server.key
 ```
 
-For Full/custom deployments, keep the same binaries and replace the runtime configuration. Start from `/usr/share/custodia/examples/custodia-server.full.yaml` or `deploy/examples/custodia-server.full.yaml`, then configure real external dependencies such as PostgreSQL/CockroachDB, Valkey, PKCS#11/HSM signer material, audit shipment/WORM evidence and production readiness checks. Do not treat Lite's SQLite/memory defaults as Full production settings.
+For Full/custom deployments, keep the same binaries and replace the runtime configuration. Start from `/usr/share/doc/custodia/custodia-server.full.yaml.example`, `/usr/local/share/doc/custodia/custodia-server.full.yaml.example` or `deploy/examples/custodia-server.full.yaml`, then configure real external dependencies such as PostgreSQL/CockroachDB, Valkey, PKCS#11/HSM signer material, audit shipment/WORM evidence and production readiness checks. Do not treat Lite's SQLite/memory defaults as Full production settings.
 
 ## 5. Configure first admin web access
 
@@ -551,20 +552,16 @@ For a complete two-client version/revoke workflow, follow [`docs/CUSTODIA_ALICE_
 SQLite backups should use an online backup flow, not blind file copies of the live database:
 
 ```bash
-sudo install -d -m 0750 -o custodia -g custodia /var/lib/custodia/backups
-BACKUP_PATH="/var/lib/custodia/backups/custodia-$(date -u +%Y%m%dT%H%M%SZ).db"
-sudo -u custodia sqlite3 /var/lib/custodia/custodia.db \
-  ".backup '${BACKUP_PATH}'"
-sudo chmod 0640 "${BACKUP_PATH}"
-```
+if [ -x /usr/local/sbin/custodia-sqlite-backup ]; then
+  CUSTODIA_SQLITE_BACKUP=/usr/local/sbin/custodia-sqlite-backup
+else
+  CUSTODIA_SQLITE_BACKUP=/usr/sbin/custodia-sqlite-backup
+fi
 
-From a cloned repository, you can also use the helper:
-
-```bash
 sudo -u custodia env \
   CUSTODIA_SQLITE_DB=/var/lib/custodia/custodia.db \
   CUSTODIA_SQLITE_BACKUP_DIR=/var/lib/custodia/backups \
-  ./scripts/sqlite-backup.sh
+  "$CUSTODIA_SQLITE_BACKUP"
 ```
 
 ## 10. First-run checklist

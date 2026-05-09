@@ -139,7 +139,7 @@ Linux packages provide three installable groups:
 
 | Package | Contents |
 | --- | --- |
-| `custodia-server` | server binaries, `custodia-admin`, signer, systemd unit, server docs and examples. |
+| `custodia-server` | server binaries, `custodia-admin`, signer, systemd units, server docs, YAML examples and SQLite backup helper. |
 | `custodia-client` | `custodia-client` encrypted secrets CLI. |
 | `custodia-sdk` | SDK source snapshots, sourceable Bash SDK helper, shared crypto vectors and SDK docs. |
 

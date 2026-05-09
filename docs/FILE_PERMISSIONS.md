@@ -10,6 +10,7 @@ Recommended package/runtime ownership:
 | --- | --- | --- | --- |
 | `/etc/custodia` | `root:custodia` | `0750` | Runtime configuration and public CA/certificate files. |
 | `/var/lib/custodia` | `custodia:custodia` | `0750` | SQLite database, local runtime state and future migration staging. |
+| `/var/lib/custodia/backups` | `custodia:custodia` | `0750` | SQLite online backup output directory. |
 | `/var/log/custodia` | `custodia:custodia` | `0750` | Server and signer logs/audit logs. |
 | `/var/log/custodia/signer-audit.jsonl` | `custodia:custodia` | `0600` | Signer security audit JSONL; created by `custodia-signer`. |
 
@@ -17,7 +18,7 @@ Create or repair them with:
 
 ```bash
 sudo install -d -m 0750 -o root -g custodia /etc/custodia
-sudo install -d -m 0750 -o custodia -g custodia /var/lib/custodia /var/log/custodia
+sudo install -d -m 0750 -o custodia -g custodia /var/lib/custodia /var/lib/custodia/backups /var/log/custodia
 ```
 
 ## Runtime YAML files
@@ -27,12 +28,14 @@ sudo install -d -m 0750 -o custodia -g custodia /var/lib/custodia /var/log/custo
 | `/etc/custodia/custodia-server.yaml` | `root:custodia` | `0640` | Server runtime configuration. |
 | `/etc/custodia/custodia-signer.yaml` | `root:custodia` | `0640` | Signer runtime configuration. |
 
-Install examples safely with:
+Install packaged examples safely with:
 
 ```bash
-sudo install -m 0640 -o root -g custodia deploy/examples/custodia-server.lite.yaml /etc/custodia/custodia-server.yaml
-sudo install -m 0640 -o root -g custodia deploy/examples/custodia-signer.yaml /etc/custodia/custodia-signer.yaml
+sudo install -m 0640 -o root -g custodia /usr/share/doc/custodia/custodia-server.lite.yaml.example /etc/custodia/custodia-server.yaml
+sudo install -m 0640 -o root -g custodia /usr/share/doc/custodia/custodia-signer.yaml.example /etc/custodia/custodia-signer.yaml
 ```
+
+For source checkouts before install, use `deploy/examples/custodia-server.lite.yaml` and `deploy/examples/custodia-signer.yaml` as the source files.
 
 ## TLS, CA and signer material
 

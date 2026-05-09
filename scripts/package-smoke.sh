@@ -86,24 +86,21 @@ smoke_extracted_tree() {
       require_contains "$root" usr/lib/systemd/system/custodia-signer.service "ProtectHome=true"
       require_contains "$root" usr/lib/systemd/system/custodia-signer.service "ReadWritePaths=/var/log/custodia"
       require_contains "$root" usr/lib/systemd/system/custodia-signer.service "CapabilityBoundingSet="
-      require_file "$root" usr/share/custodia/examples/custodia-server.lite.yaml
-      require_file "$root" usr/share/custodia/examples/custodia-server.full.yaml
-      require_file "$root" usr/share/custodia/examples/custodia-signer.service
-      require_file "$root" usr/share/custodia/examples/custodia-signer.yaml
-      require_file "$root" usr/share/custodia/examples/checks/lite-upgrade-source.env.example
-      require_file "$root" usr/share/custodia/examples/checks/lite-upgrade-target-full.env.example
-      require_file "$root" usr/share/custodia/examples/checks/production-readiness.env.example
-      require_contains "$root" usr/share/custodia/examples/custodia-server.lite.yaml "server:"
-      require_contains "$root" usr/share/custodia/examples/custodia-server.lite.yaml "storage:"
-      require_contains "$root" usr/share/custodia/examples/custodia-server.lite.yaml "bootstrap_clients:"
-      require_not_contains "$root" usr/share/custodia/examples/custodia-server.lite.yaml "store_backend:"
-      require_contains "$root" usr/share/custodia/examples/custodia-server.full.yaml "storage:"
-      require_not_contains "$root" usr/share/custodia/examples/custodia-server.full.yaml "rate_limit_backend:"
-      require_contains "$root" usr/share/custodia/examples/custodia-signer.yaml "admin:"
-      require_contains "$root" usr/share/custodia/examples/custodia-signer.yaml "subjects:"
-      require_not_contains "$root" usr/share/custodia/examples/custodia-signer.yaml "admin_subjects:"
-      require_contains "$root" usr/share/custodia/examples/checks/production-readiness.env.example "This is NOT a runtime configuration file."
-      require_file "$root" usr/share/doc/custodia-server/README.md
+      require_executable "$root" usr/sbin/custodia-sqlite-backup
+      require_file "$root" usr/share/doc/custodia/custodia-server.lite.yaml.example
+      require_file "$root" usr/share/doc/custodia/custodia-server.full.yaml.example
+      require_file "$root" usr/share/doc/custodia/custodia-signer.yaml.example
+      require_contains "$root" usr/share/doc/custodia/custodia-server.lite.yaml.example "server:"
+      require_contains "$root" usr/share/doc/custodia/custodia-server.lite.yaml.example "storage:"
+      require_contains "$root" usr/share/doc/custodia/custodia-server.lite.yaml.example "bootstrap_clients:"
+      require_not_contains "$root" usr/share/doc/custodia/custodia-server.lite.yaml.example "store_backend:"
+      require_contains "$root" usr/share/doc/custodia/custodia-server.full.yaml.example "storage:"
+      require_not_contains "$root" usr/share/doc/custodia/custodia-server.full.yaml.example "rate_limit_backend:"
+      require_contains "$root" usr/share/doc/custodia/custodia-signer.yaml.example "admin:"
+      require_contains "$root" usr/share/doc/custodia/custodia-signer.yaml.example "subjects:"
+      require_not_contains "$root" usr/share/doc/custodia/custodia-signer.yaml.example "admin_subjects:"
+      require_file "$root" usr/share/doc/custodia/README.md
+      require_file "$root" var/lib/custodia/backups
       "$root/usr/bin/custodia-admin" version >/dev/null
       ;;
     custodia-client)

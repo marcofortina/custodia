@@ -6,7 +6,7 @@ The repository produces three package families. Server packages are universal by
 
 | Package | Architecture | Contents | Intended use |
 | --- | --- | --- | --- |
-| `custodia-server` | host arch | `custodia-server`, `custodia-admin`, `custodia-signer`, systemd unit, examples and server docs | Install and operate a Custodia node. |
+| `custodia-server` | host arch | `custodia-server`, `custodia-admin`, `custodia-signer`, systemd units, server docs, YAML examples and SQLite backup helper | Install and operate a Custodia node. |
 | `custodia-client` | host arch | encrypted `/usr/bin/custodia-client` CLI | Operator workstations, CI and client-side smoke tests. |
 | `custodia-sdk` | `all` / `noarch` | SDK source snapshots, the sourceable Bash SDK helper, shared crypto vectors and SDK docs | Application developers integrating Custodia. |
 
@@ -91,10 +91,11 @@ For a guided install on a clean Debian, Ubuntu or Fedora host, use [`docs/QUICKS
 /usr/bin/custodia-signer
 /usr/lib/systemd/system/custodia-server.service
 /usr/lib/systemd/system/custodia-signer.service
-/usr/share/custodia/examples/
-/usr/share/doc/custodia-server/
+/usr/sbin/custodia-sqlite-backup
+/usr/share/doc/custodia/
 /etc/custodia/
 /var/lib/custodia/
+/var/lib/custodia/backups/
 /var/log/custodia/
 ```
 
@@ -104,8 +105,8 @@ The package does **not** install a live `/etc/custodia/custodia-server.yaml` by 
 
 ```bash
 sudo install -d -m 0750 -o root -g custodia /etc/custodia
-sudo cp /usr/share/custodia/examples/custodia-server.lite.yaml /etc/custodia/custodia-server.yaml
-sudo cp /usr/share/custodia/examples/custodia-signer.yaml /etc/custodia/custodia-signer.yaml
+sudo cp /usr/share/doc/custodia/custodia-server.lite.yaml.example /etc/custodia/custodia-server.yaml
+sudo cp /usr/share/doc/custodia/custodia-signer.yaml.example /etc/custodia/custodia-signer.yaml
 sudo chown custodia:custodia /etc/custodia/custodia-server.yaml /etc/custodia/custodia-signer.yaml
 sudo chmod 0640 /etc/custodia/custodia-server.yaml /etc/custodia/custodia-signer.yaml
 sudo editor /etc/custodia/custodia-server.yaml
@@ -182,7 +183,7 @@ VERSION=0.1.0 REVISION=1 make package-linux
 make package-smoke
 ```
 
-The smoke check does not install packages into the host system. It extracts `.deb` artifacts with `dpkg-deb` and `.rpm` artifacts with `rpm2cpio`, then verifies the expected binaries, examples, SDK source snapshots, shared test vectors, encrypted client CLI and Bash helper entrypoint.
+The smoke check does not install packages into the host system. It extracts `.deb` artifacts with `dpkg-deb` and `.rpm` artifacts with `rpm2cpio`, then verifies the expected binaries, server documentation examples, SQLite backup helper, SDK source snapshots, shared test vectors, encrypted client CLI and Bash helper entrypoint.
 
 For server packages, the smoke check executes `custodia-admin version` because it is side-effect free. It verifies that both `custodia-server.service` and `custodia-signer.service` are packaged, but it does not start `custodia-server` or `custodia-signer`; runtime startup belongs to deployment or integration tests with real configuration and certificates.
 

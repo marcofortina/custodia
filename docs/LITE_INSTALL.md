@@ -56,8 +56,8 @@ Use `--ca-passphrase-file FILE` when you already have a passphrase file managed 
 Start from the sample profile:
 
 ```bash
-sudo cp /usr/share/custodia/examples/custodia-server.lite.yaml /etc/custodia/custodia-server.yaml
-sudo cp /usr/share/custodia/examples/custodia-signer.yaml /etc/custodia/custodia-signer.yaml
+sudo cp /usr/share/doc/custodia/custodia-server.lite.yaml.example /etc/custodia/custodia-server.yaml
+sudo cp /usr/share/doc/custodia/custodia-signer.yaml.example /etc/custodia/custodia-signer.yaml
 sudo chown custodia:custodia /etc/custodia/custodia-server.yaml /etc/custodia/custodia-signer.yaml
 sudo chmod 0640 /etc/custodia/custodia-server.yaml /etc/custodia/custodia-signer.yaml
 ```
@@ -66,7 +66,7 @@ Review every certificate path before starting the service.
 
 ## Run
 
-Use the systemd unit examples in `deploy/examples/custodia-server.service` and `deploy/examples/custodia-signer.service`, or run the vault manually for a first smoke test:
+Source installs and packages install systemd units. You can also run the vault manually for a first smoke test:
 
 ```bash
 custodia-server --config /etc/custodia/custodia-server.yaml
@@ -88,7 +88,7 @@ The signer reads `/etc/custodia/custodia-signer.yaml`, defaults to `:9444` in th
 - protect `/etc/custodia` and `/var/lib/custodia` with restrictive permissions;
 - use a CA key passphrase or offline CA when possible;
 - run `custodia-signer` only on trusted admin networks when remote CSR signing is needed;
-- backup SQLite with the online backup helper, not with blind file copies;
+- backup SQLite with the `custodia-sqlite-backup` online backup helper, not with blind file copies;
 - periodically run audit export/verify;
 - use a firewall or reverse proxy; do not expose the service unfiltered to the Internet;
 - move to FULL when you need HA, WORM/SIEM, PKCS#11/HSM or distributed rate limiting.

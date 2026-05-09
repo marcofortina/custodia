@@ -130,7 +130,7 @@ For a clean machine first run, start with **[`docs/QUICKSTART.md`](docs/QUICKSTA
 
 The package split is:
 
-- `custodia-server`: server, admin CLI, signer, systemd unit and deployment examples;
+- `custodia-server`: server, admin CLI, signer, systemd units, server docs, YAML examples and SQLite backup helper;
 - `custodia-client`: encrypted `custodia-client` CLI.
 - `custodia-sdk`: SDK source snapshots, shared vectors and SDK docs.
 

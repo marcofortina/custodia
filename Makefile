@@ -13,6 +13,7 @@ COMMIT ?= $(GIT_COMMIT)
 DATE ?= $(BUILD_DATE)
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
+SBINDIR ?= $(PREFIX)/sbin
 MANDIR ?= $(PREFIX)/share/man
 SHAREDIR ?= $(PREFIX)/share/custodia
 DOCDIR ?= $(PREFIX)/share/doc
@@ -146,7 +147,7 @@ install-smoke:
 	./scripts/install-smoke.sh
 
 .PHONY: install-server
-install-server: install-server-binaries install-server-man install-server-systemd
+install-server: install-server-binaries install-server-man install-server-systemd install-server-backup install-server-docs
 
 .PHONY: install-client
 install-client: install-client-binaries install-client-man install-client-docs
@@ -173,6 +174,20 @@ install-server-systemd:
 	sed 's|/usr/local/bin|$(BINDIR)|g' deploy/examples/custodia-server.service > "$(DESTDIR)$(SYSTEMDUNITDIR)/custodia-server.service"
 	sed 's|/usr/local/bin|$(BINDIR)|g' deploy/examples/custodia-signer.service > "$(DESTDIR)$(SYSTEMDUNITDIR)/custodia-signer.service"
 	chmod 0644 "$(DESTDIR)$(SYSTEMDUNITDIR)/custodia-server.service" "$(DESTDIR)$(SYSTEMDUNITDIR)/custodia-signer.service"
+
+
+.PHONY: install-server-backup
+install-server-backup:
+	$(INSTALL) -d "$(DESTDIR)$(SBINDIR)"
+	$(INSTALL) -m 0755 scripts/sqlite-backup.sh "$(DESTDIR)$(SBINDIR)/custodia-sqlite-backup"
+
+.PHONY: install-server-docs
+install-server-docs:
+	$(INSTALL) -d "$(DESTDIR)$(DOCDIR)/custodia"
+	$(INSTALL) -m 0644 LICENSE README.md docs/QUICKSTART.md docs/DOCTOR.md docs/LITE_PROFILE.md docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/LITE_BACKUP_RESTORE.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md "$(DESTDIR)$(DOCDIR)/custodia/"
+	$(INSTALL) -m 0644 deploy/examples/custodia-server.lite.yaml "$(DESTDIR)$(DOCDIR)/custodia/custodia-server.lite.yaml.example"
+	$(INSTALL) -m 0644 deploy/examples/custodia-server.full.yaml "$(DESTDIR)$(DOCDIR)/custodia/custodia-server.full.yaml.example"
+	$(INSTALL) -m 0644 deploy/examples/custodia-signer.yaml "$(DESTDIR)$(DOCDIR)/custodia/custodia-signer.yaml.example"
 
 .PHONY: install-client-binaries
 install-client-binaries:

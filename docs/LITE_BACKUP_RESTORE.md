@@ -5,14 +5,19 @@ operator procedures.
 
 ## Online backup
 
-Use the helper script to call SQLite online backup mode. Run it as the `custodia` service user so backup ownership and read boundaries match the running service:
+Use the installed `custodia-sqlite-backup` helper to call SQLite online backup mode. Run it as the `custodia` service user so backup ownership and read boundaries match the running service:
 
 ```bash
-sudo install -d -m 0750 -o custodia -g custodia /var/lib/custodia/backups
+if [ -x /usr/local/sbin/custodia-sqlite-backup ]; then
+  CUSTODIA_SQLITE_BACKUP=/usr/local/sbin/custodia-sqlite-backup
+else
+  CUSTODIA_SQLITE_BACKUP=/usr/sbin/custodia-sqlite-backup
+fi
+
 sudo -u custodia env \
   CUSTODIA_SQLITE_DB=/var/lib/custodia/custodia.db \
   CUSTODIA_SQLITE_BACKUP_DIR=/var/lib/custodia/backups \
-  ./scripts/sqlite-backup.sh
+  "$CUSTODIA_SQLITE_BACKUP"
 ```
 
 This produces a timestamped `.db` copy using `sqlite3 .backup`.

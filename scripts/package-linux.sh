@@ -156,22 +156,23 @@ stage_server() {
   local stage="$1"
   rm -rf "$stage"
   install -d "$stage/usr/bin" \
+    "$stage/usr/sbin" \
     "$stage/usr/lib/systemd/system" \
-    "$stage/usr/share/custodia/examples" \
-    "$stage/usr/share/custodia/examples/checks" \
-    "$stage/usr/share/doc/custodia-server" \
+    "$stage/usr/share/doc/custodia" \
     "$stage/etc/custodia" \
-    "$stage/var/lib/custodia" \
+    "$stage/var/lib/custodia/backups" \
     "$stage/var/log/custodia"
 
   install -m 0755 "$WORK_DIR/bin/custodia-server" "$stage/usr/bin/custodia-server"
   install -m 0755 "$WORK_DIR/bin/custodia-admin" "$stage/usr/bin/custodia-admin"
   install -m 0755 "$WORK_DIR/bin/custodia-signer" "$stage/usr/bin/custodia-signer"
-  install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia-server/"
-  install -m 0644 docs/QUICKSTART.md docs/DOCTOR.md docs/LITE_PROFILE.md docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md "$stage/usr/share/doc/custodia-server/"
+  install -m 0755 scripts/sqlite-backup.sh "$stage/usr/sbin/custodia-sqlite-backup"
+  install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia/"
+  install -m 0644 docs/QUICKSTART.md docs/DOCTOR.md docs/LITE_PROFILE.md docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/LITE_BACKUP_RESTORE.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md "$stage/usr/share/doc/custodia/"
+  install -m 0644 deploy/examples/custodia-server.lite.yaml "$stage/usr/share/doc/custodia/custodia-server.lite.yaml.example"
+  install -m 0644 deploy/examples/custodia-server.full.yaml "$stage/usr/share/doc/custodia/custodia-server.full.yaml.example"
+  install -m 0644 deploy/examples/custodia-signer.yaml "$stage/usr/share/doc/custodia/custodia-signer.yaml.example"
   install_manpages "$stage" custodia-admin custodia-server custodia-signer
-  install -m 0644 deploy/examples/custodia-server.lite.yaml deploy/examples/custodia-server.full.yaml deploy/examples/custodia-signer.service deploy/examples/custodia-signer.yaml "$stage/usr/share/custodia/examples/"
-  install -m 0644 deploy/examples/checks/lite-upgrade-source.env.example deploy/examples/checks/lite-upgrade-target-full.env.example deploy/examples/checks/production-readiness.env.example "$stage/usr/share/custodia/examples/checks/"
 
   cat > "$stage/usr/lib/systemd/system/custodia-server.service" <<'SERVICE'
 [Unit]
@@ -265,7 +266,7 @@ Maintainer: Custodia maintainers <maintainers@example.invalid>
 Depends: ca-certificates, adduser
 Description: Custodia vault server and administration tools
  Custodia stores opaque encrypted secret payloads and authenticates API clients with mTLS.
- This package installs custodia-server, custodia-admin, custodia-signer, examples and a systemd unit.
+ This package installs custodia-server, custodia-admin, custodia-signer, server documentation examples, the SQLite backup helper and systemd units.
 EOF_CONTROL
       cat > "$control_dir/postinst" <<'EOF_POSTINST'
 #!/bin/sh
@@ -276,7 +277,7 @@ fi
 if ! getent passwd custodia >/dev/null 2>&1; then
   adduser --system --ingroup custodia --home /var/lib/custodia --shell /usr/sbin/nologin --no-create-home custodia >/dev/null
 fi
-install -d -m 0750 -o custodia -g custodia /var/lib/custodia /var/log/custodia
+install -d -m 0750 -o custodia -g custodia /var/lib/custodia /var/lib/custodia/backups /var/log/custodia
 install -d -m 0750 -o root -g custodia /etc/custodia
 if command -v systemctl >/dev/null 2>&1; then
   systemctl daemon-reload || true
@@ -333,7 +334,7 @@ build_deb() {
 
 rpm_should_own_dir() {
   case "$1" in
-    /etc/custodia|/var/lib/custodia|/var/log/custodia|/usr/share/custodia|/usr/share/custodia/*|/usr/share/doc/custodia-*)
+    /etc/custodia|/var/lib/custodia|/var/lib/custodia/backups|/var/log/custodia|/usr/share/doc/custodia)
       return 0
       ;;
     *)
@@ -373,12 +374,12 @@ build_rpm() {
   case "$pkg" in
     custodia-server)
       summary="Custodia vault server and administration tools"
-      description="Custodia stores opaque encrypted secret payloads and authenticates API clients with mTLS. This package installs custodia-server, custodia-admin, custodia-signer, examples and a systemd unit."
+      description="Custodia stores opaque encrypted secret payloads and authenticates API clients with mTLS. This package installs custodia-server, custodia-admin, custodia-signer, server documentation examples, the SQLite backup helper and systemd units."
       requires="Requires: ca-certificates"
       pre='getent group custodia >/dev/null 2>&1 || groupadd -r custodia
 getent passwd custodia >/dev/null 2>&1 || useradd -r -g custodia -d /var/lib/custodia -s /sbin/nologin custodia
 exit 0'
-      post='install -d -m 0750 -o custodia -g custodia /var/lib/custodia /var/log/custodia
+      post='install -d -m 0750 -o custodia -g custodia /var/lib/custodia /var/lib/custodia/backups /var/log/custodia
 install -d -m 0750 -o root -g custodia /etc/custodia
 if command -v systemctl >/dev/null 2>&1; then systemctl daemon-reload || true; fi
 exit 0'
