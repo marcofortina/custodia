@@ -2,120 +2,97 @@
 
 Custodia separates client metadata registration from certificate issuance. The vault API registers client metadata; the dedicated `custodia-signer` process signs client mTLS CSRs.
 
+## Preferred remote-client flow
 
-## Fast path: issue a complete local client bundle
+For remote client workstations, generate the mTLS private key and CSR on the client. Transfer only the CSR to the server/admin host. The server signs the CSR and returns the public certificate plus the public CA certificate.
 
-For Lite or lab installs where the same operator can reach both the vault API and `custodia-signer`, `client issue` performs the full local workflow in one command. Commands that read `/etc/custodia/admin.key` should run as the `custodia` service user, not as unrestricted root. Create an output directory that the `custodia` user can write, then hand the generated client material back to the operator if needed:
+### 1. Generate the CSR on the client
 
 ```bash
-sudo install -d -o custodia -g custodia -m 0700 /tmp/custodia-client-alice
+export CLIENT_ID=client_alice
+export WORK="$HOME/.config/custodia/$CLIENT_ID"
+install -d -m 0700 "$WORK"
+
+custodia-client mtls generate-csr \
+  --client-id "$CLIENT_ID" \
+  --private-key-out "$WORK/$CLIENT_ID.key" \
+  --csr-out "$WORK/$CLIENT_ID.csr"
+```
+
+Transfer `$WORK/$CLIENT_ID.csr` to the server/admin host.
+
+### 2. Sign the CSR on the server/admin host
+
+```bash
+export CLIENT_ID=client_alice
+export API=https://localhost:8443
+export SIGNER=https://localhost:9444
+export ISSUE_DIR="/var/lib/custodia/client-issue/$CLIENT_ID"
+
+sudo rm -rf "$ISSUE_DIR"
+sudo install -d -o custodia -g custodia -m 0700 "$ISSUE_DIR"
+sudo install -o custodia -g custodia -m 0644 "$CLIENT_ID.csr" "$ISSUE_DIR/$CLIENT_ID.csr"
 
 sudo -u custodia custodia-admin \
+  --server-url "$API" \
   --cert /etc/custodia/admin.crt \
   --key /etc/custodia/admin.key \
   --ca /etc/custodia/ca.crt \
-  client issue \
-  --vault-url https://localhost:8443 \
-  --signer-url https://localhost:9444 \
-  --client-id client_alice \
-  --out-dir /tmp/custodia-client-alice
-
-sudo chown -R "$USER:$USER" /tmp/custodia-client-alice
+  client sign-csr \
+  --signer-url "$SIGNER" \
+  --client-id "$CLIENT_ID" \
+  --csr-file "$ISSUE_DIR/$CLIENT_ID.csr" \
+  --certificate-out "$ISSUE_DIR/$CLIENT_ID.crt"
 ```
 
-The command registers the client metadata, generates the client mTLS key and CSR locally, submits the CSR to `custodia-signer`, extracts the signed certificate and creates `client_alice-mtls.zip`. It still keeps application encryption keys separate; generate those with `custodia-client key generate`.
-
-Output files are exclusive and the command refuses to overwrite existing material.
-
-## 1. Register metadata in the vault API
+Transfer `$ISSUE_DIR/$CLIENT_ID.crt` and `/etc/custodia/ca.crt` back to the client. Remove the server-side staging directory after delivery:
 
 ```bash
-custodia-admin client create \
-  --client-id client_alice \
-  --mtls-subject client_alice
+sudo rm -rf "$ISSUE_DIR"
 ```
 
-This only creates the `clients` metadata row. It does not create keys and does not sign certificates.
+### 3. Configure the client profile
 
-## 2. Generate a private key and CSR locally
+On the client workstation, place the received certificate and CA under the local profile:
 
 ```bash
-custodia-admin client csr \
-  --client-id client_alice \
-  --private-key-out client_alice.key \
-  --csr-out client_alice.csr
+install -m 0644 client_alice.crt "$WORK/$CLIENT_ID.crt"
+install -m 0644 ca.crt "$WORK/ca.crt"
+chmod 0600 "$WORK/$CLIENT_ID.key"
 ```
 
-The private key is generated locally and written with `0600` permissions. The vault API never sees this private key.
-
-## 3. Submit the CSR to the signer
-
-For Lite installs, make sure the signer service is running first:
+Generate the application encryption key locally:
 
 ```bash
-sudo systemctl enable --now custodia-signer
-sudo systemctl status custodia-signer --no-pager
+custodia-client key generate \
+  --client-id "$CLIENT_ID" \
+  --private-key-out "$WORK/$CLIENT_ID.x25519.json" \
+  --public-key-out "$WORK/$CLIENT_ID.x25519.pub.json"
 ```
 
-Point `--server-url` at `custodia-signer`, not the vault API:
+Write and validate the reusable client config:
 
 ```bash
-sudo -u custodia custodia-admin \
-  --server-url https://localhost:9444 \
-  --cert /etc/custodia/admin.crt \
-  --key /etc/custodia/admin.key \
-  --ca /etc/custodia/ca.crt \
-  certificate sign \
-  --client-id client_alice \
-  --csr-file client_alice.csr
+custodia-client config write \
+  --out "$WORK/$CLIENT_ID.config.json" \
+  --server-url "$API" \
+  --cert "$WORK/$CLIENT_ID.crt" \
+  --key "$WORK/$CLIENT_ID.key" \
+  --ca "$WORK/ca.crt" \
+  --client-id "$CLIENT_ID" \
+  --crypto-key "$WORK/$CLIENT_ID.x25519.json"
+
+custodia-client config check --config "$WORK/$CLIENT_ID.config.json"
+custodia-client doctor --config "$WORK/$CLIENT_ID.config.json" --online
 ```
 
-The signer returns JSON containing a client-auth certificate bound to `client_alice`. Save the signer response, then extract the PEM certificate with `custodia-admin certificate extract`:
+## Lite/lab shortcut
 
-```bash
-sudo -u custodia custodia-admin \
-  --server-url https://localhost:9444 \
-  --cert /etc/custodia/admin.crt \
-  --key /etc/custodia/admin.key \
-  --ca /etc/custodia/ca.crt \
-  certificate sign \
-  --client-id client_alice \
-  --csr-file client_alice.csr \
-  > client_alice.sign.json
+`custodia-admin client issue` remains available for local Lite/lab workflows where the same operator can reach the vault API and `custodia-signer`. It creates local mTLS material under the requested output directory. Do not use it as the preferred remote-client path because it generates the mTLS private key on the server/admin side.
 
-custodia-admin certificate extract \
-  --input client_alice.sign.json \
-  --certificate-out client_alice.crt
-```
+## Security notes
 
-`certificate extract` validates that `certificate_pem` contains exactly one client-auth PEM certificate, writes `client_alice.crt` with `0644` permissions and refuses to overwrite an existing file. The private key remains the file generated locally by `custodia-admin client csr`.
-
-Optional local client bundle for handoff to an application host:
-
-```bash
-custodia-admin certificate bundle \
-  --certificate client_alice.crt \
-  --private-key client_alice.key \
-  --ca /etc/custodia/ca.crt \
-  --out client_alice-mtls.zip
-```
-
-`certificate bundle` is a local-only packaging helper. It writes an exclusive `0600` zip containing `client.crt`, `client.key`, `ca.crt` and `README.txt`; it does not contact the vault, signer or Web Console. Protect the archive because it contains the client mTLS private key. Application encryption keys remain separate and are never bundled by this command.
-
-## 4. Use the certificate for vault API mTLS
-
-Configure client applications with:
-
-- signed client certificate;
-- locally generated private key;
-- vault server CA.
-
-The certificate identity must match the metadata `mtls_subject` registered in the vault API.
-
-## Security boundary
-
-- The vault API process does not hold the CA private key.
-- The signer service does not handle plaintext secrets, ciphertext, envelopes or application encryption keys.
-- The signer validates CSR identity binding but does not become a key directory.
-- Lite may use the file-backed local CA generated by `custodia-admin ca bootstrap-local`.
-- Production deployments should back signing with TPM/HSM/PKCS#11 instead of file-backed CA keys.
+- mTLS private keys should be generated on the client workstation when clients are remote.
+- Application encryption keys generated by `custodia-client key generate` must always remain client-side.
+- The server must never receive plaintext, DEKs, application private keys or recipient private keys.
+- Do not loosen `/etc/custodia` permissions for unprivileged client commands. Copy the public CA certificate into the client profile instead.

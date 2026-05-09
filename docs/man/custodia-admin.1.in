@@ -48,13 +48,22 @@ Print server build metadata from
 .B client create --client-id ID --mtls-subject SUBJECT
 Register client metadata in the vault.
 .TP
+.B client sign-csr --client-id ID --csr-file FILE --certificate-out FILE --signer-url URL
+Register client metadata, submit a client-generated CSR to
+.BR custodia-signer (1),
+and write the signed client certificate. The client mTLS private key stays on
+the client host.
+.TP
 .B client csr --client-id ID --private-key-out FILE --csr-out FILE
-Generate a local client mTLS private key and CSR.
+Generate a local client mTLS private key and CSR. Prefer
+.BR custodia-client " mtls generate-csr"
+for remote client workstations.
 .TP
 .B client issue --client-id ID --out-dir DIR --signer-url URL
 Register client metadata, generate local mTLS key/CSR, submit the CSR to
 .BR custodia-signer (1),
-extract the certificate, and create a local certificate bundle.
+extract the certificate, and create a local certificate bundle. This is a
+convenience path for all-in-one Lite/lab hosts.
 .TP
 .B certificate sign --client-id ID --csr-file FILE
 Submit a CSR to the signing service.
@@ -73,6 +82,12 @@ Verify exported audit body/digest/count artifacts.
 .TP
 .B production check
 Run production configuration checks from an environment file.
+.TP
+.B web totp configure --config FILE [--issuer NAME] [--account NAME]
+Generate first-run Web MFA material, append it to the server YAML config, print
+the TOTP secret and provisioning URI, and print a terminal QR code when
+.B qrencode
+is available.
 .TP
 .B doctor --server-config FILE --signer-config FILE [--systemd] [--network]
 Run read-only installation diagnostics. The default mode is offline and checks
@@ -133,20 +148,33 @@ as the
 .B custodia
 service user instead of unrestricted root.
 .SH EXAMPLES
-Issue a local client mTLS bundle:
+Sign a client-generated CSR without handling the client mTLS private key on the server:
 .PP
 .EX
-sudo install -d -o custodia -g custodia -m 0700 /tmp/custodia-client-alice
-sudo -u custodia custodia-admin \\
-  --server-url https://localhost:8443 \\
-  --cert /etc/custodia/admin.crt \\
-  --key /etc/custodia/admin.key \\
-  --ca /etc/custodia/ca.crt \\
-  client issue \\
-  --signer-url https://localhost:9444 \\
-  --client-id client_alice \\
-  --out-dir /tmp/custodia-client-alice
-sudo chown -R "$USER:$USER" /tmp/custodia-client-alice
+export CLIENT_ID=client_alice
+export ISSUE_DIR="/var/lib/custodia/client-issue/$CLIENT_ID"
+sudo rm -rf "$ISSUE_DIR"
+sudo install -d -o custodia -g custodia -m 0700 "$ISSUE_DIR"
+sudo install -o custodia -g custodia -m 0644 "$CLIENT_ID.csr" "$ISSUE_DIR/$CLIENT_ID.csr"
+sudo -u custodia custodia-admin \
+  --server-url https://localhost:8443 \
+  --cert /etc/custodia/admin.crt \
+  --key /etc/custodia/admin.key \
+  --ca /etc/custodia/ca.crt \
+  client sign-csr \
+  --signer-url https://localhost:9444 \
+  --client-id "$CLIENT_ID" \
+  --csr-file "$ISSUE_DIR/$CLIENT_ID.csr" \
+  --certificate-out "$ISSUE_DIR/$CLIENT_ID.crt"
+sudo rm -rf "$ISSUE_DIR"
+.EE
+
+Configure first-run Web TOTP material in the server YAML:
+.PP
+.EX
+sudo custodia-admin web totp configure \
+  --config /etc/custodia/custodia-server.yaml \
+  --account admin
 .EE
 .SH VERSION
 Custodia version: @VERSION@

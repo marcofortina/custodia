@@ -16,10 +16,10 @@ CUSTODIA_WEB_SESSION_TTL_SECONDS=900
 For first-run setup, generate a valid TOTP secret with:
 
 ```bash
-custodia-admin web totp generate --account admin
+sudo custodia-admin web totp configure --config /etc/custodia/custodia-server.yaml --account admin
 ```
 
-Use the printed `web_totp_secret` line in `config.yaml` or `CUSTODIA_WEB_TOTP_SECRET`. Store the provisioning URI or secret only in the operator's authenticator/password manager.
+The command writes `web_totp_secret` and `web_session_secret` to the YAML config when they are not already present. It always prints the TOTP secret and provisioning URI. If `qrencode` is installed, it also prints an ANSI terminal QR code. Store the provisioning URI or secret only in the operator's authenticator/password manager.
 
 ## Login flow
 

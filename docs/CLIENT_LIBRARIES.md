@@ -129,18 +129,9 @@ Custodia stores only the target `client_id` and opaque envelope payload.
 
 ## Bash helper and external crypto providers
 
-`clients/bash/custodia.sh` is useful for CI/CD, smoke tests, and operational scripts. It can call an external crypto provider through `CUSTODIA_CRYPTO_PROVIDER`.
+`clients/bash/custodia.bash` is a sourceable Bash SDK helper around `custodia-client` profiles. It is useful for CI/CD and operational shell scripts that want functions instead of invoking raw commands directly.
 
-Provider contract:
-
-```text
-$CUSTODIA_CRYPTO_PROVIDER create-encrypted-secret < request.json > create-payload.json
-$CUSTODIA_CRYPTO_PROVIDER read-decrypted-secret < raw-secret-response.json > plaintext-response.json
-$CUSTODIA_CRYPTO_PROVIDER share-encrypted-secret < request.json > share-payload.json
-$CUSTODIA_CRYPTO_PROVIDER create-encrypted-secret-version < request.json > version-payload.json
-```
-
-The provider, not Bash, is responsible for cryptography and must follow the shared vector contract if used for production workflows.
+The helper does not implement cryptography. It delegates to `custodia-client`, so crypto behavior follows the same shared vector contract as the Go client CLI.
 
 ## Package layout
 
@@ -149,8 +140,8 @@ Linux packages provide three installable groups:
 | Package | Contents |
 | --- | --- |
 | `custodia-server` | server binaries, `custodia-admin`, signer, systemd unit, server docs and examples. |
-| `custodia-client` | `custodia-client` encrypted secrets CLI and Bash transport helper. |
-| `custodia-sdk` | SDK source snapshots, shared crypto vectors, and SDK docs. |
+| `custodia-client` | `custodia-client` encrypted secrets CLI. |
+| `custodia-sdk` | SDK source snapshots, sourceable Bash SDK helper, shared crypto vectors and SDK docs. |
 
 External language registry publishing remains future release work.
 

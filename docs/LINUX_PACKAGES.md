@@ -7,8 +7,8 @@ The repository produces three package families. Server packages are universal by
 | Package | Architecture | Contents | Intended use |
 | --- | --- | --- | --- |
 | `custodia-server` | host arch | `custodia-server`, `custodia-admin`, `custodia-signer`, systemd unit, examples and server docs | Install and operate a Custodia node. |
-| `custodia-client` | host arch | encrypted `/usr/bin/custodia-client` CLI and Bash transport helper | Operator workstations, CI and client-side smoke tests. |
-| `custodia-sdk` | `all` / `noarch` | SDK source snapshots, shared crypto vectors and SDK docs | Application developers integrating Custodia. |
+| `custodia-client` | host arch | encrypted `/usr/bin/custodia-client` CLI | Operator workstations, CI and client-side smoke tests. |
+| `custodia-sdk` | `all` / `noarch` | SDK source snapshots, the sourceable Bash SDK helper, shared crypto vectors and SDK docs | Application developers integrating Custodia. |
 
 This split is intentional. Operating-system packages are good for deployable binaries and local source snapshots. Language SDK distribution should still use language-native channels when the project starts publishing real public packages:
 
@@ -120,11 +120,10 @@ sudo systemctl enable --now custodia-server custodia-signer
 ```text
 /usr/bin/custodia-client
 /usr/share/man/man1/custodia-client.1.gz
-/usr/share/custodia/clients/bash/custodia.sh
 /usr/share/doc/custodia-client/
 ```
 
-`/usr/bin/custodia-client` is the Go encrypted secrets CLI for local put/get/share/version workflows. The Bash transport helper is shipped under `/usr/share/custodia/clients/bash/custodia.sh` for CI and raw REST/mTLS smoke tests.
+`/usr/bin/custodia-client` is the Go encrypted secrets CLI for local put/get/share/version workflows, client-side config validation, online doctor checks and mTLS CSR generation.
 
 ## SDK package layout
 
@@ -133,6 +132,7 @@ sudo systemctl enable --now custodia-server custodia-signer
 ```text
 /usr/share/custodia/sdk/
 /usr/share/custodia/sdk/testdata/client-crypto/
+/usr/share/custodia/sdk/clients/bash/custodia.bash
 /usr/share/doc/custodia-sdk/
 ```
 

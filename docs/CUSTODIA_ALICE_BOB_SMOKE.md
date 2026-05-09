@@ -2,18 +2,7 @@
 
 This runbook verifies a fresh Custodia install end to end with two mTLS clients and local application encryption keys.
 
-It covers:
-
-1. registering `client_alice` and issuing her mTLS certificate;
-2. generating Alice's local X25519 application key;
-3. creating and reading an encrypted secret as Alice;
-4. registering `client_bob` and issuing his mTLS certificate;
-5. sharing Alice's secret with Bob;
-6. reading the shared secret as Bob;
-7. creating a new encrypted version;
-8. revoking Bob's future access.
-
-The vault never receives plaintext, DEKs, private keys or recipient public keys. Recipient public keys are local files exchanged through a trusted channel outside Custodia.
+It uses the preferred CSR flow: each client generates its own mTLS private key and CSR locally; the server signs only the CSR.
 
 ## Assumptions
 
@@ -30,107 +19,103 @@ Set common paths:
 ```bash
 export API=https://localhost:8443
 export SIGNER=https://localhost:9444
-export CA=/etc/custodia/ca.crt
+export ADMIN_CA=/etc/custodia/ca.crt
 export ADMIN_CERT=/etc/custodia/admin.crt
 export ADMIN_KEY=/etc/custodia/admin.key
-export WORK=/tmp/custodia-alice-bob
-export ISSUE_ROOT=/tmp/custodia-issue
+export WORK="$HOME/.config/custodia/alice-bob-smoke"
+export ISSUE_ROOT=/var/lib/custodia/client-issue
+export ALICE_ID=client_alice
+export BOB_ID=client_bob
 
-mkdir -p "$WORK"
-chmod 700 "$WORK"
+rm -rf "$WORK"
+install -d -m 0700 "$WORK/alice" "$WORK/bob"
+sudo install -o "$USER" -g "$USER" -m 0644 "$ADMIN_CA" "$WORK/ca.crt"
+export CA="$WORK/ca.crt"
 ```
 
-## 1. Register and issue Alice
-
-Issue Alice with the admin shortcut. This registers metadata in the vault, generates Alice's mTLS private key and CSR locally, signs the CSR through `custodia-signer`, extracts the certificate and writes `client_alice-mtls.zip`:
+## 1. Generate Alice CSR locally and sign it
 
 ```bash
-sudo rm -rf "$ISSUE_ROOT/client_alice"
-sudo install -d -o custodia -g custodia -m 0700 "$ISSUE_ROOT/client_alice"
+custodia-client mtls generate-csr \
+  --client-id "$ALICE_ID" \
+  --private-key-out "$WORK/alice/$ALICE_ID.key" \
+  --csr-out "$WORK/alice/$ALICE_ID.csr"
+```
+
+Transfer Alice's CSR to the server/admin host when Alice is remote. Sign it:
+
+```bash
+ALICE_ISSUE_DIR="$ISSUE_ROOT/$ALICE_ID"
+sudo rm -rf "$ALICE_ISSUE_DIR"
+sudo install -d -o custodia -g custodia -m 0700 "$ALICE_ISSUE_DIR"
+sudo install -o custodia -g custodia -m 0644 "$WORK/alice/$ALICE_ID.csr" "$ALICE_ISSUE_DIR/$ALICE_ID.csr"
 
 sudo -u custodia custodia-admin \
   --server-url "$API" \
   --cert "$ADMIN_CERT" \
   --key "$ADMIN_KEY" \
-  --ca "$CA" \
-  client issue \
+  --ca "$ADMIN_CA" \
+  client sign-csr \
   --signer-url "$SIGNER" \
-  --client-id client_alice \
-  --out-dir "$ISSUE_ROOT/client_alice"
+  --client-id "$ALICE_ID" \
+  --csr-file "$ALICE_ISSUE_DIR/$ALICE_ID.csr" \
+  --certificate-out "$ALICE_ISSUE_DIR/$ALICE_ID.crt"
 
-sudo cp -a "$ISSUE_ROOT/client_alice"/client_alice.* "$WORK"/
-sudo cp -a "$ISSUE_ROOT/client_alice"/client_alice-mtls.zip "$WORK"/
-sudo chown "$USER:$USER" "$WORK"/client_alice.* "$WORK"/client_alice-mtls.zip
-sudo rm -rf "$ISSUE_ROOT/client_alice"
-chmod 600 "$WORK/client_alice.key" "$WORK/client_alice.sign.json" "$WORK/client_alice-mtls.zip"
+sudo install -o "$USER" -g "$USER" -m 0644 "$ALICE_ISSUE_DIR/$ALICE_ID.crt" "$WORK/alice/$ALICE_ID.crt"
+sudo rm -rf "$ALICE_ISSUE_DIR"
 ```
 
-Verify Alice's mTLS identity:
+Transfer Alice's signed certificate and `ca.crt` back to Alice when Alice is remote.
 
-```bash
-custodia-client secret list \
-  --server-url "$API" \
-  --cert "$WORK/client_alice.crt" \
-  --key "$WORK/client_alice.key" \
-  --ca "$CA"
-```
-
-## 2. Generate Alice's application crypto key
+## 2. Generate Alice application crypto key and config
 
 ```bash
 custodia-client key generate \
-  --client-id client_alice \
-  --private-key-out "$WORK/client_alice.x25519.json" \
-  --public-key-out "$WORK/client_alice.x25519.pub.json"
+  --client-id "$ALICE_ID" \
+  --private-key-out "$WORK/alice/$ALICE_ID.x25519.json" \
+  --public-key-out "$WORK/alice/$ALICE_ID.x25519.pub.json"
 
-custodia-client key inspect --key "$WORK/client_alice.x25519.json"
-```
+ALICE_CONFIG="$WORK/alice/$ALICE_ID.config.json"
 
-Create a reusable Alice profile and validate it offline:
-
-```bash
 custodia-client config write \
-  --out "$WORK/client_alice.config.json" \
+  --out "$ALICE_CONFIG" \
   --server-url "$API" \
-  --cert "$WORK/client_alice.crt" \
-  --key "$WORK/client_alice.key" \
+  --cert "$WORK/alice/$ALICE_ID.crt" \
+  --key "$WORK/alice/$ALICE_ID.key" \
   --ca "$CA" \
-  --client-id client_alice \
-  --crypto-key "$WORK/client_alice.x25519.json"
+  --client-id "$ALICE_ID" \
+  --crypto-key "$WORK/alice/$ALICE_ID.x25519.json"
 
-custodia-client config check --config "$WORK/client_alice.config.json"
+custodia-client config check --config "$ALICE_CONFIG"
+custodia-client doctor --config "$ALICE_CONFIG" --online
 ```
 
 ## 3. Alice creates and reads an encrypted secret
 
 ```bash
-printf 'super secret demo value' > "$WORK/secret.txt"
-chmod 600 "$WORK/secret.txt"
+printf 'super secret demo value' > "$WORK/alice/secret.txt"
+chmod 600 "$WORK/alice/secret.txt"
 
 custodia-client secret put \
-  --config "$WORK/client_alice.config.json" \
+  --config "$ALICE_CONFIG" \
   --name smoke-demo \
-  --value-file "$WORK/secret.txt" \
-  > "$WORK/secret.create.json"
+  --value-file "$WORK/alice/secret.txt" \
+  > "$WORK/alice/secret.create.json"
 
 SECRET_ID=$(python3 - <<'PY'
 import json, os
-print(json.load(open(os.environ['WORK'] + '/secret.create.json'))['secret_id'])
+print(json.load(open(os.environ['WORK'] + '/alice/secret.create.json'))['secret_id'])
 PY
 )
 
 echo "$SECRET_ID" > "$WORK/secret.id"
-```
 
-Read it back as Alice:
-
-```bash
 custodia-client secret get \
-  --config "$WORK/client_alice.config.json" \
+  --config "$ALICE_CONFIG" \
   --secret-id "$SECRET_ID" \
-  --out "$WORK/alice.readback.txt"
+  --out "$WORK/alice/readback.txt"
 
-cat "$WORK/alice.readback.txt"
+cat "$WORK/alice/readback.txt"
 ```
 
 Expected output:
@@ -139,82 +124,96 @@ Expected output:
 super secret demo value
 ```
 
-## 4. Register and issue Bob
+## 4. Generate Bob CSR locally and sign it
 
 ```bash
-sudo rm -rf "$ISSUE_ROOT/client_bob"
-sudo install -d -o custodia -g custodia -m 0700 "$ISSUE_ROOT/client_bob"
+custodia-client mtls generate-csr \
+  --client-id "$BOB_ID" \
+  --private-key-out "$WORK/bob/$BOB_ID.key" \
+  --csr-out "$WORK/bob/$BOB_ID.csr"
+```
+
+Transfer Bob's CSR to the server/admin host when Bob is remote. Sign it:
+
+```bash
+BOB_ISSUE_DIR="$ISSUE_ROOT/$BOB_ID"
+sudo rm -rf "$BOB_ISSUE_DIR"
+sudo install -d -o custodia -g custodia -m 0700 "$BOB_ISSUE_DIR"
+sudo install -o custodia -g custodia -m 0644 "$WORK/bob/$BOB_ID.csr" "$BOB_ISSUE_DIR/$BOB_ID.csr"
 
 sudo -u custodia custodia-admin \
   --server-url "$API" \
   --cert "$ADMIN_CERT" \
   --key "$ADMIN_KEY" \
-  --ca "$CA" \
-  client issue \
+  --ca "$ADMIN_CA" \
+  client sign-csr \
   --signer-url "$SIGNER" \
-  --client-id client_bob \
-  --out-dir "$ISSUE_ROOT/client_bob"
+  --client-id "$BOB_ID" \
+  --csr-file "$BOB_ISSUE_DIR/$BOB_ID.csr" \
+  --certificate-out "$BOB_ISSUE_DIR/$BOB_ID.crt"
 
-sudo cp -a "$ISSUE_ROOT/client_bob"/client_bob.* "$WORK"/
-sudo cp -a "$ISSUE_ROOT/client_bob"/client_bob-mtls.zip "$WORK"/
-sudo chown "$USER:$USER" "$WORK"/client_bob.* "$WORK"/client_bob-mtls.zip
-sudo rm -rf "$ISSUE_ROOT/client_bob"
-chmod 600 "$WORK/client_bob.key" "$WORK/client_bob.sign.json" "$WORK/client_bob-mtls.zip"
+sudo install -o "$USER" -g "$USER" -m 0644 "$BOB_ISSUE_DIR/$BOB_ID.crt" "$WORK/bob/$BOB_ID.crt"
+sudo rm -rf "$BOB_ISSUE_DIR"
 ```
 
-Generate and validate Bob's application key/config:
+Transfer Bob's signed certificate and `ca.crt` back to Bob when Bob is remote.
+
+## 5. Generate Bob application crypto key and config
 
 ```bash
 custodia-client key generate \
-  --client-id client_bob \
-  --private-key-out "$WORK/client_bob.x25519.json" \
-  --public-key-out "$WORK/client_bob.x25519.pub.json"
+  --client-id "$BOB_ID" \
+  --private-key-out "$WORK/bob/$BOB_ID.x25519.json" \
+  --public-key-out "$WORK/bob/$BOB_ID.x25519.pub.json"
+
+BOB_CONFIG="$WORK/bob/$BOB_ID.config.json"
 
 custodia-client config write \
-  --out "$WORK/client_bob.config.json" \
+  --out "$BOB_CONFIG" \
   --server-url "$API" \
-  --cert "$WORK/client_bob.crt" \
-  --key "$WORK/client_bob.key" \
+  --cert "$WORK/bob/$BOB_ID.crt" \
+  --key "$WORK/bob/$BOB_ID.key" \
   --ca "$CA" \
-  --client-id client_bob \
-  --crypto-key "$WORK/client_bob.x25519.json"
+  --client-id "$BOB_ID" \
+  --crypto-key "$WORK/bob/$BOB_ID.x25519.json"
 
-custodia-client config check --config "$WORK/client_bob.config.json"
+custodia-client config check --config "$BOB_CONFIG"
+custodia-client doctor --config "$BOB_CONFIG" --online
 ```
 
 Before sharing, Bob should not be able to read Alice's secret:
 
 ```bash
 custodia-client secret get \
-  --config "$WORK/client_bob.config.json" \
+  --config "$BOB_CONFIG" \
   --secret-id "$SECRET_ID" \
   --out "$WORK/bob.before-share.txt"
 ```
 
 Expected: non-zero exit with an authorization error.
 
-## 5. Alice shares the secret with Bob
+## 6. Alice shares the secret with Bob
 
-Alice uses Bob's public key file from the trusted local channel:
+Transfer Bob's public key `$WORK/bob/$BOB_ID.x25519.pub.json` to Alice through a trusted channel when Bob is remote.
 
 ```bash
 custodia-client secret share \
-  --config "$WORK/client_alice.config.json" \
+  --config "$ALICE_CONFIG" \
   --secret-id "$SECRET_ID" \
-  --target-client-id client_bob \
-  --recipient "client_bob=$WORK/client_bob.x25519.pub.json" \
+  --target-client-id "$BOB_ID" \
+  --recipient "$BOB_ID=$WORK/bob/$BOB_ID.x25519.pub.json" \
   --permissions 4
 ```
 
-Bob can now read and decrypt the secret locally:
+Transfer the `SECRET_ID` value to Bob when Bob is remote. Bob can now read and decrypt the secret locally:
 
 ```bash
 custodia-client secret get \
-  --config "$WORK/client_bob.config.json" \
+  --config "$BOB_CONFIG" \
   --secret-id "$SECRET_ID" \
-  --out "$WORK/bob.readback.txt"
+  --out "$WORK/bob/readback.txt"
 
-cat "$WORK/bob.readback.txt"
+cat "$WORK/bob/readback.txt"
 ```
 
 Expected output:
@@ -223,43 +222,70 @@ Expected output:
 super secret demo value
 ```
 
-## 6. Alice creates a new encrypted version
-
-For a strong rotation, create a new version and include every client that must keep access:
+## 7. Create a new encrypted version as Alice
 
 ```bash
-printf 'rotated secret demo value' > "$WORK/secret.v2.txt"
-chmod 600 "$WORK/secret.v2.txt"
+printf 'rotated secret value' > "$WORK/alice/secret-v2.txt"
+chmod 600 "$WORK/alice/secret-v2.txt"
 
 custodia-client secret version put \
-  --config "$WORK/client_alice.config.json" \
+  --config "$ALICE_CONFIG" \
   --secret-id "$SECRET_ID" \
-  --value-file "$WORK/secret.v2.txt" \
-  --recipient "client_bob=$WORK/client_bob.x25519.pub.json" \
-  --permissions 7
+  --value-file "$WORK/alice/secret-v2.txt" \
+  --recipient "$BOB_ID=$WORK/bob/$BOB_ID.x25519.pub.json" \
+  > "$WORK/alice/version.create.json"
 ```
 
-Inspect metadata:
+Bob reads the latest version:
 
 ```bash
-custodia-client secret versions --config "$WORK/client_alice.config.json" --secret-id "$SECRET_ID" --limit 10
-custodia-client secret access list --config "$WORK/client_alice.config.json" --secret-id "$SECRET_ID" --limit 10
+custodia-client secret get \
+  --config "$BOB_CONFIG" \
+  --secret-id "$SECRET_ID" \
+  --out "$WORK/bob/readback-v2.txt"
+
+cat "$WORK/bob/readback-v2.txt"
 ```
 
-## 7. Revoke Bob's future access
+Expected output:
+
+```text
+rotated secret value
+```
+
+## 8. Revoke Bob's future access
 
 ```bash
 custodia-client secret access revoke \
-  --config "$WORK/client_alice.config.json" \
+  --config "$ALICE_CONFIG" \
   --secret-id "$SECRET_ID" \
-  --target-client-id client_bob \
+  --target-client-id "$BOB_ID" \
   --yes
 ```
 
-This is future server-side revocation. Material Bob already downloaded may remain decryptable offline; for strong revocation, create a new encrypted version without Bob as a recipient.
-
-## Cleanup
+Bob's future reads should fail:
 
 ```bash
-rm -rf "$WORK"
+custodia-client secret get \
+  --config "$BOB_CONFIG" \
+  --secret-id "$SECRET_ID" \
+  --out "$WORK/bob.after-revoke.txt"
 ```
+
+Expected: non-zero exit with an authorization error.
+
+## 9. Delete the smoke secret
+
+```bash
+custodia-client secret delete \
+  --config "$ALICE_CONFIG" \
+  --secret-id "$SECRET_ID" \
+  --yes
+```
+
+## Security notes
+
+- The vault never receives plaintext, DEKs, application private keys or recipient private keys.
+- Client mTLS private keys are generated locally by `custodia-client mtls generate-csr` and are not staged on the server.
+- Recipient public keys are local files exchanged through a trusted channel outside Custodia.
+- Revocation stops future server-side reads. Material already downloaded by authorized clients remains outside server control.

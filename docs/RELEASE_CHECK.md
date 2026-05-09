@@ -9,7 +9,7 @@ It runs:
 - Python client syntax compilation and tests;
 - Node.js syntax checks and tests;
 - Java, C++, Rust and Bash client checks;
-- packaging checks in CI through `make package-deb` and `make package-rpm`;
+- packaging checks in CI through `make package-deb` and `make package-rpm`, producing `custodia-server`, `custodia-client` and `custodia-sdk`;
 - formal verification checks when TLC is installed.
 
 ## Usage
@@ -31,6 +31,8 @@ Local release candidates can build installable packages with:
 ```bash
 make package-deb
 make package-rpm
+# Or build both formats explicitly:
+VERSION=0.1.0 REVISION=1 PACKAGE_NAMES="server client sdk" make package-linux
 ```
 
 The CI workflow builds both formats and uploads the generated artifacts. See [`LINUX_PACKAGES.md`](LINUX_PACKAGES.md).

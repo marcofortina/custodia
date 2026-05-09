@@ -22,7 +22,7 @@ runs the dedicated Custodia certificate signing service. It signs approved
 client mTLS CSRs and keeps CA signing concerns separate from the vault server.
 .PP
 The signer is optional for purely manual certificate workflows, but it is the
-recommended Lite path when using the admin client issue shortcut. Packaged
+recommended Lite path when using `custodia-admin client sign-csr` for client-generated CSRs. Packaged
 installs should use a YAML config file at
 .I /etc/custodia/custodia-signer.yaml
 with environment variables reserved for overrides.

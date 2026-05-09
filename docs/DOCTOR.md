@@ -99,9 +99,7 @@ Use `--online` only when you want to test the configured server with mTLS:
 custodia-client doctor --config client_alice.config.json --online
 ```
 
-The online check performs a lightweight authenticated version request. It should
-not be used as a secret read/write smoke test; use the Alice/Bob smoke runbook for
-that workflow.
+The online check performs a lightweight authenticated current-client request (`/v1/me`) with the configured non-admin mTLS identity. It should not be used as a secret read/write smoke test; use the Alice/Bob smoke runbook for that workflow.
 
 ## Related commands
 

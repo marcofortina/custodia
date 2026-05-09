@@ -40,12 +40,16 @@ Derive and write a local public key file from a private key file.
 .B key inspect --key FILE
 Print key metadata and public-key fingerprint without exposing private material.
 .TP
+.B mtls generate-csr --client-id ID --private-key-out FILE --csr-out FILE
+Generate a client-side mTLS private key and CSR. Transfer only the CSR to the
+server/admin signer workflow; keep the private key on the client host.
+.TP
 .B doctor --config FILE [--online]
 Run read-only diagnostics for a local client profile. The default mode validates
 local profile, mTLS files, CA bundle and crypto key without contacting the server.
 Pass
 .B --online
-for an mTLS reachability/version check.
+for an mTLS current-client reachability check.
 .TP
 .B secret put --config FILE --name NAME --value-file FILE
 Encrypt a plaintext file locally and create a secret.
@@ -88,7 +92,9 @@ Client mTLS certificate.
 Client mTLS private key.
 .TP
 .BI --ca " FILE"
-Custodia CA certificate.
+Custodia CA certificate. For normal client profiles, use a readable client-local copy such as
+.I ca.crt
+instead of loosening /etc/custodia permissions.
 .TP
 .BI --client-id " ID"
 Local client id for crypto operations.
@@ -146,7 +152,7 @@ custodia-client config write \\
   --server-url https://localhost:8443 \\
   --cert client_alice.crt \\
   --key client_alice.key \\
-  --ca /etc/custodia/ca.crt \\
+  --ca ca.crt \\
   --client-id client_alice \\
   --crypto-key client_alice.x25519.json
 custodia-client config check --config client_alice.config.json

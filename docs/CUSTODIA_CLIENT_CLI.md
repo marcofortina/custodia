@@ -33,8 +33,10 @@ All secret commands require the transport mTLS identity:
 --server-url https://localhost:8443 \
 --cert client_alice.crt \
 --key client_alice.key \
---ca /etc/custodia/ca.crt
+--ca ca.crt
 ```
+
+For a normal client profile, copy the public Custodia CA certificate into the client work directory and reference that readable copy. Do not loosen `/etc/custodia` permissions just so an unprivileged client can read `/etc/custodia/ca.crt`.
 
 The same values may be provided through environment variables:
 
@@ -42,7 +44,7 @@ The same values may be provided through environment variables:
 export CUSTODIA_BASE_URL=https://localhost:8443
 export CUSTODIA_CLIENT_CERT=client_alice.crt
 export CUSTODIA_CLIENT_KEY=client_alice.key
-export CUSTODIA_CA_CERT=/etc/custodia/ca.crt
+export CUSTODIA_CA_CERT=ca.crt
 export CUSTODIA_CLIENT_ID=client_alice
 export CUSTODIA_CRYPTO_KEY=client_alice.x25519.json
 ```
@@ -58,7 +60,7 @@ custodia-client config write \
   --server-url https://localhost:8443 \
   --cert client_alice.crt \
   --key client_alice.key \
-  --ca /etc/custodia/ca.crt \
+  --ca ca.crt \
   --client-id client_alice \
   --crypto-key client_alice.x25519.json
 ```
@@ -100,7 +102,7 @@ custodia-client secret put \
   --server-url https://localhost:8443 \
   --cert client_alice.crt \
   --key client_alice.key \
-  --ca /etc/custodia/ca.crt \
+  --ca ca.crt \
   --client-id client_alice \
   --crypto-key client_alice.x25519.json \
   --name smoke-demo \
@@ -116,7 +118,7 @@ custodia-client secret get \
   --server-url https://localhost:8443 \
   --cert client_alice.crt \
   --key client_alice.key \
-  --ca /etc/custodia/ca.crt \
+  --ca ca.crt \
   --client-id client_alice \
   --crypto-key client_alice.x25519.json \
   --secret-id <secret_id> \
@@ -134,7 +136,7 @@ custodia-client secret share \
   --server-url https://localhost:8443 \
   --cert client_alice.crt \
   --key client_alice.key \
-  --ca /etc/custodia/ca.crt \
+  --ca ca.crt \
   --client-id client_alice \
   --crypto-key client_alice.x25519.json \
   --secret-id <secret_id> \
@@ -157,7 +159,7 @@ custodia-client secret version put \
   --server-url https://localhost:8443 \
   --cert client_alice.crt \
   --key client_alice.key \
-  --ca /etc/custodia/ca.crt \
+  --ca ca.crt \
   --client-id client_alice \
   --crypto-key client_alice.x25519.json \
   --secret-id <secret_id> \
@@ -175,7 +177,7 @@ custodia-client secret list \
   --server-url https://localhost:8443 \
   --cert client_alice.crt \
   --key client_alice.key \
-  --ca /etc/custodia/ca.crt \
+  --ca ca.crt \
   --limit 50
 ```
 
@@ -188,7 +190,7 @@ custodia-client secret versions \
   --server-url https://localhost:8443 \
   --cert client_alice.crt \
   --key client_alice.key \
-  --ca /etc/custodia/ca.crt \
+  --ca ca.crt \
   --secret-id <secret_id> \
   --limit 50
 ```
@@ -200,7 +202,7 @@ custodia-client secret access list \
   --server-url https://localhost:8443 \
   --cert client_alice.crt \
   --key client_alice.key \
-  --ca /etc/custodia/ca.crt \
+  --ca ca.crt \
   --secret-id <secret_id> \
   --limit 50
 ```
@@ -214,7 +216,7 @@ custodia-client secret access revoke \
   --server-url https://localhost:8443 \
   --cert client_alice.crt \
   --key client_alice.key \
-  --ca /etc/custodia/ca.crt \
+  --ca ca.crt \
   --secret-id <secret_id> \
   --target-client-id client_bob \
   --yes
@@ -229,7 +231,7 @@ custodia-client secret delete \
   --server-url https://localhost:8443 \
   --cert client_alice.crt \
   --key client_alice.key \
-  --ca /etc/custodia/ca.crt \
+  --ca ca.crt \
   --secret-id <secret_id> \
   --yes
 ```

@@ -9,10 +9,11 @@ audit integrity.
 
 ## Artifact
 
-Build or install the standard universal artifact. It includes SQLite and PostgreSQL store support; the selected backend comes from configuration:
+Build or install the standard universal artifact. It includes SQLite and PostgreSQL store support; the selected backend comes from configuration. For a source-built server install:
 
 ```bash
-make
+make build-server man
+sudo make install-server PREFIX=/usr/local
 ```
 
 ## Directories
@@ -95,22 +96,6 @@ The signer reads `/etc/custodia/custodia-signer.yaml`, defaults to `:9444` in th
 
 ## First client smoke path
 
-After both `custodia` and `custodia-signer` are running, issue a local client mTLS bundle with the admin shortcut:
+After both `custodia` and `custodia-signer` are running, follow the Quickstart client flow. The preferred path generates each client mTLS private key and CSR under `$HOME/.config/custodia/<client_id>`, transfers only the CSR to the server/admin host, signs it with `custodia-admin client sign-csr`, copies the public certificate and CA back to the client profile, then generates the client-side application key and runs the encrypted put/share/get/delete smoke test.
 
-```bash
-sudo install -d -o custodia -g custodia -m 0700 /tmp/custodia-client-alice
-
-sudo -u custodia custodia-admin \
-  --server-url https://localhost:8443 \
-  --cert /etc/custodia/admin.crt \
-  --key /etc/custodia/admin.key \
-  --ca /etc/custodia/ca.crt \
-  client issue \
-  --signer-url https://localhost:9444 \
-  --client-id client_alice \
-  --out-dir /tmp/custodia-client-alice
-
-sudo chown -R "$USER:$USER" /tmp/custodia-client-alice
-```
-
-This creates local mTLS material and `client_alice-mtls.zip`; application encryption keys are still generated separately with `custodia-client key generate`. For encrypted put/get/share validation, follow [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](CUSTODIA_ALICE_BOB_SMOKE.md).
+The canonical copy/paste path is [`docs/QUICKSTART.md`](QUICKSTART.md). For a two-client share/version/revoke validation, follow [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](CUSTODIA_ALICE_BOB_SMOKE.md).

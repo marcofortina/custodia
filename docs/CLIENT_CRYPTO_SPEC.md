@@ -121,17 +121,8 @@ envelope_scheme = hpke-v1
 
 This validator also backs the first Go high-level crypto client implementation. It keeps metadata parsing, canonical AAD, AES-256-GCM payload vectors, HPKE-v1 envelope vectors and error names aligned across client implementations.
 
-## 6.4 Bash external crypto-provider bridge
+## 6.4 Bash SDK helper
 
-The Bash helper does not implement client crypto itself. When encrypted shell workflows are needed, `clients/bash/custodia.sh` may call an external provider executable through `CUSTODIA_CRYPTO_PROVIDER`.
+The Bash SDK helper does not implement client crypto itself. It exposes sourceable shell functions around the `custodia-client` CLI, so encryption, decryption, envelope handling and local key use remain in the Go client command.
 
-The provider protocol is stdin/stdout JSON with a non-secret operation name passed as argv:
-
-```text
-$CUSTODIA_CRYPTO_PROVIDER create-encrypted-secret < request.json > create-payload.json
-$CUSTODIA_CRYPTO_PROVIDER read-decrypted-secret < raw-secret-response.json > plaintext-response.json
-$CUSTODIA_CRYPTO_PROVIDER share-encrypted-secret < request.json > share-payload.json
-$CUSTODIA_CRYPTO_PROVIDER create-encrypted-secret-version < request.json > version-payload.json
-```
-
-The provider must implement this specification exactly: canonical AAD, AES-256-GCM content encryption, HPKE-v1 recipient envelopes, versioned `crypto_metadata`, local key resolution and the shared test vectors. Bash only transports provider-produced opaque payloads through REST/mTLS. Secret material must never be passed as command-line arguments.
+Shell workflows must use client JSON profiles that point at local mTLS material and local application crypto keys. Secret material must never be passed as command-line arguments. Use the full language SDKs for application code; use the Bash helper only for ops/CI glue.
