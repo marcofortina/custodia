@@ -2,7 +2,5 @@
 # Paths are relative to the extracted package root and must exist.
 usr/bin/custodia-client
 usr/share/man/man1/custodia-client.1.gz
-usr/share/custodia/clients/bash/custodia.sh
 usr/share/doc/custodia-client/CUSTODIA_CLIENT_CLI.md
-usr/share/doc/custodia-client/BASH_TRANSPORT_HELPER.md
 usr/share/doc/custodia-client/DOCTOR.md

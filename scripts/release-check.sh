@@ -25,7 +25,7 @@ python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/
 python3 -m unittest discover -s clients/python/tests
 node --check clients/node/src/index.js
 node --check clients/node/src/crypto.js
-bash -n clients/bash/custodia.sh
+bash -n clients/bash/custodia.bash
 npm test --prefix clients/node
 make test-java-client
 make test-cpp-client

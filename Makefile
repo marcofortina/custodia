@@ -69,7 +69,7 @@ check: license-check systemd-hardening-check audit-log-permissions-check test bu
 	python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py clients/python/custodia_client/crypto.py
 	node --check clients/node/src/index.js
 	node --check clients/node/src/crypto.js
-	bash -n clients/bash/custodia.sh
+	bash -n clients/bash/custodia.bash
 
 .PHONY: test-python-client
 test-python-client:
@@ -106,7 +106,7 @@ test-rust-client:
 
 .PHONY: test-bash-client
 test-bash-client:
-	bash clients/bash/tests/test_custodia_sh.sh
+	bash clients/bash/tests/test_custodia_bash.sh
 
 .PHONY: run-dev
 run-dev:
@@ -149,7 +149,7 @@ install-smoke:
 install-server: install-server-binaries install-server-man install-server-systemd
 
 .PHONY: install-client
-install-client: install-client-binaries install-client-man install-client-helper
+install-client: install-client-binaries install-client-man install-client-docs
 
 .PHONY: install-sdk
 install-sdk: install-sdk-tree install-sdk-docs
@@ -199,12 +199,10 @@ install-client-man:
 	$(INSTALL) -d "$(DESTDIR)$(MANDIR)/man1"
 	$(INSTALL) -m 0644 build/man/man1/custodia-client.1 "$(DESTDIR)$(MANDIR)/man1/custodia-client.1"
 
-.PHONY: install-client-helper
-install-client-helper:
-	$(INSTALL) -d "$(DESTDIR)$(SHAREDIR)/clients" "$(DESTDIR)$(DOCDIR)/custodia-client"
-	rm -rf "$(DESTDIR)$(SHAREDIR)/clients/bash"
-	cp -R clients/bash "$(DESTDIR)$(SHAREDIR)/clients/bash"
-	$(INSTALL) -m 0644 LICENSE README.md docs/CUSTODIA_CLIENT_CLI.md docs/BASH_TRANSPORT_HELPER.md docs/DOCTOR.md "$(DESTDIR)$(DOCDIR)/custodia-client/"
+.PHONY: install-client-docs
+install-client-docs:
+	$(INSTALL) -d "$(DESTDIR)$(DOCDIR)/custodia-client"
+	$(INSTALL) -m 0644 LICENSE README.md docs/CUSTODIA_CLIENT_CLI.md docs/DOCTOR.md "$(DESTDIR)$(DOCDIR)/custodia-client/"
 
 .PHONY: install-sdk-tree
 install-sdk-tree:

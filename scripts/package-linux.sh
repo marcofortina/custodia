@@ -231,13 +231,10 @@ stage_client() {
   rm -rf "$stage"
   install -d \
     "$stage/usr/bin" \
-    "$stage/usr/share/custodia/clients" \
     "$stage/usr/share/doc/custodia-client"
   install -m 0755 "$WORK_DIR/bin/custodia-client" "$stage/usr/bin/custodia-client"
-  rm -rf "$stage/usr/share/custodia/clients/bash"
-  cp -R clients/bash "$stage/usr/share/custodia/clients/bash"
   install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia-client/"
-  install -m 0644 docs/CUSTODIA_CLIENT_CLI.md docs/BASH_TRANSPORT_HELPER.md docs/DOCTOR.md "$stage/usr/share/doc/custodia-client/"
+  install -m 0644 docs/CUSTODIA_CLIENT_CLI.md docs/DOCTOR.md "$stage/usr/share/doc/custodia-client/"
   install_manpages "$stage" custodia-client
 }
 
@@ -299,7 +296,7 @@ Maintainer: Custodia maintainers <maintainers@example.invalid>
 Depends: ca-certificates, curl
 Description: Custodia encrypted secrets client CLI
  Custodia client tooling keeps plaintext, DEKs and private keys outside the server.
- This package installs the Go custodia-client CLI and Bash transport helper.
+ This package installs the Go custodia-client CLI.
 EOF_CONTROL
       ;;
     custodia-sdk)
@@ -313,7 +310,7 @@ Maintainer: Custodia maintainers <maintainers@example.invalid>
 Depends: ca-certificates
 Description: Custodia SDK source snapshots and crypto test vectors
  Custodia SDK source snapshots help application developers integrate with Custodia while keeping application cryptography client-side.
- This package installs SDK source snapshots, shared crypto test vectors and SDK documentation.
+ This package installs SDK source snapshots, the sourceable Bash SDK helper, shared crypto test vectors and SDK documentation.
 EOF_CONTROL
       ;;
   esac
@@ -391,7 +388,7 @@ exit 0'
       ;;
     custodia-client)
       summary="Custodia encrypted secrets client CLI"
-      description="Custodia client tooling keeps plaintext, DEKs and private keys outside the server. This package installs the Go custodia-client CLI and Bash transport helper."
+      description="Custodia client tooling keeps plaintext, DEKs and private keys outside the server. This package installs the Go custodia-client CLI."
       requires="Requires: ca-certificates
 Requires: curl"
       pre='exit 0'
@@ -401,7 +398,7 @@ Requires: curl"
       ;;
     custodia-sdk)
       summary="Custodia SDK source snapshots and crypto test vectors"
-      description="Custodia SDK source snapshots help application developers integrate with Custodia while keeping application cryptography client-side. This package installs SDK source snapshots, shared crypto test vectors and SDK documentation."
+      description="Custodia SDK source snapshots help application developers integrate with Custodia while keeping application cryptography client-side. This package installs SDK source snapshots, the sourceable Bash SDK helper, shared crypto test vectors and SDK documentation."
       requires="Requires: ca-certificates"
       pre='exit 0'
       post='exit 0'

@@ -109,7 +109,6 @@ smoke_extracted_tree() {
     custodia-client)
       require_manifest "$root" scripts/package-manifest-custodia-client.expected
       require_executable "$root" usr/bin/custodia-client
-      require_executable "$root" usr/share/custodia/clients/bash/custodia.sh
       "$root/usr/bin/custodia-client" help >/dev/null
       ;;
     custodia-sdk)
@@ -122,6 +121,7 @@ smoke_extracted_tree() {
       require_file "$root" usr/share/custodia/sdk/clients/java/src/main/java/dev/custodia/client/CustodiaClient.java
       require_file "$root" usr/share/custodia/sdk/clients/cpp/include/custodia/client.hpp
       require_file "$root" usr/share/custodia/sdk/clients/rust/Cargo.toml
+      require_file "$root" usr/share/custodia/sdk/clients/bash/custodia.bash
       require_file "$root" usr/share/custodia/sdk/testdata/client-crypto/v1/create_secret_single_recipient.json
       ;;
     *)

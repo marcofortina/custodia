@@ -12,3 +12,5 @@ usr/share/custodia/sdk/testdata/client-crypto/v1/create_secret_single_recipient.
 usr/share/doc/custodia-sdk/CLIENT_LIBRARIES.md
 usr/share/doc/custodia-sdk/CLIENT_CRYPTO_SPEC.md
 usr/share/doc/custodia-sdk/SDK_RELEASE_POLICY.md
+usr/share/custodia/sdk/clients/bash/custodia.bash
+usr/share/custodia/sdk/clients/bash/README.md

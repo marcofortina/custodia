@@ -19,7 +19,7 @@ mkdir -p \
   "$out_dir/clients/go/internal" \
   "$out_dir/testdata"
 
-cp -R clients/python clients/node clients/java clients/cpp clients/rust "$out_dir/clients/"
+cp -R clients/python clients/node clients/java clients/cpp clients/rust clients/bash "$out_dir/clients/"
 install -m 0644 go.mod "$out_dir/clients/go/go.mod"
 cp -R pkg/client "$out_dir/clients/go/pkg/"
 cp -R internal/clientcrypto "$out_dir/clients/go/internal/"
