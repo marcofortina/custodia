@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -84,6 +85,13 @@ func main() {
 		}
 		return
 	}
+	if len(args) >= 3 && args[0] == "web" && args[1] == "totp" && args[2] == "configure" {
+		if err := runWebTOTPConfigure(args[3:], os.Stdout); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 
 	var err error
 	switch args[0] + " " + args[1] {
@@ -125,6 +133,8 @@ func main() {
 		err = runClientCreate(&cfg, args[2:])
 	case "client issue":
 		err = runClientIssue(&cfg, args[2:])
+	case "client sign-csr":
+		err = runClientSignCSR(&cfg, args[2:])
 	case "client csr":
 		err = runClientCSR(args[2:])
 	case "client revoke":
@@ -206,6 +216,93 @@ func runWebTOTPGenerate(args []string, out io.Writer) error {
 	default:
 		return fmt.Errorf("unsupported --format %q", *format)
 	}
+}
+
+// runWebTOTPConfigure writes first-run Web MFA material to the server YAML config.
+func runWebTOTPConfigure(args []string, out io.Writer) error {
+	cmd := flag.NewFlagSet("web totp configure", flag.ExitOnError)
+	configPath := cmd.String("config", "/etc/custodia/custodia-server.yaml", "custodia-server YAML config to update")
+	issuer := cmd.String("issuer", "Custodia", "TOTP issuer label")
+	account := cmd.String("account", "admin", "TOTP account label")
+	_ = cmd.Parse(args)
+
+	if strings.TrimSpace(*configPath) == "" {
+		return fmt.Errorf("--config is required")
+	}
+	body, err := os.ReadFile(*configPath)
+	if err != nil {
+		return fmt.Errorf("read config: %w", err)
+	}
+	if serverConfigHasWebSecrets(string(body)) {
+		return fmt.Errorf("web_totp_secret or web_session_secret already exists; edit %s instead of appending duplicates", *configPath)
+	}
+	secret, err := webauth.GenerateTOTPSecret()
+	if err != nil {
+		return err
+	}
+	uri, err := webauth.TOTPProvisioningURI(*issuer, *account, secret)
+	if err != nil {
+		return err
+	}
+	sessionSecret, err := randomBase64(48)
+	if err != nil {
+		return err
+	}
+	appendix := fmt.Sprintf("\nweb_totp_secret: %q\nweb_session_secret: %q\n", secret, sessionSecret)
+	file, err := os.OpenFile(*configPath, os.O_WRONLY|os.O_APPEND, 0)
+	if err != nil {
+		return fmt.Errorf("open config for append: %w", err)
+	}
+	if _, err := file.WriteString(appendix); err != nil {
+		_ = file.Close()
+		return fmt.Errorf("append web secrets: %w", err)
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "web TOTP configured in %s\n", *configPath)
+	fmt.Fprintf(out, "TOTP secret: %s\n", secret)
+	fmt.Fprintf(out, "Provisioning URI: %s\n", uri)
+	fmt.Fprintln(out, "The TOTP secret and provisioning URI are sensitive; do not paste install logs into public issues or chats.")
+	if qrOut, err := renderTOTPQRCode(uri); err == nil {
+		fmt.Fprintln(out, "\nQR code:")
+		fmt.Fprint(out, qrOut)
+	} else {
+		fmt.Fprintf(out, "Hint: install qrencode to print a terminal QR code (%v).\n", err)
+	}
+	return nil
+}
+
+func serverConfigHasWebSecrets(config string) bool {
+	scanner := bufio.NewScanner(strings.NewReader(config))
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "web_totp_secret:") || strings.HasPrefix(line, "web_session_secret:") {
+			return true
+		}
+	}
+	return false
+}
+
+func randomBase64(size int) (string, error) {
+	buf := make([]byte, size)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(buf), nil
+}
+
+func renderTOTPQRCode(uri string) (string, error) {
+	path, err := exec.LookPath("qrencode")
+	if err != nil {
+		return "", err
+	}
+	cmd := exec.Command(path, "-t", "ANSIUTF8", uri)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return string(output), nil
 }
 
 // runProductionCheck intentionally validates environment files offline.
@@ -465,7 +562,7 @@ func runCABootstrapLocal(args []string) error {
 			return err
 		}
 	}
-	fmt.Fprintf(os.Stdout, "wrote Lite bootstrap artifacts to %s\n", *outDir)
+	fmt.Fprintf(os.Stdout, "wrote bootstrap artifacts to %s\n", *outDir)
 	return nil
 }
 
@@ -841,6 +938,69 @@ func ensureClientIssueOutputsAvailable(paths clientIssuePaths) error {
 			return err
 		}
 	}
+	return nil
+}
+
+func runClientSignCSR(cfg *cliConfig, args []string) error {
+	cmd := flag.NewFlagSet("client sign-csr", flag.ExitOnError)
+	clientID := cmd.String("client-id", "", "client id to register and sign")
+	mtlsSubject := cmd.String("mtls-subject", "", "certificate SAN/CN mapped to the client id; defaults to client id")
+	csrFile := cmd.String("csr-file", "", "client-generated CSR PEM file")
+	certificateOut := cmd.String("certificate-out", "", "path for signed client certificate PEM")
+	vaultURL := cmd.String("vault-url", "", "Custodia vault API URL; defaults to global --server-url")
+	signerURL := cmd.String("signer-url", env("CUSTODIA_SIGNER_URL", "https://localhost:9444"), "custodia-signer URL")
+	ttlHours := cmd.Int("ttl-hours", 0, "optional certificate TTL in hours")
+	_ = cmd.Parse(args)
+	id := strings.TrimSpace(*clientID)
+	if id == "" || strings.TrimSpace(*csrFile) == "" || strings.TrimSpace(*certificateOut) == "" {
+		return fmt.Errorf("--client-id, --csr-file and --certificate-out are required")
+	}
+	if !model.ValidClientID(id) {
+		return fmt.Errorf("--client-id is invalid")
+	}
+	subject := strings.TrimSpace(*mtlsSubject)
+	if subject == "" {
+		subject = id
+	}
+	if !model.ValidMTLSSubject(subject) {
+		return fmt.Errorf("--mtls-subject is invalid")
+	}
+	if *ttlHours < 0 {
+		return fmt.Errorf("--ttl-hours must be positive when set")
+	}
+	csrPEM, err := os.ReadFile(*csrFile)
+	if err != nil {
+		return err
+	}
+	vaultCfg := *cfg
+	if strings.TrimSpace(*vaultURL) != "" {
+		vaultCfg.serverURL = strings.TrimSpace(*vaultURL)
+	}
+	signerCfg := *cfg
+	signerCfg.serverURL = strings.TrimSpace(*signerURL)
+	if strings.TrimSpace(signerCfg.serverURL) == "" {
+		return fmt.Errorf("--signer-url is required")
+	}
+	if err := requestJSON(&vaultCfg, http.MethodPost, "/v1/clients", model.CreateClientRequest{ClientID: id, MTLSSubject: subject}, io.Discard); err != nil {
+		return fmt.Errorf("register client metadata: %w", err)
+	}
+	signReq := signing.SignClientCertificateRequest{ClientID: id, CSRPem: string(csrPEM), TTLHours: *ttlHours}
+	var signBody bytes.Buffer
+	if err := requestJSON(&signerCfg, http.MethodPost, "/v1/certificates/sign", signReq, &signBody); err != nil {
+		return fmt.Errorf("sign client certificate: %w", err)
+	}
+	var signResponse signing.SignClientCertificateResponse
+	if err := json.Unmarshal(signBody.Bytes(), &signResponse); err != nil {
+		return fmt.Errorf("invalid signer JSON: %w", err)
+	}
+	certificatePEM, err := normalizeClientCertificatePEM(signResponse.CertificatePEM)
+	if err != nil {
+		return err
+	}
+	if err := writeExclusive(*certificateOut, certificatePEM, 0o644); err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stdout, "signed %s into %s\n", id, *certificateOut)
 	return nil
 }
 
@@ -1466,6 +1626,7 @@ func usage() {
   custodia-admin [global flags] client get --client-id ID
   custodia-admin [global flags] client create --client-id ID --mtls-subject SUBJECT
   custodia-admin [global flags] client issue --client-id ID --out-dir DIR [--signer-url URL]
+  custodia-admin [global flags] client sign-csr --client-id ID --csr-file FILE --certificate-out FILE [--signer-url URL]
   custodia-admin [global flags] client revoke --client-id ID [--reason REASON]
   custodia-admin [global flags] certificate sign --client-id ID --csr-file FILE [--ttl-hours HOURS]
   custodia-admin certificate extract --input FILE --certificate-out FILE
@@ -1483,6 +1644,7 @@ func usage() {
   custodia-admin migration plan --source-config FILE --target-config FILE
   custodia-admin ca bootstrap-local [--out-dir DIR] [--admin-client-id ID] [--server-name NAME] [--generate-ca-passphrase]
   custodia-admin web totp generate [--issuer NAME] [--account NAME] [--format text|yaml|json]
+  custodia-admin web totp configure [--config FILE] [--issuer NAME] [--account NAME]
 
 global flags:
   --server-url URL

@@ -351,3 +351,38 @@ func TestTransportClientRequiresMTLSOptions(t *testing.T) {
 		t.Fatalf("expected mTLS option error, got: %v", err)
 	}
 }
+
+func TestMTLSGenerateCSRWritesClientSideMaterial(t *testing.T) {
+	dir := t.TempDir()
+	keyPath := filepath.Join(dir, "client_alice.key")
+	csrPath := filepath.Join(dir, "client_alice.csr")
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{"mtls", "generate-csr", "--client-id", "client_alice", "--private-key-out", keyPath, "--csr-out", csrPath})
+	if code != 0 {
+		t.Fatalf("mtls generate-csr failed with %d: %s", code, stderr.String())
+	}
+	for path, wantMode := range map[string]os.FileMode{keyPath: keyFileMode, csrPath: publicFileMode} {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("expected %s: %v", path, err)
+		}
+		if got := info.Mode().Perm(); got != wantMode {
+			t.Fatalf("%s mode = %o, want %o", path, got, wantMode)
+		}
+	}
+	stdout.Reset()
+	stderr.Reset()
+	code = (&app{stdout: &stdout, stderr: &stderr}).run([]string{"mtls", "generate-csr", "--client-id", "client_alice", "--private-key-out", keyPath, "--csr-out", csrPath})
+	if code == 0 {
+		t.Fatal("expected exclusive write failure")
+	}
+}
+
+func TestMTLSGenerateCSRRejectsInvalidClientID(t *testing.T) {
+	dir := t.TempDir()
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{"mtls", "generate-csr", "--client-id", "client bad", "--private-key-out", filepath.Join(dir, "client.key"), "--csr-out", filepath.Join(dir, "client.csr")})
+	if code == 0 {
+		t.Fatal("expected invalid client id failure")
+	}
+}

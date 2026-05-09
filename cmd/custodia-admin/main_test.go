@@ -816,3 +816,41 @@ CUSTODIA_STORE_BACKEND=sqlite
 		t.Fatal("expected invalid full target error")
 	}
 }
+
+func TestRunWebTOTPConfigureWritesConfig(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "custodia-server.yaml")
+	if err := os.WriteFile(configPath, []byte("server:\n  api_addr: ':8443'\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	if err := runWebTOTPConfigure([]string{"--config", configPath, "--issuer", "Custodia", "--account", "admin"}, &out); err != nil {
+		t.Fatalf("runWebTOTPConfigure() error = %v", err)
+	}
+	body, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"web_totp_secret:", "web_session_secret:"} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("config does not contain %s: %s", want, string(body))
+		}
+	}
+	if !strings.Contains(out.String(), "TOTP secret:") || !strings.Contains(out.String(), "Provisioning URI:") {
+		t.Fatalf("unexpected configure output: %s", out.String())
+	}
+	if err := runWebTOTPConfigure([]string{"--config", configPath}, io.Discard); err == nil {
+		t.Fatal("expected duplicate web secret error")
+	}
+}
+
+func TestRunClientSignCSRValidatesArgsBeforeNetwork(t *testing.T) {
+	if err := runClientSignCSR(&cliConfig{}, []string{"--client-id", "client bad", "--csr-file", "client.csr", "--certificate-out", "client.crt"}); err == nil {
+		t.Fatal("expected invalid client id error")
+	}
+	if err := runClientSignCSR(&cliConfig{}, []string{"--client-id", "client_alice", "--certificate-out", "client.crt"}); err == nil {
+		t.Fatal("expected missing csr-file error")
+	}
+	if err := runClientSignCSR(&cliConfig{}, []string{"--client-id", "client_alice", "--csr-file", "client.csr", "--certificate-out", "client.crt", "--ttl-hours", "-1"}); err == nil {
+		t.Fatal("expected invalid ttl error")
+	}
+}

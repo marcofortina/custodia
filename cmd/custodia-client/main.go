@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"custodia/internal/build"
+	"custodia/internal/certutil"
 
 	sdk "custodia/pkg/client"
 )
@@ -110,6 +111,8 @@ func (a *app) run(args []string) int {
 		return a.runConfig(args[1:])
 	case "doctor":
 		return a.runDoctor(args[1:])
+	case "mtls":
+		return a.runMTLS(args[1:])
 	case "secret":
 		return a.runSecret(args[1:])
 	case "version":
@@ -131,6 +134,7 @@ func (a *app) usage() {
   custodia-client config write --out FILE --server-url URL --cert FILE --key FILE --ca FILE [--client-id ID --crypto-key FILE]
   custodia-client config check --config FILE
   custodia-client doctor --config FILE [--online]
+  custodia-client mtls generate-csr --client-id ID --private-key-out FILE --csr-out FILE
   custodia-client secret put --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --name NAME --value-file FILE [--recipient ID=PUBLIC.json]
   custodia-client secret get --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --secret-id ID [--out FILE]
   custodia-client secret share --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --secret-id ID --target-client-id ID --recipient ID=PUBLIC.json
@@ -144,6 +148,49 @@ func (a *app) usage() {
 Common options may be stored in a JSON config file and loaded with --config FILE or CUSTODIA_CLIENT_CONFIG.
 
 Secret payloads are encrypted/decrypted locally. Custodia receives only ciphertext, crypto_metadata and opaque recipient envelopes.`)
+}
+
+func (a *app) runMTLS(args []string) int {
+	if len(args) == 0 {
+		fmt.Fprintln(a.stderr, "missing mtls subcommand")
+		return 2
+	}
+	switch args[0] {
+	case "generate-csr":
+		return a.runMTLSGenerateCSR(args[1:])
+	default:
+		fmt.Fprintf(a.stderr, "unknown mtls subcommand: %s\n", args[0])
+		return 2
+	}
+}
+
+func (a *app) runMTLSGenerateCSR(args []string) int {
+	fs := newFlagSet("custodia-client mtls generate-csr", a.stderr)
+	clientID := fs.String("client-id", "", "client id for the CSR subject")
+	privateKeyOut := fs.String("private-key-out", "", "path for generated mTLS private key PEM")
+	csrOut := fs.String("csr-out", "", "path for generated CSR PEM")
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	if strings.TrimSpace(*clientID) == "" || strings.TrimSpace(*privateKeyOut) == "" || strings.TrimSpace(*csrOut) == "" {
+		fmt.Fprintln(a.stderr, "--client-id, --private-key-out and --csr-out are required")
+		return 2
+	}
+	generated, err := certutil.GenerateClientCSR(strings.TrimSpace(*clientID))
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	if err := writeExclusive(*privateKeyOut, generated.PrivateKeyPEM, keyFileMode); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	if err := writeExclusive(*csrOut, generated.CSRPem, publicFileMode); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	fmt.Fprintf(a.stdout, "wrote %s and %s\n", *privateKeyOut, *csrOut)
+	return 0
 }
 
 func (a *app) runConfig(args []string) int {

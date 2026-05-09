@@ -132,11 +132,15 @@ func checkClientDoctorOnline(configPath string) clientDoctorFinding {
 	if err != nil {
 		return clientDoctorFinding{Status: clientDoctorFail, Name: "online server check", Message: err.Error()}
 	}
-	info, err := client.VersionInfo()
+	info, err := client.CurrentClientInfo()
 	if err != nil {
 		return clientDoctorFinding{Status: clientDoctorFail, Name: "online server check", Message: err.Error()}
 	}
-	return clientDoctorFinding{Status: clientDoctorOK, Name: "online server check", Message: strings.TrimSpace(info.Version + " " + info.Commit + " " + info.Date)}
+	message := strings.TrimSpace(info.ClientID)
+	if message == "" {
+		message = "reachable"
+	}
+	return clientDoctorFinding{Status: clientDoctorOK, Name: "online server check", Message: message}
 }
 
 func writeClientDoctorFindings(out io.Writer, findings []clientDoctorFinding) {

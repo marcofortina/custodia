@@ -9,6 +9,10 @@ package main
 
 import (
 	"bytes"
+	"crypto/x509"
+	"encoding/pem"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -49,6 +53,49 @@ func TestClientDoctorOfflineValidatesProfile(t *testing.T) {
 		if !strings.Contains(stdout.String(), token) {
 			t.Fatalf("expected %q in output: %s", token, stdout.String())
 		}
+	}
+}
+
+func TestClientDoctorOnlineUsesNonAdminMeEndpoint(t *testing.T) {
+	dir := t.TempDir()
+	artifacts, err := certutil.GenerateLiteBootstrap(certutil.LiteBootstrapRequest{AdminClientID: "client_alice", ServerName: "localhost"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	certPath := filepath.Join(dir, "client.crt")
+	keyPath := filepath.Join(dir, "client.key")
+	for path, body := range map[string][]byte{certPath: artifacts.AdminCertPEM, keyPath: artifacts.AdminKeyPEM} {
+		if err := os.WriteFile(path, body, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.EscapedPath() != "/v1/me" {
+			t.Fatalf("unexpected online doctor request: %s %s", r.Method, r.URL.EscapedPath())
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"client_id":"client_alice","mtls_subject":"CN=client_alice","is_active":true,"created_at":"2026-01-01T00:00:00Z"}`))
+	}))
+	defer server.Close()
+
+	caPath := filepath.Join(dir, "ca.crt")
+	serverCert := server.Certificate()
+	caPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: serverCert.Raw})
+	if _, err := x509.ParseCertificate(serverCert.Raw); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(caPath, caPEM, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	configPath := filepath.Join(dir, "client.config.json")
+	if err := writeJSONFileExclusive(configPath, clientConfigFile{ServerURL: server.URL, CertFile: certPath, KeyFile: keyPath, CAFile: caPath, ClientID: "client_alice"}, keyFileMode); err != nil {
+		t.Fatal(err)
+	}
+	finding := checkClientDoctorOnline(configPath)
+	if finding.Status != clientDoctorOK || finding.Message != "client_alice" {
+		t.Fatalf("unexpected online finding: %+v", finding)
 	}
 }
 
