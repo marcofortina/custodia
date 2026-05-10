@@ -16,9 +16,9 @@ custodia_use_client_id client_alice
 
 custodia_config_check
 custodia_doctor --online
-custodia_secret_put_file smoke-demo ./secret.txt ./secret.create.json
-custodia_secret_get_file "$SECRET_ID" ./readback.txt
-custodia_secret_delete "$SECRET_ID"
+custodia_secret_put_file smoke-demo ./secret.txt
+custodia_secret_get_file smoke-demo ./readback.txt
+custodia_secret_delete smoke-demo
 ```
 
 `custodia_use_client_id client_alice` uses the standard profile under `$XDG_CONFIG_HOME/custodia/client_alice`, or `$HOME/.config/custodia/client_alice` when `XDG_CONFIG_HOME` is not set.
@@ -35,7 +35,7 @@ custodia_doctor --online
 
 ## Security boundary
 
-The helper delegates all network and cryptographic work to `custodia-client`. Plaintext, mTLS private keys and application private keys remain under the local user profile configured by `--client-id` or the selected client JSON file.
+The helper delegates all network and cryptographic work to `custodia-client` and addresses secrets by namespace/key, with `default` used when no namespace argument is passed. Plaintext, mTLS private keys and application private keys remain under the local user profile configured by `--client-id` or the selected client JSON file.
 
 Do not use shell tracing with commands that handle plaintext file paths or sensitive output files.
 

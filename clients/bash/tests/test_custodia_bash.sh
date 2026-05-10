@@ -45,14 +45,22 @@ custodia_use_config "$config"
 custodia_config_check >/dev/null
 custodia_doctor --online >/dev/null
 printf 'value\n' > "$tmp_dir/value.txt"
-custodia_secret_put_file smoke-demo "$tmp_dir/value.txt" "$tmp_dir/create.json"
-custodia_secret_get_file secret-1 "$tmp_dir/readback.txt"
-custodia_secret_share secret-1 client_bob "client_bob=$tmp_dir/bob.pub.json" >/dev/null
-custodia_secret_delete secret-1 >/dev/null
+custodia_secret_put_file smoke-demo "$tmp_dir/value.txt" >/dev/null
+custodia_secret_get_file smoke-demo "$tmp_dir/readback.txt"
+custodia_secret_update_file smoke-demo "$tmp_dir/value.txt" >/dev/null
+custodia_secret_share smoke-demo client_bob "client_bob=$tmp_dir/bob.pub.json" >/dev/null
+custodia_secret_revoke smoke-demo client_bob >/dev/null
+custodia_secret_delete smoke-demo >/dev/null
+custodia_secret_delete_cascade smoke-demo >/dev/null
 
 grep -q -- 'config check --config' "$CUSTODIA_BASH_SDK_TEST_LOG"
 grep -q -- 'doctor --config' "$CUSTODIA_BASH_SDK_TEST_LOG"
 grep -q -- 'secret put --config' "$CUSTODIA_BASH_SDK_TEST_LOG"
 grep -q -- 'secret get --config' "$CUSTODIA_BASH_SDK_TEST_LOG"
 grep -q -- 'secret share --config' "$CUSTODIA_BASH_SDK_TEST_LOG"
+grep -q -- 'secret update --config' "$CUSTODIA_BASH_SDK_TEST_LOG"
+grep -q -- 'secret access revoke --config' "$CUSTODIA_BASH_SDK_TEST_LOG"
 grep -q -- 'secret delete --config' "$CUSTODIA_BASH_SDK_TEST_LOG"
+grep -q -- '--key smoke-demo' "$CUSTODIA_BASH_SDK_TEST_LOG"
+grep -q -- '--namespace default' "$CUSTODIA_BASH_SDK_TEST_LOG"
+grep -q -- '--cascade' "$CUSTODIA_BASH_SDK_TEST_LOG"

@@ -21,7 +21,8 @@ custodia_config_check
 custodia_doctor --online
 
 printf 'secret value' > /tmp/secret.txt
-custodia_secret_put_file smoke-demo /tmp/secret.txt /tmp/secret.create.json
+custodia_secret_put_file smoke-demo /tmp/secret.txt
+custodia_secret_get_file smoke-demo /tmp/readback.txt
 ```
 
 Functions:
@@ -30,10 +31,13 @@ Functions:
 - `custodia_use_config CONFIG`
 - `custodia_config_check`
 - `custodia_doctor [--online]`
-- `custodia_secret_put_file NAME VALUE_FILE [OUTPUT_JSON]`
-- `custodia_secret_get_file SECRET_ID OUTPUT_FILE`
-- `custodia_secret_share SECRET_ID TARGET_CLIENT_ID RECIPIENT_SPEC [PERMISSIONS]`
-- `custodia_secret_delete SECRET_ID`
+- `custodia_secret_put_file KEY VALUE_FILE [NAMESPACE]`
+- `custodia_secret_get_file KEY OUTPUT_FILE [NAMESPACE]`
+- `custodia_secret_update_file KEY VALUE_FILE [NAMESPACE]`
+- `custodia_secret_share KEY TARGET_CLIENT_ID RECIPIENT_SPEC [PERMISSIONS] [NAMESPACE]`
+- `custodia_secret_revoke KEY TARGET_CLIENT_ID [NAMESPACE]`
+- `custodia_secret_delete KEY [NAMESPACE]`
+- `custodia_secret_delete_cascade KEY [NAMESPACE]`
 
 ## Security boundary
 

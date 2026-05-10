@@ -50,53 +50,96 @@ custodia_doctor() {
 }
 
 custodia_secret_put_file() {
-  if [ "$#" -lt 2 ]; then
-    printf 'usage: custodia_secret_put_file NAME VALUE_FILE [OUTPUT_JSON]\n' >&2
+  if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+    printf 'usage: custodia_secret_put_file KEY VALUE_FILE [NAMESPACE]\n' >&2
     return 2
   fi
   custodia_profile_args || return "$?"
-  local name="$1"
+  local key="$1"
   local value_file="$2"
-  local output_file="${3:-}"
-  if [ -n "$output_file" ]; then
-    custodia-client secret put "${CUSTODIA_PROFILE_ARGS[@]}" --name "$name" --value-file "$value_file" > "$output_file"
-  else
-    custodia-client secret put "${CUSTODIA_PROFILE_ARGS[@]}" --name "$name" --value-file "$value_file"
-  fi
+  local namespace="${3:-default}"
+  custodia-client secret put "${CUSTODIA_PROFILE_ARGS[@]}" --namespace "$namespace" --key "$key" --value-file "$value_file"
 }
 
 custodia_secret_get_file() {
-  if [ "$#" -ne 2 ]; then
-    printf 'usage: custodia_secret_get_file SECRET_ID OUTPUT_FILE\n' >&2
+  if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+    printf 'usage: custodia_secret_get_file KEY OUTPUT_FILE [NAMESPACE]\n' >&2
     return 2
   fi
   custodia_profile_args || return "$?"
-  custodia-client secret get "${CUSTODIA_PROFILE_ARGS[@]}" --secret-id "$1" --out "$2"
+  local key="$1"
+  local output_file="$2"
+  local namespace="${3:-default}"
+  custodia-client secret get "${CUSTODIA_PROFILE_ARGS[@]}" --namespace "$namespace" --key "$key" --out "$output_file"
+}
+
+custodia_secret_update_file() {
+  if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+    printf 'usage: custodia_secret_update_file KEY VALUE_FILE [NAMESPACE]\n' >&2
+    return 2
+  fi
+  custodia_profile_args || return "$?"
+  local key="$1"
+  local value_file="$2"
+  local namespace="${3:-default}"
+  custodia-client secret update "${CUSTODIA_PROFILE_ARGS[@]}" --namespace "$namespace" --key "$key" --value-file "$value_file"
 }
 
 custodia_secret_share() {
-  if [ "$#" -lt 3 ]; then
-    printf 'usage: custodia_secret_share SECRET_ID TARGET_CLIENT_ID RECIPIENT_SPEC [PERMISSIONS]\n' >&2
+  if [ "$#" -lt 3 ] || [ "$#" -gt 5 ]; then
+    printf 'usage: custodia_secret_share KEY TARGET_CLIENT_ID RECIPIENT_SPEC [PERMISSIONS] [NAMESPACE]\n' >&2
     return 2
   fi
   custodia_profile_args || return "$?"
-  local secret_id="$1"
+  local key="$1"
   local target_client_id="$2"
   local recipient="$3"
   local permissions="${4:-4}"
+  local namespace="${5:-default}"
   custodia-client secret share \
     "${CUSTODIA_PROFILE_ARGS[@]}" \
-    --secret-id "$secret_id" \
+    --namespace "$namespace" \
+    --key "$key" \
     --target-client-id "$target_client_id" \
     --recipient "$recipient" \
     --permissions "$permissions"
 }
 
-custodia_secret_delete() {
-  if [ "$#" -ne 1 ]; then
-    printf 'usage: custodia_secret_delete SECRET_ID\n' >&2
+custodia_secret_revoke() {
+  if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+    printf 'usage: custodia_secret_revoke KEY TARGET_CLIENT_ID [NAMESPACE]\n' >&2
     return 2
   fi
   custodia_profile_args || return "$?"
-  custodia-client secret delete "${CUSTODIA_PROFILE_ARGS[@]}" --secret-id "$1" --yes
+  local key="$1"
+  local target_client_id="$2"
+  local namespace="${3:-default}"
+  custodia-client secret access revoke \
+    "${CUSTODIA_PROFILE_ARGS[@]}" \
+    --namespace "$namespace" \
+    --key "$key" \
+    --target-client-id "$target_client_id" \
+    --yes
+}
+
+custodia_secret_delete() {
+  if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+    printf 'usage: custodia_secret_delete KEY [NAMESPACE]\n' >&2
+    return 2
+  fi
+  custodia_profile_args || return "$?"
+  local key="$1"
+  local namespace="${2:-default}"
+  custodia-client secret delete "${CUSTODIA_PROFILE_ARGS[@]}" --namespace "$namespace" --key "$key" --yes
+}
+
+custodia_secret_delete_cascade() {
+  if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+    printf 'usage: custodia_secret_delete_cascade KEY [NAMESPACE]\n' >&2
+    return 2
+  fi
+  custodia_profile_args || return "$?"
+  local key="$1"
+  local namespace="${2:-default}"
+  custodia-client secret delete "${CUSTODIA_PROFILE_ARGS[@]}" --namespace "$namespace" --key "$key" --cascade --yes
 }
