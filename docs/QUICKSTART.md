@@ -365,22 +365,17 @@ custodia-client doctor --client-id "$ALICE_ID" --online
 Create and read back an encrypted secret as Alice. Keep demo plaintext/output files outside the client profile:
 
 ```bash
+SMOKE_NAMESPACE=default
+SMOKE_KEY=smoke-demo
 SMOKE_SECRET="$HOME/custodia-smoke-secret.txt"
-SMOKE_CREATE="$HOME/custodia-smoke-secret.create.json"
 SMOKE_READBACK="$HOME/custodia-smoke-secret.readback.txt"
 
 printf 'super secret demo value' > "$SMOKE_SECRET"
 chmod 600 "$SMOKE_SECRET"
 
-custodia-client secret put --client-id "$ALICE_ID" --name smoke-demo --value-file "$SMOKE_SECRET" > "$SMOKE_CREATE"
+custodia-client secret put --client-id "$ALICE_ID" --namespace "$SMOKE_NAMESPACE" --key "$SMOKE_KEY" --value-file "$SMOKE_SECRET"
 
-SECRET_ID="$(python3 - <<'PY'
-import json, os
-print(json.load(open(os.path.expanduser('~/custodia-smoke-secret.create.json')))['secret_id'])
-PY
-)"
-
-custodia-client secret get --client-id "$ALICE_ID" --secret-id "$SECRET_ID" --out "$SMOKE_READBACK"
+custodia-client secret get --client-id "$ALICE_ID" --namespace "$SMOKE_NAMESPACE" --key "$SMOKE_KEY" --out "$SMOKE_READBACK"
 
 cat "$SMOKE_READBACK"
 ```
@@ -423,15 +418,15 @@ Transfer Bob's public key to Alice through a trusted channel. The default path i
 ```bash
 BOB_PUBLIC_KEY="$HOME/$BOB_ID.x25519.pub.json"
 
-custodia-client secret share --client-id "$ALICE_ID" --secret-id "$SECRET_ID" --target-client-id "$BOB_ID" --recipient "$BOB_ID=$BOB_PUBLIC_KEY" --permissions 4
+custodia-client secret share --client-id "$ALICE_ID" --namespace "$SMOKE_NAMESPACE" --key "$SMOKE_KEY" --target-client-id "$BOB_ID" --recipient "$BOB_ID=$BOB_PUBLIC_KEY" --permissions 4
 ```
 
-Transfer the `SECRET_ID` value to Bob when Bob is remote. Bob can now read and decrypt the secret locally:
+Transfer the namespace/key values to Bob when Bob is remote. Bob can now read and decrypt the shared secret locally without knowing Alice's internal secret id:
 
 ```bash
 BOB_READBACK="$HOME/custodia-smoke-bob.readback.txt"
 
-custodia-client secret get --client-id "$BOB_ID" --secret-id "$SECRET_ID" --out "$BOB_READBACK"
+custodia-client secret get --client-id "$BOB_ID" --namespace "$SMOKE_NAMESPACE" --key "$SMOKE_KEY" --out "$BOB_READBACK"
 
 cat "$BOB_READBACK"
 ```
@@ -445,7 +440,7 @@ super secret demo value
 Delete the smoke secret when the test is complete:
 
 ```bash
-custodia-client secret delete --client-id "$ALICE_ID" --secret-id "$SECRET_ID" --yes
+custodia-client secret delete --client-id "$ALICE_ID" --namespace "$SMOKE_NAMESPACE" --key "$SMOKE_KEY" --yes
 ```
 
 The vault received only ciphertext, crypto metadata and opaque envelopes. Plaintext, mTLS private keys and application private keys stayed local to each client. Deletion prevents future server-side reads; material already downloaded by authorized clients remains outside server control.
@@ -480,7 +475,7 @@ Before considering the node ready for real data:
 - the Web Console opens through the configured host name/IP and requires TOTP;
 - `custodia-client config check` succeeds for Alice and Bob;
 - `custodia-client doctor --online` succeeds for Alice and Bob;
-- encrypted `secret put`, `secret share`, `secret get` and `secret delete` work;
+- encrypted `secret put`, `secret share`, `secret get` and `secret delete` work by namespace/key;
 - `/etc/custodia` is mode `0750` or stricter;
 - private keys under `/etc/custodia` are mode `0600`;
 - the CA passphrase file is backed up or the CA key is moved offline;

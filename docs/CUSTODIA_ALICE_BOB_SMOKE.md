@@ -33,8 +33,9 @@ custodia-client doctor --client-id "$ALICE_ID" --online
 On Alice's client host:
 
 ```bash
+ALICE_NAMESPACE=default
+ALICE_KEY=alice-bob-demo
 ALICE_SECRET="$HOME/custodia-alice-secret.txt"
-ALICE_CREATE="$HOME/custodia-alice-secret.create.json"
 ALICE_READBACK="$HOME/custodia-alice-readback.txt"
 
 printf 'super secret demo value' > "$ALICE_SECRET"
@@ -42,19 +43,14 @@ chmod 600 "$ALICE_SECRET"
 
 custodia-client secret put \
   --client-id "$ALICE_ID" \
-  --name alice-bob-demo \
-  --value-file "$ALICE_SECRET" \
-  > "$ALICE_CREATE"
-
-SECRET_ID="$(python3 - <<'PY'
-import json, os
-print(json.load(open(os.path.expanduser('~/custodia-alice-secret.create.json')))['secret_id'])
-PY
-)"
+  --namespace "$ALICE_NAMESPACE" \
+  --key "$ALICE_KEY" \
+  --value-file "$ALICE_SECRET"
 
 custodia-client secret get \
   --client-id "$ALICE_ID" \
-  --secret-id "$SECRET_ID" \
+  --namespace "$ALICE_NAMESPACE" \
+  --key "$ALICE_KEY" \
   --out "$ALICE_READBACK"
 
 cat "$ALICE_READBACK"
@@ -93,7 +89,7 @@ custodia-client doctor --client-id "$BOB_ID" --online
 Before Alice shares the secret, Bob should not be able to decrypt it:
 
 ```bash
-if custodia-client secret get --client-id "$BOB_ID" --secret-id "$SECRET_ID" --out "$HOME/custodia-bob-before-share.txt"; then
+if custodia-client secret get --client-id "$BOB_ID" --namespace "$ALICE_NAMESPACE" --key "$ALICE_KEY" --out "$HOME/custodia-bob-before-share.txt"; then
   echo "unexpected Bob access before share" >&2
   exit 1
 fi
@@ -112,20 +108,22 @@ Then share the secret:
 ```bash
 custodia-client secret share \
   --client-id "$ALICE_ID" \
-  --secret-id "$SECRET_ID" \
+  --namespace "$ALICE_NAMESPACE" \
+  --key "$ALICE_KEY" \
   --target-client-id "$BOB_ID" \
   --recipient "$BOB_ID=$BOB_PUBLIC_KEY" \
   --permissions 4
 ```
 
-Transfer the `SECRET_ID` value to Bob. On Bob's client host:
+Transfer the namespace/key values to Bob. On Bob's client host:
 
 ```bash
 BOB_READBACK="$HOME/custodia-bob-readback.txt"
 
 custodia-client secret get \
   --client-id "$BOB_ID" \
-  --secret-id "$SECRET_ID" \
+  --namespace "$ALICE_NAMESPACE" \
+  --key "$ALICE_KEY" \
   --out "$BOB_READBACK"
 
 cat "$BOB_READBACK"
@@ -146,9 +144,10 @@ ALICE_SECRET_V2="$HOME/custodia-alice-secret-v2.txt"
 printf 'rotated secret value' > "$ALICE_SECRET_V2"
 chmod 600 "$ALICE_SECRET_V2"
 
-custodia-client secret version put \
+custodia-client secret update \
   --client-id "$ALICE_ID" \
-  --secret-id "$SECRET_ID" \
+  --namespace "$ALICE_NAMESPACE" \
+  --key "$ALICE_KEY" \
   --value-file "$ALICE_SECRET_V2" \
   --recipient "$BOB_ID=$BOB_PUBLIC_KEY" \
   --permissions 7
@@ -159,7 +158,8 @@ Bob can read the latest version:
 ```bash
 custodia-client secret get \
   --client-id "$BOB_ID" \
-  --secret-id "$SECRET_ID" \
+  --namespace "$ALICE_NAMESPACE" \
+  --key "$ALICE_KEY" \
   --out "$HOME/custodia-bob-readback-v2.txt"
 
 cat "$HOME/custodia-bob-readback-v2.txt"
@@ -178,7 +178,8 @@ On Alice's client host:
 ```bash
 custodia-client secret access revoke \
   --client-id "$ALICE_ID" \
-  --secret-id "$SECRET_ID" \
+  --namespace "$ALICE_NAMESPACE" \
+  --key "$ALICE_KEY" \
   --target-client-id "$BOB_ID" \
   --yes
 ```
@@ -186,7 +187,7 @@ custodia-client secret access revoke \
 After revocation, future server-side reads for Bob should fail:
 
 ```bash
-if custodia-client secret get --client-id "$BOB_ID" --secret-id "$SECRET_ID" --out "$HOME/custodia-bob-after-revoke.txt"; then
+if custodia-client secret get --client-id "$BOB_ID" --namespace "$ALICE_NAMESPACE" --key "$ALICE_KEY" --out "$HOME/custodia-bob-after-revoke.txt"; then
   echo "unexpected Bob access after revoke" >&2
   exit 1
 fi
@@ -199,7 +200,8 @@ On Alice's client host:
 ```bash
 custodia-client secret delete \
   --client-id "$ALICE_ID" \
-  --secret-id "$SECRET_ID" \
+  --namespace "$ALICE_NAMESPACE" \
+  --key "$ALICE_KEY" \
   --yes
 ```
 
