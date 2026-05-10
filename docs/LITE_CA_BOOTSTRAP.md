@@ -8,10 +8,10 @@ from HSM/PKCS#11 dependencies while preserving mTLS.
 Custodia supports file-backed signing material through the signer key provider and provides a Lite local bootstrap command:
 
 ```bash
-custodia-admin ca bootstrap-local --out-dir /etc/custodia --admin-client-id admin --server-name localhost --generate-ca-passphrase
+custodia-admin ca bootstrap-local --out-dir /etc/custodia --admin-client-id admin --server-name "$(hostname -f)" --generate-ca-passphrase
 ```
 
-The command writes a local self-signed CA, server certificate, initial admin client certificate, empty CRL and `custodia-server.yaml` and `custodia-signer.yaml`. It refuses to overwrite existing files. Additional client certificates are issued by the separate `custodia-signer` process; package installs ship `custodia-signer.service`, while source installs can copy `deploy/examples/custodia-signer.service`.
+The command writes a local self-signed CA, server certificate, initial admin client certificate, empty CRL and `custodia-server.yaml` and `custodia-signer.yaml`. The server certificate SANs include the requested server name, `localhost`, `127.0.0.1`, `::1` and any non-loopback IP address resolved from the server name. It refuses to overwrite existing files. Additional client certificates are issued by the separate `custodia-signer` process; package installs ship `custodia-signer.service`, while source installs can copy `deploy/examples/custodia-signer.service`.
 
 For development only, `scripts/dev-certs.sh` also creates throwaway certificates:
 

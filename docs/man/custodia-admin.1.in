@@ -48,6 +48,11 @@ Print server build metadata from
 .B client create --client-id ID --mtls-subject SUBJECT
 Register client metadata in the vault.
 .TP
+.B ca bootstrap-local --out-dir DIR --admin-client-id ID --server-name NAME
+Generate Lite first-run CA material. The server certificate includes the requested
+server name, localhost, 127.0.0.1, ::1 and any non-loopback IP address resolved
+from the server name.
+.TP
 .B client sign-csr --client-id ID --csr-file FILE --certificate-out FILE --signer-url URL
 Register client metadata, submit a client-generated CSR to
 .BR custodia-signer (1),

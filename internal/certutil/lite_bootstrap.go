@@ -141,11 +141,7 @@ func createLiteLeaf(now time.Time, caCert *x509.Certificate, caKey *ecdsa.Privat
 		ExtKeyUsage:  []x509.ExtKeyUsage{usage},
 	}
 	if usage == x509.ExtKeyUsageServerAuth {
-		if ip := net.ParseIP(name); ip != nil {
-			tmpl.IPAddresses = []net.IP{ip}
-		} else {
-			tmpl.DNSNames = []string{name}
-		}
+		tmpl.DNSNames, tmpl.IPAddresses = liteServerSANs(name, net.LookupIP)
 	} else {
 		tmpl.DNSNames = []string{name}
 	}
@@ -158,6 +154,55 @@ func createLiteLeaf(now time.Time, caCert *x509.Certificate, caKey *ecdsa.Privat
 		return nil, nil, err
 	}
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), keyPEM, nil
+}
+
+func liteServerSANs(serverName string, lookup func(string) ([]net.IP, error)) ([]string, []net.IP) {
+	var dnsNames []string
+	var ipAddresses []net.IP
+	dnsSeen := make(map[string]bool)
+	ipSeen := make(map[string]bool)
+
+	addDNS := func(name string) {
+		name = strings.TrimSpace(name)
+		if name == "" || dnsSeen[name] {
+			return
+		}
+		dnsSeen[name] = true
+		dnsNames = append(dnsNames, name)
+	}
+	addIP := func(ip net.IP) {
+		if ip == nil {
+			return
+		}
+		key := ip.String()
+		if key == "<nil>" || ipSeen[key] {
+			return
+		}
+		ipSeen[key] = true
+		ipAddresses = append(ipAddresses, ip)
+	}
+
+	if ip := net.ParseIP(serverName); ip != nil {
+		addIP(ip)
+	} else {
+		addDNS(serverName)
+		if lookup != nil {
+			if resolved, err := lookup(serverName); err == nil {
+				for _, ip := range resolved {
+					if ip == nil || ip.IsLoopback() {
+						continue
+					}
+					addIP(ip)
+				}
+			}
+		}
+	}
+
+	addDNS("localhost")
+	addIP(net.ParseIP("127.0.0.1"))
+	addIP(net.ParseIP("::1"))
+
+	return dnsNames, ipAddresses
 }
 
 func createEmptyCRL(now time.Time, caCert *x509.Certificate, caKey *ecdsa.PrivateKey) ([]byte, error) {

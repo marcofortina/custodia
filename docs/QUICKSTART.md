@@ -203,7 +203,7 @@ sudo install -d -m 0750 -o custodia -g custodia \
 
 The same installed binaries can run Lite, Full or custom profiles. This quickstart configures Lite.
 
-Set the name clients and browsers will use to reach the server. The value is embedded into the server certificate SAN. Use the DNS name or IP address that browsers and clients will actually use.
+Set the name clients and browsers will use to reach the server. The value is embedded into the server certificate SAN. The bootstrap certificate also includes `localhost`, `127.0.0.1`, `::1` and, when the name resolves to a non-loopback address, that resolved IP address. Use the DNS name or IP address that browsers and clients will actually use.
 
 ```bash
 CUSTODIA_SERVER_NAME="$(hostname -f)"

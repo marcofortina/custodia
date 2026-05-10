@@ -518,7 +518,7 @@ func runCABootstrapLocal(args []string) error {
 	cmd := flag.NewFlagSet("ca bootstrap-local", flag.ExitOnError)
 	outDir := cmd.String("out-dir", "", "directory for generated Lite CA artifacts")
 	adminClientID := cmd.String("admin-client-id", "admin", "initial admin client id")
-	serverName := cmd.String("server-name", "localhost", "server DNS name or IP address for the TLS certificate")
+	serverName := cmd.String("server-name", "localhost", "server DNS name or IP address for the TLS certificate SANs")
 	passphraseFile := cmd.String("ca-passphrase-file", "", "optional file containing the CA key passphrase")
 	generatePassphrase := cmd.Bool("generate-ca-passphrase", false, "generate a CA key passphrase file when --ca-passphrase-file is not provided")
 	_ = cmd.Parse(args)

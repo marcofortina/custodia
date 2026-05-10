@@ -11,6 +11,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"net"
 	"strings"
 	"testing"
 	"time"
@@ -64,14 +65,33 @@ func TestGenerateLiteBootstrapRejectsInvalidAdminClientID(t *testing.T) {
 	}
 }
 
-func TestGenerateLiteBootstrapServerIPGoesToIPAddresses(t *testing.T) {
-	artifacts, err := GenerateLiteBootstrap(LiteBootstrapRequest{AdminClientID: "admin", ServerName: "127.0.0.1"})
+func TestGenerateLiteBootstrapServerIPAddsLocalhostSANs(t *testing.T) {
+	artifacts, err := GenerateLiteBootstrap(LiteBootstrapRequest{AdminClientID: "admin", ServerName: "192.0.2.10"})
 	if err != nil {
 		t.Fatalf("GenerateLiteBootstrap() error = %v", err)
 	}
 	cert := parseTestCertificate(t, artifacts.ServerCertPEM)
-	if len(cert.IPAddresses) != 1 || cert.IPAddresses[0].String() != "127.0.0.1" {
-		t.Fatalf("unexpected IP SANs: %#v", cert.IPAddresses)
+	assertTestDNSName(t, cert, "localhost")
+	assertTestIPAddress(t, cert, "192.0.2.10")
+	assertTestIPAddress(t, cert, "127.0.0.1")
+	assertTestIPAddress(t, cert, "::1")
+}
+
+func TestLiteServerSANsAddsResolvedNonLoopbackIP(t *testing.T) {
+	dnsNames, ipAddresses := liteServerSANs("custodia.example.internal", func(name string) ([]net.IP, error) {
+		if name != "custodia.example.internal" {
+			t.Fatalf("unexpected lookup name %q", name)
+		}
+		return []net.IP{net.ParseIP("192.0.2.10"), net.ParseIP("127.0.1.1")}, nil
+	})
+	if !containsString(dnsNames, "custodia.example.internal") || !containsString(dnsNames, "localhost") {
+		t.Fatalf("unexpected DNS SANs: %#v", dnsNames)
+	}
+	if !containsIPString(ipAddresses, "192.0.2.10") || !containsIPString(ipAddresses, "127.0.0.1") || !containsIPString(ipAddresses, "::1") {
+		t.Fatalf("unexpected IP SANs: %#v", ipAddresses)
+	}
+	if containsIPString(ipAddresses, "127.0.1.1") {
+		t.Fatalf("resolved loopback should not be added automatically: %#v", ipAddresses)
 	}
 }
 
@@ -86,4 +106,36 @@ func parseTestCertificate(t *testing.T, certPEM []byte) *x509.Certificate {
 		t.Fatalf("ParseCertificate() error = %v", err)
 	}
 	return cert
+}
+
+func assertTestDNSName(t *testing.T, cert *x509.Certificate, name string) {
+	t.Helper()
+	if !containsString(cert.DNSNames, name) {
+		t.Fatalf("expected DNS SAN %q in %#v", name, cert.DNSNames)
+	}
+}
+
+func assertTestIPAddress(t *testing.T, cert *x509.Certificate, want string) {
+	t.Helper()
+	if !containsIPString(cert.IPAddresses, want) {
+		t.Fatalf("expected IP SAN %q in %#v", want, cert.IPAddresses)
+	}
+}
+
+func containsString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
+}
+
+func containsIPString(values []net.IP, want string) bool {
+	for _, value := range values {
+		if value.String() == want {
+			return true
+		}
+	}
+	return false
 }

@@ -45,11 +45,11 @@ For a first Lite installation, generate local CA and certificate material with:
 sudo -u custodia custodia-admin ca bootstrap-local \
   --out-dir /etc/custodia \
   --admin-client-id admin \
-  --server-name localhost \
+  --server-name "$(hostname -f)" \
   --generate-ca-passphrase
 ```
 
-Use `--ca-passphrase-file FILE` when you already have a passphrase file managed by your secret-handling process.
+Use `--ca-passphrase-file FILE` when you already have a passphrase file managed by your secret-handling process. The generated server certificate includes the requested server name, `localhost`, `127.0.0.1`, `::1` and any non-loopback IP address resolved from the server name.
 
 ## Configuration
 
