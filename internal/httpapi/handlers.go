@@ -418,6 +418,103 @@ func (s *Server) handleGetSecret(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, response)
 }
 
+func (s *Server) handleGetSecretByKey(w http.ResponseWriter, r *http.Request) {
+	namespace, key, ok := s.requireSecretKeyspaceQuery(w, r, "secret.read")
+	if !ok {
+		return
+	}
+	secretID, err := s.store.ResolveSecretIDByKey(r.Context(), clientIDFromContext(r), namespace, key, model.PermissionRead)
+	if err != nil {
+		s.auditStoreFailure(r, "secret.read", "secret_key", secretKeyspaceResource(namespace, key), err)
+		writeMappedError(w, err)
+		return
+	}
+	response, err := s.store.GetSecret(r.Context(), clientIDFromContext(r), secretID)
+	if err != nil {
+		s.auditStoreFailure(r, "secret.read", "secret", secretID, err)
+		writeMappedError(w, err)
+		return
+	}
+	s.audit(r, "secret.read", "secret", secretID, "success", nil)
+	writeJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) handleDeleteSecretByKey(w http.ResponseWriter, r *http.Request) {
+	namespace, key, ok := s.requireSecretKeyspaceQuery(w, r, "secret.delete")
+	if !ok {
+		return
+	}
+	secretID, err := s.store.ResolveSecretIDByKey(r.Context(), clientIDFromContext(r), namespace, key, model.PermissionWrite)
+	if err != nil {
+		s.auditStoreFailure(r, "secret.delete", "secret_key", secretKeyspaceResource(namespace, key), err)
+		writeMappedError(w, err)
+		return
+	}
+	if err := s.store.DeleteSecret(r.Context(), clientIDFromContext(r), secretID); err != nil {
+		s.auditStoreFailure(r, "secret.delete", "secret", secretID, err)
+		writeMappedError(w, err)
+		return
+	}
+	s.audit(r, "secret.delete", "secret", secretID, "success", nil)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+func (s *Server) handleShareSecretByKey(w http.ResponseWriter, r *http.Request) {
+	namespace, key, ok := s.requireSecretKeyspaceQuery(w, r, "secret.share")
+	if !ok {
+		return
+	}
+	secretID, err := s.store.ResolveSecretIDByKey(r.Context(), clientIDFromContext(r), namespace, key, model.PermissionShare)
+	if err != nil {
+		s.auditStoreFailure(r, "secret.share", "secret_key", secretKeyspaceResource(namespace, key), err)
+		writeMappedError(w, err)
+		return
+	}
+	var req model.ShareSecretRequest
+	if !decodeJSON(w, r, &req) {
+		s.auditFailure(r, "secret.share", "secret", secretID, map[string]string{"reason": "invalid_json"})
+		return
+	}
+	if err := s.store.ShareSecret(r.Context(), clientIDFromContext(r), secretID, req); err != nil {
+		s.auditStoreFailure(r, "secret.share", "secret", secretID, err)
+		writeMappedError(w, err)
+		return
+	}
+	s.audit(r, "secret.share", "secret", secretID, "success", nil)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "shared"})
+}
+
+func (s *Server) handleCreateSecretVersionByKey(w http.ResponseWriter, r *http.Request) {
+	namespace, key, ok := s.requireSecretKeyspaceQuery(w, r, "secret.version_create")
+	if !ok {
+		return
+	}
+	secretID, err := s.store.ResolveSecretIDByKey(r.Context(), clientIDFromContext(r), namespace, key, model.PermissionWrite)
+	if err != nil {
+		s.auditStoreFailure(r, "secret.version_create", "secret_key", secretKeyspaceResource(namespace, key), err)
+		writeMappedError(w, err)
+		return
+	}
+	var req model.CreateSecretVersionRequest
+	if !decodeJSON(w, r, &req) {
+		s.auditFailure(r, "secret.version_create", "secret", secretID, map[string]string{"reason": "invalid_json"})
+		return
+	}
+	if len(req.Envelopes) > s.maxEnvelopesPerSecret {
+		s.auditFailure(r, "secret.version_create", "secret", secretID, map[string]string{"reason": "too_many_envelopes"})
+		writeError(w, http.StatusRequestEntityTooLarge, "too_many_envelopes")
+		return
+	}
+	ref, err := s.store.CreateSecretVersion(r.Context(), clientIDFromContext(r), secretID, req)
+	if err != nil {
+		s.auditStoreFailure(r, "secret.version_create", "secret", secretID, err)
+		writeMappedError(w, err)
+		return
+	}
+	s.audit(r, "secret.version_create", "secret", secretID, "success", nil)
+	writeJSON(w, http.StatusCreated, ref)
+}
+
 func (s *Server) handleListSecretVersions(w http.ResponseWriter, r *http.Request) {
 	secretID, ok := s.requireSecretID(w, r, "secret.version_list")
 	if !ok {
@@ -666,6 +763,26 @@ func (s *Server) requireClientID(w http.ResponseWriter, r *http.Request, action 
 		return "", false
 	}
 	return clientID, true
+}
+
+func (s *Server) requireSecretKeyspaceQuery(w http.ResponseWriter, r *http.Request, action string) (string, string, bool) {
+	namespace := model.NormalizeSecretNamespace(r.URL.Query().Get("namespace"))
+	key := model.NormalizeSecretKey(r.URL.Query().Get("key"))
+	if !model.ValidSecretNamespace(namespace) {
+		s.auditFailure(r, action, "secret_key", secretKeyspaceResource(namespace, key), map[string]string{"reason": "invalid_secret_namespace"})
+		writeError(w, http.StatusBadRequest, "invalid_secret_namespace")
+		return "", "", false
+	}
+	if !model.ValidSecretKey(key) {
+		s.auditFailure(r, action, "secret_key", secretKeyspaceResource(namespace, key), map[string]string{"reason": "invalid_secret_key"})
+		writeError(w, http.StatusBadRequest, "invalid_secret_key")
+		return "", "", false
+	}
+	return namespace, key, true
+}
+
+func secretKeyspaceResource(namespace, key string) string {
+	return model.NormalizeSecretNamespace(namespace) + "/" + model.NormalizeSecretKey(key)
 }
 
 func (s *Server) requireSecretID(w http.ResponseWriter, r *http.Request, action string) (string, bool) {

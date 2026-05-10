@@ -50,6 +50,9 @@ func (s *PostgresStore) CreateSecret(context.Context, string, model.CreateSecret
 func (s *PostgresStore) ListSecrets(context.Context, string) ([]model.SecretMetadata, error) {
 	return nil, ErrPostgresStoreNotWired
 }
+func (s *PostgresStore) ResolveSecretIDByKey(context.Context, string, string, string, model.Permission) (string, error) {
+	return "", ErrPostgresStoreNotWired
+}
 func (s *PostgresStore) GetSecret(context.Context, string, string) (model.SecretReadResponse, error) {
 	return model.SecretReadResponse{}, ErrPostgresStoreNotWired
 }

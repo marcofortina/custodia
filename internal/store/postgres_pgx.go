@@ -266,6 +266,25 @@ func (s *PostgresStore) ListSecrets(ctx context.Context, actorClientID string) (
 	return secrets, mapPostgresError(rows.Err())
 }
 
+func (s *PostgresStore) ResolveSecretIDByKey(ctx context.Context, actorClientID, namespace, key string, permission model.Permission) (string, error) {
+	namespace = model.NormalizeSecretNamespace(namespace)
+	key = model.NormalizeSecretKey(key)
+	if !model.ValidSecretNamespace(namespace) || !model.ValidSecretKey(key) {
+		return "", ErrInvalidInput
+	}
+	secretID, ok, err := activeVisibleSecretIDByKey(ctx, s.pool, actorClientID, namespace, key)
+	if err != nil {
+		return "", err
+	}
+	if !ok {
+		return "", ErrNotFound
+	}
+	if _, _, err := visibleVersion(ctx, s.pool, actorClientID, secretID, "", permission); err != nil {
+		return "", err
+	}
+	return secretID, nil
+}
+
 func (s *PostgresStore) GetSecret(ctx context.Context, actorClientID, secretID string) (model.SecretReadResponse, error) {
 	if _, _, err := visibleVersion(ctx, s.pool, actorClientID, secretID, "", model.PermissionRead); err != nil {
 		return model.SecretReadResponse{}, err
@@ -283,7 +302,6 @@ func (s *PostgresStore) GetSecret(ctx context.Context, actorClientID, secretID s
 			ORDER BY created_at DESC
 			LIMIT 1
 		) v ON TRUE
-		JOIN secret_visibility sv ON sv.secret_id = s.secret_id AND sv.client_id = $2
 		JOIN secret_visibility sv ON sv.secret_id = s.secret_id AND sv.client_id = $2
 		JOIN secret_access a ON a.secret_id = v.secret_id AND a.version_id = v.version_id AND a.client_id = $2
 		WHERE s.secret_id = $1::uuid AND s.deleted_at IS NULL

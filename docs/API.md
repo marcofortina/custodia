@@ -4,7 +4,7 @@ All `/v1/*` routes require mTLS. The authenticated `client_id` is extracted from
 
 ## Secret addressing migration target
 
-Custodia is migrating user-facing secret workflows from generated `secret_id` values to a namespace/key keyspace. The target contract is documented in [`SECRET_KEYSPACE_MODEL.md`](SECRET_KEYSPACE_MODEL.md). Until the code migration lands, the endpoint descriptions below document the current `secret_id` API surface.
+Custodia is migrating user-facing secret workflows from generated `secret_id` values to a namespace/key keyspace. The target contract is documented in [`SECRET_KEYSPACE_MODEL.md`](SECRET_KEYSPACE_MODEL.md). New read/share/version/delete workflows can resolve the caller-visible secret through `namespace` and `key`; legacy `secret_id` endpoints remain available for compatibility during the migration.
 
 
 ## Client metadata create
@@ -34,7 +34,11 @@ Returns metadata for secrets whose latest active version is readable by the call
 
 ## Secret read
 
-`GET /v1/secrets/{secret_id}`
+`GET /v1/secrets/by-key?namespace=db01&key=user:sys`
+
+Resolves the authenticated caller's visible keyspace and returns the latest readable version. `namespace` defaults to `default` when omitted; `key` is required.
+
+`GET /v1/secrets/{secret_id}` remains available as a compatibility endpoint.
 
 Returns the latest readable version for the caller only:
 
@@ -51,15 +55,27 @@ Returns the latest readable version for the caller only:
 
 ## Secret share
 
-`POST /v1/secrets/{secret_id}/share`
+`POST /v1/secrets/by-key/share?namespace=db01&key=user:sys`
 
-Requires the caller to have `share` on the selected version. The request must include a base64-encoded envelope generated client-side for the target client.
+Resolves the caller-visible secret by namespace/key and requires `share` on the selected version. The request must include a base64-encoded envelope generated client-side for the target client.
+
+`POST /v1/secrets/{secret_id}/share` remains available as a compatibility endpoint.
 
 ## Secret new version
 
-`POST /v1/secrets/{secret_id}/versions`
+`POST /v1/secrets/by-key/versions?namespace=db01&key=user:sys`
 
-Requires `write`. Used for strong revocation and client-side cryptographic rotation by uploading new base64-encoded ciphertext and new opaque envelopes. Creating a new version supersedes previous active versions and cancels pending access grants for those versions, so future reads and activations use only the latest client-side material. Requests with more than `CUSTODIA_MAX_ENVELOPES_PER_SECRET` recipients are rejected with `413 Payload Too Large`; the default limit is `100`.
+Resolves the caller-visible secret by namespace/key and requires `write`. Used for strong revocation and client-side cryptographic rotation by uploading new base64-encoded ciphertext and new opaque envelopes. Creating a new version supersedes previous active versions and cancels pending access grants for those versions, so future reads and activations use only the latest client-side material. Requests with more than `CUSTODIA_MAX_ENVELOPES_PER_SECRET` recipients are rejected with `413 Payload Too Large`; the default limit is `100`.
+
+`POST /v1/secrets/{secret_id}/versions` remains available as a compatibility endpoint.
+
+## Secret delete
+
+`DELETE /v1/secrets/by-key?namespace=db01&key=user:sys`
+
+Resolves the caller-visible secret by namespace/key and currently follows the compatibility delete behavior for that secret. The final owner/shared/cascade semantics are defined in `SECRET_KEYSPACE_MODEL.md` and will replace this transitional behavior in a later patch.
+
+`DELETE /v1/secrets/{secret_id}` remains available as a compatibility endpoint.
 
 ## Access grant request
 

@@ -44,6 +44,9 @@ func (s *SQLiteStore) CreateSecret(context.Context, string, model.CreateSecretRe
 func (s *SQLiteStore) ListSecrets(context.Context, string) ([]model.SecretMetadata, error) {
 	return nil, ErrSQLiteStoreNotWired
 }
+func (s *SQLiteStore) ResolveSecretIDByKey(context.Context, string, string, string, model.Permission) (string, error) {
+	return "", ErrSQLiteStoreNotWired
+}
 func (s *SQLiteStore) GetSecret(context.Context, string, string) (model.SecretReadResponse, error) {
 	return model.SecretReadResponse{}, ErrSQLiteStoreNotWired
 }

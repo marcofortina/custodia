@@ -22,6 +22,7 @@ type Store interface {
 	RevokeClient(ctx context.Context, clientID string) error
 	CreateSecret(ctx context.Context, actorClientID string, req model.CreateSecretRequest) (model.SecretVersionRef, error)
 	ListSecrets(ctx context.Context, actorClientID string) ([]model.SecretMetadata, error)
+	ResolveSecretIDByKey(ctx context.Context, actorClientID, namespace, key string, permission model.Permission) (string, error)
 	GetSecret(ctx context.Context, actorClientID, secretID string) (model.SecretReadResponse, error)
 	ListSecretVersions(ctx context.Context, actorClientID, secretID string) ([]model.SecretVersionMetadata, error)
 	ListSecretAccess(ctx context.Context, actorClientID, secretID string) ([]model.SecretAccessMetadata, error)

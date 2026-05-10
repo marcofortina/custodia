@@ -604,6 +604,88 @@ func TestAPICreateAndReadOpaqueSecret(t *testing.T) {
 	}
 }
 
+func TestAPIReadsSharesAndVersionsSecretByKeyspace(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, clientID := range []string{"client_alice", "client_bob"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %s: %v", clientID, err)
+		}
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	createBody := `{"namespace":"db01","key":"user:sys","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
+	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected create 201, got %d: %s", res.Code, res.Body.String())
+	}
+
+	req = mtlsRequest(http.MethodGet, "/v1/secrets/by-key?namespace=db01&key=user:sys", "", "client_alice")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected read by key 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var read model.SecretReadResponse
+	if err := json.NewDecoder(res.Body).Decode(&read); err != nil {
+		t.Fatalf("decode read: %v", err)
+	}
+	if read.Namespace != "db01" || read.Key != "user:sys" || read.Ciphertext != "Y2lwaGVydGV4dA==" {
+		t.Fatalf("unexpected keyspace read: %+v", read)
+	}
+
+	shareBody := `{"target_client_id":"client_bob","envelope":"ZW52ZWxvcGUtZm9yLWJvYg==","permissions":4}`
+	req = mtlsRequest(http.MethodPost, "/v1/secrets/by-key/share?namespace=db01&key=user:sys", shareBody, "client_alice")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected share by key 200, got %d: %s", res.Code, res.Body.String())
+	}
+
+	req = mtlsRequest(http.MethodGet, "/v1/secrets/by-key?namespace=db01&key=user:sys", "", "client_bob")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected bob read by key 200, got %d: %s", res.Code, res.Body.String())
+	}
+	read = model.SecretReadResponse{}
+	if err := json.NewDecoder(res.Body).Decode(&read); err != nil {
+		t.Fatalf("decode bob read: %v", err)
+	}
+	if read.Envelope != "ZW52ZWxvcGUtZm9yLWJvYg==" {
+		t.Fatalf("unexpected bob envelope: %+v", read)
+	}
+
+	versionBody := `{"ciphertext":"bmV3LWNpcGhlcnRleHQ=","envelopes":[{"client_id":"client_alice","envelope":"bmV3LWVudmVsb3BlLWFsaWNl"},{"client_id":"client_bob","envelope":"bmV3LWVudmVsb3BlLWJvYg=="}],"permissions":7}`
+	req = mtlsRequest(http.MethodPost, "/v1/secrets/by-key/versions?namespace=db01&key=user:sys", versionBody, "client_alice")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected version by key 201, got %d: %s", res.Code, res.Body.String())
+	}
+}
+
+func TestAPIRejectsMissingSecretKeyspaceKey(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/v1/secrets/by-key?namespace=db01", "", "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", res.Code, res.Body.String())
+	}
+	if !strings.Contains(res.Body.String(), "invalid_secret_key") {
+		t.Fatalf("expected invalid_secret_key, got %s", res.Body.String())
+	}
+}
+
 func TestAPIRejectsInvalidPermissionBits(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()

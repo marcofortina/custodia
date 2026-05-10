@@ -280,6 +280,24 @@ func (s *MemoryStore) ListSecrets(_ context.Context, actorClientID string) ([]mo
 	return secrets, nil
 }
 
+func (s *MemoryStore) ResolveSecretIDByKey(_ context.Context, actorClientID, namespace, key string, permission model.Permission) (string, error) {
+	namespace = model.NormalizeSecretNamespace(namespace)
+	key = model.NormalizeSecretKey(key)
+	if !model.ValidSecretNamespace(namespace) || !model.ValidSecretKey(key) {
+		return "", ErrInvalidInput
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	secretID, ok := s.activeVisibleSecretIDLocked(actorClientID, namespace, key)
+	if !ok {
+		return "", ErrNotFound
+	}
+	if _, _, _, err := s.visibleSecretLocked(actorClientID, secretID, permission); err != nil {
+		return "", err
+	}
+	return secretID, nil
+}
+
 func (s *MemoryStore) GetSecret(_ context.Context, actorClientID, secretID string) (model.SecretReadResponse, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

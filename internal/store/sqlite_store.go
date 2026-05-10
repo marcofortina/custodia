@@ -224,6 +224,9 @@ func (s *SQLiteStore) CreateSecret(ctx context.Context, actorClientID string, re
 func (s *SQLiteStore) ListSecrets(ctx context.Context, actorClientID string) ([]model.SecretMetadata, error) {
 	return s.memory.ListSecrets(ctx, actorClientID)
 }
+func (s *SQLiteStore) ResolveSecretIDByKey(ctx context.Context, actorClientID, namespace, key string, permission model.Permission) (string, error) {
+	return s.memory.ResolveSecretIDByKey(ctx, actorClientID, namespace, key, permission)
+}
 func (s *SQLiteStore) GetSecret(ctx context.Context, actorClientID, secretID string) (model.SecretReadResponse, error) {
 	return s.memory.GetSecret(ctx, actorClientID, secretID)
 }
