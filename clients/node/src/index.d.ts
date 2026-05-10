@@ -50,6 +50,8 @@ export type Transport = (request: TransportRequest) => Promise<TransportResponse
 
 export interface CreateSecretPayload {
   name: string;
+  namespace?: string;
+  key?: string;
   ciphertext: string;
   envelopes: RecipientEnvelope[];
   permissions?: number;
@@ -127,14 +129,19 @@ export class CustodiaClient {
   revokeClientInfo(payload: JsonObject): Promise<JsonObject>;
   createSecretPayload(payload: CreateSecretPayload): Promise<JsonObject>;
   getSecretPayload(secretID: string): Promise<JsonObject>;
+  getSecretPayloadByKey(namespace: string, key: string): Promise<JsonObject>;
   listSecretMetadata(limit?: number): Promise<JsonObject>;
   listSecretVersionMetadata(secretID: string, limit?: number): Promise<JsonObject>;
   listSecretAccessMetadata(secretID: string, limit?: number): Promise<JsonObject>;
   shareSecretPayload(secretID: string, payload: ShareSecretPayload): Promise<JsonObject>;
+  shareSecretPayloadByKey(namespace: string, key: string, payload: ShareSecretPayload): Promise<JsonObject>;
   createAccessGrant(secretID: string, payload: AccessGrantPayload): Promise<JsonObject>;
   activateAccessGrantPayload(secretID: string, targetClientID: string, payload: ActivateAccessPayload): Promise<JsonObject>;
   revokeAccess(secretID: string, clientID: string): Promise<JsonObject>;
   createSecretVersionPayload(secretID: string, payload: CreateSecretVersionPayload): Promise<JsonObject>;
+  createSecretVersionPayloadByKey(namespace: string, key: string, payload: CreateSecretVersionPayload): Promise<JsonObject>;
+  deleteSecretPayload(secretID: string, options?: { cascade?: boolean }): Promise<JsonObject>;
+  deleteSecretPayloadByKey(namespace: string, key: string, options?: { cascade?: boolean }): Promise<JsonObject>;
   listAccessGrantMetadata(filters?: AccessGrantRequestFilters): Promise<JsonObject>;
   statusInfo(): Promise<JsonObject>;
   versionInfo(): Promise<JsonObject>;
@@ -297,6 +304,14 @@ export class CryptoCustodiaClient {
     permissions?: number;
     expiresAt?: string;
   }): Promise<JsonObject>;
+  createEncryptedSecretByKey(payload: {
+    namespace?: string;
+    key: string;
+    plaintext: Uint8Array;
+    recipients?: string[];
+    permissions?: number;
+    expiresAt?: string;
+  }): Promise<JsonObject>;
   createEncryptedSecretVersion(payload: {
     secretID: string;
     plaintext: Uint8Array;
@@ -304,9 +319,25 @@ export class CryptoCustodiaClient {
     permissions?: number;
     expiresAt?: string;
   }): Promise<JsonObject>;
+  createEncryptedSecretVersionByKey(payload: {
+    namespace?: string;
+    key: string;
+    plaintext: Uint8Array;
+    recipients?: string[];
+    permissions?: number;
+    expiresAt?: string;
+  }): Promise<JsonObject>;
   readDecryptedSecret(secretID: string): Promise<DecryptedSecret>;
+  readDecryptedSecretByKey(namespace: string, key: string): Promise<DecryptedSecret>;
   shareEncryptedSecret(payload: {
     secretID: string;
+    targetClientID: string;
+    permissions?: number;
+    expiresAt?: string;
+  }): Promise<JsonObject>;
+  shareEncryptedSecretByKey(payload: {
+    namespace?: string;
+    key: string;
     targetClientID: string;
     permissions?: number;
     expiresAt?: string;

@@ -391,6 +391,30 @@ export class CryptoCustodiaClient {
     return this.transport.createSecretPayload(payload);
   }
 
+  async createEncryptedSecretByKey({ namespace = "default", key, plaintext, recipients = [], permissions = 7, expiresAt } = {}) {
+    namespace = normalizeNamespace(namespace);
+    key = requireSecretKey(key);
+    const dek = this.random(AES256GCMKeyBytes);
+    const nonce = this.random(AESGCMNonceBytes);
+    const aadInputs = new CanonicalAADInputs({ secretName: key });
+    const metadata = metadataV1(aadInputs, nonce);
+    const aad = buildCanonicalAAD(metadata, aadInputs);
+    const ciphertext = sealContentAES256GCM(dek, nonce, Buffer.from(plaintext), aad);
+    const payload = {
+      namespace,
+      key,
+      name: key,
+      ciphertext: encodeBase64(ciphertext),
+      crypto_metadata: metadata.toJSON(),
+      envelopes: this.sealRecipientEnvelopes(this.normalizedRecipients(recipients), dek, aad),
+      permissions,
+    };
+    if (expiresAt) {
+      payload.expires_at = expiresAt;
+    }
+    return this.transport.createSecretPayload(payload);
+  }
+
   async createEncryptedSecretVersion({ secretID, plaintext, recipients = [], permissions = 7, expiresAt } = {}) {
     if (!String(secretID ?? "").trim()) {
       throw new TypeError("secret id is required");
@@ -413,11 +437,61 @@ export class CryptoCustodiaClient {
     return this.transport.createSecretVersionPayload(secretID, payload);
   }
 
+  async createEncryptedSecretVersionByKey({ namespace = "default", key, plaintext, recipients = [], permissions = 7, expiresAt } = {}) {
+    namespace = normalizeNamespace(namespace);
+    key = requireSecretKey(key);
+    const dek = this.random(AES256GCMKeyBytes);
+    const nonce = this.random(AESGCMNonceBytes);
+    const aadInputs = new CanonicalAADInputs({ secretName: key });
+    const metadata = metadataV1(aadInputs, nonce);
+    const aad = buildCanonicalAAD(metadata, aadInputs);
+    const ciphertext = sealContentAES256GCM(dek, nonce, Buffer.from(plaintext), aad);
+    const payload = {
+      ciphertext: encodeBase64(ciphertext),
+      crypto_metadata: metadata.toJSON(),
+      envelopes: this.sealRecipientEnvelopes(this.normalizedRecipients(recipients), dek, aad),
+      permissions,
+    };
+    if (expiresAt) {
+      payload.expires_at = expiresAt;
+    }
+    return this.transport.createSecretVersionPayloadByKey(namespace, key, payload);
+  }
+
   async readDecryptedSecret(secretID) {
     const secret = await this.transport.getSecretPayload(secretID);
     const metadata = parseMetadata(secret.crypto_metadata ?? {});
     const fallback = new CanonicalAADInputs({
       secretID: String(secret.secret_id ?? ""),
+      versionID: String(secret.version_id ?? ""),
+    });
+    const aadInputs = metadata.canonicalAADInputs(fallback);
+    const aad = buildCanonicalAAD(metadata, aadInputs);
+    if (!metadata.contentNonceB64) {
+      throw new MalformedCryptoMetadata("missing content nonce");
+    }
+    const nonce = decodeBase64(metadata.contentNonceB64);
+    const dek = this.openSecretEnvelope(String(secret.envelope ?? ""), aad);
+    const ciphertext = decodeBase64(String(secret.ciphertext ?? ""));
+    const plaintext = openContentAES256GCM(dek, nonce, ciphertext, aad);
+    return new DecryptedSecret({
+      secretID: String(secret.secret_id ?? ""),
+      versionID: String(secret.version_id ?? ""),
+      plaintext,
+      cryptoMetadata: metadata.toJSON(),
+      permissions: Number(secret.permissions ?? 0),
+      grantedAt: String(secret.granted_at ?? ""),
+      accessExpiresAt: secret.access_expires_at ?? null,
+    });
+  }
+
+  async readDecryptedSecretByKey(namespace, key) {
+    namespace = normalizeNamespace(namespace);
+    key = requireSecretKey(key);
+    const secret = await this.transport.getSecretPayloadByKey(namespace, key);
+    const metadata = parseMetadata(secret.crypto_metadata ?? {});
+    const fallback = new CanonicalAADInputs({
+      secretName: key,
       versionID: String(secret.version_id ?? ""),
     });
     const aadInputs = metadata.canonicalAADInputs(fallback);
@@ -464,6 +538,34 @@ export class CryptoCustodiaClient {
       payload.expires_at = expiresAt;
     }
     return this.transport.shareSecretPayload(secretID, payload);
+  }
+
+  async shareEncryptedSecretByKey({ namespace = "default", key, targetClientID, permissions = 4, expiresAt } = {}) {
+    namespace = normalizeNamespace(namespace);
+    key = requireSecretKey(key);
+    if (!String(targetClientID ?? "").trim()) {
+      throw new TypeError("target client id is required");
+    }
+    const secret = await this.transport.getSecretPayloadByKey(namespace, key);
+    const metadata = parseMetadata(secret.crypto_metadata ?? {});
+    const fallback = new CanonicalAADInputs({
+      secretName: key,
+      versionID: String(secret.version_id ?? ""),
+    });
+    const aadInputs = metadata.canonicalAADInputs(fallback);
+    const aad = buildCanonicalAAD(metadata, aadInputs);
+    const dek = this.openSecretEnvelope(String(secret.envelope ?? ""), aad);
+    const envelope = this.sealRecipientEnvelopes([targetClientID], dek, aad)[0];
+    const payload = {
+      version_id: String(secret.version_id ?? ""),
+      target_client_id: targetClientID,
+      envelope: envelope.envelope,
+      permissions,
+    };
+    if (expiresAt) {
+      payload.expires_at = expiresAt;
+    }
+    return this.transport.shareSecretPayloadByKey(namespace, key, payload);
   }
 
   normalizedRecipients(recipients) {
@@ -517,6 +619,19 @@ export class CryptoCustodiaClient {
 
 export function withCrypto(client, options) {
   return new CryptoCustodiaClient(client, options);
+}
+
+function normalizeNamespace(namespace) {
+  const value = String(namespace ?? "").trim();
+  return value || "default";
+}
+
+function requireSecretKey(key) {
+  const value = String(key ?? "").trim();
+  if (!value) {
+    throw new TypeError("secret key is required");
+  }
+  return value;
 }
 
 function hpkeSeal(sharedSecret, info, plaintext, aad) {
