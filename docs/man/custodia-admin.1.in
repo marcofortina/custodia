@@ -54,7 +54,7 @@ server name, localhost, 127.0.0.1, ::1 and any non-loopback IP address resolved
 from the server name.
 .TP
 .B client enrollment create [--config FILE] [--ttl DURATION]
-Create a short-lived, one-shot enrollment token for remote client onboarding. The command reads the configured server URL from the server YAML and prints the token, server URL and server certificate SHA-256 fingerprint for transfer to the client host.
+Create a short-lived, one-shot enrollment token for remote client onboarding. The command reads the configured server URL from the server YAML and prints the token and server URL for transfer to the client host.
 .TP
 .B client sign-csr --client-id ID --csr-file FILE --certificate-out FILE --signer-url URL
 Register client metadata, submit a client-generated CSR to

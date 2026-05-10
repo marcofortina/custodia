@@ -170,10 +170,9 @@ type ClientEnrollmentCreateRequest struct {
 
 // ClientEnrollmentCreateResponse returns the token only once to the admin caller.
 type ClientEnrollmentCreateResponse struct {
-	ServerURL        string    `json:"server_url"`
-	EnrollmentToken  string    `json:"enrollment_token"`
-	ExpiresAt        time.Time `json:"expires_at"`
-	ServerCertSHA256 string    `json:"server_cert_sha256,omitempty"`
+	ServerURL       string    `json:"server_url"`
+	EnrollmentToken string    `json:"enrollment_token"`
+	ExpiresAt       time.Time `json:"expires_at"`
 }
 
 // ClientEnrollmentClaimRequest is intentionally unauthenticated by mTLS: the client

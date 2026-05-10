@@ -50,8 +50,7 @@ export CLIENT_ID=client_alice
 custodia-client mtls enroll \
   --client-id "$CLIENT_ID" \
   --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
-  --enrollment-token "ENROLLMENT_TOKEN" \
-  --server-cert-sha256 "SERVER_CERT_SHA256"
+  --enrollment-token "ENROLLMENT_TOKEN"
 custodia-client key generate --client-id "$CLIENT_ID"
 custodia-client config write --client-id "$CLIENT_ID"
 custodia-client config check --client-id "$CLIENT_ID"

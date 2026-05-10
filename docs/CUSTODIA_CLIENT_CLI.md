@@ -48,14 +48,13 @@ On the server/admin host, create a one-shot enrollment token:
 sudo -u custodia custodia-admin client enrollment create --ttl 15m
 ```
 
-Transfer the printed server URL, token and server certificate SHA-256 fingerprint to the client host. Then enroll the client:
+Transfer the printed server URL and token to the client host. Enrollment verifies TLS normally by default; use `--insecure` only for disposable first-run labs with an untrusted local CA. Then enroll the client:
 
 ```bash
 custodia-client mtls enroll \
   --client-id "$CLIENT_ID" \
   --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
-  --enrollment-token "ENROLLMENT_TOKEN" \
-  --server-cert-sha256 "SERVER_CERT_SHA256"
+  --enrollment-token "ENROLLMENT_TOKEN"
 ```
 
 This writes the mTLS private key, CSR, signed certificate and CA certificate into the standard client profile. The mTLS private key remains local to the client host.

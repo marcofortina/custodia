@@ -131,7 +131,7 @@ func (a *app) run(args []string) int {
 
 func (a *app) usage() {
 	fmt.Fprintln(a.stdout, `Usage:
-  custodia-client mtls enroll --client-id ID --server-url URL --enrollment-token TOKEN [--server-cert-sha256 HEX]
+  custodia-client mtls enroll --client-id ID --server-url URL --enrollment-token TOKEN [--insecure]
   custodia-client mtls generate-csr --client-id ID [--private-key-out FILE --csr-out FILE]
   custodia-client mtls install-cert --client-id ID --cert-file FILE --ca-file FILE
   custodia-client key generate --client-id ID [--private-key-out FILE --public-key-out FILE]
@@ -179,7 +179,7 @@ func (a *app) runMTLSEnroll(args []string) int {
 	clientID := fs.String("client-id", "", "client id for the local profile")
 	serverURL := fs.String("server-url", "", "Custodia API URL returned by the enrollment admin command")
 	token := fs.String("enrollment-token", "", "one-shot enrollment token")
-	serverCertSHA256 := fs.String("server-cert-sha256", "", "optional pinned SHA-256 fingerprint for the server TLS certificate")
+	insecure := fs.Bool("insecure", false, "skip TLS certificate verification during enrollment (unsafe; first-run or lab only)")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
@@ -211,7 +211,7 @@ func (a *app) runMTLSEnroll(args []string) int {
 		return 1
 	}
 	claim := model.ClientEnrollmentClaimRequest{ClientID: id, EnrollmentToken: strings.TrimSpace(*token), CSRPem: string(generated.CSRPem)}
-	response, err := claimEnrollment(strings.TrimSpace(*serverURL), strings.TrimSpace(*serverCertSHA256), claim)
+	response, err := claimEnrollment(strings.TrimSpace(*serverURL), *insecure, claim)
 	if err != nil {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
@@ -236,7 +236,7 @@ func (a *app) runMTLSEnroll(args []string) int {
 	return 0
 }
 
-func claimEnrollment(serverURL, serverCertSHA256 string, claim model.ClientEnrollmentClaimRequest) (model.ClientEnrollmentClaimResponse, error) {
+func claimEnrollment(serverURL string, insecure bool, claim model.ClientEnrollmentClaimRequest) (model.ClientEnrollmentClaimResponse, error) {
 	payload, err := json.Marshal(claim)
 	if err != nil {
 		return model.ClientEnrollmentClaimResponse{}, err
@@ -247,12 +247,8 @@ func claimEnrollment(serverURL, serverCertSHA256 string, claim model.ClientEnrol
 	}
 	request.Header.Set("Content-Type", "application/json")
 	client := &http.Client{Timeout: 30 * time.Second}
-	if serverCertSHA256 != "" {
-		transport, err := pinnedCertificateTransport(serverCertSHA256)
-		if err != nil {
-			return model.ClientEnrollmentClaimResponse{}, err
-		}
-		client.Transport = transport
+	if insecure {
+		client.Transport = insecureEnrollmentTransport()
 	}
 	response, err := client.Do(request)
 	if err != nil {
@@ -273,22 +269,11 @@ func claimEnrollment(serverURL, serverCertSHA256 string, claim model.ClientEnrol
 	return decoded, nil
 }
 
-func pinnedCertificateTransport(expectedFingerprint string) (*http.Transport, error) {
-	expectedFingerprint = strings.ToLower(strings.TrimSpace(strings.ReplaceAll(expectedFingerprint, ":", "")))
-	if len(expectedFingerprint) != sha256.Size*2 {
-		return nil, fmt.Errorf("--server-cert-sha256 must be a hex SHA-256 certificate fingerprint")
-	}
-	return &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS12, VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
-		if len(rawCerts) == 0 {
-			return fmt.Errorf("server did not present a certificate")
-		}
-		digest := sha256.Sum256(rawCerts[0])
-		got := hex.EncodeToString(digest[:])
-		if got != expectedFingerprint {
-			return fmt.Errorf("server certificate fingerprint mismatch")
-		}
-		return nil
-	}}}, nil
+func insecureEnrollmentTransport() *http.Transport {
+	// codeql[go/disabled-certificate-check]: Enrollment uses normal TLS verification by default;
+	// this transport is only selected when the user explicitly passes --insecure for
+	// first-run or lab bootstrap scenarios.
+	return &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS12}}
 }
 
 func (a *app) runMTLSGenerateCSR(args []string) int {

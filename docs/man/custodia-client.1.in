@@ -44,8 +44,8 @@ The server is not a public-key directory. Recipient public keys are loaded
 from local files supplied by trusted out-of-band exchange.
 .SH COMMANDS
 .TP
-.B mtls enroll --client-id ID --server-url URL --enrollment-token TOKEN [--server-cert-sha256 HEX]
-Generate a client-side mTLS private key and CSR, claim a short-lived enrollment token, and install the returned client certificate and CA certificate into the standard profile. The mTLS private key never leaves the client host.
+.B mtls enroll --client-id ID --server-url URL --enrollment-token TOKEN [--insecure]
+Generate a client-side mTLS private key and CSR, claim a short-lived enrollment token, and install the returned client certificate and CA certificate into the standard profile. TLS certificate validation is enabled by default; use --insecure only for disposable first-run labs with an untrusted local CA. The mTLS private key never leaves the client host.
 .TP
 .B mtls generate-csr --client-id ID [--private-key-out FILE --csr-out FILE]
 Generate a client-side mTLS private key and CSR for manual/offline enrollment workflows.
@@ -194,8 +194,7 @@ Create and validate a local client profile:
 CLIENT_ID=client_alice
 custodia-client mtls enroll --client-id "$CLIENT_ID" \
   --server-url https://vault.example:8443 \
-  --enrollment-token ENROLLMENT_TOKEN \
-  --server-cert-sha256 SERVER_CERT_SHA256
+  --enrollment-token ENROLLMENT_TOKEN
 custodia-client key generate --client-id "$CLIENT_ID"
 custodia-client config write --client-id "$CLIENT_ID"
 custodia-client config check --client-id "$CLIENT_ID"

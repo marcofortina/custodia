@@ -357,7 +357,9 @@ Create a short-lived enrollment token on the server/admin host:
 sudo -u custodia custodia-admin client enrollment create --ttl 15m
 ```
 
-The command reads `/etc/custodia/custodia-server.yaml`, contacts the configured server URL, and prints a one-shot enrollment token, the server URL and the server certificate SHA-256 fingerprint. Transfer those values to the client host. The token is sensitive and expires quickly.
+The command reads `/etc/custodia/custodia-server.yaml`, contacts the configured server URL, and prints a one-shot enrollment token plus the server URL. Transfer those values to the client host. The token is sensitive and expires quickly.
+
+Enrollment uses normal TLS certificate validation by default. The server URL must match the server certificate SAN. For disposable first-run labs with an untrusted local CA, `custodia-client mtls enroll` also supports `--insecure`, but do not use it for real remote clients.
 
 Set Alice's client id on Alice's workstation:
 
@@ -371,8 +373,7 @@ Enroll Alice from Alice's workstation:
 custodia-client mtls enroll \
   --client-id "$ALICE_ID" \
   --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
-  --enrollment-token "ENROLLMENT_TOKEN" \
-  --server-cert-sha256 "SERVER_CERT_SHA256"
+  --enrollment-token "ENROLLMENT_TOKEN"
 ```
 
 This generates Alice's mTLS private key and CSR locally, sends only the CSR plus token to Custodia, receives Alice's signed certificate plus `ca.crt`, and installs the public material into Alice's standard client profile. The mTLS private key never leaves Alice's workstation.
@@ -421,7 +422,7 @@ Create another enrollment token for Bob on the server/admin host:
 sudo -u custodia custodia-admin client enrollment create --ttl 15m
 ```
 
-Transfer Bob's enrollment values to Bob. Enroll Bob from Bob's workstation:
+Transfer Bob's enrollment values to Bob. Enroll Bob from Bob's workstation. Enrollment uses normal TLS verification by default; use `--insecure` only for disposable first-run labs:
 
 ```bash
 export BOB_ID=client_bob
@@ -429,8 +430,7 @@ export BOB_ID=client_bob
 custodia-client mtls enroll \
   --client-id "$BOB_ID" \
   --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
-  --enrollment-token "ENROLLMENT_TOKEN" \
-  --server-cert-sha256 "SERVER_CERT_SHA256"
+  --enrollment-token "ENROLLMENT_TOKEN"
 ```
 
 Configure Bob's local application encryption key and reusable client profile:

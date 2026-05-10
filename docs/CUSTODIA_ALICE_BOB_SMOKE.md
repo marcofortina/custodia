@@ -6,7 +6,7 @@ The commands assume the server side is already running. Each client is enrolled 
 
 ## 1. Provision Alice
 
-On the server/admin host, create an enrollment token and transfer the printed server URL, token and server certificate SHA-256 fingerprint to Alice:
+On the server/admin host, create an enrollment token and transfer the printed server URL and token to Alice. Enrollment verifies TLS normally by default; use `--insecure` only for disposable first-run labs with an untrusted local CA:
 
 ```bash
 sudo -u custodia custodia-admin client enrollment create --ttl 15m
@@ -20,8 +20,7 @@ export ALICE_ID=client_alice
 custodia-client mtls enroll \
   --client-id "$ALICE_ID" \
   --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
-  --enrollment-token "ENROLLMENT_TOKEN" \
-  --server-cert-sha256 "SERVER_CERT_SHA256"
+  --enrollment-token "ENROLLMENT_TOKEN"
 
 custodia-client key generate --client-id "$ALICE_ID"
 custodia-client config write --client-id "$ALICE_ID"
@@ -69,7 +68,7 @@ super secret demo value
 
 ## 3. Provision Bob
 
-On the server/admin host, create a second enrollment token and transfer the printed server URL, token and server certificate SHA-256 fingerprint to Bob:
+On the server/admin host, create a second enrollment token and transfer the printed server URL and token to Bob. Enrollment verifies TLS normally by default; use `--insecure` only for disposable first-run labs with an untrusted local CA:
 
 ```bash
 sudo -u custodia custodia-admin client enrollment create --ttl 15m
@@ -83,8 +82,7 @@ export BOB_ID=client_bob
 custodia-client mtls enroll \
   --client-id "$BOB_ID" \
   --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
-  --enrollment-token "ENROLLMENT_TOKEN" \
-  --server-cert-sha256 "SERVER_CERT_SHA256"
+  --enrollment-token "ENROLLMENT_TOKEN"
 
 custodia-client key generate --client-id "$BOB_ID"
 custodia-client config write --client-id "$BOB_ID"

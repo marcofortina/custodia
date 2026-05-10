@@ -9,9 +9,6 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -95,7 +92,6 @@ func main() {
 		DatabaseHATarget:                 cfg.DatabaseHATarget,
 		AuditShipmentSink:                cfg.AuditShipmentSink,
 		EnrollmentServerURL:              cfg.ServerURL,
-		ServerCertSHA256:                 serverCertFingerprint(cfg.TLSCertFile),
 		SignerURL:                        cfg.SignerURL,
 		SignerClientCertFile:             cfg.SignerClientCertFile,
 		SignerClientKeyFile:              cfg.SignerClientKeyFile,
@@ -567,17 +563,4 @@ func buildLimiter(cfg config.Config) (ratelimit.Limiter, error) {
 	default:
 		return nil, errors.New("unsupported rate limit backend")
 	}
-}
-
-func serverCertFingerprint(path string) string {
-	payload, err := os.ReadFile(strings.TrimSpace(path))
-	if err != nil {
-		return ""
-	}
-	block, _ := pem.Decode(payload)
-	if block == nil || block.Type != "CERTIFICATE" {
-		return ""
-	}
-	digest := sha256.Sum256(block.Bytes)
-	return hex.EncodeToString(digest[:])
 }

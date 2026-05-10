@@ -48,7 +48,6 @@ type Server struct {
 	databaseHATarget                 string
 	auditShipmentSink                string
 	enrollmentServerURL              string
-	serverCertSHA256                 string
 	signerURL                        string
 	signerClientCertFile             string
 	signerClientKeyFile              string
@@ -83,7 +82,6 @@ type Options struct {
 	DatabaseHATarget                 string
 	AuditShipmentSink                string
 	EnrollmentServerURL              string
-	ServerCertSHA256                 string
 	SignerURL                        string
 	SignerClientCertFile             string
 	SignerClientKeyFile              string
@@ -151,7 +149,6 @@ func New(options Options) http.Handler {
 		databaseHATarget:                 options.DatabaseHATarget,
 		auditShipmentSink:                options.AuditShipmentSink,
 		enrollmentServerURL:              options.EnrollmentServerURL,
-		serverCertSHA256:                 options.ServerCertSHA256,
 		signerURL:                        options.SignerURL,
 		signerClientCertFile:             options.SignerClientCertFile,
 		signerClientKeyFile:              options.SignerClientKeyFile,

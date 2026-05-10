@@ -73,10 +73,9 @@ func (s *Server) handleCreateClientEnrollment(w http.ResponseWriter, r *http.Req
 	s.enrollmentMu.Unlock()
 	s.audit(r, "client.enrollment_create", "client_enrollment", "", "success", nil)
 	writeJSON(w, http.StatusCreated, model.ClientEnrollmentCreateResponse{
-		ServerURL:        serverURL,
-		EnrollmentToken:  token,
-		ExpiresAt:        expiresAt,
-		ServerCertSHA256: strings.TrimSpace(s.serverCertSHA256),
+		ServerURL:       serverURL,
+		EnrollmentToken: token,
+		ExpiresAt:       expiresAt,
 	})
 }
 
