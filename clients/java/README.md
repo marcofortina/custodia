@@ -29,8 +29,9 @@ var client = CustodiaClient.newClient(
 );
 
 String response = client.createSecretPayload("""
-    {"name":"db","ciphertext":"base64cipher","envelopes":[{"client_id":"self","envelope":"base64env"}]}
+    {"namespace":"default","key":"db","ciphertext":"base64cipher","envelopes":[{"client_id":"self","envelope":"base64env"}]}
     """);
+String payload = client.getSecretPayloadByKey("default", "db");
 ```
 
 ## Boundary
@@ -56,7 +57,7 @@ crypto.createEncryptedSecret(
     CustodiaClient.PERMISSION_ALL
 );
 
-var decrypted = crypto.readDecryptedSecret(secretId);
+var decrypted = crypto.readDecryptedSecret(secretId); // Legacy secret_id compatibility remains available.
 ```
 
 Recipient public keys are still resolved by the application, not by Custodia.

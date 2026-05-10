@@ -44,6 +44,21 @@ public final class CustodiaClientTest {
             transport.lastRequest.uri().toString(),
             "encoded activate path"
         );
+
+        client.getSecretPayloadByKey("db01", "user:sys");
+        assertEquals("https://vault.test/v1/secrets/by-key?namespace=db01&key=user%3Asys", transport.lastRequest.uri().toString(), "read by key path");
+
+        client.shareSecretPayloadByKey("db01", "user:sys", "{\"target_client_id\":\"client_bob\"}");
+        assertEquals("https://vault.test/v1/secrets/by-key/share?namespace=db01&key=user%3Asys", transport.lastRequest.uri().toString(), "share by key path");
+
+        client.createSecretVersionPayloadByKey("db01", "user:sys", "{\"ciphertext\":\"opaque\"}");
+        assertEquals("https://vault.test/v1/secrets/by-key/versions?namespace=db01&key=user%3Asys", transport.lastRequest.uri().toString(), "version by key path");
+
+        client.revokeAccessByKey("db01", "user:sys", "client bob");
+        assertEquals("https://vault.test/v1/secrets/by-key/access/client%20bob?namespace=db01&key=user%3Asys", transport.lastRequest.uri().toString(), "revoke by key path");
+
+        client.deleteSecretByKey("db01", "user:sys", true);
+        assertEquals("https://vault.test/v1/secrets/by-key?namespace=db01&key=user%3Asys&cascade=true", transport.lastRequest.uri().toString(), "delete by key path");
     }
 
     private static void validatesHttpErrors() throws Exception {
