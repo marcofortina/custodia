@@ -104,6 +104,21 @@ void routes_opaque_secret_payloads() {
       "https://vault.test/v1/secrets/secret%2Fone/access-requests/client%20one/activate",
       transport->last_request.url,
       "encoded activate path");
+
+  client.get_secret_payload_by_key("db01", "user:sys");
+  expect_eq("https://vault.test/v1/secrets/by-key?namespace=db01&key=user%3Asys", transport->last_request.url, "read by key path");
+
+  client.share_secret_payload_by_key("db01", "user:sys", R"({"target_client_id":"client_bob"})");
+  expect_eq("https://vault.test/v1/secrets/by-key/share?namespace=db01&key=user%3Asys", transport->last_request.url, "share by key path");
+
+  client.create_secret_version_payload_by_key("db01", "user:sys", R"({"ciphertext":"opaque"})");
+  expect_eq("https://vault.test/v1/secrets/by-key/versions?namespace=db01&key=user%3Asys", transport->last_request.url, "version by key path");
+
+  client.revoke_access_by_key("db01", "user:sys", "client bob");
+  expect_eq("https://vault.test/v1/secrets/by-key/access/client%20bob?namespace=db01&key=user%3Asys", transport->last_request.url, "revoke by key path");
+
+  client.delete_secret_by_key("db01", "user:sys", true);
+  expect_eq("https://vault.test/v1/secrets/by-key?namespace=db01&key=user%3Asys&cascade=true", transport->last_request.url, "delete by key path");
 }
 
 void validates_http_errors() {

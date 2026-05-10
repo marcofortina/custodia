@@ -226,6 +226,10 @@ std::string Client::get_secret_payload(const std::string& secret_id) {
   return request_json("GET", "/v1/secrets/" + path_escape(secret_id));
 }
 
+std::string Client::get_secret_payload_by_key(const std::string& namespace_name, const std::string& key) {
+  return request_json("GET", with_query("/v1/secrets/by-key", {{"namespace", namespace_name}, {"key", key}}));
+}
+
 std::string Client::list_secret_metadata(int limit) {
   validate_optional_limit(limit);
   Filters filters;
@@ -257,6 +261,14 @@ std::string Client::share_secret_payload(const std::string& secret_id, const std
   return request_json("POST", "/v1/secrets/" + path_escape(secret_id) + "/share", payload_json);
 }
 
+std::string Client::share_secret_payload_by_key(const std::string& namespace_name, const std::string& key, const std::string& payload_json) {
+  return request_json("POST", with_query("/v1/secrets/by-key/share", {{"namespace", namespace_name}, {"key", key}}), payload_json);
+}
+
+std::string Client::revoke_access_by_key(const std::string& namespace_name, const std::string& key, const std::string& client_id) {
+  return request_json("DELETE", with_query("/v1/secrets/by-key/access/" + path_escape(client_id), {{"namespace", namespace_name}, {"key", key}}));
+}
+
 std::string Client::create_access_grant(const std::string& secret_id, const std::string& payload_json) {
   return request_json("POST", "/v1/secrets/" + path_escape(secret_id) + "/access-requests", payload_json);
 }
@@ -277,6 +289,18 @@ std::string Client::revoke_access(const std::string& secret_id, const std::strin
 
 std::string Client::create_secret_version_payload(const std::string& secret_id, const std::string& payload_json) {
   return request_json("POST", "/v1/secrets/" + path_escape(secret_id) + "/versions", payload_json);
+}
+
+std::string Client::create_secret_version_payload_by_key(const std::string& namespace_name, const std::string& key, const std::string& payload_json) {
+  return request_json("POST", with_query("/v1/secrets/by-key/versions", {{"namespace", namespace_name}, {"key", key}}), payload_json);
+}
+
+std::string Client::delete_secret_by_key(const std::string& namespace_name, const std::string& key, bool cascade) {
+  Filters filters{{"namespace", namespace_name}, {"key", key}};
+  if (cascade) {
+    filters.emplace_back("cascade", "true");
+  }
+  return request_json("DELETE", with_query("/v1/secrets/by-key", filters));
 }
 
 std::string Client::list_access_grant_metadata(const Filters& filters) {

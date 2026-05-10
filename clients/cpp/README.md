@@ -25,8 +25,9 @@ custodia::Client client(custodia::Config{
 });
 
 std::string response = client.create_secret_payload(
-    R"({"name":"db","ciphertext":"base64cipher","envelopes":[{"client_id":"self","envelope":"base64env"}]})"
+    R"({"namespace":"default","key":"db","ciphertext":"base64cipher","envelopes":[{"client_id":"self","envelope":"base64env"}]})"
 );
+std::string payload = client.get_secret_payload_by_key("default", "db");
 ```
 
 ## Boundary
@@ -46,7 +47,7 @@ auto crypto = client.with_crypto(custodia::CryptoOptions{
 });
 
 crypto.create_encrypted_secret("db", {'l','o','c','a','l',' ','p','l','a','i','n','t','e','x','t'}, {"client_bob"});
-auto decrypted = crypto.read_decrypted_secret(secret_id);
+auto decrypted = crypto.read_decrypted_secret(secret_id); // Legacy secret_id compatibility remains available.
 ```
 
 Recipient public keys are still resolved by the application, not by Custodia.
