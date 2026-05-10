@@ -320,14 +320,14 @@ func TestHelpMentionsEncryptedSecretCommands(t *testing.T) {
 		t.Fatalf("help failed: %d %s", code, stderr.String())
 	}
 	body := stdout.String()
-	for _, token := range []string{"config write", "config check", "doctor --client-id ID|--config FILE [--online]", "mtls install-cert", "key inspect", "--client-id ID", "secret put", "secret get", "secret share", "secret delete", "secret version put", "secret versions", "secret access list", "secret access revoke", "Secret payloads are encrypted/decrypted locally"} {
+	for _, token := range []string{"config write", "config check", "doctor --client-id ID|--config FILE [--online]", "mtls install-cert", "key inspect", "--client-id ID", "secret put", "secret get", "secret update", "secret share", "secret delete", "secret versions", "secret access list", "secret access revoke", "Secret payloads are encrypted/decrypted locally"} {
 		if !strings.Contains(body, token) {
 			t.Fatalf("help missing %q: %s", token, body)
 		}
 	}
 }
 
-func TestMetadataListCommandsRequireSecretIDBeforeTransport(t *testing.T) {
+func TestMetadataListCommandsRequireKeyOrSecretIDBeforeTransport(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		args []string
@@ -341,8 +341,8 @@ func TestMetadataListCommandsRequireSecretIDBeforeTransport(t *testing.T) {
 			if code != 2 {
 				t.Fatalf("expected usage failure, got %d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
 			}
-			if !strings.Contains(stderr.String(), "--secret-id is required") {
-				t.Fatalf("expected secret id error, got: %s", stderr.String())
+			if !strings.Contains(stderr.String(), "--key or --secret-id is required") {
+				t.Fatalf("expected secret key error, got: %s", stderr.String())
 			}
 		})
 	}
