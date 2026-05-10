@@ -4,6 +4,10 @@
 
 The CLI never sends plaintext, DEKs, mTLS private keys, application private keys or recipient public keys to the server. It sends only ciphertext, versioned `crypto_metadata` and opaque recipient envelopes.
 
+## Namespace/key migration target
+
+Custodia is moving the normal client workflow to `namespace + key` addressing with `namespace=default` when omitted. The target semantics for create, read, update, share, revoke and delete are frozen in [`SECRET_KEYSPACE_MODEL.md`](SECRET_KEYSPACE_MODEL.md). Until the implementation patches land, the command reference below still describes the current `secret_id`-based CLI.
+
 ## Standard client profile
 
 For most commands, pass a client id instead of repeating every path:

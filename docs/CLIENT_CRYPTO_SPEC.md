@@ -4,6 +4,8 @@ This document defines the shared client-side crypto contract for Custodia high-l
 
 The server remains metadata/ciphertext/envelope-only. It must never receive plaintext, DEK material, private keys or public-key directory state.
 
+The namespace/key addressing migration binds client workflows to a logical keyspace instead of exposing generated `secret_id` values. The target AAD/resource binding is described in [`SECRET_KEYSPACE_MODEL.md`](SECRET_KEYSPACE_MODEL.md); existing fixtures remain valid until the code migration updates the canonical AAD contract.
+
 ## Versioning
 
 Every encrypted payload must carry versioned crypto metadata:

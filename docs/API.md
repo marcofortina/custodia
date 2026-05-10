@@ -2,6 +2,10 @@
 
 All `/v1/*` routes require mTLS. The authenticated `client_id` is extracted from the client certificate SAN/CN and mapped to an active row in `clients`. JSON request bodies must use `Content-Type: application/json`, are capped at 1 MiB and must contain a single JSON value.
 
+## Secret addressing migration target
+
+Custodia is migrating user-facing secret workflows from generated `secret_id` values to a namespace/key keyspace. The target contract is documented in [`SECRET_KEYSPACE_MODEL.md`](SECRET_KEYSPACE_MODEL.md). Until the code migration lands, the endpoint descriptions below document the current `secret_id` API surface.
+
 
 ## Client metadata create
 

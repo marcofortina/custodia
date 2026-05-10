@@ -93,6 +93,7 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 - Alice/Bob first encrypted secret smoke test: [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](docs/CUSTODIA_ALICE_BOB_SMOKE.md)
 - Bash SDK helper: [`docs/BASH_SDK.md`](docs/BASH_SDK.md)
 - Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
+- Namespace/key secret keyspace migration model: [`docs/SECRET_KEYSPACE_MODEL.md`](docs/SECRET_KEYSPACE_MODEL.md)
 - SDK release policy: [`docs/SDK_RELEASE_POLICY.md`](docs/SDK_RELEASE_POLICY.md)
 - Linux DEB/RPM packaging: [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md)
 - Start here / install quickstart: [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
@@ -334,6 +335,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 
 - [Custodia client libraries specification](docs/CLIENT_LIBRARIES.md)
 - [Client crypto specification](docs/CLIENT_CRYPTO_SPEC.md)
+- [Namespace/key secret keyspace model](docs/SECRET_KEYSPACE_MODEL.md)
 - [Go client SDK](docs/GO_CLIENT_SDK.md)
 - [Custodia client CLI](docs/CUSTODIA_CLIENT_CLI.md)
 - [Python client SDK](docs/PYTHON_CLIENT_SDK.md)
