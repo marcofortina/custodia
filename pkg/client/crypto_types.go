@@ -19,6 +19,8 @@ type CryptoClient struct {
 }
 
 type CreateEncryptedSecretRequest struct {
+	Namespace   string
+	Key         string
 	Name        string
 	Plaintext   []byte
 	Recipients  []string
@@ -27,6 +29,8 @@ type CreateEncryptedSecretRequest struct {
 }
 
 type CreateEncryptedSecretVersionRequest struct {
+	Namespace   string
+	Key         string
 	Plaintext   []byte
 	Recipients  []string
 	Permissions int
@@ -34,6 +38,8 @@ type CreateEncryptedSecretVersionRequest struct {
 }
 
 type ShareEncryptedSecretRequest struct {
+	Namespace      string
+	Key            string
 	TargetClientID string
 	Permissions    int
 	ExpiresAt      *time.Time
@@ -42,6 +48,8 @@ type ShareEncryptedSecretRequest struct {
 // DecryptedSecret is intentionally returned only by the high-level crypto client, never by raw transport methods.
 type DecryptedSecret struct {
 	SecretID        string
+	Namespace       string
+	Key             string
 	VersionID       string
 	Plaintext       []byte
 	CryptoMetadata  json.RawMessage

@@ -367,7 +367,25 @@ func (c *Client) CreateSecretVersion(secretID string, req model.CreateSecretVers
 }
 
 func (c *Client) DeleteSecret(secretID string) error {
-	return c.doJSON(http.MethodDelete, "/v1/secrets/"+pathEscape(secretID), nil, nil)
+	return c.DeleteSecretWithCascade(secretID, false)
+}
+
+func (c *Client) DeleteSecretWithCascade(secretID string, cascade bool) error {
+	path := "/v1/secrets/" + pathEscape(secretID)
+	if cascade {
+		query := url.Values{}
+		query.Set("cascade", "true")
+		path += "?" + query.Encode()
+	}
+	return c.doJSON(http.MethodDelete, path, nil, nil)
+}
+
+func (c *Client) DeleteSecretByKey(namespace, key string, cascade bool) error {
+	path, err := secretByKeyPath("/v1/secrets/by-key", namespace, key, cascade)
+	if err != nil {
+		return err
+	}
+	return c.doJSON(http.MethodDelete, path, nil, nil)
 }
 
 func (c *Client) doRaw(method, path string, payload any, out io.Writer) error {

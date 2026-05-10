@@ -27,6 +27,41 @@ func TestPublicGoTransportMethodsAvoidInternalTypes(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(model.SecretReadResponse{SecretID: "secret-id", VersionID: "version-id", Ciphertext: "Y2lwaGVy", Envelope: "ZW52", Permissions: PermissionRead})
 		case "POST /v1/secrets/secret-id/share":
 			_ = json.NewEncoder(w).Encode(map[string]string{"status": "shared"})
+		case "GET /v1/secrets/by-key":
+			if got := r.URL.Query().Get("namespace"); got != "db01" {
+				t.Fatalf("namespace = %q", got)
+			}
+			if got := r.URL.Query().Get("key"); got != "user:sys" {
+				t.Fatalf("key = %q", got)
+			}
+			_ = json.NewEncoder(w).Encode(SecretReadResponse{SecretID: "secret-id", Namespace: "db01", Key: "user:sys", VersionID: "version-id", Ciphertext: "Y2lwaGVy", Envelope: "ZW52", Permissions: PermissionRead})
+		case "POST /v1/secrets/by-key/share":
+			if got := r.URL.Query().Get("namespace"); got != "db01" {
+				t.Fatalf("namespace = %q", got)
+			}
+			if got := r.URL.Query().Get("key"); got != "user:sys" {
+				t.Fatalf("key = %q", got)
+			}
+			_ = json.NewEncoder(w).Encode(map[string]string{"status": "shared"})
+		case "POST /v1/secrets/by-key/versions":
+			if got := r.URL.Query().Get("namespace"); got != "db01" {
+				t.Fatalf("namespace = %q", got)
+			}
+			if got := r.URL.Query().Get("key"); got != "user:sys" {
+				t.Fatalf("key = %q", got)
+			}
+			_ = json.NewEncoder(w).Encode(SecretVersionRef{SecretID: "secret-id", VersionID: "version-id-2"})
+		case "DELETE /v1/secrets/by-key":
+			if got := r.URL.Query().Get("namespace"); got != "db01" {
+				t.Fatalf("namespace = %q", got)
+			}
+			if got := r.URL.Query().Get("key"); got != "user:sys" {
+				t.Fatalf("key = %q", got)
+			}
+			if got := r.URL.Query().Get("cascade"); got != "true" {
+				t.Fatalf("cascade = %q", got)
+			}
+			_ = json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
 		}
@@ -53,6 +88,20 @@ func TestPublicGoTransportMethodsAvoidInternalTypes(t *testing.T) {
 	}
 	if err := custodiaClient.ShareSecretPayload("secret-id", ShareSecretPayload{VersionID: "version-id", TargetClientID: "client_bob", Envelope: "ZW52", Permissions: PermissionRead}); err != nil {
 		t.Fatalf("ShareSecretPayload() error = %v", err)
+	}
+	readByKey, err := custodiaClient.GetSecretPayloadByKey("db01", "user:sys")
+	if err != nil || readByKey.Namespace != "db01" || readByKey.Key != "user:sys" {
+		t.Fatalf("GetSecretPayloadByKey() = %+v err=%v", readByKey, err)
+	}
+	if err := custodiaClient.ShareSecretPayloadByKey("db01", "user:sys", ShareSecretPayload{VersionID: "version-id", TargetClientID: "client_bob", Envelope: "ZW52", Permissions: PermissionRead}); err != nil {
+		t.Fatalf("ShareSecretPayloadByKey() error = %v", err)
+	}
+	versionByKey, err := custodiaClient.CreateSecretVersionPayloadByKey("db01", "user:sys", CreateSecretVersionPayload{Ciphertext: "Y2lwaGVy", Envelopes: []RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52"}}, Permissions: PermissionRead})
+	if err != nil || versionByKey.VersionID != "version-id-2" {
+		t.Fatalf("CreateSecretVersionPayloadByKey() = %+v err=%v", versionByKey, err)
+	}
+	if err := custodiaClient.DeleteSecretByKey("db01", "user:sys", true); err != nil {
+		t.Fatalf("DeleteSecretByKey() error = %v", err)
 	}
 }
 

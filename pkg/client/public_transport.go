@@ -65,6 +65,15 @@ func (c *Client) GetSecretPayload(secretID string) (SecretReadResponse, error) {
 	return response, c.doJSON(http.MethodGet, "/v1/secrets/"+pathEscape(secretID), nil, &response)
 }
 
+func (c *Client) GetSecretPayloadByKey(namespace, key string) (SecretReadResponse, error) {
+	path, err := secretByKeyPath("/v1/secrets/by-key", namespace, key, false)
+	if err != nil {
+		return SecretReadResponse{}, err
+	}
+	var response SecretReadResponse
+	return response, c.doJSON(http.MethodGet, path, nil, &response)
+}
+
 func (c *Client) ListSecretMetadataPublic(limit int) ([]SecretMetadata, error) {
 	return c.ListSecretMetadata(limit)
 }
@@ -125,6 +134,14 @@ func (c *Client) ShareSecretPayload(secretID string, req ShareSecretPayload) err
 	return c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/share", req, nil)
 }
 
+func (c *Client) ShareSecretPayloadByKey(namespace, key string, req ShareSecretPayload) error {
+	path, err := secretByKeyPath("/v1/secrets/by-key/share", namespace, key, false)
+	if err != nil {
+		return err
+	}
+	return c.doJSON(http.MethodPost, path, req, nil)
+}
+
 func (c *Client) CreateAccessGrant(secretID string, req AccessGrantPayload) (AccessGrantRef, error) {
 	var ref AccessGrantRef
 	return ref, c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/access-requests", req, &ref)
@@ -137,6 +154,33 @@ func (c *Client) ActivateAccessGrantPayload(secretID, targetClientID string, req
 func (c *Client) CreateSecretVersionPayload(secretID string, req CreateSecretVersionPayload) (SecretVersionRef, error) {
 	var ref SecretVersionRef
 	return ref, c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/versions", req, &ref)
+}
+
+func (c *Client) CreateSecretVersionPayloadByKey(namespace, key string, req CreateSecretVersionPayload) (SecretVersionRef, error) {
+	path, err := secretByKeyPath("/v1/secrets/by-key/versions", namespace, key, false)
+	if err != nil {
+		return SecretVersionRef{}, err
+	}
+	var ref SecretVersionRef
+	return ref, c.doJSON(http.MethodPost, path, req, &ref)
+}
+
+func secretByKeyPath(basePath, namespace, key string, cascade bool) (string, error) {
+	namespace = strings.TrimSpace(namespace)
+	if namespace == "" {
+		namespace = "default"
+	}
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return "", fmt.Errorf("secret key is required")
+	}
+	query := url.Values{}
+	query.Set("namespace", namespace)
+	query.Set("key", key)
+	if cascade {
+		query.Set("cascade", "true")
+	}
+	return basePath + "?" + query.Encode(), nil
 }
 
 func (c *Client) ListAccessGrantMetadata(filters AccessGrantRequestFilters) ([]AccessGrantMetadata, error) {

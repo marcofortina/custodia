@@ -40,14 +40,15 @@ func (c *Client) WithCrypto(options CryptoOptions) (*CryptoClient, error) {
 // The creator is automatically included as a recipient so the secret remains
 // readable by the client that created it.
 func (c *CryptoClient) CreateEncryptedSecret(ctx context.Context, req CreateEncryptedSecretRequest) (SecretVersionRef, error) {
-	if strings.TrimSpace(req.Name) == "" {
-		return SecretVersionRef{}, fmt.Errorf("secret name is required")
+	namespace, key, legacyName, err := normalizeSecretKeyRequest(req.Namespace, req.Key, req.Name)
+	if err != nil {
+		return SecretVersionRef{}, err
 	}
 	dek, nonce, err := c.generateContentKeyAndNonce()
 	if err != nil {
 		return SecretVersionRef{}, err
 	}
-	aadInputs := clientcrypto.CanonicalAADInputs{SecretName: req.Name}
+	aadInputs := clientcrypto.CanonicalAADInputs{SecretName: key}
 	metadata := clientcrypto.MetadataV1(aadInputs, base64.StdEncoding.EncodeToString(nonce))
 	aad, metadataJSON, err := encodeCryptoMetadata(metadata, aadInputs)
 	if err != nil {
@@ -66,7 +67,9 @@ func (c *CryptoClient) CreateEncryptedSecret(ctx context.Context, req CreateEncr
 		return SecretVersionRef{}, err
 	}
 	return c.transport.CreateSecretPayload(CreateSecretPayload{
-		Name:           req.Name,
+		Namespace:      namespace,
+		Key:            key,
+		Name:           legacyName,
 		Ciphertext:     base64.StdEncoding.EncodeToString(ciphertext),
 		CryptoMetadata: metadataJSON,
 		Envelopes:      envelopes,
@@ -79,35 +82,54 @@ func (c *CryptoClient) CreateEncryptedSecretVersion(ctx context.Context, secretI
 	if strings.TrimSpace(secretID) == "" {
 		return SecretVersionRef{}, fmt.Errorf("secret id is required")
 	}
-	dek, nonce, err := c.generateContentKeyAndNonce()
+	payload, err := c.buildEncryptedSecretVersionPayload(ctx, clientcrypto.CanonicalAADInputs{SecretID: secretID}, req)
 	if err != nil {
 		return SecretVersionRef{}, err
 	}
-	aadInputs := clientcrypto.CanonicalAADInputs{SecretID: secretID}
+	return c.transport.CreateSecretVersionPayload(secretID, payload)
+}
+
+func (c *CryptoClient) CreateEncryptedSecretVersionByKey(ctx context.Context, namespace, key string, req CreateEncryptedSecretVersionRequest) (SecretVersionRef, error) {
+	namespace, key, _, err := normalizeSecretKeyRequest(firstNonEmpty(namespace, req.Namespace), firstNonEmpty(key, req.Key), "")
+	if err != nil {
+		return SecretVersionRef{}, err
+	}
+	payload, err := c.buildEncryptedSecretVersionPayload(ctx, clientcrypto.CanonicalAADInputs{SecretName: key}, req)
+	if err != nil {
+		return SecretVersionRef{}, err
+	}
+	return c.transport.CreateSecretVersionPayloadByKey(namespace, key, payload)
+}
+
+func (c *CryptoClient) buildEncryptedSecretVersionPayload(ctx context.Context, aadInputs clientcrypto.CanonicalAADInputs, req CreateEncryptedSecretVersionRequest) (CreateSecretVersionPayload, error) {
+	dek, nonce, err := c.generateContentKeyAndNonce()
+	if err != nil {
+		return CreateSecretVersionPayload{}, err
+	}
 	metadata := clientcrypto.MetadataV1(aadInputs, base64.StdEncoding.EncodeToString(nonce))
 	aad, metadataJSON, err := encodeCryptoMetadata(metadata, aadInputs)
 	if err != nil {
-		return SecretVersionRef{}, err
+		return CreateSecretVersionPayload{}, err
 	}
 	ciphertext, err := clientcrypto.SealContentAES256GCM(dek, nonce, req.Plaintext, aad)
 	if err != nil {
-		return SecretVersionRef{}, mapClientCryptoError(err)
+		return CreateSecretVersionPayload{}, mapClientCryptoError(err)
 	}
 	recipients, err := c.normalizedRecipients(ctx, req.Recipients)
 	if err != nil {
-		return SecretVersionRef{}, err
+		return CreateSecretVersionPayload{}, err
 	}
 	envelopes, err := c.sealRecipientEnvelopes(ctx, recipients, dek, aad)
 	if err != nil {
-		return SecretVersionRef{}, err
+		return CreateSecretVersionPayload{}, err
 	}
-	return c.transport.CreateSecretVersionPayload(secretID, CreateSecretVersionPayload{
+	return CreateSecretVersionPayload{
 		Ciphertext:     base64.StdEncoding.EncodeToString(ciphertext),
 		CryptoMetadata: metadataJSON,
 		Envelopes:      envelopes,
 		Permissions:    req.Permissions,
 		ExpiresAt:      req.ExpiresAt,
-	})
+	}, nil
 }
 
 // ReadDecryptedSecret downloads the caller's authorized envelope and opens it locally.
@@ -118,7 +140,23 @@ func (c *CryptoClient) ReadDecryptedSecret(ctx context.Context, secretID string)
 	if err != nil {
 		return DecryptedSecret{}, err
 	}
-	metadata, aad, err := decodeCryptoMetadata(secret.CryptoMetadata, clientcrypto.CanonicalAADInputs{SecretID: secret.SecretID, VersionID: secret.VersionID})
+	return c.openDecryptedSecret(ctx, secret, clientcrypto.CanonicalAADInputs{SecretID: secret.SecretID, VersionID: secret.VersionID})
+}
+
+func (c *CryptoClient) ReadDecryptedSecretByKey(ctx context.Context, namespace, key string) (DecryptedSecret, error) {
+	namespace, key, _, err := normalizeSecretKeyRequest(namespace, key, "")
+	if err != nil {
+		return DecryptedSecret{}, err
+	}
+	secret, err := c.transport.GetSecretPayloadByKey(namespace, key)
+	if err != nil {
+		return DecryptedSecret{}, err
+	}
+	return c.openDecryptedSecret(ctx, secret, clientcrypto.CanonicalAADInputs{SecretName: key, VersionID: secret.VersionID})
+}
+
+func (c *CryptoClient) openDecryptedSecret(ctx context.Context, secret SecretReadResponse, fallback clientcrypto.CanonicalAADInputs) (DecryptedSecret, error) {
+	metadata, aad, err := decodeCryptoMetadata(secret.CryptoMetadata, fallback)
 	if err != nil {
 		return DecryptedSecret{}, err
 	}
@@ -143,6 +181,8 @@ func (c *CryptoClient) ReadDecryptedSecret(ctx context.Context, secretID string)
 	}
 	return DecryptedSecret{
 		SecretID:        secret.SecretID,
+		Namespace:       secret.Namespace,
+		Key:             secret.Key,
 		VersionID:       secret.VersionID,
 		Plaintext:       plaintext,
 		CryptoMetadata:  append([]byte{}, secret.CryptoMetadata...),
@@ -163,28 +203,71 @@ func (c *CryptoClient) ShareEncryptedSecret(ctx context.Context, secretID string
 	if err != nil {
 		return err
 	}
-	_, aad, err := decodeCryptoMetadata(secret.CryptoMetadata, clientcrypto.CanonicalAADInputs{SecretID: secret.SecretID, VersionID: secret.VersionID})
+	payload, err := c.buildShareSecretPayload(ctx, secret, req)
 	if err != nil {
 		return err
+	}
+	return c.transport.ShareSecretPayload(secretID, payload)
+}
+
+func (c *CryptoClient) ShareEncryptedSecretByKey(ctx context.Context, namespace, key string, req ShareEncryptedSecretRequest) error {
+	namespace, key, _, err := normalizeSecretKeyRequest(firstNonEmpty(namespace, req.Namespace), firstNonEmpty(key, req.Key), "")
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(req.TargetClientID) == "" {
+		return fmt.Errorf("target client id is required")
+	}
+	secret, err := c.transport.GetSecretPayloadByKey(namespace, key)
+	if err != nil {
+		return err
+	}
+	payload, err := c.buildShareSecretPayload(ctx, secret, req)
+	if err != nil {
+		return err
+	}
+	return c.transport.ShareSecretPayloadByKey(namespace, key, payload)
+}
+
+func (c *CryptoClient) buildShareSecretPayload(ctx context.Context, secret SecretReadResponse, req ShareEncryptedSecretRequest) (ShareSecretPayload, error) {
+	_, aad, err := decodeCryptoMetadata(secret.CryptoMetadata, clientcrypto.CanonicalAADInputs{SecretID: secret.SecretID, VersionID: secret.VersionID})
+	if err != nil {
+		return ShareSecretPayload{}, err
 	}
 	dek, err := c.openSecretEnvelope(ctx, secret.Envelope, aad)
 	if err != nil {
-		return err
+		return ShareSecretPayload{}, err
 	}
 	envelopes, err := c.sealRecipientEnvelopes(ctx, []string{req.TargetClientID}, dek, aad)
 	if err != nil {
-		return err
+		return ShareSecretPayload{}, err
 	}
 	if len(envelopes) != 1 {
-		return ErrMissingRecipientEnvelope
+		return ShareSecretPayload{}, ErrMissingRecipientEnvelope
 	}
-	return c.transport.ShareSecretPayload(secretID, ShareSecretPayload{
+	return ShareSecretPayload{
 		VersionID:      secret.VersionID,
 		TargetClientID: req.TargetClientID,
 		Envelope:       envelopes[0].Envelope,
 		Permissions:    req.Permissions,
 		ExpiresAt:      req.ExpiresAt,
-	})
+	}, nil
+}
+
+func normalizeSecretKeyRequest(namespace, key, legacyName string) (string, string, string, error) {
+	namespace = strings.TrimSpace(namespace)
+	if namespace == "" {
+		namespace = "default"
+	}
+	key = strings.TrimSpace(key)
+	legacyName = strings.TrimSpace(legacyName)
+	if key == "" {
+		key = legacyName
+	}
+	if key == "" {
+		return "", "", "", fmt.Errorf("secret key is required")
+	}
+	return namespace, key, firstNonEmpty(legacyName, key), nil
 }
 
 func (c *CryptoClient) generateContentKeyAndNonce() ([]byte, []byte, error) {
@@ -292,6 +375,15 @@ func decodeCryptoMetadata(payload json.RawMessage, fallbackAAD clientcrypto.Cano
 		return clientcrypto.Metadata{}, nil, mapClientCryptoError(err)
 	}
 	return metadata, aad, nil
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func readRandomBytes(random io.Reader, length int) ([]byte, error) {
