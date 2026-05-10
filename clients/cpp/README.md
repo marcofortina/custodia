@@ -46,8 +46,9 @@ auto crypto = client.with_crypto(custodia::CryptoOptions{
     .private_key = private_key,
 });
 
-crypto.create_encrypted_secret("db", {'l','o','c','a','l',' ','p','l','a','i','n','t','e','x','t'}, {"client_bob"});
-auto decrypted = crypto.read_decrypted_secret(secret_id); // Legacy secret_id compatibility remains available.
+crypto.create_encrypted_secret_by_key("default", "db", {'l','o','c','a','l',' ','p','l','a','i','n','t','e','x','t'}, {"client_bob"});
+auto decrypted = crypto.read_decrypted_secret_by_key("default", "db");
+crypto.share_encrypted_secret_by_key("default", "db", "client_charlie", custodia::permission_read);
 ```
 
 Recipient public keys are still resolved by the application, not by Custodia.

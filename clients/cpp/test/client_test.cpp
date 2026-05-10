@@ -230,6 +230,60 @@ void reads_decrypted_secret_with_persisted_aad_metadata() {
   expect_eq(7, secret.permissions, "permissions");
 }
 
+
+void creates_encrypted_secret_by_key_payload() {
+  auto transport = std::make_shared<FakeTransport>();
+  transport->response = custodia::Response{.status = 200, .body = R"({"secret_id":"s1"})", .headers = {}};
+  auto client = test_client(transport);
+  std::queue<std::vector<std::uint8_t>> random_values;
+  random_values.push(b64("UVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVE="));
+  random_values.push(b64("YWFhYWFhYWFhYWFh"));
+  random_values.push(b64("QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE="));
+  auto crypto = client.with_crypto(crypto_options(std::move(random_values)));
+
+  auto response = crypto.create_encrypted_secret_by_key(
+      "db01",
+      "user:sys",
+      b64("ZGF0YWJhc2UgcGFzc3dvcmQ6IGNvcnJlY3QgaG9yc2UgYmF0dGVyeSBzdGFwbGU="));
+
+  expect_eq(R"({"secret_id":"s1"})", response, "create by key response");
+  expect_eq("https://vault.test/v1/secrets", transport->last_request.url, "create by key url");
+  expect_contains(*transport->last_request.body, R"("namespace":"db01")", "create namespace");
+  expect_contains(*transport->last_request.body, R"("key":"user:sys")", "create key");
+  expect_contains(*transport->last_request.body, R"("secret_name":"db01/user:sys")", "create keyspace aad");
+}
+
+void reads_decrypted_secret_by_key() {
+  auto transport = std::make_shared<FakeTransport>();
+  transport->response = custodia::Response{
+      .status = 200,
+      .body = R"({"secret_id":"550e8400-e29b-41d4-a716-446655440000","version_id":"660e8400-e29b-41d4-a716-446655440000","ciphertext":"d+Ub720HWc3YmYcZyQPyyd3EK2QHKMg7iaKMgGg6Ir5RRRmfzoUe","crypto_metadata":{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","content_nonce_b64":"Y2NjY2NjY2NjY2Nj","aad":{"secret_id":"550e8400-e29b-41d4-a716-446655440000","version_id":"660e8400-e29b-41d4-a716-446655440000"}},"envelope":"ze/YeDqRtEZkDi4flVmds15ISgBxvSGCs7YNCBLBDHDZczDrK3IdDIfEWJA8JD3ERLLFg1eklPtBfJ2tbctFNV8yFiD0BrjltlAaV/RogLk=","permissions":7})",
+      .headers = {}};
+  auto client = test_client(transport);
+  auto crypto = client.with_crypto(crypto_options());
+
+  auto secret = crypto.read_decrypted_secret_by_key("db01", "user:sys");
+
+  expect_eq("https://vault.test/v1/secrets/by-key?namespace=db01&key=user%3Asys", transport->last_request.url, "read by key url");
+  expect_eq("existing secret payload", std::string(secret.plaintext.begin(), secret.plaintext.end()), "decrypted by key plaintext");
+}
+
+void creates_encrypted_secret_version_by_key_payload() {
+  auto transport = std::make_shared<FakeTransport>();
+  transport->response = custodia::Response{.status = 200, .body = R"({"version_id":"v2"})", .headers = {}};
+  auto client = test_client(transport);
+  std::queue<std::vector<std::uint8_t>> random_values;
+  random_values.push(b64("UVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVE="));
+  random_values.push(b64("YWFhYWFhYWFhYWFh"));
+  random_values.push(b64("QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE="));
+  auto crypto = client.with_crypto(crypto_options(std::move(random_values)));
+
+  crypto.create_encrypted_secret_version_by_key("db01", "user:sys", b64("bmV3IHNlY3JldA=="));
+
+  expect_eq("https://vault.test/v1/secrets/by-key/versions?namespace=db01&key=user%3Asys", transport->last_request.url, "version by key url");
+  expect_contains(*transport->last_request.body, R"("secret_name":"db01/user:sys")", "version by key aad");
+}
+
 void validates_config() {
   try {
     custodia::Client client(custodia::Config{});
@@ -251,5 +305,8 @@ int main() {
   validates_shared_crypto_vectors();
   creates_encrypted_secret_with_deterministic_vector_payload();
   reads_decrypted_secret_with_persisted_aad_metadata();
+  creates_encrypted_secret_by_key_payload();
+  reads_decrypted_secret_by_key();
+  creates_encrypted_secret_version_by_key_payload();
   return 0;
 }

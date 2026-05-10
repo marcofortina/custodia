@@ -65,9 +65,10 @@ auto crypto = client.with_crypto(custodia::CryptoOptions{
     .private_key = custodia::X25519PrivateKeyHandle("client_alice", alice_private_key_bytes),
 });
 
-crypto.create_encrypted_secret("db", plaintext_bytes, {"client_bob"});
-auto decrypted = crypto.read_decrypted_secret(secret_id); // Legacy secret_id crypto compatibility.
-crypto.share_encrypted_secret(secret_id, "client_charlie", custodia::permission_read);
+crypto.create_encrypted_secret_by_key("default", "db", plaintext_bytes, {"client_bob"});
+auto decrypted = crypto.read_decrypted_secret_by_key("default", "db");
+crypto.share_encrypted_secret_by_key("default", "db", "client_charlie", custodia::permission_read);
+crypto.create_encrypted_secret_version_by_key("default", "db", rotated_plaintext_bytes, {"client_bob"});
 ```
 
 The application must provide recipient public keys through `public_key_resolver`; Custodia is not a key directory.

@@ -472,6 +472,10 @@ std::string require_text(std::string value, const std::string& label) {
   return std::string(first, last);
 }
 
+std::string aad_secret_name_for_keyspace(const std::string& namespace_name, const std::string& key) {
+  return namespace_name + "/" + key;
+}
+
 void append_json_int(std::ostringstream& json, const std::string& key, int value) {
   json << json_quote(key) << ':' << value;
 }
@@ -661,6 +665,41 @@ std::string CryptoClient::create_encrypted_secret(
   return transport_->create_secret_payload(payload.str());
 }
 
+std::string CryptoClient::create_encrypted_secret_by_key(
+    const std::string& namespace_name,
+    const std::string& key,
+    const std::vector<std::uint8_t>& plaintext,
+    const std::vector<std::string>& recipients,
+    int permissions,
+    const std::string& expires_at) {
+  auto normalized_namespace = require_text(namespace_name, "namespace");
+  auto normalized_key = require_text(key, "secret key");
+  auto dek = random(kAES256GCMKeyBytes);
+  auto nonce = random(kAESGCMNonceBytes);
+  AADInputs aad_inputs{"", aad_secret_name_for_keyspace(normalized_namespace, normalized_key), ""};
+  auto metadata = metadata_v1(aad_inputs, nonce);
+  auto aad = build_canonical_aad(metadata, aad_inputs);
+  auto ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad);
+
+  std::ostringstream payload;
+  payload << '{';
+  append_json_field(payload, "namespace", normalized_namespace);
+  payload << ',';
+  append_json_field(payload, "key", normalized_key);
+  payload << ',';
+  append_json_field(payload, "ciphertext", base64_encode(ciphertext));
+  payload << ',' << json_quote("crypto_metadata") << ':' << metadata_json(metadata);
+  payload << ',' << json_quote("envelopes") << ':' << seal_recipient_envelopes(normalized_recipients(recipients), dek, aad);
+  payload << ',';
+  append_json_int(payload, "permissions", permissions);
+  if (!expires_at.empty()) {
+    payload << ',';
+    append_json_field(payload, "expires_at", expires_at);
+  }
+  payload << '}';
+  return transport_->create_secret_payload(payload.str());
+}
+
 std::string CryptoClient::create_encrypted_secret_version(
     const std::string& secret_id,
     const std::vector<std::uint8_t>& plaintext,
@@ -690,8 +729,51 @@ std::string CryptoClient::create_encrypted_secret_version(
   return transport_->create_secret_version_payload(normalized_secret_id, payload.str());
 }
 
+std::string CryptoClient::create_encrypted_secret_version_by_key(
+    const std::string& namespace_name,
+    const std::string& key,
+    const std::vector<std::uint8_t>& plaintext,
+    const std::vector<std::string>& recipients,
+    int permissions,
+    const std::string& expires_at) {
+  auto normalized_namespace = require_text(namespace_name, "namespace");
+  auto normalized_key = require_text(key, "secret key");
+  auto dek = random(kAES256GCMKeyBytes);
+  auto nonce = random(kAESGCMNonceBytes);
+  AADInputs aad_inputs{"", aad_secret_name_for_keyspace(normalized_namespace, normalized_key), ""};
+  auto metadata = metadata_v1(aad_inputs, nonce);
+  auto aad = build_canonical_aad(metadata, aad_inputs);
+  auto ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad);
+
+  std::ostringstream payload;
+  payload << '{';
+  append_json_field(payload, "ciphertext", base64_encode(ciphertext));
+  payload << ',' << json_quote("crypto_metadata") << ':' << metadata_json(metadata);
+  payload << ',' << json_quote("envelopes") << ':' << seal_recipient_envelopes(normalized_recipients(recipients), dek, aad);
+  payload << ',';
+  append_json_int(payload, "permissions", permissions);
+  if (!expires_at.empty()) {
+    payload << ',';
+    append_json_field(payload, "expires_at", expires_at);
+  }
+  payload << '}';
+  return transport_->create_secret_version_payload_by_key(normalized_namespace, normalized_key, payload.str());
+}
+
 DecryptedSecret CryptoClient::read_decrypted_secret(const std::string& secret_id) {
   auto secret = parse_secret(transport_->get_secret_payload(secret_id));
+  auto aad_inputs = secret.metadata.canonical_aad_inputs(AADInputs{secret.secret_id, "", secret.version_id});
+  auto aad = build_canonical_aad(secret.metadata, aad_inputs);
+  if (secret.metadata.content_nonce_b64.empty()) {
+    throw CryptoError("missing content nonce");
+  }
+  auto dek = open_secret_envelope(secret.envelope, aad);
+  auto plaintext = open_content_aes_256_gcm(dek, base64_decode(secret.metadata.content_nonce_b64), base64_decode(secret.ciphertext), aad);
+  return DecryptedSecret{secret.secret_id, secret.version_id, plaintext, secret.metadata, secret.permissions, secret.granted_at, secret.access_expires_at};
+}
+
+DecryptedSecret CryptoClient::read_decrypted_secret_by_key(const std::string& namespace_name, const std::string& key) {
+  auto secret = parse_secret(transport_->get_secret_payload_by_key(namespace_name, key));
   auto aad_inputs = secret.metadata.canonical_aad_inputs(AADInputs{secret.secret_id, "", secret.version_id});
   auto aad = build_canonical_aad(secret.metadata, aad_inputs);
   if (secret.metadata.content_nonce_b64.empty()) {
@@ -728,6 +810,37 @@ std::string CryptoClient::share_encrypted_secret(
   }
   payload << '}';
   return transport_->share_secret_payload(secret_id, payload.str());
+}
+
+std::string CryptoClient::share_encrypted_secret_by_key(
+    const std::string& namespace_name,
+    const std::string& key,
+    const std::string& target_client_id,
+    int permissions,
+    const std::string& expires_at) {
+  auto normalized_namespace = require_text(namespace_name, "namespace");
+  auto normalized_key = require_text(key, "secret key");
+  auto target = require_text(target_client_id, "target client id");
+  auto secret = parse_secret(transport_->get_secret_payload_by_key(normalized_namespace, normalized_key));
+  auto aad_inputs = secret.metadata.canonical_aad_inputs(AADInputs{secret.secret_id, "", secret.version_id});
+  auto aad = build_canonical_aad(secret.metadata, aad_inputs);
+  auto dek = open_secret_envelope(secret.envelope, aad);
+  auto envelope_json = envelope_object_without_client_id(seal_recipient_envelopes({target}, dek, aad));
+
+  std::ostringstream payload;
+  payload << '{';
+  append_json_field(payload, "version_id", secret.version_id);
+  payload << ',';
+  append_json_field(payload, "target_client_id", target);
+  payload << ',' << envelope_json;
+  payload << ',';
+  append_json_int(payload, "permissions", permissions);
+  if (!expires_at.empty()) {
+    payload << ',';
+    append_json_field(payload, "expires_at", expires_at);
+  }
+  payload << '}';
+  return transport_->share_secret_payload_by_key(normalized_namespace, normalized_key, payload.str());
 }
 
 std::vector<std::string> CryptoClient::normalized_recipients(const std::vector<std::string>& recipients) const {

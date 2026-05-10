@@ -226,15 +226,36 @@ class CryptoClient final {
       const std::vector<std::string>& recipients = {},
       int permissions = permission_all,
       const std::string& expires_at = "");
+  std::string create_encrypted_secret_by_key(
+      const std::string& namespace_name,
+      const std::string& key,
+      const std::vector<std::uint8_t>& plaintext,
+      const std::vector<std::string>& recipients = {},
+      int permissions = permission_all,
+      const std::string& expires_at = "");
   std::string create_encrypted_secret_version(
       const std::string& secret_id,
       const std::vector<std::uint8_t>& plaintext,
       const std::vector<std::string>& recipients = {},
       int permissions = permission_all,
       const std::string& expires_at = "");
+  std::string create_encrypted_secret_version_by_key(
+      const std::string& namespace_name,
+      const std::string& key,
+      const std::vector<std::uint8_t>& plaintext,
+      const std::vector<std::string>& recipients = {},
+      int permissions = permission_all,
+      const std::string& expires_at = "");
   DecryptedSecret read_decrypted_secret(const std::string& secret_id);
+  DecryptedSecret read_decrypted_secret_by_key(const std::string& namespace_name, const std::string& key);
   std::string share_encrypted_secret(
       const std::string& secret_id,
+      const std::string& target_client_id,
+      int permissions = permission_read,
+      const std::string& expires_at = "");
+  std::string share_encrypted_secret_by_key(
+      const std::string& namespace_name,
+      const std::string& key,
       const std::string& target_client_id,
       int permissions = permission_read,
       const std::string& expires_at = "");
