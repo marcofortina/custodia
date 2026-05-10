@@ -220,6 +220,20 @@ impl CustodiaClient {
         self.request_json("GET", &format!("/v1/secrets/{}", path_escape(secret_id)), None)
     }
 
+    pub fn get_secret_payload_by_key(&self, namespace: &str, key: &str) -> Result<Value> {
+        self.request_json(
+            "GET",
+            &with_query(
+                "/v1/secrets/by-key",
+                &[
+                    ("namespace".to_string(), namespace.to_string()),
+                    ("key".to_string(), key.to_string()),
+                ],
+            ),
+            None,
+        )
+    }
+
     pub fn list_secret_metadata(&self, limit: Option<u32>) -> Result<Value> {
         let mut query = Vec::new();
         push_optional(&mut query, "limit", limit.map(|value| value.to_string()));
@@ -250,6 +264,20 @@ impl CustodiaClient {
         self.request_json(
             "POST",
             &format!("/v1/secrets/{}/share", path_escape(secret_id)),
+            Some(payload),
+        )
+    }
+
+    pub fn share_secret_payload_by_key(&self, namespace: &str, key: &str, payload: &Value) -> Result<Value> {
+        self.request_json(
+            "POST",
+            &with_query(
+                "/v1/secrets/by-key/share",
+                &[
+                    ("namespace".to_string(), namespace.to_string()),
+                    ("key".to_string(), key.to_string()),
+                ],
+            ),
             Some(payload),
         )
     }
@@ -287,12 +315,51 @@ impl CustodiaClient {
         )
     }
 
+    pub fn revoke_access_by_key(&self, namespace: &str, key: &str, client_id: &str) -> Result<Value> {
+        self.request_json(
+            "DELETE",
+            &with_query(
+                &format!("/v1/secrets/by-key/access/{}", path_escape(client_id)),
+                &[
+                    ("namespace".to_string(), namespace.to_string()),
+                    ("key".to_string(), key.to_string()),
+                ],
+            ),
+            None,
+        )
+    }
+
     pub fn create_secret_version_payload(&self, secret_id: &str, payload: &Value) -> Result<Value> {
         self.request_json(
             "POST",
             &format!("/v1/secrets/{}/versions", path_escape(secret_id)),
             Some(payload),
         )
+    }
+
+    pub fn create_secret_version_payload_by_key(&self, namespace: &str, key: &str, payload: &Value) -> Result<Value> {
+        self.request_json(
+            "POST",
+            &with_query(
+                "/v1/secrets/by-key/versions",
+                &[
+                    ("namespace".to_string(), namespace.to_string()),
+                    ("key".to_string(), key.to_string()),
+                ],
+            ),
+            Some(payload),
+        )
+    }
+
+    pub fn delete_secret_by_key(&self, namespace: &str, key: &str, cascade: bool) -> Result<Value> {
+        let mut query = vec![
+            ("namespace".to_string(), namespace.to_string()),
+            ("key".to_string(), key.to_string()),
+        ];
+        if cascade {
+            query.push(("cascade".to_string(), "true".to_string()));
+        }
+        self.request_json("DELETE", &with_query("/v1/secrets/by-key", &query), None)
     }
 
     pub fn list_access_grant_metadata(&self, filters: &AccessGrantFilters) -> Result<Value> {

@@ -114,6 +114,11 @@ fn builds_metadata_and_operational_paths() {
         json!({"versions": []}),
         json!({"access": []}),
         json!({"access_requests": []}),
+        json!({"secret_id": "s1"}),
+        json!({"status": "shared"}),
+        json!({"version_id": "v2"}),
+        json!({"status": "revoked"}),
+        json!({"status": "deleted"}),
         json!({"status": "ok"}),
         json!({"version": "dev"}),
         json!({"diagnostics": {}}),
@@ -141,6 +146,15 @@ fn builds_metadata_and_operational_paths() {
             ..Default::default()
         })
         .unwrap();
+    client.get_secret_payload_by_key("db01", "user:sys").unwrap();
+    client
+        .share_secret_payload_by_key("db01", "user:sys", &json!({"target_client_id":"client_bob"}))
+        .unwrap();
+    client
+        .create_secret_version_payload_by_key("db01", "user:sys", &json!({"ciphertext":"opaque"}))
+        .unwrap();
+    client.revoke_access_by_key("db01", "user:sys", "client_bob").unwrap();
+    client.delete_secret_by_key("db01", "user:sys", true).unwrap();
     client.status_info().unwrap();
     client.version_info().unwrap();
     client.diagnostics_info().unwrap();
@@ -161,7 +175,12 @@ fn builds_metadata_and_operational_paths() {
     assert!(urls[2].contains("/v1/secrets/550e8400-e29b-41d4-a716-446655440000/versions?limit=2"));
     assert!(urls[4].contains("/v1/access-requests?"));
     assert!(urls[4].contains("status=pending"));
-    assert!(urls[10].contains("/v1/audit-events?"));
+    assert_eq!(urls[5], "https://vault.example.test:8443/v1/secrets/by-key?namespace=db01&key=user%3Asys");
+    assert_eq!(urls[6], "https://vault.example.test:8443/v1/secrets/by-key/share?namespace=db01&key=user%3Asys");
+    assert_eq!(urls[7], "https://vault.example.test:8443/v1/secrets/by-key/versions?namespace=db01&key=user%3Asys");
+    assert_eq!(urls[8], "https://vault.example.test:8443/v1/secrets/by-key/access/client_bob?namespace=db01&key=user%3Asys");
+    assert_eq!(urls[9], "https://vault.example.test:8443/v1/secrets/by-key?namespace=db01&key=user%3Asys&cascade=true");
+    assert!(urls[15].contains("/v1/audit-events?"));
 }
 
 #[test]

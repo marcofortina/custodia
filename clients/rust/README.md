@@ -46,6 +46,8 @@ crypto.create_encrypted_secret(
     custodia_client::PERMISSION_ALL,
     None,
 )?;
+
+let payload = client.get_secret_payload_by_key("default", "db/password")?;
 ```
 
 ## Test
