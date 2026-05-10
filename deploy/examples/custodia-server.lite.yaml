@@ -9,6 +9,7 @@ profile: lite
 
 server:
   api_addr: ":8443"
+  url: "https://custodia.example.internal:8443"
   web_addr: ":9443"
   log_file: /var/log/custodia/custodia.log
 

@@ -25,6 +25,9 @@ The recommended YAML format groups runtime settings into explicit sections such 
 ```yaml
 profile: lite
 
+server:
+  url: "https://custodia.example.internal:8443"
+
 storage:
   backend: sqlite
   database_url: "file:/var/lib/custodia/custodia.db"
@@ -44,7 +47,7 @@ signer:
   key_provider: file
 ```
 
-See `deploy/examples/custodia-server.lite.yaml` for a complete example and `docs/CONFIG_REFERENCE.md` for the full structured YAML reference.
+See `deploy/examples/custodia-server.lite.yaml` for a complete example and `docs/CONFIG_REFERENCE.md` for the full structured YAML reference. The `server.url` value is the externally reachable API URL printed by `custodia-admin client enrollment create` and used by remote clients during enrollment.
 
 ## Full profile
 

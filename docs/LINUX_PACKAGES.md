@@ -114,6 +114,8 @@ sudo editor /etc/custodia/custodia-signer.yaml
 sudo systemctl enable --now custodia-server custodia-signer
 ```
 
+Set `server.url` in `custodia-server.yaml` to the HTTPS API URL that remote clients will use. `custodia-admin client enrollment create` prints that configured URL with each one-shot enrollment token.
+
 ## Client package layout
 
 `custodia-client` installs:

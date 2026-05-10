@@ -137,7 +137,7 @@ func (a *app) usage() {
   custodia-client key generate --client-id ID [--private-key-out FILE --public-key-out FILE]
   custodia-client key public --client-id ID --private-key FILE --public-key-out FILE
   custodia-client key inspect --key FILE
-  custodia-client config write --client-id ID --server-url URL [--out FILE --cert FILE --key FILE --ca FILE --crypto-key FILE]
+  custodia-client config write --client-id ID [--server-url URL --out FILE --cert FILE --key FILE --ca FILE --crypto-key FILE]
   custodia-client config check --client-id ID|--config FILE
   custodia-client doctor --client-id ID|--config FILE [--online]
   custodia-client secret put --client-id ID --name NAME --value-file FILE [--recipient ID=PUBLIC.json]
@@ -444,7 +444,7 @@ func (a *app) runConfigWrite(args []string) int {
 		}
 	}
 	if strings.TrimSpace(*out) == "" || strings.TrimSpace(*serverURL) == "" || strings.TrimSpace(*certFile) == "" || strings.TrimSpace(*keyFile) == "" || strings.TrimSpace(*caFile) == "" {
-		fmt.Fprintln(a.stderr, "--server-url and either --client-id or explicit --out, --cert, --key and --ca are required")
+		fmt.Fprintln(a.stderr, "--client-id with an enrolled profile, or explicit --server-url, --out, --cert, --key and --ca are required")
 		return 2
 	}
 	config := clientConfigFile{ServerURL: strings.TrimSpace(*serverURL), CertFile: strings.TrimSpace(*certFile), KeyFile: strings.TrimSpace(*keyFile), CAFile: strings.TrimSpace(*caFile), ClientID: id, CryptoKey: strings.TrimSpace(*cryptoKey)}

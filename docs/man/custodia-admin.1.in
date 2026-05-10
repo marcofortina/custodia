@@ -116,17 +116,17 @@ Admin mTLS private key.
 Custodia CA certificate.
 .SH ENVIRONMENT
 .TP
-.B CUSTODIA_BASE_URL
-Default API base URL.
+.B CUSTODIA_SERVER_URL
+Default Custodia API URL.
 .TP
-.B CUSTODIA_ADMIN_CERT
-Default admin certificate path.
+.B CUSTODIA_CLIENT_CERT_FILE
+Default admin mTLS certificate path.
 .TP
-.B CUSTODIA_ADMIN_KEY
-Default admin private key path.
+.B CUSTODIA_CLIENT_KEY_FILE
+Default admin mTLS private key path.
 .TP
-.B CUSTODIA_CA_CERT
-Default CA certificate path.
+.B CUSTODIA_SERVER_CA_FILE
+Default server CA certificate path.
 .TP
 .B CUSTODIA_SIGNER_URL
 Default signer URL for client certificate issue workflows.

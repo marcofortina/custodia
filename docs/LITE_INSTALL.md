@@ -53,16 +53,18 @@ Use `--ca-passphrase-file FILE` when you already have a passphrase file managed 
 
 ## Configuration
 
-Start from the sample profile:
+`custodia-admin ca bootstrap-local` writes `/etc/custodia/custodia-server.yaml` and `/etc/custodia/custodia-signer.yaml` for the Lite first-run path. Review every certificate path before starting the service. The server config must also contain a `server.url` value that remote clients can reach; bootstrap writes it from `--server-name`.
+
+If you are building a config manually instead of using the bootstrap-generated files, start from the installed examples and edit them before starting the services:
 
 ```bash
 sudo cp /usr/share/doc/custodia/custodia-server.lite.yaml.example /etc/custodia/custodia-server.yaml
 sudo cp /usr/share/doc/custodia/custodia-signer.yaml.example /etc/custodia/custodia-signer.yaml
 sudo chown custodia:custodia /etc/custodia/custodia-server.yaml /etc/custodia/custodia-signer.yaml
 sudo chmod 0640 /etc/custodia/custodia-server.yaml /etc/custodia/custodia-signer.yaml
+sudo editor /etc/custodia/custodia-server.yaml
+sudo editor /etc/custodia/custodia-signer.yaml
 ```
-
-Review every certificate path before starting the service.
 
 ## Run
 
