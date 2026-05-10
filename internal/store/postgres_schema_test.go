@@ -132,3 +132,51 @@ func TestPostgresSchemaRejectsEmptyOpaqueBlobs(t *testing.T) {
 		}
 	}
 }
+
+func TestPostgresSchemaDefinesVisibleSecretKeyspace(t *testing.T) {
+	t.Parallel()
+
+	schemaPath := filepath.Join("..", "..", "migrations", "postgres", "001_init.sql")
+	schemaBytes, err := os.ReadFile(schemaPath)
+	if err != nil {
+		t.Fatalf("read postgres schema: %v", err)
+	}
+	schema := string(schemaBytes)
+
+	for _, expected := range []string{
+		"namespace            TEXT NOT NULL DEFAULT 'default'",
+		"key                  TEXT NOT NULL",
+		"CREATE TABLE IF NOT EXISTS secret_visibility",
+		"PRIMARY KEY (client_id, namespace, key)",
+		"UNIQUE (client_id, secret_id)",
+		"CREATE UNIQUE INDEX IF NOT EXISTS idx_secrets_owner_key_active",
+	} {
+		if !strings.Contains(schema, expected) {
+			t.Fatalf("postgres schema missing visible keyspace token %q", expected)
+		}
+	}
+}
+
+func TestPostgresStoreMaintainsVisibleSecretKeyspace(t *testing.T) {
+	t.Parallel()
+
+	storeBytes, err := os.ReadFile("postgres_pgx.go")
+	if err != nil {
+		t.Fatalf("read postgres store: %v", err)
+	}
+	postgresStore := string(storeBytes)
+
+	for _, expected := range []string{
+		"normalizeSecretIdentity(&req)",
+		"INSERT INTO secrets (namespace, key, name, created_by_client_id)",
+		"activeVisibleSecretIDByKey(ctx, tx, envelope.ClientID, req.Namespace, req.Key)",
+		"insertSecretVisibility(ctx, tx, envelope.ClientID, req.Namespace, req.Key, ref.SecretID, visibilityType)",
+		"activeVisibleSecretIDByKey(ctx, tx, req.TargetClientID, namespace, key)",
+		"DELETE FROM secret_visibility WHERE secret_id = $1::uuid AND client_id = $2",
+		"JOIN secret_visibility sv ON sv.secret_id = s.secret_id AND sv.client_id = $2",
+	} {
+		if !strings.Contains(postgresStore, expected) {
+			t.Fatalf("postgres store missing visible keyspace token %q", expected)
+		}
+	}
+}

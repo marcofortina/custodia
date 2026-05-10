@@ -18,10 +18,24 @@ CREATE TABLE IF NOT EXISTS clients (
 
 CREATE TABLE IF NOT EXISTS secrets (
     secret_id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    namespace            TEXT NOT NULL DEFAULT 'default' CHECK (length(btrim(namespace)) > 0 AND length(namespace) <= 255),
+    key                  TEXT NOT NULL CHECK (length(btrim(key)) > 0 AND length(key) <= 255),
     name                 TEXT NOT NULL CHECK (length(btrim(name)) > 0 AND length(name) <= 255),
     created_by_client_id TEXT NOT NULL REFERENCES clients(client_id),
     created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at           TIMESTAMPTZ
+);
+
+-- The visible keyspace makes namespace/key lookup unique per client, including shared secrets.
+CREATE TABLE IF NOT EXISTS secret_visibility (
+    client_id       TEXT NOT NULL REFERENCES clients(client_id),
+    namespace       TEXT NOT NULL CHECK (length(btrim(namespace)) > 0 AND length(namespace) <= 255),
+    key             TEXT NOT NULL CHECK (length(btrim(key)) > 0 AND length(key) <= 255),
+    secret_id       UUID NOT NULL REFERENCES secrets(secret_id) ON DELETE CASCADE,
+    visibility_type TEXT NOT NULL CHECK (visibility_type IN ('owner', 'shared')),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (client_id, namespace, key),
+    UNIQUE (client_id, secret_id)
 );
 
 -- Secret versions preserve client-side rotation history; ciphertext and crypto_metadata remain opaque server data.
@@ -103,6 +117,8 @@ CREATE TABLE IF NOT EXISTS audit_events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_clients_active_subject ON clients (mtls_subject) WHERE is_active = TRUE AND revoked_at IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_secrets_owner_key_active ON secrets (created_by_client_id, namespace, key) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_secret_visibility_secret ON secret_visibility (secret_id);
 CREATE INDEX IF NOT EXISTS idx_secret_versions_latest ON secret_versions (secret_id, created_at DESC) WHERE revoked_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_secret_access_client ON secret_access (client_id, secret_id, version_id) WHERE revoked_at IS NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_secret_access_requests_pending ON secret_access_requests (secret_id, version_id, client_id) WHERE activated_at IS NULL AND revoked_at IS NULL;

@@ -140,12 +140,14 @@ func (s *PostgresStore) RevokeClient(ctx context.Context, clientID string) error
 		WHERE (client_id = $1 OR requested_by_client_id = $1) AND activated_at IS NULL AND revoked_at IS NULL`, clientID); err != nil {
 		return mapPostgresError(err)
 	}
+	if _, err := tx.Exec(ctx, `DELETE FROM secret_visibility WHERE client_id = $1`, clientID); err != nil {
+		return mapPostgresError(err)
+	}
 	return tx.Commit(ctx)
 }
 
 func (s *PostgresStore) CreateSecret(ctx context.Context, actorClientID string, req model.CreateSecretRequest) (model.SecretVersionRef, error) {
-	req.Name = model.NormalizeSecretName(req.Name)
-	if !model.ValidSecretName(req.Name) {
+	if err := normalizeSecretIdentity(&req); err != nil {
 		return model.SecretVersionRef{}, ErrInvalidInput
 	}
 	if err := validateOpaqueSecretPayload(req.Ciphertext, req.Envelopes); err != nil {
@@ -180,12 +182,17 @@ func (s *PostgresStore) CreateSecret(ctx context.Context, actorClientID string, 
 		} else if !active {
 			return model.SecretVersionRef{}, ErrInvalidInput
 		}
+		if existingSecretID, ok, err := activeVisibleSecretIDByKey(ctx, tx, envelope.ClientID, req.Namespace, req.Key); err != nil {
+			return model.SecretVersionRef{}, err
+		} else if ok && existingSecretID != "" {
+			return model.SecretVersionRef{}, ErrConflict
+		}
 	}
 	var ref model.SecretVersionRef
 	err = tx.QueryRow(ctx, `
-		INSERT INTO secrets (name, created_by_client_id)
-		VALUES ($1, $2)
-		RETURNING secret_id::text`, req.Name, actorClientID).Scan(&ref.SecretID)
+		INSERT INTO secrets (namespace, key, name, created_by_client_id)
+		VALUES ($1, $2, $3, $4)
+		RETURNING secret_id::text`, req.Namespace, req.Key, req.Name, actorClientID).Scan(&ref.SecretID)
 	if err != nil {
 		return model.SecretVersionRef{}, mapPostgresError(err)
 	}
@@ -207,6 +214,13 @@ func (s *PostgresStore) CreateSecret(ctx context.Context, actorClientID string, 
 			ref.SecretID, ref.VersionID, envelope.ClientID, envelopeBytes, req.Permissions, req.ExpiresAt); err != nil {
 			return model.SecretVersionRef{}, mapPostgresError(err)
 		}
+		visibilityType := "shared"
+		if envelope.ClientID == actorClientID {
+			visibilityType = "owner"
+		}
+		if err := insertSecretVisibility(ctx, tx, envelope.ClientID, req.Namespace, req.Key, ref.SecretID, visibilityType); err != nil {
+			return model.SecretVersionRef{}, err
+		}
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return model.SecretVersionRef{}, err
@@ -221,7 +235,7 @@ func (s *PostgresStore) ListSecrets(ctx context.Context, actorClientID string) (
 		return nil, ErrForbidden
 	}
 	rows, err := s.pool.Query(ctx, `
-		SELECT s.secret_id::text, s.name, v.version_id::text, a.permissions, s.created_at, s.created_by_client_id, a.expires_at
+		SELECT s.secret_id::text, s.namespace, s.key, s.name, v.version_id::text, a.permissions, s.created_at, s.created_by_client_id, a.expires_at
 		FROM secrets s
 		JOIN LATERAL (
 			SELECT version_id, secret_id, created_at
@@ -230,6 +244,7 @@ func (s *PostgresStore) ListSecrets(ctx context.Context, actorClientID string) (
 			ORDER BY created_at DESC
 			LIMIT 1
 		) v ON TRUE
+		JOIN secret_visibility sv ON sv.secret_id = s.secret_id AND sv.client_id = $1
 		JOIN secret_access a ON a.secret_id = v.secret_id AND a.version_id = v.version_id AND a.client_id = $1
 		WHERE s.deleted_at IS NULL
 		  AND a.revoked_at IS NULL
@@ -243,7 +258,7 @@ func (s *PostgresStore) ListSecrets(ctx context.Context, actorClientID string) (
 	secrets := make([]model.SecretMetadata, 0)
 	for rows.Next() {
 		var secret model.SecretMetadata
-		if err := rows.Scan(&secret.SecretID, &secret.Name, &secret.VersionID, &secret.Permissions, &secret.CreatedAt, &secret.CreatedByClientID, &secret.AccessExpiresAt); err != nil {
+		if err := rows.Scan(&secret.SecretID, &secret.Namespace, &secret.Key, &secret.Name, &secret.VersionID, &secret.Permissions, &secret.CreatedAt, &secret.CreatedByClientID, &secret.AccessExpiresAt); err != nil {
 			return nil, mapPostgresError(err)
 		}
 		secrets = append(secrets, secret)
@@ -260,7 +275,7 @@ func (s *PostgresStore) GetSecret(ctx context.Context, actorClientID, secretID s
 	var envelope []byte
 	var metadata []byte
 	err := s.pool.QueryRow(ctx, `
-		SELECT s.secret_id::text, v.version_id::text, v.ciphertext, v.crypto_metadata, a.envelope, a.permissions, a.granted_at, a.expires_at
+		SELECT s.secret_id::text, s.namespace, s.key, v.version_id::text, v.ciphertext, v.crypto_metadata, a.envelope, a.permissions, a.granted_at, a.expires_at
 		FROM secrets s
 		JOIN LATERAL (
 			SELECT * FROM secret_versions
@@ -268,12 +283,14 @@ func (s *PostgresStore) GetSecret(ctx context.Context, actorClientID, secretID s
 			ORDER BY created_at DESC
 			LIMIT 1
 		) v ON TRUE
+		JOIN secret_visibility sv ON sv.secret_id = s.secret_id AND sv.client_id = $2
+		JOIN secret_visibility sv ON sv.secret_id = s.secret_id AND sv.client_id = $2
 		JOIN secret_access a ON a.secret_id = v.secret_id AND a.version_id = v.version_id AND a.client_id = $2
 		WHERE s.secret_id = $1::uuid AND s.deleted_at IS NULL
 		  AND a.revoked_at IS NULL
 		  AND (a.expires_at IS NULL OR a.expires_at > NOW())
 		  AND (a.permissions & $3) = $3`, secretID, actorClientID, int(model.PermissionRead)).
-		Scan(&response.SecretID, &response.VersionID, &ciphertext, &metadata, &envelope, &response.Permissions, &response.GrantedAt, &response.AccessExpiresAt)
+		Scan(&response.SecretID, &response.Namespace, &response.Key, &response.VersionID, &ciphertext, &metadata, &envelope, &response.Permissions, &response.GrantedAt, &response.AccessExpiresAt)
 	if err != nil {
 		return model.SecretReadResponse{}, mapPostgresError(err)
 	}
@@ -357,6 +374,9 @@ func (s *PostgresStore) DeleteSecret(ctx context.Context, actorClientID, secretI
 	if _, err := tx.Exec(ctx, `UPDATE secret_access_requests SET revoked_at = COALESCE(revoked_at, NOW()) WHERE secret_id = $1::uuid AND activated_at IS NULL AND revoked_at IS NULL`, secretID); err != nil {
 		return mapPostgresError(err)
 	}
+	if _, err := tx.Exec(ctx, `DELETE FROM secret_visibility WHERE secret_id = $1::uuid`, secretID); err != nil {
+		return mapPostgresError(err)
+	}
 	return tx.Commit(ctx)
 }
 
@@ -377,10 +397,19 @@ func (s *PostgresStore) ShareSecret(ctx context.Context, actorClientID, secretID
 	if err != nil {
 		return err
 	}
+	namespace, key, err := postgresSecretIdentity(ctx, tx, secretID)
+	if err != nil {
+		return err
+	}
 	if active, err := activeClientExists(ctx, tx, req.TargetClientID); err != nil {
 		return err
 	} else if !active {
 		return ErrInvalidInput
+	}
+	if existingSecretID, ok, err := activeVisibleSecretIDByKey(ctx, tx, req.TargetClientID, namespace, key); err != nil {
+		return err
+	} else if ok && existingSecretID != secretID {
+		return ErrConflict
 	}
 	if active, err := activeAccessExists(ctx, tx, secretID, versionID, req.TargetClientID); err != nil {
 		return err
@@ -400,6 +429,9 @@ func (s *PostgresStore) ShareSecret(ctx context.Context, actorClientID, secretID
 		secretID, versionID, req.TargetClientID, envelopeBytes, req.Permissions, req.ExpiresAt); err != nil {
 		return mapPostgresError(err)
 	}
+	if err := insertSecretVisibility(ctx, tx, req.TargetClientID, namespace, key, secretID, "shared"); err != nil {
+		return err
+	}
 	return tx.Commit(ctx)
 }
 
@@ -416,6 +448,10 @@ func (s *PostgresStore) RequestAccessGrant(ctx context.Context, actorClientID, s
 	if err != nil {
 		return model.AccessGrantRef{}, err
 	}
+	namespace, key, err := postgresSecretIdentity(ctx, tx, secretID)
+	if err != nil {
+		return model.AccessGrantRef{}, err
+	}
 	if active, err := activeClientExists(ctx, tx, actorClientID); err != nil {
 		return model.AccessGrantRef{}, err
 	} else if !active {
@@ -425,6 +461,11 @@ func (s *PostgresStore) RequestAccessGrant(ctx context.Context, actorClientID, s
 		return model.AccessGrantRef{}, err
 	} else if !active {
 		return model.AccessGrantRef{}, ErrInvalidInput
+	}
+	if existingSecretID, ok, err := activeVisibleSecretIDByKey(ctx, tx, req.TargetClientID, namespace, key); err != nil {
+		return model.AccessGrantRef{}, err
+	} else if ok && existingSecretID != secretID {
+		return model.AccessGrantRef{}, ErrConflict
 	}
 	if active, err := activeAccessExists(ctx, tx, secretID, versionID, req.TargetClientID); err != nil {
 		return model.AccessGrantRef{}, err
@@ -511,10 +552,19 @@ func (s *PostgresStore) ActivateAccessGrant(ctx context.Context, actorClientID, 
 	if _, _, err := visibleVersion(ctx, tx, actorClientID, secretID, versionID, model.PermissionShare); err != nil {
 		return err
 	}
+	namespace, key, err := postgresSecretIdentity(ctx, tx, secretID)
+	if err != nil {
+		return err
+	}
 	if active, err := activeClientExists(ctx, tx, targetClientID); err != nil {
 		return err
 	} else if !active {
 		return ErrInvalidInput
+	}
+	if existingSecretID, ok, err := activeVisibleSecretIDByKey(ctx, tx, targetClientID, namespace, key); err != nil {
+		return err
+	} else if ok && existingSecretID != secretID {
+		return ErrConflict
 	}
 	if active, err := activeAccessExists(ctx, tx, secretID, versionID, targetClientID); err != nil {
 		return err
@@ -532,6 +582,9 @@ func (s *PostgresStore) ActivateAccessGrant(ctx context.Context, actorClientID, 
 		    revoked_at = NULL
 		WHERE secret_access.revoked_at IS NOT NULL OR secret_access.expires_at <= NOW()`, secretID, versionID, targetClientID, envelopeBytes, permissions, expiresAt); err != nil {
 		return mapPostgresError(err)
+	}
+	if err := insertSecretVisibility(ctx, tx, targetClientID, namespace, key, secretID, "shared"); err != nil {
+		return err
 	}
 	_, err = tx.Exec(ctx, `
 		UPDATE secret_access_requests
@@ -570,6 +623,9 @@ func (s *PostgresStore) RevokeAccess(ctx context.Context, actorClientID, secretI
 	if accessTag.RowsAffected()+pendingTag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
+	if _, err := tx.Exec(ctx, `DELETE FROM secret_visibility WHERE secret_id = $1::uuid AND client_id = $2`, secretID, targetClientID); err != nil {
+		return mapPostgresError(err)
+	}
 	return tx.Commit(ctx)
 }
 
@@ -598,11 +654,20 @@ func (s *PostgresStore) CreateSecretVersion(ctx context.Context, actorClientID, 
 	if _, _, err := visibleVersion(ctx, tx, actorClientID, secretID, "", model.PermissionWrite); err != nil {
 		return model.SecretVersionRef{}, err
 	}
+	namespace, key, err := postgresSecretIdentity(ctx, tx, secretID)
+	if err != nil {
+		return model.SecretVersionRef{}, err
+	}
 	for _, envelope := range req.Envelopes {
 		if active, err := activeClientExists(ctx, tx, envelope.ClientID); err != nil {
 			return model.SecretVersionRef{}, err
 		} else if !active {
 			return model.SecretVersionRef{}, ErrInvalidInput
+		}
+		if existingSecretID, ok, err := activeVisibleSecretIDByKey(ctx, tx, envelope.ClientID, namespace, key); err != nil {
+			return model.SecretVersionRef{}, err
+		} else if ok && existingSecretID != secretID {
+			return model.SecretVersionRef{}, ErrConflict
 		}
 	}
 	now := time.Now().UTC()
@@ -644,6 +709,9 @@ func (s *PostgresStore) CreateSecretVersion(ctx context.Context, actorClientID, 
 	if err != nil {
 		return model.SecretVersionRef{}, mapPostgresError(err)
 	}
+	if _, err := tx.Exec(ctx, `DELETE FROM secret_visibility WHERE secret_id = $1::uuid`, secretID); err != nil {
+		return model.SecretVersionRef{}, mapPostgresError(err)
+	}
 	for _, envelope := range req.Envelopes {
 		envelopeBytes, err := decodeOpaqueBlob(envelope.Envelope)
 		if err != nil {
@@ -653,6 +721,13 @@ func (s *PostgresStore) CreateSecretVersion(ctx context.Context, actorClientID, 
 			INSERT INTO secret_access (secret_id, version_id, client_id, envelope, permissions, expires_at)
 			VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6)`, secretID, ref.VersionID, envelope.ClientID, envelopeBytes, req.Permissions, req.ExpiresAt); err != nil {
 			return model.SecretVersionRef{}, mapPostgresError(err)
+		}
+		visibilityType := "shared"
+		if envelope.ClientID == actorClientID {
+			visibilityType = "owner"
+		}
+		if err := insertSecretVisibility(ctx, tx, envelope.ClientID, namespace, key, secretID, visibilityType); err != nil {
+			return model.SecretVersionRef{}, err
 		}
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -764,6 +839,7 @@ func visibleVersionQuery(secretID, actorClientID, versionID string, permission i
 			SELECT s.secret_id::text, v.version_id::text
 			FROM secrets s
 			JOIN secret_versions v ON v.secret_id = s.secret_id AND v.version_id = $3::uuid AND v.revoked_at IS NULL
+			JOIN secret_visibility sv ON sv.secret_id = s.secret_id AND sv.client_id = $2
 			JOIN secret_access a ON a.secret_id = v.secret_id AND a.version_id = v.version_id AND a.client_id = $2
 			WHERE s.secret_id = $1::uuid AND s.deleted_at IS NULL
 			  AND a.revoked_at IS NULL
@@ -780,6 +856,7 @@ func visibleVersionQuery(secretID, actorClientID, versionID string, permission i
 			ORDER BY created_at DESC
 			LIMIT 1
 		) v ON TRUE
+		JOIN secret_visibility sv ON sv.secret_id = s.secret_id AND sv.client_id = $2
 		JOIN secret_access a ON a.secret_id = v.secret_id AND a.version_id = v.version_id AND a.client_id = $2
 		WHERE s.secret_id = $1::uuid AND s.deleted_at IS NULL
 		  AND a.revoked_at IS NULL
@@ -830,6 +907,95 @@ func activeVersionExists(ctx context.Context, q pgQuerier, secretID, versionID s
 	var exists bool
 	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM secret_versions WHERE secret_id = $1::uuid AND version_id = $2::uuid AND revoked_at IS NULL)`, secretID, versionID).Scan(&exists)
 	return exists, mapPostgresError(err)
+}
+
+func postgresSecretIdentity(ctx context.Context, q pgQuerier, secretID string) (string, string, error) {
+	var namespace string
+	var key string
+	err := q.QueryRow(ctx, `
+		SELECT namespace, key
+		FROM secrets
+		WHERE secret_id = $1::uuid AND deleted_at IS NULL`, secretID).Scan(&namespace, &key)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", ErrNotFound
+	}
+	if err != nil {
+		return "", "", mapPostgresError(err)
+	}
+	return model.NormalizeSecretNamespace(namespace), model.NormalizeSecretKey(key), nil
+}
+
+func activeVisibleSecretIDByKey(ctx context.Context, q pgQuerier, clientID, namespace, key string) (string, bool, error) {
+	namespace = model.NormalizeSecretNamespace(namespace)
+	key = model.NormalizeSecretKey(key)
+	if !model.ValidClientID(clientID) || !model.ValidSecretNamespace(namespace) || !model.ValidSecretKey(key) {
+		return "", false, ErrInvalidInput
+	}
+	if _, err := q.Exec(ctx, `
+		DELETE FROM secret_visibility sv
+		WHERE sv.client_id = $1
+		  AND sv.namespace = $2
+		  AND sv.key = $3
+		  AND NOT EXISTS (
+			SELECT 1
+			FROM secrets s
+			JOIN LATERAL (
+				SELECT version_id, secret_id
+				FROM secret_versions
+				WHERE secret_id = s.secret_id AND revoked_at IS NULL
+				ORDER BY created_at DESC
+				LIMIT 1
+			) v ON TRUE
+			JOIN secret_access a ON a.secret_id = v.secret_id AND a.version_id = v.version_id AND a.client_id = sv.client_id
+			WHERE s.secret_id = sv.secret_id
+			  AND s.deleted_at IS NULL
+			  AND a.revoked_at IS NULL
+			  AND (a.expires_at IS NULL OR a.expires_at > NOW())
+		  )`, clientID, namespace, key); err != nil {
+		return "", false, mapPostgresError(err)
+	}
+	var secretID string
+	err := q.QueryRow(ctx, `
+		SELECT sv.secret_id::text
+		FROM secret_visibility sv
+		JOIN secrets s ON s.secret_id = sv.secret_id
+		JOIN LATERAL (
+			SELECT version_id, secret_id
+			FROM secret_versions
+			WHERE secret_id = s.secret_id AND revoked_at IS NULL
+			ORDER BY created_at DESC
+			LIMIT 1
+		) v ON TRUE
+		JOIN secret_access a ON a.secret_id = v.secret_id AND a.version_id = v.version_id AND a.client_id = sv.client_id
+		WHERE sv.client_id = $1
+		  AND sv.namespace = $2
+		  AND sv.key = $3
+		  AND s.deleted_at IS NULL
+		  AND a.revoked_at IS NULL
+		  AND (a.expires_at IS NULL OR a.expires_at > NOW())
+		LIMIT 1`, clientID, namespace, key).Scan(&secretID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, mapPostgresError(err)
+	}
+	return secretID, true, nil
+}
+
+func insertSecretVisibility(ctx context.Context, q pgQuerier, clientID, namespace, key, secretID, visibilityType string) error {
+	namespace = model.NormalizeSecretNamespace(namespace)
+	key = model.NormalizeSecretKey(key)
+	if !model.ValidClientID(clientID) || !model.ValidSecretNamespace(namespace) || !model.ValidSecretKey(key) {
+		return ErrInvalidInput
+	}
+	if visibilityType != "owner" && visibilityType != "shared" {
+		return ErrInvalidInput
+	}
+	_, err := q.Exec(ctx, `
+		INSERT INTO secret_visibility (client_id, namespace, key, secret_id, visibility_type)
+		VALUES ($1, $2, $3, $4::uuid, $5)`, clientID, namespace, key, secretID, visibilityType)
+	return mapPostgresError(err)
 }
 
 func activeAccessExists(ctx context.Context, q pgQuerier, secretID, versionID, clientID string) (bool, error) {

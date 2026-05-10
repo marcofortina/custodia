@@ -60,7 +60,8 @@ func TestPostgresStoreSecretLifecycleIntegration(t *testing.T) {
 	}
 
 	created, err := vaultStore.CreateSecret(ctx, alice, model.CreateSecretRequest{
-		Name:        "integration-secret",
+		Namespace:   "db01",
+		Key:         "user:sys",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: alice, Envelope: "ZW52ZWxvcGUtYWxpY2U="}},
 		Permissions: int(model.PermissionAll),
@@ -85,7 +86,21 @@ func TestPostgresStoreSecretLifecycleIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read shared secret: %v", err)
 	}
+	if read.Namespace != "db01" || read.Key != "user:sys" {
+		t.Fatalf("expected namespace/key metadata on shared read, got %+v", read)
+	}
 	if read.Ciphertext != "Y2lwaGVydGV4dA==" || read.Envelope != "ZW52ZWxvcGUtYm9i" {
 		t.Fatalf("unexpected opaque payload: %+v", read)
+	}
+
+	_, err = vaultStore.CreateSecret(ctx, bob, model.CreateSecretRequest{
+		Namespace:   "db01",
+		Key:         "user:sys",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: bob, Envelope: "ZW52ZWxvcGUtYm9iLTI="}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != ErrConflict {
+		t.Fatalf("expected bob visible namespace/key create conflict, got %v", err)
 	}
 }
