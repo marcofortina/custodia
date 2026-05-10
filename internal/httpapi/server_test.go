@@ -665,6 +665,20 @@ func TestAPIReadsSharesAndVersionsSecretByKeyspace(t *testing.T) {
 	if res.Code != http.StatusCreated {
 		t.Fatalf("expected version by key 201, got %d: %s", res.Code, res.Body.String())
 	}
+
+	req = mtlsRequest(http.MethodDelete, "/v1/secrets/by-key/access/client_bob?namespace=db01&key=user:sys", "", "client_alice")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected revoke by key 200, got %d: %s", res.Code, res.Body.String())
+	}
+
+	req = mtlsRequest(http.MethodGet, "/v1/secrets/by-key?namespace=db01&key=user:sys", "", "client_bob")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusForbidden && res.Code != http.StatusNotFound {
+		t.Fatalf("expected bob read by key after revoke to fail, got %d: %s", res.Code, res.Body.String())
+	}
 }
 
 func TestAPIRejectsMissingSecretKeyspaceKey(t *testing.T) {

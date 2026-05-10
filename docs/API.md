@@ -108,9 +108,11 @@ Requires the caller to have `share` on the pending request version. The request 
 
 ## Revocation
 
-`DELETE /v1/secrets/{secret_id}/access/{client_id}`
+`DELETE /v1/secrets/by-key/access/{client_id}?namespace=db01&key=user:sys`
 
-Stops future reads for the target client. Previously downloaded ciphertext and envelope remain outside server control.
+Resolves the owner-visible secret by namespace/key and revokes an active access grant. Only the owner can revoke another client's access.
+
+`DELETE /v1/secrets/{secret_id}/access/{client_id}` remains available as a compatibility endpoint. Previously downloaded ciphertext and envelope remain outside server control.
 
 ## Audit events
 

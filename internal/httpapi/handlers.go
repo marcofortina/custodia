@@ -484,6 +484,30 @@ func (s *Server) handleShareSecretByKey(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "shared"})
 }
 
+func (s *Server) handleRevokeAccessByKey(w http.ResponseWriter, r *http.Request) {
+	namespace, key, ok := s.requireSecretKeyspaceQuery(w, r, "secret.access_revoke")
+	if !ok {
+		return
+	}
+	targetClientID, ok := s.requireClientID(w, r, "secret.access_revoke")
+	if !ok {
+		return
+	}
+	secretID, err := s.store.ResolveSecretIDByKey(r.Context(), clientIDFromContext(r), namespace, key, model.PermissionShare)
+	if err != nil {
+		s.auditStoreFailure(r, "secret.access_revoke", "secret_key", secretKeyspaceResource(namespace, key), err)
+		writeMappedError(w, err)
+		return
+	}
+	if err := s.store.RevokeAccess(r.Context(), clientIDFromContext(r), secretID, targetClientID); err != nil {
+		s.auditStoreFailure(r, "secret.access_revoke", "secret", secretID, err)
+		writeMappedError(w, err)
+		return
+	}
+	s.audit(r, "secret.access_revoke", "secret", secretID, "success", nil)
+	writeJSON(w, http.StatusOK, map[string]string{"status": "revoked"})
+}
+
 func (s *Server) handleCreateSecretVersionByKey(w http.ResponseWriter, r *http.Request) {
 	namespace, key, ok := s.requireSecretKeyspaceQuery(w, r, "secret.version_create")
 	if !ok {
