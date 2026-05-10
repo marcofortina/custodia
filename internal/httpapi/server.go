@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"custodia/internal/ratelimit"
@@ -46,6 +47,14 @@ type Server struct {
 	deploymentMode                   string
 	databaseHATarget                 string
 	auditShipmentSink                string
+	enrollmentServerURL              string
+	serverCertSHA256                 string
+	signerURL                        string
+	signerClientCertFile             string
+	signerClientKeyFile              string
+	signerCAFile                     string
+	enrollmentMu                     sync.Mutex
+	enrollmentTokens                 map[string]enrollmentToken
 }
 
 type Options struct {
@@ -73,6 +82,12 @@ type Options struct {
 	DeploymentMode                   string
 	DatabaseHATarget                 string
 	AuditShipmentSink                string
+	EnrollmentServerURL              string
+	ServerCertSHA256                 string
+	SignerURL                        string
+	SignerClientCertFile             string
+	SignerClientKeyFile              string
+	SignerCAFile                     string
 }
 
 type contextKey string
@@ -135,6 +150,13 @@ func New(options Options) http.Handler {
 		deploymentMode:                   options.DeploymentMode,
 		databaseHATarget:                 options.DatabaseHATarget,
 		auditShipmentSink:                options.AuditShipmentSink,
+		enrollmentServerURL:              options.EnrollmentServerURL,
+		serverCertSHA256:                 options.ServerCertSHA256,
+		signerURL:                        options.SignerURL,
+		signerClientCertFile:             options.SignerClientCertFile,
+		signerClientKeyFile:              options.SignerClientKeyFile,
+		signerCAFile:                     options.SignerCAFile,
+		enrollmentTokens:                 make(map[string]enrollmentToken),
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", server.handleHealth)
@@ -158,6 +180,8 @@ func New(options Options) http.Handler {
 	mux.Handle("GET /web/audit", server.webAdmin(http.HandlerFunc(server.handleWebAudit)))
 	mux.Handle("GET /web/audit/verify", server.webAdmin(http.HandlerFunc(server.handleWebAuditVerify)))
 	mux.Handle("GET /web/access-requests", server.webAdmin(http.HandlerFunc(server.handleWebAccessRequests)))
+	mux.Handle("POST /v1/client-enrollments/claim", http.HandlerFunc(server.handleClientEnrollmentClaim))
+	mux.Handle("POST /v1/client-enrollments", server.auth(server.adminOnly(http.HandlerFunc(server.handleCreateClientEnrollment))))
 	mux.Handle("GET /v1/me", server.auth(http.HandlerFunc(server.handleMe)))
 	mux.Handle("GET /v1/clients", server.auth(server.adminOnly(http.HandlerFunc(server.handleListClients))))
 	mux.Handle("GET /v1/clients/{client_id}", server.auth(server.adminOnly(http.HandlerFunc(server.handleGetClient))))

@@ -25,6 +25,7 @@ type clientProfilePaths struct {
 	CryptoPrivate string
 	CryptoPublic  string
 	Config        string
+	ServerURL     string
 }
 
 func defaultClientConfigPath(clientID string) (string, error) {
@@ -54,7 +55,24 @@ func defaultClientProfilePaths(clientID string) (clientProfilePaths, error) {
 		CryptoPrivate: filepath.Join(dir, clientID+".x25519.json"),
 		CryptoPublic:  filepath.Join(dir, clientID+".x25519.pub.json"),
 		Config:        filepath.Join(dir, clientID+".config.json"),
+		ServerURL:     filepath.Join(dir, "server_url"),
 	}, nil
+}
+
+func readDefaultServerURL(clientID string) (string, error) {
+	paths, err := defaultClientProfilePaths(clientID)
+	if err != nil {
+		return "", err
+	}
+	payload, err := os.ReadFile(paths.ServerURL)
+	if err != nil {
+		return "", fmt.Errorf("read server URL from %s: %w", paths.ServerURL, err)
+	}
+	value := strings.TrimSpace(string(payload))
+	if value == "" {
+		return "", fmt.Errorf("server URL profile file is empty: %s", paths.ServerURL)
+	}
+	return value, nil
 }
 
 func ensureClientProfileDir(dir string) error {

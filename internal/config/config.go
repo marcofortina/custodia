@@ -29,6 +29,7 @@ type Config struct {
 	Profile                          string
 	ConfigFile                       string
 	APIAddr                          string
+	ServerURL                        string
 	HealthAddr                       string
 	WebAddr                          string
 	LogFile                          string
@@ -63,6 +64,10 @@ type Config struct {
 	DeploymentMode                   string
 	DatabaseHATarget                 string
 	AuditShipmentSink                string
+	SignerURL                        string
+	SignerClientCertFile             string
+	SignerClientKeyFile              string
+	SignerClientCAFile               string
 	SignerKeyProvider                string
 	SignerCACertFile                 string
 	SignerCAKeyFile                  string
@@ -126,6 +131,7 @@ func profileDefaults(profile string) Config {
 	cfg := Config{
 		Profile:                       normalizedProfile(profile),
 		APIAddr:                       ":8443",
+		ServerURL:                     "",
 		HealthAddr:                    "",
 		WebAddr:                       ":9443",
 		LogFile:                       "/var/log/custodia/custodia.log",
@@ -258,6 +264,7 @@ func loadSimpleYAML(path string) (map[string]string, error) {
 var supportedServerScalarKeys = map[string]bool{
 	"profile":                              true,
 	"api_addr":                             true,
+	"server_url":                           true,
 	"health_addr":                          true,
 	"web_addr":                             true,
 	"log_file":                             true,
@@ -290,6 +297,10 @@ var supportedServerScalarKeys = map[string]bool{
 	"deployment_mode":                      true,
 	"database_ha_target":                   true,
 	"audit_shipment_sink":                  true,
+	"signer_url":                           true,
+	"signer_client_cert_file":              true,
+	"signer_client_key_file":               true,
+	"signer_client_ca_file":                true,
 	"signer_key_provider":                  true,
 	"signer_ca_cert_file":                  true,
 	"signer_ca_key_file":                   true,
@@ -300,6 +311,7 @@ var supportedServerScalarKeys = map[string]bool{
 var serverConfigSections = map[string]map[string]string{
 	"server": {
 		"api_addr":    "api_addr",
+		"url":         "server_url",
 		"health_addr": "health_addr",
 		"web_addr":    "web_addr",
 		"log_file":    "log_file",
@@ -344,6 +356,10 @@ var serverConfigSections = map[string]map[string]string{
 		"audit_shipment_sink": "audit_shipment_sink",
 	},
 	"signer": {
+		"url":                    "signer_url",
+		"client_cert_file":       "signer_client_cert_file",
+		"client_key_file":        "signer_client_key_file",
+		"client_ca_file":         "signer_client_ca_file",
 		"key_provider":           "signer_key_provider",
 		"ca_cert_file":           "signer_ca_cert_file",
 		"ca_key_file":            "signer_ca_key_file",
@@ -603,6 +619,8 @@ func applyValues(cfg *Config, values map[string]string) error {
 			cfg.Profile = normalizedProfile(value)
 		case "api_addr":
 			cfg.APIAddr = value
+		case "server_url":
+			cfg.ServerURL = value
 		case "health_addr":
 			cfg.HealthAddr = value
 		case "web_addr":
@@ -683,6 +701,14 @@ func applyValues(cfg *Config, values map[string]string) error {
 			cfg.DatabaseHATarget = value
 		case "audit_shipment_sink":
 			cfg.AuditShipmentSink = value
+		case "signer_url":
+			cfg.SignerURL = value
+		case "signer_client_cert_file":
+			cfg.SignerClientCertFile = value
+		case "signer_client_key_file":
+			cfg.SignerClientKeyFile = value
+		case "signer_client_ca_file":
+			cfg.SignerClientCAFile = value
 		case "signer_key_provider":
 			cfg.SignerKeyProvider = value
 		case "signer_ca_cert_file":
@@ -705,6 +731,7 @@ func applyEnv(cfg *Config) {
 		cfg.Profile = normalizedProfile(value)
 	}
 	cfg.APIAddr = env("CUSTODIA_API_ADDR", cfg.APIAddr)
+	cfg.ServerURL = env("CUSTODIA_SERVER_URL", cfg.ServerURL)
 	cfg.HealthAddr = env("CUSTODIA_HEALTH_ADDR", cfg.HealthAddr)
 	cfg.WebAddr = env("CUSTODIA_WEB_ADDR", cfg.WebAddr)
 	cfg.LogFile = env("CUSTODIA_LOG_FILE", cfg.LogFile)
@@ -743,6 +770,10 @@ func applyEnv(cfg *Config) {
 	cfg.DeploymentMode = env("CUSTODIA_DEPLOYMENT_MODE", cfg.DeploymentMode)
 	cfg.DatabaseHATarget = env("CUSTODIA_DATABASE_HA_TARGET", cfg.DatabaseHATarget)
 	cfg.AuditShipmentSink = env("CUSTODIA_AUDIT_SHIPMENT_SINK", cfg.AuditShipmentSink)
+	cfg.SignerURL = env("CUSTODIA_SIGNER_URL", cfg.SignerURL)
+	cfg.SignerClientCertFile = env("CUSTODIA_SIGNER_CLIENT_CERT_FILE", cfg.SignerClientCertFile)
+	cfg.SignerClientKeyFile = env("CUSTODIA_SIGNER_CLIENT_KEY_FILE", cfg.SignerClientKeyFile)
+	cfg.SignerClientCAFile = env("CUSTODIA_SIGNER_CLIENT_CA_FILE", cfg.SignerClientCAFile)
 	cfg.SignerKeyProvider = env("CUSTODIA_SIGNER_KEY_PROVIDER", cfg.SignerKeyProvider)
 	cfg.SignerCACertFile = env("CUSTODIA_SIGNER_CA_CERT_FILE", cfg.SignerCACertFile)
 	cfg.SignerCAKeyFile = env("CUSTODIA_SIGNER_CA_KEY_FILE", cfg.SignerCAKeyFile)

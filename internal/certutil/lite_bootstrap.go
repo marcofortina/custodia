@@ -92,7 +92,7 @@ func GenerateLiteBootstrap(req LiteBootstrapRequest) (*LiteBootstrapArtifacts, e
 		AdminCertPEM:     adminCertPEM,
 		AdminKeyPEM:      adminKeyPEM,
 		ClientCRLPEM:     crlPEM,
-		ConfigYAML:       liteBootstrapConfigYAML(adminClientID),
+		ConfigYAML:       liteBootstrapConfigYAML(adminClientID, serverName),
 		SignerConfigYAML: liteBootstrapSignerConfigYAML(adminClientID),
 		PassphraseSet:    len(req.Passphrase) > 0,
 	}, nil
@@ -240,11 +240,13 @@ func randomSerial() (*big.Int, error) {
 	return rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 }
 
-func liteBootstrapConfigYAML(adminClientID string) []byte {
+func liteBootstrapConfigYAML(adminClientID, serverName string) []byte {
+	serverURL := "https://" + strings.TrimSpace(serverName) + ":8443"
 	return []byte(`profile: lite
 
 server:
   api_addr: ":8443"
+  url: "` + serverURL + `"
   web_addr: ":9443"
   log_file: /var/log/custodia/custodia.log
 
@@ -273,6 +275,10 @@ deployment:
   database_ha_target: none
 
 signer:
+  url: "https://localhost:9444"
+  client_cert_file: /etc/custodia/admin.crt
+  client_key_file: /etc/custodia/admin.key
+  client_ca_file: /etc/custodia/ca.crt
   key_provider: file
   ca_cert_file: /etc/custodia/ca.crt
   ca_key_file: /etc/custodia/ca.key

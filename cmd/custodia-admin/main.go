@@ -125,6 +125,8 @@ func main() {
 		err = runCABootstrapLocal(args[2:])
 	case "client whoami":
 		err = requestJSON(&cfg, http.MethodGet, "/v1/me", nil, os.Stdout)
+	case "client enrollment":
+		err = runClientEnrollment(&cfg, args[2:])
 	case "client list":
 		err = runClientList(&cfg, args[2:])
 	case "client get":
@@ -1038,6 +1040,48 @@ func writeExclusive(path string, data []byte, perm os.FileMode) error {
 		return writeErr
 	}
 	return closeErr
+}
+
+func runClientEnrollment(cfg *cliConfig, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("missing client enrollment subcommand")
+	}
+	switch strings.TrimSpace(args[0]) {
+	case "create":
+		return runClientEnrollmentCreate(cfg, args[1:])
+	default:
+		return fmt.Errorf("unknown client enrollment subcommand: %s", args[0])
+	}
+}
+
+func runClientEnrollmentCreate(cfg *cliConfig, args []string) error {
+	cmd := flag.NewFlagSet("client enrollment create", flag.ExitOnError)
+	configFile := cmd.String("config", "/etc/custodia/custodia-server.yaml", "Custodia server config file")
+	ttl := cmd.Duration("ttl", 15*time.Minute, "enrollment token TTL")
+	_ = cmd.Parse(args)
+	if *ttl <= 0 {
+		return fmt.Errorf("--ttl must be positive")
+	}
+	serverCfg, err := serverconfig.LoadFile(*configFile)
+	if err != nil {
+		return fmt.Errorf("load server config: %w", err)
+	}
+	requestCfg := *cfg
+	requestCfg.serverURL = strings.TrimSpace(serverCfg.ServerURL)
+	if requestCfg.serverURL == "" {
+		return fmt.Errorf("server_url is required in %s", *configFile)
+	}
+	if strings.TrimSpace(requestCfg.certFile) == "" {
+		requestCfg.certFile = "/etc/custodia/admin.crt"
+	}
+	if strings.TrimSpace(requestCfg.keyFile) == "" {
+		requestCfg.keyFile = "/etc/custodia/admin.key"
+	}
+	if strings.TrimSpace(requestCfg.caFile) == "" {
+		requestCfg.caFile = "/etc/custodia/ca.crt"
+	}
+	req := model.ClientEnrollmentCreateRequest{TTLSeconds: int(ttl.Seconds())}
+	return requestJSON(&requestCfg, http.MethodPost, "/v1/client-enrollments", req, os.Stdout)
 }
 
 func runClientList(cfg *cliConfig, args []string) error {

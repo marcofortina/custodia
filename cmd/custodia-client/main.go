@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -28,6 +29,7 @@ import (
 
 	"custodia/internal/build"
 	"custodia/internal/certutil"
+	"custodia/internal/model"
 
 	sdk "custodia/pkg/client"
 )
@@ -129,6 +131,7 @@ func (a *app) run(args []string) int {
 
 func (a *app) usage() {
 	fmt.Fprintln(a.stdout, `Usage:
+  custodia-client mtls enroll --client-id ID --server-url URL --enrollment-token TOKEN [--server-cert-sha256 HEX]
   custodia-client mtls generate-csr --client-id ID [--private-key-out FILE --csr-out FILE]
   custodia-client mtls install-cert --client-id ID --cert-file FILE --ca-file FILE
   custodia-client key generate --client-id ID [--private-key-out FILE --public-key-out FILE]
@@ -159,6 +162,8 @@ func (a *app) runMTLS(args []string) int {
 		return 2
 	}
 	switch args[0] {
+	case "enroll":
+		return a.runMTLSEnroll(args[1:])
 	case "generate-csr":
 		return a.runMTLSGenerateCSR(args[1:])
 	case "install-cert":
@@ -167,6 +172,123 @@ func (a *app) runMTLS(args []string) int {
 		fmt.Fprintf(a.stderr, "unknown mtls subcommand: %s\n", args[0])
 		return 2
 	}
+}
+
+func (a *app) runMTLSEnroll(args []string) int {
+	fs := newFlagSet("custodia-client mtls enroll", a.stderr)
+	clientID := fs.String("client-id", "", "client id for the local profile")
+	serverURL := fs.String("server-url", "", "Custodia API URL returned by the enrollment admin command")
+	token := fs.String("enrollment-token", "", "one-shot enrollment token")
+	serverCertSHA256 := fs.String("server-cert-sha256", "", "optional pinned SHA-256 fingerprint for the server TLS certificate")
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	id := strings.TrimSpace(*clientID)
+	if id == "" || strings.TrimSpace(*serverURL) == "" || strings.TrimSpace(*token) == "" {
+		fmt.Fprintln(a.stderr, "--client-id, --server-url and --enrollment-token are required")
+		return 2
+	}
+	paths, err := defaultClientProfilePaths(id)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 2
+	}
+	if err := ensureClientProfileDir(paths.Dir); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	generated, err := certutil.GenerateClientCSR(id)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	if err := writeExclusive(paths.MTLSKey, generated.PrivateKeyPEM, keyFileMode); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	if err := writeExclusive(paths.MTLSCSR, generated.CSRPem, publicFileMode); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	claim := model.ClientEnrollmentClaimRequest{ClientID: id, EnrollmentToken: strings.TrimSpace(*token), CSRPem: string(generated.CSRPem)}
+	response, err := claimEnrollment(strings.TrimSpace(*serverURL), strings.TrimSpace(*serverCertSHA256), claim)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	if err := writeExclusive(paths.MTLSCert, []byte(response.CertificatePEM), publicFileMode); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	if err := writeExclusive(paths.CA, []byte(response.CAPEM), publicFileMode); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	if err := writeExclusive(paths.ServerURL, []byte(strings.TrimSpace(response.ServerURL)+"\n"), publicFileMode); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	fmt.Fprintf(a.stdout, "wrote mTLS private key to %s\n", paths.MTLSKey)
+	fmt.Fprintf(a.stdout, "wrote client CSR to %s\n", paths.MTLSCSR)
+	fmt.Fprintf(a.stdout, "installed client certificate to %s\n", paths.MTLSCert)
+	fmt.Fprintf(a.stdout, "installed CA certificate to %s\n", paths.CA)
+	fmt.Fprintf(a.stdout, "saved server URL to %s\n", paths.ServerURL)
+	return 0
+}
+
+func claimEnrollment(serverURL, serverCertSHA256 string, claim model.ClientEnrollmentClaimRequest) (model.ClientEnrollmentClaimResponse, error) {
+	payload, err := json.Marshal(claim)
+	if err != nil {
+		return model.ClientEnrollmentClaimResponse{}, err
+	}
+	request, err := http.NewRequest(http.MethodPost, strings.TrimRight(serverURL, "/")+"/v1/client-enrollments/claim", strings.NewReader(string(payload)))
+	if err != nil {
+		return model.ClientEnrollmentClaimResponse{}, err
+	}
+	request.Header.Set("Content-Type", "application/json")
+	client := &http.Client{Timeout: 30 * time.Second}
+	if serverCertSHA256 != "" {
+		transport, err := pinnedCertificateTransport(serverCertSHA256)
+		if err != nil {
+			return model.ClientEnrollmentClaimResponse{}, err
+		}
+		client.Transport = transport
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		return model.ClientEnrollmentClaimResponse{}, err
+	}
+	defer response.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	if err != nil {
+		return model.ClientEnrollmentClaimResponse{}, err
+	}
+	if response.StatusCode < 200 || response.StatusCode > 299 {
+		return model.ClientEnrollmentClaimResponse{}, fmt.Errorf("enrollment failed: %s: %s", response.Status, strings.TrimSpace(string(body)))
+	}
+	var decoded model.ClientEnrollmentClaimResponse
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		return model.ClientEnrollmentClaimResponse{}, err
+	}
+	return decoded, nil
+}
+
+func pinnedCertificateTransport(expectedFingerprint string) (*http.Transport, error) {
+	expectedFingerprint = strings.ToLower(strings.TrimSpace(strings.ReplaceAll(expectedFingerprint, ":", "")))
+	if len(expectedFingerprint) != sha256.Size*2 {
+		return nil, fmt.Errorf("--server-cert-sha256 must be a hex SHA-256 certificate fingerprint")
+	}
+	return &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS12, VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
+		if len(rawCerts) == 0 {
+			return fmt.Errorf("server did not present a certificate")
+		}
+		digest := sha256.Sum256(rawCerts[0])
+		got := hex.EncodeToString(digest[:])
+		if got != expectedFingerprint {
+			return fmt.Errorf("server certificate fingerprint mismatch")
+		}
+		return nil
+	}}}, nil
 }
 
 func (a *app) runMTLSGenerateCSR(args []string) int {
@@ -295,6 +417,14 @@ func (a *app) runConfigWrite(args []string) int {
 		}
 		if strings.TrimSpace(*out) == "" {
 			*out = paths.Config
+		}
+		if strings.TrimSpace(*serverURL) == "" {
+			profileURL, err := readDefaultServerURL(id)
+			if err != nil {
+				fmt.Fprintf(a.stderr, "%v\n", err)
+				return 2
+			}
+			*serverURL = profileURL
 		}
 		if strings.TrimSpace(*certFile) == "" {
 			*certFile = paths.MTLSCert

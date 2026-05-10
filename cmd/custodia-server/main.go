@@ -9,6 +9,9 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -91,6 +94,12 @@ func main() {
 		DeploymentMode:                   cfg.DeploymentMode,
 		DatabaseHATarget:                 cfg.DatabaseHATarget,
 		AuditShipmentSink:                cfg.AuditShipmentSink,
+		EnrollmentServerURL:              cfg.ServerURL,
+		ServerCertSHA256:                 serverCertFingerprint(cfg.TLSCertFile),
+		SignerURL:                        cfg.SignerURL,
+		SignerClientCertFile:             cfg.SignerClientCertFile,
+		SignerClientKeyFile:              cfg.SignerClientKeyFile,
+		SignerCAFile:                     cfg.SignerClientCAFile,
 	})
 
 	if err := validateDedicatedWebListener(cfg.APIAddr, cfg.WebAddr); err != nil {
@@ -258,6 +267,7 @@ const serverLiteConfigTemplate = `profile: lite
 
 server:
   api_addr: ":8443"
+  url: "https://custodia.example.internal:8443"
   web_addr: ":9443"
   log_file: /var/log/custodia/custodia.log
 
@@ -283,6 +293,10 @@ deployment:
   database_ha_target: none
 
 signer:
+  url: "https://localhost:9444"
+  client_cert_file: /etc/custodia/admin.crt
+  client_key_file: /etc/custodia/admin.key
+  client_ca_file: /etc/custodia/ca.crt
   key_provider: file
   ca_cert_file: /etc/custodia/ca.crt
   ca_key_file: /etc/custodia/ca.key
@@ -300,6 +314,7 @@ const serverFullConfigTemplate = `profile: full
 
 server:
   api_addr: ":8443"
+  url: "https://custodia.example.internal:8443"
   web_addr: ":9443"
   log_file: /var/log/custodia/custodia.log
 
@@ -329,6 +344,10 @@ audit:
   shipment_sink: none
 
 signer:
+  url: "https://localhost:9444"
+  client_cert_file: /etc/custodia/admin.crt
+  client_key_file: /etc/custodia/admin.key
+  client_ca_file: /etc/custodia/ca.crt
   key_provider: file
   ca_cert_file: /etc/custodia/ca.crt
   ca_key_file: /etc/custodia/ca.key
@@ -548,4 +567,17 @@ func buildLimiter(cfg config.Config) (ratelimit.Limiter, error) {
 	default:
 		return nil, errors.New("unsupported rate limit backend")
 	}
+}
+
+func serverCertFingerprint(path string) string {
+	payload, err := os.ReadFile(strings.TrimSpace(path))
+	if err != nil {
+		return ""
+	}
+	block, _ := pem.Decode(payload)
+	if block == nil || block.Type != "CERTIFICATE" {
+		return ""
+	}
+	digest := sha256.Sum256(block.Bytes)
+	return hex.EncodeToString(digest[:])
 }

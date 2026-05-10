@@ -162,6 +162,37 @@ type CreateClientRequest struct {
 	MTLSSubject string `json:"mtls_subject"`
 }
 
+// ClientEnrollmentCreateRequest creates a short-lived, one-shot token used by a remote client
+// to submit a client-side CSR without exposing mTLS private key material to the server.
+type ClientEnrollmentCreateRequest struct {
+	TTLSeconds int `json:"ttl_seconds,omitempty"`
+}
+
+// ClientEnrollmentCreateResponse returns the token only once to the admin caller.
+type ClientEnrollmentCreateResponse struct {
+	ServerURL        string    `json:"server_url"`
+	EnrollmentToken  string    `json:"enrollment_token"`
+	ExpiresAt        time.Time `json:"expires_at"`
+	ServerCertSHA256 string    `json:"server_cert_sha256,omitempty"`
+}
+
+// ClientEnrollmentClaimRequest is intentionally unauthenticated by mTLS: the client
+// does not have a certificate yet. The one-shot enrollment token is the bootstrap secret.
+type ClientEnrollmentClaimRequest struct {
+	ClientID        string `json:"client_id"`
+	EnrollmentToken string `json:"enrollment_token"`
+	CSRPem          string `json:"csr_pem"`
+}
+
+// ClientEnrollmentClaimResponse returns only public material. The mTLS private key
+// remains on the client that generated the CSR.
+type ClientEnrollmentClaimResponse struct {
+	ClientID       string `json:"client_id"`
+	ServerURL      string `json:"server_url"`
+	CAPEM          string `json:"ca_pem"`
+	CertificatePEM string `json:"certificate_pem"`
+}
+
 type RevokeClientRequest struct {
 	ClientID string `json:"client_id"`
 	Reason   string `json:"reason,omitempty"`
