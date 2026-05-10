@@ -236,8 +236,8 @@ func (s *SQLiteStore) ListSecretVersions(ctx context.Context, actorClientID, sec
 func (s *SQLiteStore) ListSecretAccess(ctx context.Context, actorClientID, secretID string) ([]model.SecretAccessMetadata, error) {
 	return s.memory.ListSecretAccess(ctx, actorClientID, secretID)
 }
-func (s *SQLiteStore) DeleteSecret(ctx context.Context, actorClientID, secretID string) error {
-	return s.mutate(ctx, func() error { return s.memory.DeleteSecret(ctx, actorClientID, secretID) })
+func (s *SQLiteStore) DeleteSecret(ctx context.Context, actorClientID, secretID string, cascade bool) error {
+	return s.mutate(ctx, func() error { return s.memory.DeleteSecret(ctx, actorClientID, secretID, cascade) })
 }
 func (s *SQLiteStore) ShareSecret(ctx context.Context, actorClientID, secretID string, req model.ShareSecretRequest) error {
 	return s.mutate(ctx, func() error { return s.memory.ShareSecret(ctx, actorClientID, secretID, req) })

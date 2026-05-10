@@ -56,7 +56,7 @@ func (s *PostgresStore) ResolveSecretIDByKey(context.Context, string, string, st
 func (s *PostgresStore) GetSecret(context.Context, string, string) (model.SecretReadResponse, error) {
 	return model.SecretReadResponse{}, ErrPostgresStoreNotWired
 }
-func (s *PostgresStore) DeleteSecret(context.Context, string, string) error {
+func (s *PostgresStore) DeleteSecret(context.Context, string, string, bool) error {
 	return ErrPostgresStoreNotWired
 }
 func (s *PostgresStore) ShareSecret(context.Context, string, string, model.ShareSecretRequest) error {

@@ -357,6 +357,119 @@ func TestMemoryStoreSecretLifecycleKeepsEnvelopePerClient(t *testing.T) {
 	}
 }
 
+func TestMemoryStoreDeleteSharedSecretRemovesOnlyCallerVisibility(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	mustCreateClient(t, store, "client_bob", "client_bob")
+
+	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Namespace:   "db01",
+		Key:         "user:sys",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtYWxpY2U="}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	if err := store.ShareSecret(ctx, "client_alice", created.SecretID, model.ShareSecretRequest{
+		VersionID:      created.VersionID,
+		TargetClientID: "client_bob",
+		Envelope:       "ZW52ZWxvcGUtYm9i",
+		Permissions:    int(model.PermissionRead),
+	}); err != nil {
+		t.Fatalf("share secret: %v", err)
+	}
+	if err := store.DeleteSecret(ctx, "client_bob", created.SecretID, false); err != nil {
+		t.Fatalf("bob delete shared secret: %v", err)
+	}
+	if _, err := store.ResolveSecretIDByKey(ctx, "client_bob", "db01", "user:sys", model.PermissionRead); err != ErrNotFound {
+		t.Fatalf("expected bob visible keyspace to be removed, got %v", err)
+	}
+	if _, err := store.GetSecret(ctx, "client_alice", created.SecretID); err != nil {
+		t.Fatalf("expected owner secret to remain readable: %v", err)
+	}
+}
+
+func TestMemoryStoreOwnerDeleteRequiresCascadeWhenShared(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	mustCreateClient(t, store, "client_bob", "client_bob")
+
+	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Namespace:   "db01",
+		Key:         "user:sys",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtYWxpY2U="}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	if err := store.ShareSecret(ctx, "client_alice", created.SecretID, model.ShareSecretRequest{
+		VersionID:      created.VersionID,
+		TargetClientID: "client_bob",
+		Envelope:       "ZW52ZWxvcGUtYm9i",
+		Permissions:    int(model.PermissionRead),
+	}); err != nil {
+		t.Fatalf("share secret: %v", err)
+	}
+	if err := store.DeleteSecret(ctx, "client_alice", created.SecretID, false); err != ErrConflict {
+		t.Fatalf("expected owner delete without cascade to conflict while shared, got %v", err)
+	}
+	if err := store.DeleteSecret(ctx, "client_alice", created.SecretID, true); err != nil {
+		t.Fatalf("owner cascade delete: %v", err)
+	}
+	if _, err := store.GetSecret(ctx, "client_alice", created.SecretID); err != ErrNotFound {
+		t.Fatalf("expected cascade delete to remove owner secret, got %v", err)
+	}
+	if _, err := store.ResolveSecretIDByKey(ctx, "client_bob", "db01", "user:sys", model.PermissionRead); err != ErrNotFound {
+		t.Fatalf("expected cascade delete to remove bob visibility, got %v", err)
+	}
+}
+
+func TestMemoryStoreRevokeRequiresOwner(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	mustCreateClient(t, store, "client_bob", "client_bob")
+	mustCreateClient(t, store, "client_charlie", "client_charlie")
+
+	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:        "secret",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtYWxpY2U="}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	if err := store.ShareSecret(ctx, "client_alice", created.SecretID, model.ShareSecretRequest{
+		VersionID:      created.VersionID,
+		TargetClientID: "client_bob",
+		Envelope:       "ZW52ZWxvcGUtYm9i",
+		Permissions:    int(model.PermissionShare | model.PermissionRead),
+	}); err != nil {
+		t.Fatalf("share to bob: %v", err)
+	}
+	if err := store.ShareSecret(ctx, "client_bob", created.SecretID, model.ShareSecretRequest{
+		VersionID:      created.VersionID,
+		TargetClientID: "client_charlie",
+		Envelope:       "ZW52ZWxvcGUtY2hhcmxpZQ==",
+		Permissions:    int(model.PermissionRead),
+	}); err != nil {
+		t.Fatalf("share to charlie: %v", err)
+	}
+	if err := store.RevokeAccess(ctx, "client_bob", created.SecretID, "client_charlie"); err != ErrForbidden {
+		t.Fatalf("expected non-owner revoke to be forbidden, got %v", err)
+	}
+	if err := store.RevokeAccess(ctx, "client_alice", created.SecretID, "client_charlie"); err != nil {
+		t.Fatalf("expected owner revoke to succeed: %v", err)
+	}
+}
+
 func TestMemoryStoreRequiresCreatorEnvelope(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryStore()
@@ -834,7 +947,7 @@ func TestMemoryStoreDeleteSecretRevokesPendingAccessRequests(t *testing.T) {
 	if _, err := store.RequestAccessGrant(ctx, "admin", created.SecretID, model.AccessGrantRequest{TargetClientID: "client_bob", Permissions: int(model.PermissionRead)}); err != nil {
 		t.Fatalf("request access: %v", err)
 	}
-	if err := store.DeleteSecret(ctx, "client_alice", created.SecretID); err != nil {
+	if err := store.DeleteSecret(ctx, "client_alice", created.SecretID, false); err != nil {
 		t.Fatalf("delete secret: %v", err)
 	}
 	requests, err := store.ListAccessGrantRequests(ctx, created.SecretID)

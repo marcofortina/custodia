@@ -444,13 +444,13 @@ func (s *Server) handleDeleteSecretByKey(w http.ResponseWriter, r *http.Request)
 	if !ok {
 		return
 	}
-	secretID, err := s.store.ResolveSecretIDByKey(r.Context(), clientIDFromContext(r), namespace, key, model.PermissionWrite)
+	secretID, err := s.store.ResolveSecretIDByKey(r.Context(), clientIDFromContext(r), namespace, key, model.PermissionRead)
 	if err != nil {
 		s.auditStoreFailure(r, "secret.delete", "secret_key", secretKeyspaceResource(namespace, key), err)
 		writeMappedError(w, err)
 		return
 	}
-	if err := s.store.DeleteSecret(r.Context(), clientIDFromContext(r), secretID); err != nil {
+	if err := s.store.DeleteSecret(r.Context(), clientIDFromContext(r), secretID, secretCascadeQuery(r)); err != nil {
 		s.auditStoreFailure(r, "secret.delete", "secret", secretID, err)
 		writeMappedError(w, err)
 		return
@@ -564,7 +564,7 @@ func (s *Server) handleDeleteSecret(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if err := s.store.DeleteSecret(r.Context(), clientIDFromContext(r), secretID); err != nil {
+	if err := s.store.DeleteSecret(r.Context(), clientIDFromContext(r), secretID, secretCascadeQuery(r)); err != nil {
 		s.auditStoreFailure(r, "secret.delete", "secret", secretID, err)
 		writeMappedError(w, err)
 		return
@@ -783,6 +783,11 @@ func (s *Server) requireSecretKeyspaceQuery(w http.ResponseWriter, r *http.Reque
 
 func secretKeyspaceResource(namespace, key string) string {
 	return model.NormalizeSecretNamespace(namespace) + "/" + model.NormalizeSecretKey(key)
+}
+
+func secretCascadeQuery(r *http.Request) bool {
+	cascade, err := strconv.ParseBool(strings.TrimSpace(r.URL.Query().Get("cascade")))
+	return err == nil && cascade
 }
 
 func (s *Server) requireSecretID(w http.ResponseWriter, r *http.Request, action string) (string, bool) {

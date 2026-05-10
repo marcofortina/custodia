@@ -370,26 +370,88 @@ func (s *PostgresStore) ListSecretAccess(ctx context.Context, actorClientID, sec
 	return accesses, mapPostgresError(rows.Err())
 }
 
-func (s *PostgresStore) DeleteSecret(ctx context.Context, actorClientID, secretID string) error {
-	if _, _, err := visibleVersion(ctx, s.pool, actorClientID, secretID, "", model.PermissionWrite); err != nil {
-		return err
-	}
+func (s *PostgresStore) DeleteSecret(ctx context.Context, actorClientID, secretID string, cascade bool) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer rollbackIgnored(ctx, tx)
-	tag, err := tx.Exec(ctx, `UPDATE secrets SET deleted_at = COALESCE(deleted_at, NOW()) WHERE secret_id = $1::uuid AND deleted_at IS NULL`, secretID)
+	var ownerClientID string
+	if err := tx.QueryRow(ctx, `
+		SELECT created_by_client_id
+		FROM secrets
+		WHERE secret_id = $1::uuid AND deleted_at IS NULL`, secretID).Scan(&ownerClientID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		return mapPostgresError(err)
+	}
+	if active, err := activeClientExists(ctx, tx, actorClientID); err != nil {
+		return err
+	} else if !active {
+		return ErrForbidden
+	}
+	var versionID string
+	if err := tx.QueryRow(ctx, `
+		SELECT version_id::text
+		FROM secret_versions
+		WHERE secret_id = $1::uuid AND revoked_at IS NULL
+		ORDER BY created_at DESC
+		LIMIT 1`, secretID).Scan(&versionID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		return mapPostgresError(err)
+	}
+	if active, err := activeAccessExists(ctx, tx, secretID, versionID, actorClientID); err != nil {
+		return err
+	} else if !active {
+		return ErrForbidden
+	}
+	now := time.Now().UTC()
+	if ownerClientID != actorClientID {
+		accessTag, err := tx.Exec(ctx, `
+			UPDATE secret_access
+			SET revoked_at = $3
+			WHERE secret_id = $1::uuid AND client_id = $2 AND revoked_at IS NULL
+			  AND (expires_at IS NULL OR expires_at > NOW())`, secretID, actorClientID, now)
+		if err != nil {
+			return mapPostgresError(err)
+		}
+		pendingTag, err := tx.Exec(ctx, `
+			UPDATE secret_access_requests
+			SET revoked_at = $3
+			WHERE secret_id = $1::uuid AND client_id = $2 AND activated_at IS NULL AND revoked_at IS NULL
+			  AND (expires_at IS NULL OR expires_at > NOW())`, secretID, actorClientID, now)
+		if err != nil {
+			return mapPostgresError(err)
+		}
+		if accessTag.RowsAffected()+pendingTag.RowsAffected() == 0 {
+			return ErrNotFound
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM secret_visibility WHERE secret_id = $1::uuid AND client_id = $2`, secretID, actorClientID); err != nil {
+			return mapPostgresError(err)
+		}
+		return tx.Commit(ctx)
+	}
+	sharedCount, err := activeSharedAccessCountPostgres(ctx, tx, secretID, versionID, actorClientID)
+	if err != nil {
+		return err
+	}
+	if sharedCount > 0 && !cascade {
+		return ErrConflict
+	}
+	tag, err := tx.Exec(ctx, `UPDATE secrets SET deleted_at = COALESCE(deleted_at, $2) WHERE secret_id = $1::uuid AND deleted_at IS NULL`, secretID, now)
 	if err != nil {
 		return mapPostgresError(err)
 	}
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
-	if _, err := tx.Exec(ctx, `UPDATE secret_access SET revoked_at = COALESCE(revoked_at, NOW()) WHERE secret_id = $1::uuid AND revoked_at IS NULL`, secretID); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE secret_access SET revoked_at = COALESCE(revoked_at, $2) WHERE secret_id = $1::uuid AND revoked_at IS NULL`, secretID, now); err != nil {
 		return mapPostgresError(err)
 	}
-	if _, err := tx.Exec(ctx, `UPDATE secret_access_requests SET revoked_at = COALESCE(revoked_at, NOW()) WHERE secret_id = $1::uuid AND activated_at IS NULL AND revoked_at IS NULL`, secretID); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE secret_access_requests SET revoked_at = COALESCE(revoked_at, $2) WHERE secret_id = $1::uuid AND activated_at IS NULL AND revoked_at IS NULL`, secretID, now); err != nil {
 		return mapPostgresError(err)
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM secret_visibility WHERE secret_id = $1::uuid`, secretID); err != nil {
@@ -615,13 +677,31 @@ func (s *PostgresStore) ActivateAccessGrant(ctx context.Context, actorClientID, 
 }
 
 func (s *PostgresStore) RevokeAccess(ctx context.Context, actorClientID, secretID, targetClientID string) error {
+	if !model.ValidClientID(targetClientID) || targetClientID == actorClientID {
+		return ErrForbidden
+	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer rollbackIgnored(ctx, tx)
-	if _, _, err := visibleVersion(ctx, tx, actorClientID, secretID, "", model.PermissionShare); err != nil {
+	var ownerClientID string
+	if err := tx.QueryRow(ctx, `
+		SELECT created_by_client_id
+		FROM secrets
+		WHERE secret_id = $1::uuid AND deleted_at IS NULL`, secretID).Scan(&ownerClientID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		return mapPostgresError(err)
+	}
+	if ownerClientID != actorClientID {
+		return ErrForbidden
+	}
+	if active, err := activeClientExists(ctx, tx, actorClientID); err != nil {
 		return err
+	} else if !active {
+		return ErrForbidden
 	}
 	accessTag, err := tx.Exec(ctx, `
 		UPDATE secret_access
@@ -1014,6 +1094,16 @@ func insertSecretVisibility(ctx context.Context, q pgQuerier, clientID, namespac
 		INSERT INTO secret_visibility (client_id, namespace, key, secret_id, visibility_type)
 		VALUES ($1, $2, $3, $4::uuid, $5)`, clientID, namespace, key, secretID, visibilityType)
 	return mapPostgresError(err)
+}
+
+func activeSharedAccessCountPostgres(ctx context.Context, q pgQuerier, secretID, versionID, ownerClientID string) (int, error) {
+	var count int
+	err := q.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM secret_access
+		WHERE secret_id = $1::uuid AND version_id = $2::uuid AND client_id <> $3
+		  AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > NOW())`, secretID, versionID, ownerClientID).Scan(&count)
+	return count, mapPostgresError(err)
 }
 
 func activeAccessExists(ctx context.Context, q pgQuerier, secretID, versionID, clientID string) (bool, error) {

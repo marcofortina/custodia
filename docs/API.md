@@ -73,9 +73,13 @@ Resolves the caller-visible secret by namespace/key and requires `write`. Used f
 
 `DELETE /v1/secrets/by-key?namespace=db01&key=user:sys`
 
-Resolves the caller-visible secret by namespace/key and currently follows the compatibility delete behavior for that secret. The final owner/shared/cascade semantics are defined in `SECRET_KEYSPACE_MODEL.md` and will replace this transitional behavior in a later patch.
+Resolves the caller-visible secret by namespace/key. Non-owner recipients remove only their own visibility/access to the shared secret. Owners delete the secret only when it has no active shares; deleting a still-shared secret returns `409 Conflict` unless `cascade=true` is supplied:
 
-`DELETE /v1/secrets/{secret_id}` remains available as a compatibility endpoint.
+```text
+DELETE /v1/secrets/by-key?namespace=db01&key=user:sys&cascade=true
+```
+
+`DELETE /v1/secrets/{secret_id}` remains available as a compatibility endpoint and accepts the same optional `cascade=true` query parameter.
 
 ## Access grant request
 

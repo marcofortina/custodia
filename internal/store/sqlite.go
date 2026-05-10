@@ -56,7 +56,7 @@ func (s *SQLiteStore) ListSecretVersions(context.Context, string, string) ([]mod
 func (s *SQLiteStore) ListSecretAccess(context.Context, string, string) ([]model.SecretAccessMetadata, error) {
 	return nil, ErrSQLiteStoreNotWired
 }
-func (s *SQLiteStore) DeleteSecret(context.Context, string, string) error {
+func (s *SQLiteStore) DeleteSecret(context.Context, string, string, bool) error {
 	return ErrSQLiteStoreNotWired
 }
 func (s *SQLiteStore) ShareSecret(context.Context, string, string, model.ShareSecretRequest) error {

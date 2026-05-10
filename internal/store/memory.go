@@ -365,14 +365,37 @@ func (s *MemoryStore) ListSecretAccess(_ context.Context, actorClientID, secretI
 	return accesses, nil
 }
 
-func (s *MemoryStore) DeleteSecret(_ context.Context, actorClientID, secretID string) error {
+func (s *MemoryStore) DeleteSecret(_ context.Context, actorClientID, secretID string, cascade bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	secret, _, _, err := s.visibleSecretLocked(actorClientID, secretID, model.PermissionWrite)
+	secret, version, err := s.visibleSecretForDeleteLocked(actorClientID, secretID)
 	if err != nil {
 		return err
 	}
 	now := time.Now().UTC()
+	if secret.CreatedByClientID != actorClientID {
+		revoked := false
+		for _, version := range secret.Versions {
+			if access, ok := version.Access[actorClientID]; ok && activeAccess(access) {
+				access.RevokedAt = &now
+				revoked = true
+			}
+		}
+		for _, pending := range s.pendingAccess {
+			if pending.SecretID == secretID && pending.ClientID == actorClientID && activePendingAccess(pending) {
+				pending.RevokedAt = &now
+				revoked = true
+			}
+		}
+		if !revoked {
+			return ErrNotFound
+		}
+		s.syncSecretVisibilityLocked(secret)
+		return nil
+	}
+	if !cascade && activeSharedAccessCount(version, actorClientID) > 0 {
+		return ErrConflict
+	}
 	secret.DeletedAt = &now
 	for _, version := range secret.Versions {
 		for _, access := range version.Access {
@@ -562,9 +585,12 @@ func (s *MemoryStore) ActivateAccessGrant(_ context.Context, actorClientID, secr
 func (s *MemoryStore) RevokeAccess(_ context.Context, actorClientID, secretID, targetClientID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	secret, _, _, err := s.visibleSecretLocked(actorClientID, secretID, model.PermissionShare)
+	secret, _, err := s.visibleSecretForDeleteLocked(actorClientID, secretID)
 	if err != nil {
 		return err
+	}
+	if secret.CreatedByClientID != actorClientID || targetClientID == actorClientID {
+		return ErrForbidden
 	}
 	now := time.Now().UTC()
 	revoked := false
@@ -688,6 +714,38 @@ func (s *MemoryStore) visibleSecretLocked(actorClientID, secretID string, permis
 		return nil, nil, nil, ErrForbidden
 	}
 	return secret, version, access, nil
+}
+
+func (s *MemoryStore) visibleSecretForDeleteLocked(actorClientID, secretID string) (*memorySecret, *memoryVersion, error) {
+	if !s.clientActiveLocked(actorClientID) {
+		return nil, nil, ErrForbidden
+	}
+	secret, ok := s.secrets[secretID]
+	if !ok || secret.DeletedAt != nil {
+		return nil, nil, ErrNotFound
+	}
+	version := s.versionLocked(secret, "")
+	if version == nil {
+		return nil, nil, ErrNotFound
+	}
+	access, ok := version.Access[actorClientID]
+	if !ok || !activeAccess(access) {
+		return nil, nil, ErrForbidden
+	}
+	return secret, version, nil
+}
+
+func activeSharedAccessCount(version *memoryVersion, ownerClientID string) int {
+	if version == nil {
+		return 0
+	}
+	count := 0
+	for clientID, access := range version.Access {
+		if clientID != ownerClientID && activeAccess(access) {
+			count++
+		}
+	}
+	return count
 }
 
 func normalizeSecretIdentity(req *model.CreateSecretRequest) error {
