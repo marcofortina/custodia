@@ -24,7 +24,7 @@ The response contains only the signed mTLS client certificate and validity windo
 
 ## Admin CLI workflow
 
-For remote clients, prefer `custodia-client mtls generate-csr` on the client workstation followed by `custodia-admin client sign-csr` on the server/admin host. This keeps the client mTLS private key off the server.
+For remote clients, prefer `custodia-admin client enrollment create` on the server/admin host followed by `custodia-client mtls enroll` on the client workstation. This keeps the client mTLS private key off the server and avoids manual CSR/certificate transfers.
 
 `custodia-admin client issue` remains available as a Lite/lab shortcut for local workflows. It still uses the signer API for the signing step and does not move application encryption keys into the server, but it generates the mTLS private key on the admin/server side and is not the preferred remote-client path.
 

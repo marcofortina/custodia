@@ -44,29 +44,20 @@ The server is not a public-key directory. Recipient public keys are loaded
 from local files supplied by trusted out-of-band exchange.
 .SH COMMANDS
 .TP
+.B mtls enroll --client-id ID --server-url URL --enrollment-token TOKEN [--server-cert-sha256 HEX]
+Generate a client-side mTLS private key and CSR, claim a short-lived enrollment token, and install the returned client certificate and CA certificate into the standard profile. The mTLS private key never leaves the client host.
+.TP
 .B mtls generate-csr --client-id ID [--private-key-out FILE --csr-out FILE]
-Generate a client-side mTLS private key and CSR. Without explicit output paths,
-write
-.I ID.key
-and
-.I ID.csr
-under the standard client profile directory. Transfer only the CSR to the
-server/admin signer workflow; keep the private key on the client host.
+Generate a client-side mTLS private key and CSR for manual/offline enrollment workflows.
 .TP
 .B mtls install-cert --client-id ID --cert-file FILE --ca-file FILE [--cert-out FILE --ca-out FILE]
-Install the signed mTLS client certificate and public CA certificate into the
-standard client profile directory. Without explicit output paths, write
-.I ID.crt
-and
-.I ca.crt
-under the profile directory.
+Install a signed mTLS client certificate and public CA certificate into the standard client profile directory.
 .TP
-.B config write --client-id ID --server-url URL [--out FILE --cert FILE --key FILE --ca FILE --crypto-key FILE]
+.B config write --client-id ID [--server-url URL --out FILE --cert FILE --key FILE --ca FILE --crypto-key FILE]
 Write a reusable local JSON profile for mTLS and local crypto paths. With only
-.B --client-id
-and
-.BR --server-url ,
-paths are derived from the standard client profile directory.
+.B --client-id ,
+paths and the server URL are derived from the standard client profile directory created by
+.BR "mtls enroll" .
 .TP
 .B config check --client-id ID|--config FILE
 Validate the profile, HTTPS URL, local mTLS certificate/key pair, CA bundle,
@@ -201,13 +192,12 @@ Create and validate a local client profile:
 .PP
 .EX
 CLIENT_ID=client_alice
-custodia-client mtls generate-csr --client-id "$CLIENT_ID"
-# Transfer the CSR to the server/admin host, sign it, then transfer back the signed certificate and CA.
-custodia-client mtls install-cert --client-id "$CLIENT_ID" \
-  --cert-file client_alice.crt --ca-file ca.crt
+custodia-client mtls enroll --client-id "$CLIENT_ID" \
+  --server-url https://vault.example:8443 \
+  --enrollment-token ENROLLMENT_TOKEN \
+  --server-cert-sha256 SERVER_CERT_SHA256
 custodia-client key generate --client-id "$CLIENT_ID"
-custodia-client config write --client-id "$CLIENT_ID" \
-  --server-url https://vault.example:8443
+custodia-client config write --client-id "$CLIENT_ID"
 custodia-client config check --client-id "$CLIENT_ID"
 .EE
 .PP

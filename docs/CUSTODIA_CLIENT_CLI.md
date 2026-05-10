@@ -40,24 +40,27 @@ Use `--config`, explicit path flags or environment variables only for advanced a
 
 ## Client mTLS material
 
-Generate the mTLS private key and CSR on the client host:
+The preferred remote-client workflow uses a short-lived enrollment token created by an admin. The client generates its mTLS private key locally, submits only a CSR to Custodia, and receives only public certificate material.
+
+On the server/admin host, create a one-shot enrollment token:
 
 ```bash
-custodia-client mtls generate-csr --client-id "$CLIENT_ID"
+sudo -u custodia custodia-admin client enrollment create --ttl 15m
 ```
 
-Transfer only the CSR to the server/admin host. The server signs it with `custodia-admin client sign-csr` and returns the signed certificate plus the public Custodia CA certificate.
-
-Install the returned public material into the standard profile:
+Transfer the printed server URL, token and server certificate SHA-256 fingerprint to the client host. Then enroll the client:
 
 ```bash
-custodia-client mtls install-cert \
+custodia-client mtls enroll \
   --client-id "$CLIENT_ID" \
-  --cert-file client_alice.crt \
-  --ca-file ca.crt
+  --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
+  --enrollment-token "ENROLLMENT_TOKEN" \
+  --server-cert-sha256 "SERVER_CERT_SHA256"
 ```
 
-The mTLS private key remains local to the client host.
+This writes the mTLS private key, CSR, signed certificate and CA certificate into the standard client profile. The mTLS private key remains local to the client host.
+
+Manual CSR signing remains available for advanced/offline workflows with `custodia-client mtls generate-csr`, `custodia-admin client sign-csr` and `custodia-client mtls install-cert`.
 
 ## Application encryption key
 
@@ -79,12 +82,10 @@ The command prints the client id, crypto scheme and derived public-key fingerpri
 
 ## Reusable client config
 
-Write a local JSON config file after the mTLS certificate, CA and application key are present:
+Write a local JSON config file after enrollment and application key generation:
 
 ```bash
-custodia-client config write \
-  --client-id "$CLIENT_ID" \
-  --server-url https://localhost:8443
+custodia-client config write --client-id "$CLIENT_ID"
 ```
 
 The config file stores paths and identifiers, not private key material, but it is still written with mode `0600` because it references local secret-bearing files. Validate the profile and its referenced local mTLS/crypto files with:

@@ -351,54 +351,37 @@ The Web Console is metadata-only. It does not decrypt or display secret plaintex
 
 Custodia client profiles are per-user. Passing `--client-id client_alice` stores client-side material under `$XDG_CONFIG_HOME/custodia/client_alice`, or `$HOME/.config/custodia/client_alice` when `XDG_CONFIG_HOME` is not set. Do not use `/etc/custodia` for client-only hosts.
 
-The preferred remote-client flow generates each client mTLS private key and CSR on the client workstation. The server signs only the CSR. When the client is on a separate host, transfer the CSR to the server/admin host, then transfer the signed certificate and public CA certificate back to the client.
+Create a short-lived enrollment token on the server/admin host:
 
-Set the client ids:
+```bash
+sudo -u custodia custodia-admin client enrollment create --ttl 15m
+```
+
+The command reads `/etc/custodia/custodia-server.yaml`, contacts the configured server URL, and prints a one-shot enrollment token, the server URL and the server certificate SHA-256 fingerprint. Transfer those values to the client host. The token is sensitive and expires quickly.
+
+Set Alice's client id on Alice's workstation:
 
 ```bash
 export ALICE_ID=client_alice
-export BOB_ID=client_bob
 ```
 
-Generate Alice's mTLS private key and CSR on Alice's workstation:
+Enroll Alice from Alice's workstation:
 
 ```bash
-custodia-client mtls generate-csr --client-id "$ALICE_ID"
-```
-
-Transfer Alice's CSR to the server/admin host. Sign Alice's CSR on the server/admin host:
-
-```bash
-sudo -u custodia custodia-admin \
-  --server-url "$CUSTODIA_API" \
-  --cert /etc/custodia/admin.crt \
-  --key /etc/custodia/admin.key \
-  --ca /etc/custodia/ca.crt \
-  client sign-csr \
-  --signer-url "$CUSTODIA_SIGNER" \
+custodia-client mtls enroll \
   --client-id "$ALICE_ID" \
-  --csr-file "$ALICE_ID.csr" \
-  --certificate-out "$ALICE_ID.crt"
+  --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
+  --enrollment-token "ENROLLMENT_TOKEN" \
+  --server-cert-sha256 "SERVER_CERT_SHA256"
 ```
 
-Transfer `$ALICE_ID.crt` and `/etc/custodia/ca.crt` back to Alice. Install the returned public material on Alice's workstation:
-
-```bash
-custodia-client mtls install-cert \
-  --client-id "$ALICE_ID" \
-  --cert-file "$ALICE_ID.crt" \
-  --ca-file ca.crt
-```
+This generates Alice's mTLS private key and CSR locally, sends only the CSR plus token to Custodia, receives Alice's signed certificate plus `ca.crt`, and installs the public material into Alice's standard client profile. The mTLS private key never leaves Alice's workstation.
 
 Configure Alice's local application encryption key and reusable client profile:
 
 ```bash
 custodia-client key generate --client-id "$ALICE_ID"
-
-custodia-client config write \
-  --client-id "$ALICE_ID" \
-  --server-url "$CUSTODIA_API"
-
+custodia-client config write --client-id "$ALICE_ID"
 custodia-client config check --client-id "$ALICE_ID"
 custodia-client doctor --client-id "$ALICE_ID" --online
 ```
@@ -413,11 +396,7 @@ SMOKE_READBACK="$HOME/custodia-smoke-secret.readback.txt"
 printf 'super secret demo value' > "$SMOKE_SECRET"
 chmod 600 "$SMOKE_SECRET"
 
-custodia-client secret put \
-  --client-id "$ALICE_ID" \
-  --name smoke-demo \
-  --value-file "$SMOKE_SECRET" \
-  > "$SMOKE_CREATE"
+custodia-client secret put   --client-id "$ALICE_ID"   --name smoke-demo   --value-file "$SMOKE_SECRET"   > "$SMOKE_CREATE"
 
 SECRET_ID="$(python3 - <<'PY'
 import json, os
@@ -425,10 +404,7 @@ print(json.load(open(os.path.expanduser('~/custodia-smoke-secret.create.json')))
 PY
 )"
 
-custodia-client secret get \
-  --client-id "$ALICE_ID" \
-  --secret-id "$SECRET_ID" \
-  --out "$SMOKE_READBACK"
+custodia-client secret get   --client-id "$ALICE_ID"   --secret-id "$SECRET_ID"   --out "$SMOKE_READBACK"
 
 cat "$SMOKE_READBACK"
 ```
@@ -439,45 +415,29 @@ Expected output:
 super secret demo value
 ```
 
-Generate Bob's mTLS private key and CSR on Bob's workstation:
+Create another enrollment token for Bob on the server/admin host:
 
 ```bash
-custodia-client mtls generate-csr --client-id "$BOB_ID"
+sudo -u custodia custodia-admin client enrollment create --ttl 15m
 ```
 
-Transfer Bob's CSR to the server/admin host. Sign Bob's CSR on the server/admin host:
+Transfer Bob's enrollment values to Bob. Enroll Bob from Bob's workstation:
 
 ```bash
-sudo -u custodia custodia-admin \
-  --server-url "$CUSTODIA_API" \
-  --cert /etc/custodia/admin.crt \
-  --key /etc/custodia/admin.key \
-  --ca /etc/custodia/ca.crt \
-  client sign-csr \
-  --signer-url "$CUSTODIA_SIGNER" \
-  --client-id "$BOB_ID" \
-  --csr-file "$BOB_ID.csr" \
-  --certificate-out "$BOB_ID.crt"
-```
+export BOB_ID=client_bob
 
-Transfer `$BOB_ID.crt` and `/etc/custodia/ca.crt` back to Bob. Install the returned public material on Bob's workstation:
-
-```bash
-custodia-client mtls install-cert \
+custodia-client mtls enroll \
   --client-id "$BOB_ID" \
-  --cert-file "$BOB_ID.crt" \
-  --ca-file ca.crt
+  --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
+  --enrollment-token "ENROLLMENT_TOKEN" \
+  --server-cert-sha256 "SERVER_CERT_SHA256"
 ```
 
 Configure Bob's local application encryption key and reusable client profile:
 
 ```bash
 custodia-client key generate --client-id "$BOB_ID"
-
-custodia-client config write \
-  --client-id "$BOB_ID" \
-  --server-url "$CUSTODIA_API"
-
+custodia-client config write --client-id "$BOB_ID"
 custodia-client config check --client-id "$BOB_ID"
 custodia-client doctor --client-id "$BOB_ID" --online
 ```
@@ -487,12 +447,7 @@ Transfer Bob's public key to Alice through a trusted channel. The default path i
 ```bash
 BOB_PUBLIC_KEY="$HOME/$BOB_ID.x25519.pub.json"
 
-custodia-client secret share \
-  --client-id "$ALICE_ID" \
-  --secret-id "$SECRET_ID" \
-  --target-client-id "$BOB_ID" \
-  --recipient "$BOB_ID=$BOB_PUBLIC_KEY" \
-  --permissions 4
+custodia-client secret share   --client-id "$ALICE_ID"   --secret-id "$SECRET_ID"   --target-client-id "$BOB_ID"   --recipient "$BOB_ID=$BOB_PUBLIC_KEY"   --permissions 4
 ```
 
 Transfer the `SECRET_ID` value to Bob when Bob is remote. Bob can now read and decrypt the secret locally:
@@ -500,10 +455,7 @@ Transfer the `SECRET_ID` value to Bob when Bob is remote. Bob can now read and d
 ```bash
 BOB_READBACK="$HOME/custodia-smoke-bob.readback.txt"
 
-custodia-client secret get \
-  --client-id "$BOB_ID" \
-  --secret-id "$SECRET_ID" \
-  --out "$BOB_READBACK"
+custodia-client secret get   --client-id "$BOB_ID"   --secret-id "$SECRET_ID"   --out "$BOB_READBACK"
 
 cat "$BOB_READBACK"
 ```
@@ -517,10 +469,7 @@ super secret demo value
 Delete the smoke secret when the test is complete:
 
 ```bash
-custodia-client secret delete \
-  --client-id "$ALICE_ID" \
-  --secret-id "$SECRET_ID" \
-  --yes
+custodia-client secret delete   --client-id "$ALICE_ID"   --secret-id "$SECRET_ID"   --yes
 ```
 
 The vault received only ciphertext, crypto metadata and opaque envelopes. Plaintext, mTLS private keys and application private keys stayed local to each client. Deletion prevents future server-side reads; material already downloaded by authorized clients remains outside server control.

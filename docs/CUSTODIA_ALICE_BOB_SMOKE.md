@@ -2,51 +2,29 @@
 
 This smoke test provisions two clients with client-side mTLS CSR generation, creates an encrypted secret as Alice, shares it with Bob, creates a new version, revokes Bob's future access, and deletes the secret.
 
-The commands assume the server side is already running and that these variables are set on the server/admin host:
-
-```bash
-CUSTODIA_API="https://${CUSTODIA_SERVER_NAME}:8443"
-CUSTODIA_SIGNER="https://${CUSTODIA_SERVER_NAME}:9444"
-```
+The commands assume the server side is already running. Each client is enrolled with a short-lived token created on the server/admin host.
 
 ## 1. Provision Alice
+
+On the server/admin host, create an enrollment token and transfer the printed server URL, token and server certificate SHA-256 fingerprint to Alice:
+
+```bash
+sudo -u custodia custodia-admin client enrollment create --ttl 15m
+```
 
 On Alice's client host:
 
 ```bash
 export ALICE_ID=client_alice
-custodia-client mtls generate-csr --client-id "$ALICE_ID"
-```
 
-Transfer Alice's CSR to the server/admin host. On the server/admin host:
-
-```bash
-sudo -u custodia custodia-admin \
-  --server-url "$CUSTODIA_API" \
-  --cert /etc/custodia/admin.crt \
-  --key /etc/custodia/admin.key \
-  --ca /etc/custodia/ca.crt \
-  client sign-csr \
-  --signer-url "$CUSTODIA_SIGNER" \
+custodia-client mtls enroll \
   --client-id "$ALICE_ID" \
-  --csr-file "$ALICE_ID.csr" \
-  --certificate-out "$ALICE_ID.crt"
-```
-
-Transfer `$ALICE_ID.crt` and `/etc/custodia/ca.crt` back to Alice. On Alice's client host:
-
-```bash
-custodia-client mtls install-cert \
-  --client-id "$ALICE_ID" \
-  --cert-file "$ALICE_ID.crt" \
-  --ca-file ca.crt
+  --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
+  --enrollment-token "ENROLLMENT_TOKEN" \
+  --server-cert-sha256 "SERVER_CERT_SHA256"
 
 custodia-client key generate --client-id "$ALICE_ID"
-
-custodia-client config write \
-  --client-id "$ALICE_ID" \
-  --server-url "$CUSTODIA_API"
-
+custodia-client config write --client-id "$ALICE_ID"
 custodia-client config check --client-id "$ALICE_ID"
 custodia-client doctor --client-id "$ALICE_ID" --online
 ```
@@ -91,42 +69,25 @@ super secret demo value
 
 ## 3. Provision Bob
 
+On the server/admin host, create a second enrollment token and transfer the printed server URL, token and server certificate SHA-256 fingerprint to Bob:
+
+```bash
+sudo -u custodia custodia-admin client enrollment create --ttl 15m
+```
+
 On Bob's client host:
 
 ```bash
 export BOB_ID=client_bob
-custodia-client mtls generate-csr --client-id "$BOB_ID"
-```
 
-Transfer Bob's CSR to the server/admin host. On the server/admin host:
-
-```bash
-sudo -u custodia custodia-admin \
-  --server-url "$CUSTODIA_API" \
-  --cert /etc/custodia/admin.crt \
-  --key /etc/custodia/admin.key \
-  --ca /etc/custodia/ca.crt \
-  client sign-csr \
-  --signer-url "$CUSTODIA_SIGNER" \
+custodia-client mtls enroll \
   --client-id "$BOB_ID" \
-  --csr-file "$BOB_ID.csr" \
-  --certificate-out "$BOB_ID.crt"
-```
-
-Transfer `$BOB_ID.crt` and `/etc/custodia/ca.crt` back to Bob. On Bob's client host:
-
-```bash
-custodia-client mtls install-cert \
-  --client-id "$BOB_ID" \
-  --cert-file "$BOB_ID.crt" \
-  --ca-file ca.crt
+  --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
+  --enrollment-token "ENROLLMENT_TOKEN" \
+  --server-cert-sha256 "SERVER_CERT_SHA256"
 
 custodia-client key generate --client-id "$BOB_ID"
-
-custodia-client config write \
-  --client-id "$BOB_ID" \
-  --server-url "$CUSTODIA_API"
-
+custodia-client config write --client-id "$BOB_ID"
 custodia-client config check --client-id "$BOB_ID"
 custodia-client doctor --client-id "$BOB_ID" --online
 ```

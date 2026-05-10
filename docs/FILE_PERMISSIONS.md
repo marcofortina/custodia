@@ -47,11 +47,12 @@ Example client provisioning flow:
 
 ```bash
 export CLIENT_ID=client_alice
-custodia-client mtls generate-csr --client-id "$CLIENT_ID"
-# Transfer the CSR to the server/admin host.
-# Transfer the signed certificate and public CA certificate back to this client host.
-custodia-client mtls install-cert --client-id "$CLIENT_ID" --cert-file "$CLIENT_ID.crt" --ca-file ca.crt
+custodia-client mtls enroll \
+  --client-id "$CLIENT_ID" \
+  --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
+  --enrollment-token "ENROLLMENT_TOKEN" \
+  --server-cert-sha256 "SERVER_CERT_SHA256"
 custodia-client key generate --client-id "$CLIENT_ID"
-custodia-client config write --client-id "$CLIENT_ID" --server-url "$CUSTODIA_API"
+custodia-client config write --client-id "$CLIENT_ID"
 custodia-client config check --client-id "$CLIENT_ID"
 ```

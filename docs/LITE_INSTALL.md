@@ -96,6 +96,6 @@ The signer reads `/etc/custodia/custodia-signer.yaml`, defaults to `:9444` in th
 
 ## First client smoke path
 
-After both `custodia` and `custodia-signer` are running, follow the Quickstart client flow. The preferred path generates each client mTLS private key and CSR under `$HOME/.config/custodia/<client_id>`, transfers only the CSR to the server/admin host, signs it with `custodia-admin client sign-csr`, copies the public certificate and CA back to the client profile, then generates the client-side application key and runs the encrypted put/share/get/delete smoke test.
+After both `custodia` and `custodia-signer` are running, follow the Quickstart client flow. The preferred path uses `custodia-admin client enrollment create` to mint a one-shot token, lets the client run `custodia-client mtls enroll` so mTLS private key material stays client-side, then generates the client-side application key and runs the encrypted put/share/get/delete smoke test.
 
 The canonical copy/paste path is [`docs/QUICKSTART.md`](QUICKSTART.md). For a two-client share/version/revoke validation, follow [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](CUSTODIA_ALICE_BOB_SMOKE.md).

@@ -32,9 +32,9 @@ If you are not sure what to choose, use the package install path. It covers Debi
 - Minimal admin CLI for metadata operations exposed by the API.
 - Go, Python and Node.js / TypeScript client libraries with raw transport helpers; all three include high-level client-side crypto wrappers that keep plaintext, DEKs and private keys outside the server.
 - Java, C++ and Rust client libraries with raw transport helpers plus high-level client-side crypto wrappers that use the shared AES-256-GCM/HPKE-v1 vectors.
-- Go `custodia-client` CLI for encrypted put/get/share/version, access revoke/delete workflows, reusable JSON client profiles and client-side mTLS CSR generation.
+- Go `custodia-client` CLI for encrypted put/get/share/version, access revoke/delete workflows, reusable JSON client profiles and one-shot enrollment for client-side mTLS CSR signing.
 - Docker, Compose, Helm and Lite single-node deployment examples.
-- Dedicated `custodia-signer` service for admin-only client CSR signing.
+- Dedicated `custodia-signer` service for enrollment-backed client CSR signing.
 - Custodia Lite profile with YAML config, SQLite build-tag artifact, local CA bootstrap, backup helper and Lite-to-Full readiness checks.
 
 ## What is deliberately not implemented server-side
@@ -317,7 +317,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 **Identity, certificates and web authentication**
 
 - [CA signing service design](docs/CA_SIGNING_SERVICE.md)
-- [Client certificate lifecycle](docs/CLIENT_CERTIFICATE_LIFECYCLE.md) — includes client-side CSR generation and server-side CSR signing
+- [Client certificate lifecycle](docs/CLIENT_CERTIFICATE_LIFECYCLE.md) — includes one-shot enrollment and client-side CSR signing
 - [CRL and OCSP operations](docs/CRL_OCSP_RUNBOOK.md)
 - [PKCS#11 and SoftHSM signer bridge](docs/PKCS11_SOFTHSM.md)
 - [Web MFA](docs/WEB_MFA.md)

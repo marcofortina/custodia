@@ -53,11 +53,13 @@ Generate Lite first-run CA material. The server certificate includes the request
 server name, localhost, 127.0.0.1, ::1 and any non-loopback IP address resolved
 from the server name.
 .TP
+.B client enrollment create [--config FILE] [--ttl DURATION]
+Create a short-lived, one-shot enrollment token for remote client onboarding. The command reads the configured server URL from the server YAML and prints the token, server URL and server certificate SHA-256 fingerprint for transfer to the client host.
+.TP
 .B client sign-csr --client-id ID --csr-file FILE --certificate-out FILE --signer-url URL
 Register client metadata, submit a client-generated CSR to
 .BR custodia-signer (1),
-and write the signed client certificate. The client mTLS private key stays on
-the client host.
+and write the signed client certificate. This manual/offline flow keeps the client mTLS private key on the client host.
 .TP
 .B client csr --client-id ID --private-key-out FILE --csr-out FILE
 Generate a local client mTLS private key and CSR. Prefer
@@ -153,25 +155,10 @@ as the
 .B custodia
 service user instead of unrestricted root.
 .SH EXAMPLES
-Sign a client-generated CSR without handling the client mTLS private key on the server:
+Create a remote-client enrollment token:
 .PP
 .EX
-export CLIENT_ID=client_alice
-export ISSUE_DIR="/var/lib/custodia/client-issue/$CLIENT_ID"
-sudo rm -rf "$ISSUE_DIR"
-sudo install -d -o custodia -g custodia -m 0700 "$ISSUE_DIR"
-sudo install -o custodia -g custodia -m 0644 "$CLIENT_ID.csr" "$ISSUE_DIR/$CLIENT_ID.csr"
-sudo -u custodia custodia-admin \
-  --server-url https://localhost:8443 \
-  --cert /etc/custodia/admin.crt \
-  --key /etc/custodia/admin.key \
-  --ca /etc/custodia/ca.crt \
-  client sign-csr \
-  --signer-url https://localhost:9444 \
-  --client-id "$CLIENT_ID" \
-  --csr-file "$ISSUE_DIR/$CLIENT_ID.csr" \
-  --certificate-out "$ISSUE_DIR/$CLIENT_ID.crt"
-sudo rm -rf "$ISSUE_DIR"
+sudo -u custodia custodia-admin client enrollment create --ttl 15m
 .EE
 
 Configure first-run Web TOTP material in the server YAML:
