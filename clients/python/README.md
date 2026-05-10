@@ -12,16 +12,20 @@ Implemented helpers:
 - `list_access_grant_requests(secret_id=None)` admin metadata-only, no envelopes
 - `create_secret(payload)`
 - `list_secrets()` metadata-only, no ciphertext or envelopes
-- `get_secret(secret_id)`
+- `get_secret(secret_id)` legacy/internal lookup
+- `get_secret_by_key(namespace, key)` user-facing lookup
 - `list_secret_versions(secret_id)` metadata-only, no ciphertext or crypto metadata
 - `list_secret_access(secret_id)` metadata-only, no envelopes
 - `status()` admin metadata-only operational status
-- `share_secret(secret_id, payload)`
+- `share_secret(secret_id, payload)` legacy/internal lookup
+- `share_secret_by_key(namespace, key, payload)` user-facing lookup
 - `request_access_grant(secret_id, payload)`
 - `activate_access_grant(secret_id, client_id, payload)`
 - `revoke_access(secret_id, client_id)`
-- `create_secret_version(secret_id, payload)`
-- `delete_secret(secret_id)`
+- `create_secret_version(secret_id, payload)` legacy/internal lookup
+- `create_secret_version_by_key(namespace, key, payload)` user-facing lookup
+- `delete_secret(secret_id, cascade=False)` legacy/internal lookup
+- `delete_secret_by_key(namespace, key, cascade=False)` user-facing lookup
 
 Dynamic path segments are URL-escaped. Raw transport payloads remain caller-defined JSON with base64 ciphertext/envelope strings. The high-level crypto wrapper requires an application-provided public-key resolver and local private-key provider; Custodia never acts as a public-key directory.
 
@@ -62,13 +66,14 @@ crypto = client.with_crypto(CryptoOptions(
     ),
 ))
 
-created = crypto.create_encrypted_secret(
-    name="database-password",
+created = crypto.create_encrypted_secret_by_key(
+    namespace="db01",
+    key="user:sys",
     plaintext=b"correct horse battery staple",
     recipients=["client_bob"],
 )
 
-secret = crypto.read_decrypted_secret(created["secret_id"])
+secret = crypto.read_decrypted_secret_by_key("db01", "user:sys")
 ```
 
 The static resolver above is only a minimal example. Production applications
