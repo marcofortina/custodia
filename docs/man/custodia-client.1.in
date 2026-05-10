@@ -20,19 +20,65 @@ is the end-user encrypted secret CLI for Custodia. It performs application
 cryptography locally and sends only ciphertext, crypto metadata, and opaque
 recipient envelopes to the server.
 .PP
+Passing
+.BI --client-id " ID"
+uses the standard per-user profile directory:
+.PP
+.EX
+$XDG_CONFIG_HOME/custodia/ID
+.EE
+.PP
+or, when
+.B XDG_CONFIG_HOME
+is not set:
+.PP
+.EX
+$HOME/.config/custodia/ID
+.EE
+.PP
+Explicit paths and
+.BI --config " FILE"
+remain available for advanced automation.
+.PP
 The server is not a public-key directory. Recipient public keys are loaded
 from local files supplied by trusted out-of-band exchange.
 .SH COMMANDS
 .TP
-.B config write --out FILE --server-url URL --cert FILE --key FILE --ca FILE [--client-id ID --crypto-key FILE]
-Write a reusable local JSON profile for mTLS and local crypto paths.
+.B mtls generate-csr --client-id ID [--private-key-out FILE --csr-out FILE]
+Generate a client-side mTLS private key and CSR. Without explicit output paths,
+write
+.I ID.key
+and
+.I ID.csr
+under the standard client profile directory. Transfer only the CSR to the
+server/admin signer workflow; keep the private key on the client host.
 .TP
-.B config check --config FILE
+.B mtls install-cert --client-id ID --cert-file FILE --ca-file FILE [--cert-out FILE --ca-out FILE]
+Install the signed mTLS client certificate and public CA certificate into the
+standard client profile directory. Without explicit output paths, write
+.I ID.crt
+and
+.I ca.crt
+under the profile directory.
+.TP
+.B config write --client-id ID --server-url URL [--out FILE --cert FILE --key FILE --ca FILE --crypto-key FILE]
+Write a reusable local JSON profile for mTLS and local crypto paths. With only
+.B --client-id
+and
+.BR --server-url ,
+paths are derived from the standard client profile directory.
+.TP
+.B config check --client-id ID|--config FILE
 Validate the profile, HTTPS URL, local mTLS certificate/key pair, CA bundle,
 and optional crypto key without contacting the server.
 .TP
-.B key generate --client-id ID --private-key-out FILE --public-key-out FILE
-Generate a local X25519 application key pair.
+.B key generate --client-id ID [--private-key-out FILE --public-key-out FILE]
+Generate a local X25519 application key pair. Without explicit output paths,
+write
+.I ID.x25519.json
+and
+.I ID.x25519.pub.json
+under the standard client profile directory.
 .TP
 .B key public --client-id ID --private-key FILE --public-key-out FILE
 Derive and write a local public key file from a private key file.
@@ -40,43 +86,44 @@ Derive and write a local public key file from a private key file.
 .B key inspect --key FILE
 Print key metadata and public-key fingerprint without exposing private material.
 .TP
-.B mtls generate-csr --client-id ID --private-key-out FILE --csr-out FILE
-Generate a client-side mTLS private key and CSR. Transfer only the CSR to the
-server/admin signer workflow; keep the private key on the client host.
-.TP
-.B doctor --config FILE [--online]
+.B doctor --client-id ID|--config FILE [--online]
 Run read-only diagnostics for a local client profile. The default mode validates
 local profile, mTLS files, CA bundle and crypto key without contacting the server.
 Pass
 .B --online
 for an mTLS current-client reachability check.
 .TP
-.B secret put --config FILE --name NAME --value-file FILE
+.B secret put --client-id ID|--config FILE --name NAME --value-file FILE
 Encrypt a plaintext file locally and create a secret.
 .TP
-.B secret get --config FILE --secret-id ID --out FILE
+.B secret get --client-id ID|--config FILE --secret-id ID [--out FILE]
 Read a secret, decrypt locally, and write plaintext output with mode 0600.
 .TP
-.B secret share --config FILE --secret-id ID --target-client-id ID --recipient ID=FILE
+.B secret share --client-id ID|--config FILE --secret-id ID --target-client-id ID --recipient ID=FILE
 Grant another client access by rewrapping local key material to the target
 recipient public key.
 .TP
-.B secret version put --config FILE --secret-id ID --value-file FILE [--recipient ID=FILE]
+.B secret version put --client-id ID|--config FILE --secret-id ID --value-file FILE [--recipient ID=FILE]
 Create a new encrypted version. Include every recipient that should keep access.
 .TP
-.B secret versions --config FILE --secret-id ID [--limit N]
+.B secret versions --client-id ID|--config FILE --secret-id ID [--limit N]
 List secret version metadata.
 .TP
-.B secret access list --config FILE --secret-id ID [--limit N]
+.B secret access list --client-id ID|--config FILE --secret-id ID [--limit N]
 List access grant metadata.
 .TP
-.B secret access revoke --config FILE --secret-id ID --target-client-id ID --yes
+.B secret access revoke --client-id ID|--config FILE --secret-id ID --target-client-id ID --yes
 Revoke future server-side access for a target client. Already downloaded
 material may remain decryptable offline.
 .TP
-.B secret delete --config FILE --secret-id ID --yes
+.B secret delete --client-id ID|--config FILE --secret-id ID --yes
 Delete a secret from future server-side reads.
 .SH GLOBAL OPTIONS
+.TP
+.BI --client-id " ID"
+Local client id. For most commands this selects the standard per-user profile.
+Also accepted through
+.BR CUSTODIA_CLIENT_ID .
 .TP
 .BI --config " FILE"
 Reusable client profile. Also accepted through
@@ -96,15 +143,19 @@ Custodia CA certificate. For normal client profiles, use a readable client-local
 .I ca.crt
 instead of loosening /etc/custodia permissions.
 .TP
-.BI --client-id " ID"
-Local client id for crypto operations.
-.TP
 .BI --crypto-key " FILE"
 Local X25519 private key JSON.
 .TP
 .BI --recipient " ID=FILE"
 Recipient public key file for share/version operations.
 .SH ENVIRONMENT
+.TP
+.B XDG_CONFIG_HOME
+Base directory for standard Custodia client profiles. Defaults to
+.IR $HOME/.config .
+.TP
+.B CUSTODIA_CLIENT_ID
+Default local client id.
 .TP
 .B CUSTODIA_CLIENT_CONFIG
 Default reusable profile path.
@@ -121,49 +172,51 @@ Default mTLS client private key.
 .B CUSTODIA_CA_CERT
 Default CA certificate.
 .TP
-.B CUSTODIA_CLIENT_ID
-Default local client id.
-.TP
 .B CUSTODIA_CRYPTO_KEY
 Default local X25519 private key file.
 .SH FILES
 .TP
-.I client.config.json
+.I $HOME/.config/custodia/ID/ID.config.json
 Reusable local client profile written by
 .BR "custodia-client config write" .
 .TP
-.I client.x25519.json
+.I $HOME/.config/custodia/ID/ID.key
+Client-side mTLS private key generated by
+.BR "custodia-client mtls generate-csr" .
+.TP
+.I $HOME/.config/custodia/ID/ID.x25519.json
 Local application private key. Keep mode 0600.
 .TP
-.I client.x25519.pub.json
+.I $HOME/.config/custodia/ID/ID.x25519.pub.json
 Local application public key to exchange out of band.
 .SH SECURITY NOTES
-Plaintext, DEKs, application private keys, and recipient public-key discovery
-remain outside the server. Avoid writing plaintext to stdout on shared terminals.
+Plaintext, DEKs, mTLS private keys, application private keys, and recipient
+public-key discovery remain outside the server. Avoid writing plaintext to stdout
+on shared terminals.
 .PP
 Revoking access is future server-side revocation. For strong revocation, create
 a new encrypted version without the removed recipient.
 .SH EXAMPLES
-Create and validate a local profile:
+Create and validate a local client profile:
 .PP
 .EX
-custodia-client config write \\
-  --out client_alice.config.json \\
-  --server-url https://localhost:8443 \\
-  --cert client_alice.crt \\
-  --key client_alice.key \\
-  --ca ca.crt \\
-  --client-id client_alice \\
-  --crypto-key client_alice.x25519.json
-custodia-client config check --config client_alice.config.json
+CLIENT_ID=client_alice
+custodia-client mtls generate-csr --client-id "$CLIENT_ID"
+# Transfer the CSR to the server/admin host, sign it, then transfer back the signed certificate and CA.
+custodia-client mtls install-cert --client-id "$CLIENT_ID" \
+  --cert-file client_alice.crt --ca-file ca.crt
+custodia-client key generate --client-id "$CLIENT_ID"
+custodia-client config write --client-id "$CLIENT_ID" \
+  --server-url https://vault.example:8443
+custodia-client config check --client-id "$CLIENT_ID"
 .EE
 .PP
 Create and read a secret:
 .PP
 .EX
-custodia-client secret put --config client_alice.config.json \\
-  --name demo --value-file secret.txt
-custodia-client secret get --config client_alice.config.json \\
+custodia-client secret put --client-id client_alice \
+  --name demo --value-file secret.txt > create.json
+custodia-client secret get --client-id client_alice \
   --secret-id SECRET_ID --out secret.readback.txt
 .EE
 .SH VERSION

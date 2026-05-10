@@ -349,38 +349,26 @@ The Web Console is metadata-only. It does not decrypt or display secret plaintex
 
 ## 8. Configure two clients and run an encrypted smoke test
 
+Custodia client profiles are per-user. Passing `--client-id client_alice` stores client-side material under `$XDG_CONFIG_HOME/custodia/client_alice`, or `$HOME/.config/custodia/client_alice` when `XDG_CONFIG_HOME` is not set. Do not use `/etc/custodia` for client-only hosts.
+
 The preferred remote-client flow generates each client mTLS private key and CSR on the client workstation. The server signs only the CSR. When the client is on a separate host, transfer the CSR to the server/admin host, then transfer the signed certificate and public CA certificate back to the client.
 
-Create persistent local work directories outside `/tmp` for the smoke test:
+Set the client ids:
 
 ```bash
-export WORK="$HOME/.config/custodia/quickstart-smoke"
-export ISSUE_ROOT="/var/lib/custodia/client-issue"
 export ALICE_ID=client_alice
 export BOB_ID=client_bob
-
-rm -rf "$WORK"
-install -d -m 0700 "$WORK/alice" "$WORK/bob"
-sudo install -o "$USER" -g "$USER" -m 0644 /etc/custodia/ca.crt "$WORK/ca.crt"
 ```
 
 Generate Alice's mTLS private key and CSR on Alice's workstation:
 
 ```bash
-custodia-client mtls generate-csr \
-  --client-id "$ALICE_ID" \
-  --private-key-out "$WORK/alice/$ALICE_ID.key" \
-  --csr-out "$WORK/alice/$ALICE_ID.csr"
+custodia-client mtls generate-csr --client-id "$ALICE_ID"
 ```
 
-Transfer `$WORK/alice/$ALICE_ID.csr` to the server/admin host when Alice is remote. Sign Alice's CSR on the server/admin host:
+Transfer Alice's CSR to the server/admin host. Sign Alice's CSR on the server/admin host:
 
 ```bash
-ALICE_ISSUE_DIR="$ISSUE_ROOT/$ALICE_ID"
-sudo rm -rf "$ALICE_ISSUE_DIR"
-sudo install -d -o custodia -g custodia -m 0700 "$ALICE_ISSUE_DIR"
-sudo install -o custodia -g custodia -m 0644 "$WORK/alice/$ALICE_ID.csr" "$ALICE_ISSUE_DIR/$ALICE_ID.csr"
-
 sudo -u custodia custodia-admin \
   --server-url "$CUSTODIA_API" \
   --cert /etc/custodia/admin.crt \
@@ -389,60 +377,60 @@ sudo -u custodia custodia-admin \
   client sign-csr \
   --signer-url "$CUSTODIA_SIGNER" \
   --client-id "$ALICE_ID" \
-  --csr-file "$ALICE_ISSUE_DIR/$ALICE_ID.csr" \
-  --certificate-out "$ALICE_ISSUE_DIR/$ALICE_ID.crt"
-
-sudo install -o "$USER" -g "$USER" -m 0644 "$ALICE_ISSUE_DIR/$ALICE_ID.crt" "$WORK/alice/$ALICE_ID.crt"
-sudo rm -rf "$ALICE_ISSUE_DIR"
+  --csr-file "$ALICE_ID.csr" \
+  --certificate-out "$ALICE_ID.crt"
 ```
 
-Transfer `$ALICE_ID.crt` and `ca.crt` back to Alice when Alice is remote. Configure Alice's local application encryption key and reusable client profile:
+Transfer `$ALICE_ID.crt` and `/etc/custodia/ca.crt` back to Alice. Install the returned public material on Alice's workstation:
 
 ```bash
-custodia-client key generate \
+custodia-client mtls install-cert \
   --client-id "$ALICE_ID" \
-  --private-key-out "$WORK/alice/$ALICE_ID.x25519.json" \
-  --public-key-out "$WORK/alice/$ALICE_ID.x25519.pub.json"
+  --cert-file "$ALICE_ID.crt" \
+  --ca-file ca.crt
+```
 
-ALICE_CONFIG="$WORK/alice/$ALICE_ID.config.json"
+Configure Alice's local application encryption key and reusable client profile:
+
+```bash
+custodia-client key generate --client-id "$ALICE_ID"
 
 custodia-client config write \
-  --out "$ALICE_CONFIG" \
-  --server-url "$CUSTODIA_API" \
-  --cert "$WORK/alice/$ALICE_ID.crt" \
-  --key "$WORK/alice/$ALICE_ID.key" \
-  --ca "$WORK/ca.crt" \
   --client-id "$ALICE_ID" \
-  --crypto-key "$WORK/alice/$ALICE_ID.x25519.json"
+  --server-url "$CUSTODIA_API"
 
-custodia-client config check --config "$ALICE_CONFIG"
-custodia-client doctor --config "$ALICE_CONFIG" --online
+custodia-client config check --client-id "$ALICE_ID"
+custodia-client doctor --client-id "$ALICE_ID" --online
 ```
 
-Create and read back an encrypted secret as Alice:
+Create and read back an encrypted secret as Alice. Keep demo plaintext/output files outside the client profile:
 
 ```bash
-printf 'super secret demo value' > "$WORK/alice/secret.txt"
-chmod 600 "$WORK/alice/secret.txt"
+SMOKE_SECRET="$HOME/custodia-smoke-secret.txt"
+SMOKE_CREATE="$HOME/custodia-smoke-secret.create.json"
+SMOKE_READBACK="$HOME/custodia-smoke-secret.readback.txt"
+
+printf 'super secret demo value' > "$SMOKE_SECRET"
+chmod 600 "$SMOKE_SECRET"
 
 custodia-client secret put \
-  --config "$ALICE_CONFIG" \
+  --client-id "$ALICE_ID" \
   --name smoke-demo \
-  --value-file "$WORK/alice/secret.txt" \
-  > "$WORK/alice/secret.create.json"
+  --value-file "$SMOKE_SECRET" \
+  > "$SMOKE_CREATE"
 
 SECRET_ID="$(python3 - <<'PY'
 import json, os
-print(json.load(open(os.environ['WORK'] + '/alice/secret.create.json'))['secret_id'])
+print(json.load(open(os.path.expanduser('~/custodia-smoke-secret.create.json')))['secret_id'])
 PY
 )"
 
 custodia-client secret get \
-  --config "$ALICE_CONFIG" \
+  --client-id "$ALICE_ID" \
   --secret-id "$SECRET_ID" \
-  --out "$WORK/alice/readback.txt"
+  --out "$SMOKE_READBACK"
 
-cat "$WORK/alice/readback.txt"
+cat "$SMOKE_READBACK"
 ```
 
 Expected output:
@@ -454,20 +442,12 @@ super secret demo value
 Generate Bob's mTLS private key and CSR on Bob's workstation:
 
 ```bash
-custodia-client mtls generate-csr \
-  --client-id "$BOB_ID" \
-  --private-key-out "$WORK/bob/$BOB_ID.key" \
-  --csr-out "$WORK/bob/$BOB_ID.csr"
+custodia-client mtls generate-csr --client-id "$BOB_ID"
 ```
 
-Transfer `$WORK/bob/$BOB_ID.csr` to the server/admin host when Bob is remote. Sign Bob's CSR on the server/admin host:
+Transfer Bob's CSR to the server/admin host. Sign Bob's CSR on the server/admin host:
 
 ```bash
-BOB_ISSUE_DIR="$ISSUE_ROOT/$BOB_ID"
-sudo rm -rf "$BOB_ISSUE_DIR"
-sudo install -d -o custodia -g custodia -m 0700 "$BOB_ISSUE_DIR"
-sudo install -o custodia -g custodia -m 0644 "$WORK/bob/$BOB_ID.csr" "$BOB_ISSUE_DIR/$BOB_ID.csr"
-
 sudo -u custodia custodia-admin \
   --server-url "$CUSTODIA_API" \
   --cert /etc/custodia/admin.crt \
@@ -476,56 +456,56 @@ sudo -u custodia custodia-admin \
   client sign-csr \
   --signer-url "$CUSTODIA_SIGNER" \
   --client-id "$BOB_ID" \
-  --csr-file "$BOB_ISSUE_DIR/$BOB_ID.csr" \
-  --certificate-out "$BOB_ISSUE_DIR/$BOB_ID.crt"
-
-sudo install -o "$USER" -g "$USER" -m 0644 "$BOB_ISSUE_DIR/$BOB_ID.crt" "$WORK/bob/$BOB_ID.crt"
-sudo rm -rf "$BOB_ISSUE_DIR"
+  --csr-file "$BOB_ID.csr" \
+  --certificate-out "$BOB_ID.crt"
 ```
 
-Transfer `$BOB_ID.crt` and `ca.crt` back to Bob when Bob is remote. Configure Bob's local application encryption key and reusable client profile:
+Transfer `$BOB_ID.crt` and `/etc/custodia/ca.crt` back to Bob. Install the returned public material on Bob's workstation:
 
 ```bash
-custodia-client key generate \
+custodia-client mtls install-cert \
   --client-id "$BOB_ID" \
-  --private-key-out "$WORK/bob/$BOB_ID.x25519.json" \
-  --public-key-out "$WORK/bob/$BOB_ID.x25519.pub.json"
+  --cert-file "$BOB_ID.crt" \
+  --ca-file ca.crt
+```
 
-BOB_CONFIG="$WORK/bob/$BOB_ID.config.json"
+Configure Bob's local application encryption key and reusable client profile:
+
+```bash
+custodia-client key generate --client-id "$BOB_ID"
 
 custodia-client config write \
-  --out "$BOB_CONFIG" \
-  --server-url "$CUSTODIA_API" \
-  --cert "$WORK/bob/$BOB_ID.crt" \
-  --key "$WORK/bob/$BOB_ID.key" \
-  --ca "$WORK/ca.crt" \
   --client-id "$BOB_ID" \
-  --crypto-key "$WORK/bob/$BOB_ID.x25519.json"
+  --server-url "$CUSTODIA_API"
 
-custodia-client config check --config "$BOB_CONFIG"
-custodia-client doctor --config "$BOB_CONFIG" --online
+custodia-client config check --client-id "$BOB_ID"
+custodia-client doctor --client-id "$BOB_ID" --online
 ```
 
-Transfer Bob's public key `$WORK/bob/$BOB_ID.x25519.pub.json` to Alice through a trusted channel. Alice can then share the secret with Bob:
+Transfer Bob's public key to Alice through a trusted channel. The default path is `$HOME/.config/custodia/$BOB_ID/$BOB_ID.x25519.pub.json`, or `$XDG_CONFIG_HOME/custodia/$BOB_ID/$BOB_ID.x25519.pub.json` when `XDG_CONFIG_HOME` is set. Alice can then share the secret with Bob:
 
 ```bash
+BOB_PUBLIC_KEY="$HOME/$BOB_ID.x25519.pub.json"
+
 custodia-client secret share \
-  --config "$ALICE_CONFIG" \
+  --client-id "$ALICE_ID" \
   --secret-id "$SECRET_ID" \
   --target-client-id "$BOB_ID" \
-  --recipient "$BOB_ID=$WORK/bob/$BOB_ID.x25519.pub.json" \
+  --recipient "$BOB_ID=$BOB_PUBLIC_KEY" \
   --permissions 4
 ```
 
 Transfer the `SECRET_ID` value to Bob when Bob is remote. Bob can now read and decrypt the secret locally:
 
 ```bash
-custodia-client secret get \
-  --config "$BOB_CONFIG" \
-  --secret-id "$SECRET_ID" \
-  --out "$WORK/bob/readback.txt"
+BOB_READBACK="$HOME/custodia-smoke-bob.readback.txt"
 
-cat "$WORK/bob/readback.txt"
+custodia-client secret get \
+  --client-id "$BOB_ID" \
+  --secret-id "$SECRET_ID" \
+  --out "$BOB_READBACK"
+
+cat "$BOB_READBACK"
 ```
 
 Expected output:
@@ -538,7 +518,7 @@ Delete the smoke secret when the test is complete:
 
 ```bash
 custodia-client secret delete \
-  --config "$ALICE_CONFIG" \
+  --client-id "$ALICE_ID" \
   --secret-id "$SECRET_ID" \
   --yes
 ```
@@ -596,13 +576,13 @@ sudo -u custodia custodia-admin doctor \
 For client-side checks:
 
 ```bash
-custodia-client doctor --config "$ALICE_CONFIG"
+custodia-client doctor --client-id "$ALICE_ID"
 ```
 
 For an online mTLS reachability check with the non-admin client identity:
 
 ```bash
-custodia-client doctor --config "$ALICE_CONFIG" --online
+custodia-client doctor --client-id "$ALICE_ID" --online
 ```
 
 ## 12. What to read next

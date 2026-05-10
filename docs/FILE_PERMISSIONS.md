@@ -1,95 +1,57 @@
-# Custodia file ownership and permissions
+# File permissions
 
-Custodia packages create the service user and runtime directories, but operators still have to install certificates, keys and runtime YAML files with the correct ownership. The daemon processes run as `custodia`, so readable secret-bearing material should be scoped to that user or the `custodia` group.
+Custodia keeps server runtime files and client-side profiles separate.
 
-## Runtime directories
+## Server files
 
-Recommended package/runtime ownership:
+For source installs, prepare the server runtime directories with restrictive ownership:
+
+```bash
+sudo install -d -m 0750 -o custodia -g custodia \
+  /etc/custodia /var/lib/custodia /var/lib/custodia/backups /var/log/custodia
+```
+
+Typical server-side modes:
 
 | Path | Owner | Mode | Notes |
 | --- | --- | --- | --- |
-| `/etc/custodia` | `root:custodia` | `0750` | Runtime configuration and public CA/certificate files. |
-| `/var/lib/custodia` | `custodia:custodia` | `0750` | SQLite database, local runtime state and future migration staging. |
-| `/var/lib/custodia/backups` | `custodia:custodia` | `0750` | SQLite online backup output directory. |
-| `/var/log/custodia` | `custodia:custodia` | `0750` | Server and signer logs/audit logs. |
-| `/var/log/custodia/signer-audit.jsonl` | `custodia:custodia` | `0600` | Signer security audit JSONL; created by `custodia-signer`. |
+| `/etc/custodia` | `custodia:custodia` | `0750` | Server config/cert directory. Do not loosen this for clients. |
+| `/etc/custodia/*.key` | `custodia:custodia` | `0600` | Server/admin/CA private keys. |
+| `/etc/custodia/*.crt` | `custodia:custodia` | `0644` | Public certificates, but parent directory remains restricted. |
+| `/etc/custodia/*.yaml` | `custodia:custodia` | `0640` | Runtime config. |
+| `/var/lib/custodia` | `custodia:custodia` | `0750` | Lite SQLite/runtime state. |
+| `/var/lib/custodia/backups` | `custodia:custodia` | `0750` | Lite backup target. |
+| `/var/log/custodia` | `custodia:custodia` | `0750` | Server logs. |
 
-Create or repair them with:
+Do not `chmod 755 /etc/custodia` to make a client work. Copy the public CA certificate into that user's client profile instead.
 
-```bash
-sudo install -d -m 0750 -o root -g custodia /etc/custodia
-sudo install -d -m 0750 -o custodia -g custodia /var/lib/custodia /var/lib/custodia/backups /var/log/custodia
-```
+## Client files
 
-## Runtime YAML files
+Client-only hosts do not need `/etc/custodia`, `/var/lib/custodia`, `/var/log/custodia`, a `custodia` service user or server systemd units.
 
-| File | Owner | Mode | Notes |
-| --- | --- | --- | --- |
-| `/etc/custodia/custodia-server.yaml` | `root:custodia` | `0640` | Server runtime configuration. |
-| `/etc/custodia/custodia-signer.yaml` | `root:custodia` | `0640` | Signer runtime configuration. |
+Passing `--client-id client_alice` stores client-side files under `$XDG_CONFIG_HOME/custodia/client_alice`, or `$HOME/.config/custodia/client_alice` when `XDG_CONFIG_HOME` is not set.
 
-Install packaged examples safely with:
+Typical client-side modes:
 
-```bash
-sudo install -m 0640 -o root -g custodia /usr/share/doc/custodia/custodia-server.lite.yaml.example /etc/custodia/custodia-server.yaml
-sudo install -m 0640 -o root -g custodia /usr/share/doc/custodia/custodia-signer.yaml.example /etc/custodia/custodia-signer.yaml
-```
+| File | Mode | Notes |
+| --- | --- | --- |
+| `<client_id>.key` | `0600` | mTLS private key generated on the client host. |
+| `<client_id>.csr` | `0644` | CSR transferred to the server/admin host. |
+| `<client_id>.crt` | `0644` | Signed public mTLS certificate returned by the server/admin host. |
+| `ca.crt` | `0644` | Public CA certificate copied into the client profile. |
+| `<client_id>.x25519.json` | `0600` | Application encryption private key. |
+| `<client_id>.x25519.pub.json` | `0644` | Public application key for trusted handoff. |
+| `<client_id>.config.json` | `0600` | Local config referencing the files above. |
 
-For source checkouts before install, use `deploy/examples/custodia-server.lite.yaml` and `deploy/examples/custodia-signer.yaml` as the source files.
-
-## TLS, CA and signer material
-
-| File | Owner | Mode | Notes |
-| --- | --- | --- | --- |
-| `/etc/custodia/server.crt` | `root:custodia` | `0644` | Public server certificate. |
-| `/etc/custodia/server.key` | `custodia:custodia` | `0600` | Server TLS private key. |
-| `/etc/custodia/client-ca.crt` | `root:custodia` | `0644` | Public client CA bundle. |
-| `/etc/custodia/client.crl.pem` | `custodia:custodia` | `0644` | CRL read by server/signer and updated by revocation workflow. |
-| `/etc/custodia/ca.crt` | `root:custodia` | `0644` | Public signer CA certificate. |
-| `/etc/custodia/ca.key` | `custodia:custodia` | `0600` | File-provider signer CA private key. Prefer HSM/PKCS#11 for production. |
-| `/etc/custodia/ca.pass` | `custodia:custodia` | `0600` | Optional signer CA key passphrase file. |
-| `/etc/custodia/admin.crt` | `root:custodia` | `0644` | Bootstrap admin mTLS certificate. |
-| `/etc/custodia/admin.key` | `custodia:custodia` | `0600` | Bootstrap admin mTLS private key; run admin commands as `custodia` when using it. |
-
-Repair a Lite bootstrap directory with:
-
-```bash
-sudo chown root:custodia /etc/custodia/*.yaml /etc/custodia/*.crt 2>/dev/null || true
-sudo chown custodia:custodia /etc/custodia/*.key /etc/custodia/*.pass /etc/custodia/client.crl.pem 2>/dev/null || true
-sudo chmod 0640 /etc/custodia/*.yaml 2>/dev/null || true
-sudo chmod 0644 /etc/custodia/*.crt /etc/custodia/client.crl.pem 2>/dev/null || true
-sudo chmod 0600 /etc/custodia/*.key /etc/custodia/*.pass 2>/dev/null || true
-```
-
-## Client handoff material
-
-Remote clients should generate their mTLS private key and CSR locally with `custodia-client mtls generate-csr`. Transfer only the CSR to the server/admin host. The server signs the CSR and returns the public certificate plus the public CA certificate.
-
-Client profile files belong under the Linux user's own home directory, not under `/etc/custodia`:
+Example client provisioning flow:
 
 ```bash
 export CLIENT_ID=client_alice
-export WORK="$HOME/.config/custodia/$CLIENT_ID"
-install -d -m 0700 "$WORK"
-
-custodia-client mtls generate-csr \
-  --client-id "$CLIENT_ID" \
-  --private-key-out "$WORK/$CLIENT_ID.key" \
-  --csr-out "$WORK/$CLIENT_ID.csr"
+custodia-client mtls generate-csr --client-id "$CLIENT_ID"
+# Transfer the CSR to the server/admin host.
+# Transfer the signed certificate and public CA certificate back to this client host.
+custodia-client mtls install-cert --client-id "$CLIENT_ID" --cert-file "$CLIENT_ID.crt" --ca-file ca.crt
+custodia-client key generate --client-id "$CLIENT_ID"
+custodia-client config write --client-id "$CLIENT_ID" --server-url "$CUSTODIA_API"
+custodia-client config check --client-id "$CLIENT_ID"
 ```
-
-After signing, install the returned certificate and CA copy in the same profile:
-
-```bash
-install -m 0644 "$CLIENT_ID.crt" "$WORK/$CLIENT_ID.crt"
-install -m 0644 ca.crt "$WORK/ca.crt"
-chmod 0600 "$WORK/$CLIENT_ID.key"
-```
-
-Do not loosen `/etc/custodia` permissions to make unprivileged client commands read `/etc/custodia/ca.crt`. Copy the public CA certificate into the client profile and reference that readable copy.
-
-Application encryption keys generated by `custodia-client key generate` belong to the application/operator account, not to the Custodia server process.
-
-## Permission diagnostics
-
-Run `custodia-admin doctor --server-config /etc/custodia/custodia-server.yaml --signer-config /etc/custodia/custodia-signer.yaml` as the `custodia` service user to check sensitive key and passphrase file modes together with runtime directories. See [`DOCTOR.md`](DOCTOR.md).

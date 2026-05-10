@@ -39,12 +39,21 @@ type clientDoctorOptions struct {
 func (a *app) runDoctor(args []string) int {
 	fs := newFlagSet("custodia-client doctor", a.stderr)
 	configFile := fs.String("config", envDefault("CUSTODIA_CLIENT_CONFIG", ""), "Custodia client config JSON")
+	clientID := fs.String("client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "local client id for the standard profile")
 	online := fs.Bool("online", false, "also contact the configured Custodia server")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
+	if strings.TrimSpace(*configFile) == "" && strings.TrimSpace(*clientID) != "" {
+		path, err := defaultClientConfigPath(*clientID)
+		if err != nil {
+			fmt.Fprintf(a.stderr, "%v\n", err)
+			return 2
+		}
+		*configFile = path
+	}
 	if strings.TrimSpace(*configFile) == "" {
-		fmt.Fprintln(a.stderr, "--config is required")
+		fmt.Fprintln(a.stderr, "--client-id or --config is required")
 		return 2
 	}
 	findings := collectClientDoctorFindings(clientDoctorOptions{configFile: *configFile, online: *online, out: a.stdout})

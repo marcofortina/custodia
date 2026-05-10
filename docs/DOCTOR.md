@@ -81,7 +81,7 @@ custodia-admin doctor \
 The client doctor validates a reusable local client profile:
 
 ```bash
-custodia-client doctor --config client_alice.config.json
+custodia-client doctor --client-id client_alice
 ```
 
 The default client doctor is offline. It validates:
@@ -96,7 +96,7 @@ The default client doctor is offline. It validates:
 Use `--online` only when you want to test the configured server with mTLS:
 
 ```bash
-custodia-client doctor --config client_alice.config.json --online
+custodia-client doctor --client-id client_alice --online
 ```
 
 The online check performs a lightweight authenticated current-client request (`/v1/me`) with the configured non-admin mTLS identity. It should not be used as a secret read/write smoke test; use the Alice/Bob smoke runbook for that workflow.

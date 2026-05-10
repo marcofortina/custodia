@@ -58,6 +58,29 @@ func TestKeyGenerateWritesUsableLocalKeyPair(t *testing.T) {
 	}
 }
 
+func TestKeyGenerateUsesDefaultClientProfile(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{"key", "generate", "--client-id", "client_alice"})
+	if code != 0 {
+		t.Fatalf("key generate failed with %d: %s", code, stderr.String())
+	}
+	profile := filepath.Join(dir, "custodia", "client_alice")
+	for _, path := range []string{filepath.Join(profile, "client_alice.x25519.json"), filepath.Join(profile, "client_alice.x25519.pub.json")} {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("expected %s: %v", path, err)
+		}
+	}
+	info, err := os.Stat(profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0o700 {
+		t.Fatalf("profile dir mode = %o, want 700", got)
+	}
+}
+
 func TestKeyGenerateRefusesOverwrite(t *testing.T) {
 	dir := t.TempDir()
 	privatePath := filepath.Join(dir, "client_alice.x25519.json")
@@ -176,6 +199,24 @@ func TestConfigWriteCreatesReusableClientConfig(t *testing.T) {
 	}
 }
 
+func TestConfigWriteUsesDefaultClientProfile(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{"config", "write", "--client-id", "client_alice", "--server-url", "https://vault.example:8443"})
+	if code != 0 {
+		t.Fatalf("config write failed with %d: %s", code, stderr.String())
+	}
+	profile := filepath.Join(dir, "custodia", "client_alice")
+	config, err := readClientConfigFile(filepath.Join(profile, "client_alice.config.json"))
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	if config.CertFile != filepath.Join(profile, "client_alice.crt") || config.KeyFile != filepath.Join(profile, "client_alice.key") || config.CAFile != filepath.Join(profile, "ca.crt") || config.CryptoKey != filepath.Join(profile, "client_alice.x25519.json") {
+		t.Fatalf("unexpected default config paths: %+v", config)
+	}
+}
+
 func TestConfigCheckValidatesLocalFiles(t *testing.T) {
 	dir := t.TempDir()
 	artifacts, err := certutil.GenerateLiteBootstrap(certutil.LiteBootstrapRequest{AdminClientID: "client_alice", ServerName: "localhost"})
@@ -279,7 +320,7 @@ func TestHelpMentionsEncryptedSecretCommands(t *testing.T) {
 		t.Fatalf("help failed: %d %s", code, stderr.String())
 	}
 	body := stdout.String()
-	for _, token := range []string{"config write", "config check", "doctor --config FILE [--online]", "key inspect", "--config FILE", "secret put", "secret get", "secret share", "secret delete", "secret version put", "secret versions", "secret access list", "secret access revoke", "Secret payloads are encrypted/decrypted locally"} {
+	for _, token := range []string{"config write", "config check", "doctor --client-id ID|--config FILE [--online]", "mtls install-cert", "key inspect", "--client-id ID", "secret put", "secret get", "secret share", "secret delete", "secret version put", "secret versions", "secret access list", "secret access revoke", "Secret payloads are encrypted/decrypted locally"} {
 		if !strings.Contains(body, token) {
 			t.Fatalf("help missing %q: %s", token, body)
 		}
@@ -375,6 +416,50 @@ func TestMTLSGenerateCSRWritesClientSideMaterial(t *testing.T) {
 	code = (&app{stdout: &stdout, stderr: &stderr}).run([]string{"mtls", "generate-csr", "--client-id", "client_alice", "--private-key-out", keyPath, "--csr-out", csrPath})
 	if code == 0 {
 		t.Fatal("expected exclusive write failure")
+	}
+}
+
+func TestMTLSGenerateCSRUsesDefaultClientProfile(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{"mtls", "generate-csr", "--client-id", "client_alice"})
+	if code != 0 {
+		t.Fatalf("mtls generate-csr failed with %d: %s", code, stderr.String())
+	}
+	profile := filepath.Join(dir, "custodia", "client_alice")
+	for path, wantMode := range map[string]os.FileMode{filepath.Join(profile, "client_alice.key"): keyFileMode, filepath.Join(profile, "client_alice.csr"): publicFileMode} {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("expected %s: %v", path, err)
+		}
+		if got := info.Mode().Perm(); got != wantMode {
+			t.Fatalf("%s mode = %o, want %o", path, got, wantMode)
+		}
+	}
+}
+
+func TestMTLSInstallCertUsesDefaultClientProfile(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	certPath := filepath.Join(dir, "issued.crt")
+	caPath := filepath.Join(dir, "ca.crt")
+	if err := os.WriteFile(certPath, []byte("cert\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(caPath, []byte("ca\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{"mtls", "install-cert", "--client-id", "client_alice", "--cert-file", certPath, "--ca-file", caPath})
+	if code != 0 {
+		t.Fatalf("mtls install-cert failed with %d: %s", code, stderr.String())
+	}
+	profile := filepath.Join(dir, "custodia", "client_alice")
+	for _, path := range []string{filepath.Join(profile, "client_alice.crt"), filepath.Join(profile, "ca.crt")} {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("expected %s: %v", path, err)
+		}
 	}
 }
 

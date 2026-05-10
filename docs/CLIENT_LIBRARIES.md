@@ -9,11 +9,11 @@ The repository contains two client layers:
 1. **Transport clients** send and receive already-opaque REST payloads over mTLS.
 2. **High-level crypto clients** encrypt plaintext locally, build recipient envelopes locally, call the transport client, and decrypt authorized responses locally.
 
-The Go `custodia-client` command is the repository-provided encrypted secrets CLI for end-user put/get/share/version, access revoke/delete, metadata inspection and reusable JSON config profiles. The Bash helper is intentionally different: it is a transport helper with an optional external crypto-provider bridge. It does not implement native Bash cryptography.
+The Go `custodia-client` command is the repository-provided encrypted secrets CLI for end-user put/get/share/version, access revoke/delete, metadata inspection and standard per-user JSON profile UX. The Bash helper is a sourceable shell wrapper around that CLI; it does not implement native Bash cryptography.
 
 ## Repository status
 
-Go, Python, Node.js/TypeScript, Java, C++ and Rust provide repository-level transport plus high-level crypto surfaces. Bash is included as a transport helper for CI, smoke tests and operational scripts; encrypted Bash flows require an external crypto provider executable.
+Go, Python, Node.js/TypeScript, Java, C++ and Rust provide repository-level transport plus high-level crypto surfaces. Bash is included as a sourceable helper for CI, smoke tests and operational scripts that delegate encryption and transport to `custodia-client`.
 
 The public registry publication status remains separate from repository implementation status. Until release channels are published, language packages are monorepo source snapshots governed by the SDK release policy.
 
@@ -28,7 +28,7 @@ The public registry publication status remains separate from repository implemen
 | C++ | `clients/cpp` | Yes | Yes | libcurl transport and OpenSSL crypto. |
 | Rust | `clients/rust` | Yes | Yes | reqwest/rustls transport and local crypto. |
 | Go CLI | `cmd/custodia-client` | Yes | Yes | Encrypted put/get/share/version, access revoke/delete, metadata inspection and reusable JSON client profile UX. |
-| Bash | `clients/bash` | Yes | External provider only | Shell helper for CI and operational scripts. |
+| Bash | `clients/bash` | Via `custodia-client` | Via `custodia-client` | Sourceable shell helper for CI and operational scripts. |
 
 A client is considered repository-official when it has:
 
@@ -176,7 +176,7 @@ Release checks call the language-specific targets when the required toolchains a
 
 ## CLI validation helpers
 
-`custodia-client config check` validates local config profiles and referenced mTLS/crypto files. `custodia-client key inspect` reports a local X25519 key fingerprint without exposing private key material.
+`custodia-client config check --client-id ID` validates standard per-user profiles and referenced mTLS/crypto files. `custodia-client key inspect` reports a local X25519 key fingerprint without exposing private key material.
 
 
 ## End-to-end smoke test

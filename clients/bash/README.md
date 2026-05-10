@@ -16,7 +16,7 @@ Go `custodia-client` binary.
 ```bash
 source /usr/share/custodia/sdk/clients/bash/custodia.bash
 
-custodia_use_config "$HOME/.config/custodia/client_alice/client_alice.config.json"
+custodia_use_client_id client_alice
 custodia_config_check
 custodia_doctor --online
 
@@ -26,6 +26,7 @@ custodia_secret_put_file smoke-demo /tmp/secret.txt /tmp/secret.create.json
 
 Functions:
 
+- `custodia_use_client_id CLIENT_ID`
 - `custodia_use_config CONFIG`
 - `custodia_config_check`
 - `custodia_doctor [--online]`
@@ -38,5 +39,5 @@ Functions:
 
 - Do not run shell scripts with `set -x` around secret operations.
 - Do not put plaintext, DEKs, private keys or passphrases in shell history.
-- Protect client profiles and local crypto keys under `$HOME/.config/custodia`.
+- Protect client profiles and local crypto keys under `$XDG_CONFIG_HOME/custodia` or `$HOME/.config/custodia`.
 - Use trusted out-of-band exchange for recipient public-key files.

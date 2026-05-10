@@ -45,11 +45,12 @@ type app struct {
 }
 
 type transportFlags struct {
-	configFile string
-	serverURL  string
-	certFile   string
-	keyFile    string
-	caFile     string
+	configFile      string
+	serverURL       string
+	certFile        string
+	keyFile         string
+	caFile          string
+	profileClientID string
 }
 
 type cryptoFlags struct {
@@ -128,24 +129,26 @@ func (a *app) run(args []string) int {
 
 func (a *app) usage() {
 	fmt.Fprintln(a.stdout, `Usage:
-  custodia-client key generate --client-id ID --private-key-out FILE --public-key-out FILE
+  custodia-client mtls generate-csr --client-id ID [--private-key-out FILE --csr-out FILE]
+  custodia-client mtls install-cert --client-id ID --cert-file FILE --ca-file FILE
+  custodia-client key generate --client-id ID [--private-key-out FILE --public-key-out FILE]
   custodia-client key public --client-id ID --private-key FILE --public-key-out FILE
   custodia-client key inspect --key FILE
-  custodia-client config write --out FILE --server-url URL --cert FILE --key FILE --ca FILE [--client-id ID --crypto-key FILE]
-  custodia-client config check --config FILE
-  custodia-client doctor --config FILE [--online]
-  custodia-client mtls generate-csr --client-id ID --private-key-out FILE --csr-out FILE
-  custodia-client secret put --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --name NAME --value-file FILE [--recipient ID=PUBLIC.json]
-  custodia-client secret get --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --secret-id ID [--out FILE]
-  custodia-client secret share --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --secret-id ID --target-client-id ID --recipient ID=PUBLIC.json
-  custodia-client secret version put --server-url URL --cert FILE --key FILE --ca FILE --client-id ID --crypto-key FILE --secret-id ID --value-file FILE [--recipient ID=PUBLIC.json]
-  custodia-client secret versions --server-url URL --cert FILE --key FILE --ca FILE --secret-id ID [--limit N]
-  custodia-client secret access list --server-url URL --cert FILE --key FILE --ca FILE --secret-id ID [--limit N]
-  custodia-client secret access revoke --server-url URL --cert FILE --key FILE --ca FILE --secret-id ID --target-client-id ID --yes
-  custodia-client secret delete --server-url URL --cert FILE --key FILE --ca FILE --secret-id ID --yes
-  custodia-client secret list --server-url URL --cert FILE --key FILE --ca FILE [--limit N]
+  custodia-client config write --client-id ID --server-url URL [--out FILE --cert FILE --key FILE --ca FILE --crypto-key FILE]
+  custodia-client config check --client-id ID|--config FILE
+  custodia-client doctor --client-id ID|--config FILE [--online]
+  custodia-client secret put --client-id ID --name NAME --value-file FILE [--recipient ID=PUBLIC.json]
+  custodia-client secret get --client-id ID --secret-id ID [--out FILE]
+  custodia-client secret share --client-id ID --secret-id ID --target-client-id ID --recipient ID=PUBLIC.json
+  custodia-client secret version put --client-id ID --secret-id ID --value-file FILE [--recipient ID=PUBLIC.json]
+  custodia-client secret versions --client-id ID --secret-id ID [--limit N]
+  custodia-client secret access list --client-id ID --secret-id ID [--limit N]
+  custodia-client secret access revoke --client-id ID --secret-id ID --target-client-id ID --yes
+  custodia-client secret delete --client-id ID --secret-id ID --yes
+  custodia-client secret list --client-id ID [--limit N]
 
-Common options may be stored in a JSON config file and loaded with --config FILE or CUSTODIA_CLIENT_CONFIG.
+Passing --client-id ID uses the standard profile at $XDG_CONFIG_HOME/custodia/ID or $HOME/.config/custodia/ID.
+Common options may still be stored in a JSON config file and loaded with --config FILE or CUSTODIA_CLIENT_CONFIG.
 
 Secret payloads are encrypted/decrypted locally. Custodia receives only ciphertext, crypto_metadata and opaque recipient envelopes.`)
 }
@@ -158,6 +161,8 @@ func (a *app) runMTLS(args []string) int {
 	switch args[0] {
 	case "generate-csr":
 		return a.runMTLSGenerateCSR(args[1:])
+	case "install-cert":
+		return a.runMTLSInstallCert(args[1:])
 	default:
 		fmt.Fprintf(a.stderr, "unknown mtls subcommand: %s\n", args[0])
 		return 2
@@ -172,11 +177,27 @@ func (a *app) runMTLSGenerateCSR(args []string) int {
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
-	if strings.TrimSpace(*clientID) == "" || strings.TrimSpace(*privateKeyOut) == "" || strings.TrimSpace(*csrOut) == "" {
-		fmt.Fprintln(a.stderr, "--client-id, --private-key-out and --csr-out are required")
+	id := strings.TrimSpace(*clientID)
+	if id == "" {
+		fmt.Fprintln(a.stderr, "--client-id is required")
 		return 2
 	}
-	generated, err := certutil.GenerateClientCSR(strings.TrimSpace(*clientID))
+	paths, err := defaultClientProfilePaths(id)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 2
+	}
+	if strings.TrimSpace(*privateKeyOut) == "" {
+		*privateKeyOut = paths.MTLSKey
+	}
+	if strings.TrimSpace(*csrOut) == "" {
+		*csrOut = paths.MTLSCSR
+	}
+	if err := ensureClientProfileDir(paths.Dir); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	generated, err := certutil.GenerateClientCSR(id)
 	if err != nil {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
@@ -189,7 +210,51 @@ func (a *app) runMTLSGenerateCSR(args []string) int {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
-	fmt.Fprintf(a.stdout, "wrote %s and %s\n", *privateKeyOut, *csrOut)
+	fmt.Fprintf(a.stdout, "wrote mTLS private key to %s\n", *privateKeyOut)
+	fmt.Fprintf(a.stdout, "wrote client CSR to %s\n", *csrOut)
+	return 0
+}
+
+func (a *app) runMTLSInstallCert(args []string) int {
+	fs := newFlagSet("custodia-client mtls install-cert", a.stderr)
+	clientID := fs.String("client-id", "", "client id for the local profile")
+	certFile := fs.String("cert-file", "", "signed mTLS client certificate PEM")
+	caFile := fs.String("ca-file", "", "Custodia CA certificate PEM")
+	certOut := fs.String("cert-out", "", "destination for the installed client certificate")
+	caOut := fs.String("ca-out", "", "destination for the installed CA certificate")
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	id := strings.TrimSpace(*clientID)
+	if id == "" || strings.TrimSpace(*certFile) == "" || strings.TrimSpace(*caFile) == "" {
+		fmt.Fprintln(a.stderr, "--client-id, --cert-file and --ca-file are required")
+		return 2
+	}
+	paths, err := defaultClientProfilePaths(id)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 2
+	}
+	if strings.TrimSpace(*certOut) == "" {
+		*certOut = paths.MTLSCert
+	}
+	if strings.TrimSpace(*caOut) == "" {
+		*caOut = paths.CA
+	}
+	if err := ensureClientProfileDir(paths.Dir); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	if err := copyFileExclusive(*certFile, *certOut, publicFileMode); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	if err := copyFileExclusive(*caFile, *caOut, publicFileMode); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	fmt.Fprintf(a.stdout, "installed client certificate to %s\n", *certOut)
+	fmt.Fprintf(a.stdout, "installed CA certificate to %s\n", *caOut)
 	return 0
 }
 
@@ -221,11 +286,38 @@ func (a *app) runConfigWrite(args []string) int {
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
+	id := strings.TrimSpace(*clientID)
+	if id != "" {
+		paths, err := defaultClientProfilePaths(id)
+		if err != nil {
+			fmt.Fprintf(a.stderr, "%v\n", err)
+			return 2
+		}
+		if strings.TrimSpace(*out) == "" {
+			*out = paths.Config
+		}
+		if strings.TrimSpace(*certFile) == "" {
+			*certFile = paths.MTLSCert
+		}
+		if strings.TrimSpace(*keyFile) == "" {
+			*keyFile = paths.MTLSKey
+		}
+		if strings.TrimSpace(*caFile) == "" {
+			*caFile = paths.CA
+		}
+		if strings.TrimSpace(*cryptoKey) == "" {
+			*cryptoKey = paths.CryptoPrivate
+		}
+		if err := ensureClientProfileDir(paths.Dir); err != nil {
+			fmt.Fprintf(a.stderr, "%v\n", err)
+			return 1
+		}
+	}
 	if strings.TrimSpace(*out) == "" || strings.TrimSpace(*serverURL) == "" || strings.TrimSpace(*certFile) == "" || strings.TrimSpace(*keyFile) == "" || strings.TrimSpace(*caFile) == "" {
-		fmt.Fprintln(a.stderr, "--out, --server-url, --cert, --key and --ca are required")
+		fmt.Fprintln(a.stderr, "--server-url and either --client-id or explicit --out, --cert, --key and --ca are required")
 		return 2
 	}
-	config := clientConfigFile{ServerURL: strings.TrimSpace(*serverURL), CertFile: strings.TrimSpace(*certFile), KeyFile: strings.TrimSpace(*keyFile), CAFile: strings.TrimSpace(*caFile), ClientID: strings.TrimSpace(*clientID), CryptoKey: strings.TrimSpace(*cryptoKey)}
+	config := clientConfigFile{ServerURL: strings.TrimSpace(*serverURL), CertFile: strings.TrimSpace(*certFile), KeyFile: strings.TrimSpace(*keyFile), CAFile: strings.TrimSpace(*caFile), ClientID: id, CryptoKey: strings.TrimSpace(*cryptoKey)}
 	if err := writeJSONFileExclusive(*out, config, keyFileMode); err != nil {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
@@ -233,19 +325,26 @@ func (a *app) runConfigWrite(args []string) int {
 	fmt.Fprintf(a.stdout, "wrote %s\n", *out)
 	return 0
 }
-
 func (a *app) runConfigCheck(args []string) int {
 	fs := newFlagSet("custodia-client config check", a.stderr)
-	var transport transportFlags
-	registerTransportFlags(fs, &transport)
+	configFile := fs.String("config", envDefault("CUSTODIA_CLIENT_CONFIG", ""), "Custodia client config JSON")
+	clientID := fs.String("client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "local client id for the standard profile")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
-	if strings.TrimSpace(transport.configFile) == "" {
-		fmt.Fprintln(a.stderr, "--config is required")
+	if strings.TrimSpace(*configFile) == "" && strings.TrimSpace(*clientID) != "" {
+		path, err := defaultClientConfigPath(*clientID)
+		if err != nil {
+			fmt.Fprintf(a.stderr, "%v\n", err)
+			return 2
+		}
+		*configFile = path
+	}
+	if strings.TrimSpace(*configFile) == "" {
+		fmt.Fprintln(a.stderr, "--client-id or --config is required")
 		return 2
 	}
-	config, err := validateClientConfigFile(transport.configFile)
+	config, err := validateClientConfigFile(*configFile)
 	if err != nil {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
@@ -257,7 +356,6 @@ func (a *app) runConfigCheck(args []string) int {
 		"has_crypto_key": strings.TrimSpace(config.CryptoKey) != "",
 	})
 }
-
 func (a *app) runKey(args []string) int {
 	if len(args) == 0 {
 		fmt.Fprintln(a.stderr, "missing key subcommand")
@@ -284,23 +382,39 @@ func (a *app) runKeyGenerate(args []string) int {
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
-	if strings.TrimSpace(*clientID) == "" || strings.TrimSpace(*privateOut) == "" || strings.TrimSpace(*publicOut) == "" {
-		fmt.Fprintln(a.stderr, "--client-id, --private-key-out and --public-key-out are required")
+	id := strings.TrimSpace(*clientID)
+	if id == "" {
+		fmt.Fprintln(a.stderr, "--client-id is required")
 		return 2
+	}
+	paths, err := defaultClientProfilePaths(id)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 2
+	}
+	if strings.TrimSpace(*privateOut) == "" {
+		*privateOut = paths.CryptoPrivate
+	}
+	if strings.TrimSpace(*publicOut) == "" {
+		*publicOut = paths.CryptoPublic
+	}
+	if err := ensureClientProfileDir(paths.Dir); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
 	}
 	privateKey := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, privateKey); err != nil {
 		fmt.Fprintf(a.stderr, "generate private key: %v\n", err)
 		return 1
 	}
-	if err := writeKeyPair(*clientID, privateKey, *privateOut, *publicOut); err != nil {
+	if err := writeKeyPair(id, privateKey, *privateOut, *publicOut); err != nil {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
-	fmt.Fprintf(a.stdout, "wrote %s and %s\n", *privateOut, *publicOut)
+	fmt.Fprintf(a.stdout, "wrote application private key to %s\n", *privateOut)
+	fmt.Fprintf(a.stdout, "wrote application public key to %s\n", *publicOut)
 	return 0
 }
-
 func (a *app) runKeyPublic(args []string) int {
 	fs := newFlagSet("custodia-client key public", a.stderr)
 	clientID := fs.String("client-id", "", "local Custodia client id override")
@@ -467,11 +581,13 @@ func (a *app) runSecretDelete(args []string) int {
 	fs := newFlagSet("custodia-client secret delete", a.stderr)
 	var transport transportFlags
 	registerTransportFlags(fs, &transport)
+	clientID := fs.String("client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "local client id for the standard profile")
 	secretID := fs.String("secret-id", "", "secret id")
 	confirmed := fs.Bool("yes", false, "confirm destructive secret deletion")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
+	transport.profileClientID = strings.TrimSpace(*clientID)
 	if strings.TrimSpace(*secretID) == "" {
 		fmt.Fprintln(a.stderr, "--secret-id is required")
 		return 2
@@ -570,11 +686,13 @@ func (a *app) runSecretVersionsList(args []string) int {
 	fs := newFlagSet("custodia-client secret versions", a.stderr)
 	var transport transportFlags
 	registerTransportFlags(fs, &transport)
+	clientID := fs.String("client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "local client id for the standard profile")
 	secretID := fs.String("secret-id", "", "secret id")
 	limit := fs.Int("limit", 100, "maximum rows to return")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
+	transport.profileClientID = strings.TrimSpace(*clientID)
 	if strings.TrimSpace(*secretID) == "" {
 		fmt.Fprintln(a.stderr, "--secret-id is required")
 		return 2
@@ -612,11 +730,13 @@ func (a *app) runSecretAccessList(args []string) int {
 	fs := newFlagSet("custodia-client secret access list", a.stderr)
 	var transport transportFlags
 	registerTransportFlags(fs, &transport)
+	clientID := fs.String("client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "local client id for the standard profile")
 	secretID := fs.String("secret-id", "", "secret id")
 	limit := fs.Int("limit", 100, "maximum rows to return")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
+	transport.profileClientID = strings.TrimSpace(*clientID)
 	if strings.TrimSpace(*secretID) == "" {
 		fmt.Fprintln(a.stderr, "--secret-id is required")
 		return 2
@@ -638,12 +758,14 @@ func (a *app) runSecretAccessRevoke(args []string) int {
 	fs := newFlagSet("custodia-client secret access revoke", a.stderr)
 	var transport transportFlags
 	registerTransportFlags(fs, &transport)
+	clientID := fs.String("client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "local client id for the standard profile")
 	secretID := fs.String("secret-id", "", "secret id")
 	targetClientID := fs.String("target-client-id", "", "target client id whose future access is revoked")
 	confirmed := fs.Bool("yes", false, "confirm access revocation")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
+	transport.profileClientID = strings.TrimSpace(*clientID)
 	if strings.TrimSpace(*secretID) == "" || strings.TrimSpace(*targetClientID) == "" {
 		fmt.Fprintln(a.stderr, "--secret-id and --target-client-id are required")
 		return 2
@@ -668,10 +790,12 @@ func (a *app) runSecretList(args []string) int {
 	fs := newFlagSet("custodia-client secret list", a.stderr)
 	var transport transportFlags
 	registerTransportFlags(fs, &transport)
+	clientID := fs.String("client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "local client id for the standard profile")
 	limit := fs.Int("limit", 100, "maximum rows to return")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
+	transport.profileClientID = strings.TrimSpace(*clientID)
 	client, err := buildTransportClient(transport)
 	if err != nil {
 		fmt.Fprintf(a.stderr, "%v\n", err)
@@ -721,6 +845,9 @@ func registerCryptoFlagsNoRecipients(fs *flag.FlagSet, flags *cryptoFlags) {
 }
 
 func buildTransportClient(transport transportFlags) (*sdk.Client, error) {
+	if err := defaultTransportConfigFromClientID(&transport, transport.profileClientID); err != nil {
+		return nil, err
+	}
 	if err := applyClientConfig(&transport, nil); err != nil {
 		return nil, err
 	}
@@ -735,8 +862,18 @@ func buildTransportClient(transport transportFlags) (*sdk.Client, error) {
 }
 
 func buildCryptoClient(transport transportFlags, crypto cryptoFlags) (*sdk.CryptoClient, []string, error) {
+	if err := defaultTransportConfigFromClientID(&transport, crypto.clientID); err != nil {
+		return nil, nil, err
+	}
 	if err := applyClientConfig(&transport, &crypto); err != nil {
 		return nil, nil, err
+	}
+	if strings.TrimSpace(crypto.cryptoKey) == "" && strings.TrimSpace(crypto.clientID) != "" {
+		paths, err := defaultClientProfilePaths(crypto.clientID)
+		if err != nil {
+			return nil, nil, err
+		}
+		crypto.cryptoKey = paths.CryptoPrivate
 	}
 	if strings.TrimSpace(crypto.cryptoKey) == "" {
 		return nil, nil, fmt.Errorf("--crypto-key is required")

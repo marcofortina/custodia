@@ -1,98 +1,70 @@
 # Client certificate lifecycle
 
-Custodia separates client metadata registration from certificate issuance. The vault API registers client metadata; the dedicated `custodia-signer` process signs client mTLS CSRs.
+Custodia clients use mTLS for transport identity and a separate client-side application key for encrypted payloads. The preferred remote-client workflow keeps the mTLS private key on the client host: the client generates a CSR, the server/admin host signs the CSR, and only the signed certificate plus public CA certificate return to the client.
 
-## Preferred remote-client flow
+## Client-side CSR flow
 
-For remote client workstations, generate the mTLS private key and CSR on the client. Transfer only the CSR to the server/admin host. The server signs the CSR and returns the public certificate plus the public CA certificate.
-
-### 1. Generate the CSR on the client
+On the client host:
 
 ```bash
 export CLIENT_ID=client_alice
-export WORK="$HOME/.config/custodia/$CLIENT_ID"
-install -d -m 0700 "$WORK"
-
-custodia-client mtls generate-csr \
-  --client-id "$CLIENT_ID" \
-  --private-key-out "$WORK/$CLIENT_ID.key" \
-  --csr-out "$WORK/$CLIENT_ID.csr"
+custodia-client mtls generate-csr --client-id "$CLIENT_ID"
 ```
 
-Transfer `$WORK/$CLIENT_ID.csr` to the server/admin host.
+This creates the standard per-user profile under `$XDG_CONFIG_HOME/custodia/$CLIENT_ID`, or `$HOME/.config/custodia/$CLIENT_ID` when `XDG_CONFIG_HOME` is not set, and writes:
 
-### 2. Sign the CSR on the server/admin host
+```text
+client_alice.key
+client_alice.csr
+```
+
+Transfer only `client_alice.csr` to the server/admin host. Do not transfer `client_alice.key`.
+
+On the server/admin host:
 
 ```bash
-export CLIENT_ID=client_alice
-export API=https://localhost:8443
-export SIGNER=https://localhost:9444
-export ISSUE_DIR="/var/lib/custodia/client-issue/$CLIENT_ID"
-
-sudo rm -rf "$ISSUE_DIR"
-sudo install -d -o custodia -g custodia -m 0700 "$ISSUE_DIR"
-sudo install -o custodia -g custodia -m 0644 "$CLIENT_ID.csr" "$ISSUE_DIR/$CLIENT_ID.csr"
-
 sudo -u custodia custodia-admin \
-  --server-url "$API" \
+  --server-url "$CUSTODIA_API" \
   --cert /etc/custodia/admin.crt \
   --key /etc/custodia/admin.key \
   --ca /etc/custodia/ca.crt \
   client sign-csr \
-  --signer-url "$SIGNER" \
+  --signer-url "$CUSTODIA_SIGNER" \
   --client-id "$CLIENT_ID" \
-  --csr-file "$ISSUE_DIR/$CLIENT_ID.csr" \
-  --certificate-out "$ISSUE_DIR/$CLIENT_ID.crt"
+  --csr-file "$CLIENT_ID.csr" \
+  --certificate-out "$CLIENT_ID.crt"
 ```
 
-Transfer `$ISSUE_DIR/$CLIENT_ID.crt` and `/etc/custodia/ca.crt` back to the client. Remove the server-side staging directory after delivery:
+Transfer the signed certificate and public CA certificate back to the client host.
+
+On the client host:
 
 ```bash
-sudo rm -rf "$ISSUE_DIR"
-```
-
-### 3. Configure the client profile
-
-On the client workstation, place the received certificate and CA under the local profile:
-
-```bash
-install -m 0644 client_alice.crt "$WORK/$CLIENT_ID.crt"
-install -m 0644 ca.crt "$WORK/ca.crt"
-chmod 0600 "$WORK/$CLIENT_ID.key"
-```
-
-Generate the application encryption key locally:
-
-```bash
-custodia-client key generate \
+custodia-client mtls install-cert \
   --client-id "$CLIENT_ID" \
-  --private-key-out "$WORK/$CLIENT_ID.x25519.json" \
-  --public-key-out "$WORK/$CLIENT_ID.x25519.pub.json"
+  --cert-file "$CLIENT_ID.crt" \
+  --ca-file ca.crt
 ```
 
-Write and validate the reusable client config:
+Then generate the local application encryption key and write the client profile:
 
 ```bash
+custodia-client key generate --client-id "$CLIENT_ID"
+
 custodia-client config write \
-  --out "$WORK/$CLIENT_ID.config.json" \
-  --server-url "$API" \
-  --cert "$WORK/$CLIENT_ID.crt" \
-  --key "$WORK/$CLIENT_ID.key" \
-  --ca "$WORK/ca.crt" \
   --client-id "$CLIENT_ID" \
-  --crypto-key "$WORK/$CLIENT_ID.x25519.json"
+  --server-url "$CUSTODIA_API"
 
-custodia-client config check --config "$WORK/$CLIENT_ID.config.json"
-custodia-client doctor --config "$WORK/$CLIENT_ID.config.json" --online
+custodia-client config check --client-id "$CLIENT_ID"
+custodia-client doctor --client-id "$CLIENT_ID" --online
 ```
 
-## Lite/lab shortcut
+## Legacy all-in-one issuance
 
-`custodia-admin client issue` remains available for local Lite/lab workflows where the same operator can reach the vault API and `custodia-signer`. It creates local mTLS material under the requested output directory. Do not use it as the preferred remote-client path because it generates the mTLS private key on the server/admin side.
+`custodia-admin client issue` can still generate and sign client mTLS material in one step for local lab setups. Do not use that path for remote clients when you want the mTLS private key to be generated and retained only on the client workstation.
 
-## Security notes
+## Rotation and revocation
 
-- mTLS private keys should be generated on the client workstation when clients are remote.
-- Application encryption keys generated by `custodia-client key generate` must always remain client-side.
-- The server must never receive plaintext, DEKs, application private keys or recipient private keys.
-- Do not loosen `/etc/custodia` permissions for unprivileged client commands. Copy the public CA certificate into the client profile instead.
+To rotate a client mTLS certificate, generate a new CSR on the client host and sign it with `custodia-admin client sign-csr`. To revoke access, use the admin lifecycle commands documented in the CLI/manpage and keep the revocation evidence with the audit trail.
+
+Application encryption keys are independent from mTLS certificates. Rotating mTLS credentials does not rotate encrypted-secret recipient keys; use `custodia-client key generate` and new secret versions when you need application-key rotation.

@@ -105,7 +105,7 @@ func TestClientDoctorRequiresConfig(t *testing.T) {
 	if code != 2 {
 		t.Fatalf("expected usage failure, got %d", code)
 	}
-	if !strings.Contains(stderr.String(), "--config is required") {
+	if !strings.Contains(stderr.String(), "--client-id or --config is required") {
 		t.Fatalf("expected config error, got %s", stderr.String())
 	}
 }
