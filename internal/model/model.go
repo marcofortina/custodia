@@ -58,7 +58,9 @@ type RecipientEnvelope struct {
 }
 
 type CreateSecretRequest struct {
-	Name           string              `json:"name"`
+	Namespace      string              `json:"namespace,omitempty"`
+	Key            string              `json:"key,omitempty"`
+	Name           string              `json:"name,omitempty"`
 	Ciphertext     string              `json:"ciphertext"`
 	CryptoMetadata json.RawMessage     `json:"crypto_metadata,omitempty"`
 	Envelopes      []RecipientEnvelope `json:"envelopes"`
@@ -107,6 +109,8 @@ type SecretVersionRef struct {
 
 type SecretMetadata struct {
 	SecretID          string     `json:"secret_id"`
+	Namespace         string     `json:"namespace,omitempty"`
+	Key               string     `json:"key,omitempty"`
 	Name              string     `json:"name"`
 	VersionID         string     `json:"version_id"`
 	Permissions       int        `json:"permissions"`
@@ -148,6 +152,8 @@ type AccessGrantMetadata struct {
 
 type SecretReadResponse struct {
 	SecretID        string          `json:"secret_id"`
+	Namespace       string          `json:"namespace,omitempty"`
+	Key             string          `json:"key,omitempty"`
 	VersionID       string          `json:"version_id"`
 	Ciphertext      string          `json:"ciphertext"`
 	CryptoMetadata  json.RawMessage `json:"crypto_metadata,omitempty"`

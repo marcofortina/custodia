@@ -150,6 +150,149 @@ func TestMemoryStoreListsSecretsNewestFirst(t *testing.T) {
 	}
 }
 
+func TestMemoryStoreDefaultsSecretNamespaceAndKey(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Name:        "  user:sys  ",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+
+	read, err := store.GetSecret(ctx, "client_alice", created.SecretID)
+	if err != nil {
+		t.Fatalf("read secret: %v", err)
+	}
+	if read.Namespace != model.DefaultSecretNamespace || read.Key != "user:sys" {
+		t.Fatalf("expected default namespace and normalized key, got %+v", read)
+	}
+
+	secrets, err := store.ListSecrets(ctx, "client_alice")
+	if err != nil {
+		t.Fatalf("list secrets: %v", err)
+	}
+	if len(secrets) != 1 || secrets[0].Namespace != model.DefaultSecretNamespace || secrets[0].Key != "user:sys" || secrets[0].Name != "user:sys" {
+		t.Fatalf("expected metadata to expose namespace/key compat fields, got %+v", secrets)
+	}
+}
+
+func TestMemoryStoreRejectsVisibleKeyConflictsOnCreate(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_alice", "client_alice")
+
+	if _, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Namespace:   "db01",
+		Key:         "user:sys",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
+		Permissions: int(model.PermissionAll),
+	}); err != nil {
+		t.Fatalf("create first secret: %v", err)
+	}
+
+	_, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Namespace:   "db01",
+		Key:         "user:sys",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != ErrConflict {
+		t.Fatalf("expected same visible namespace/key to conflict, got %v", err)
+	}
+
+	if _, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Namespace:   "db02",
+		Key:         "user:sys",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
+		Permissions: int(model.PermissionAll),
+	}); err != nil {
+		t.Fatalf("expected same key in a different namespace to be allowed: %v", err)
+	}
+}
+
+func TestMemoryStoreRejectsVisibleKeyConflictWhenSharing(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	mustCreateClient(t, store, "client_bob", "client_bob")
+
+	aliceSecret, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Namespace:   "db01",
+		Key:         "user:sys",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtYWxpY2U="}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create alice secret: %v", err)
+	}
+	if _, err := store.CreateSecret(ctx, "client_bob", model.CreateSecretRequest{
+		Namespace:   "db01",
+		Key:         "user:sys",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_bob", Envelope: "ZW52ZWxvcGUtYm9i"}},
+		Permissions: int(model.PermissionAll),
+	}); err != nil {
+		t.Fatalf("create bob secret: %v", err)
+	}
+
+	err = store.ShareSecret(ctx, "client_alice", aliceSecret.SecretID, model.ShareSecretRequest{
+		VersionID:      aliceSecret.VersionID,
+		TargetClientID: "client_bob",
+		Envelope:       "ZW52ZWxvcGUtYm9iLWFsaWNl",
+		Permissions:    int(model.PermissionRead),
+	})
+	if err != ErrConflict {
+		t.Fatalf("expected share to conflict with target visible namespace/key, got %v", err)
+	}
+}
+
+func TestMemoryStoreReleasesVisibleKeyAfterRevoke(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryStore()
+	mustCreateClient(t, store, "client_alice", "client_alice")
+	mustCreateClient(t, store, "client_bob", "client_bob")
+
+	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Namespace:   "db01",
+		Key:         "user:sys",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtYWxpY2U="}},
+		Permissions: int(model.PermissionAll),
+	})
+	if err != nil {
+		t.Fatalf("create alice secret: %v", err)
+	}
+	if err := store.ShareSecret(ctx, "client_alice", created.SecretID, model.ShareSecretRequest{
+		VersionID:      created.VersionID,
+		TargetClientID: "client_bob",
+		Envelope:       "ZW52ZWxvcGUtYm9i",
+		Permissions:    int(model.PermissionRead),
+	}); err != nil {
+		t.Fatalf("share secret: %v", err)
+	}
+	if err := store.RevokeAccess(ctx, "client_alice", created.SecretID, "client_bob"); err != nil {
+		t.Fatalf("revoke bob: %v", err)
+	}
+	if _, err := store.CreateSecret(ctx, "client_bob", model.CreateSecretRequest{
+		Namespace:   "db01",
+		Key:         "user:sys",
+		Ciphertext:  "Y2lwaGVydGV4dA==",
+		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_bob", Envelope: "ZW52ZWxvcGUtYm9i"}},
+		Permissions: int(model.PermissionAll),
+	}); err != nil {
+		t.Fatalf("expected revoked shared keyspace to be reusable by bob: %v", err)
+	}
+}
+
 func TestMemoryStoreListsClientsInStableOrder(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryStore()

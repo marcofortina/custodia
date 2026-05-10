@@ -41,6 +41,7 @@ type sqliteSnapshot struct {
 	Clients         map[string]model.Client         `json:"clients"`
 	SubjectToClient map[string]string               `json:"subject_to_client"`
 	Secrets         map[string]*memorySecret        `json:"secrets"`
+	VisibleKeyspace map[string]string               `json:"visible_keyspace"`
 	PendingAccess   map[string]*memoryPendingAccess `json:"pending_access"`
 	AuditEvents     []model.AuditEvent              `json:"audit_events"`
 	LastAuditHash   []byte                          `json:"last_audit_hash"`
@@ -126,6 +127,8 @@ func (s *SQLiteStore) load(ctx context.Context) error {
 	s.memory.clients = ensureClientMap(snapshot.Clients)
 	s.memory.subjectToClient = ensureStringMap(snapshot.SubjectToClient)
 	s.memory.secrets = ensureSecretMap(snapshot.Secrets)
+	s.memory.visibleKeyspace = ensureStringMap(snapshot.VisibleKeyspace)
+	s.memory.rebuildVisibleKeyspaceLocked()
 	s.memory.pendingAccess = ensurePendingMap(snapshot.PendingAccess)
 	s.memory.auditEvents = snapshot.AuditEvents
 	s.memory.lastAuditHash = snapshot.LastAuditHash
@@ -163,6 +166,7 @@ func (s *SQLiteStore) save(ctx context.Context) error {
 		Clients:         s.memory.clients,
 		SubjectToClient: s.memory.subjectToClient,
 		Secrets:         s.memory.secrets,
+		VisibleKeyspace: s.memory.visibleKeyspace,
 		PendingAccess:   s.memory.pendingAccess,
 		AuditEvents:     s.memory.auditEvents,
 		LastAuditHash:   s.memory.lastAuditHash,

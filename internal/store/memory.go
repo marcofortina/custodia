@@ -27,6 +27,7 @@ type MemoryStore struct {
 	clients         map[string]model.Client
 	subjectToClient map[string]string
 	secrets         map[string]*memorySecret
+	visibleKeyspace map[string]string
 	pendingAccess   map[string]*memoryPendingAccess
 	auditEvents     []model.AuditEvent
 	lastAuditHash   []byte
@@ -34,6 +35,8 @@ type MemoryStore struct {
 
 type memorySecret struct {
 	SecretID          string
+	Namespace         string
+	Key               string
 	Name              string
 	CreatedByClientID string
 	CreatedAt         time.Time
@@ -77,6 +80,7 @@ func NewMemoryStore() *MemoryStore {
 		clients:         make(map[string]model.Client),
 		subjectToClient: make(map[string]string),
 		secrets:         make(map[string]*memorySecret),
+		visibleKeyspace: make(map[string]string),
 		pendingAccess:   make(map[string]*memoryPendingAccess),
 	}
 }
@@ -152,10 +156,15 @@ func (s *MemoryStore) RevokeClient(_ context.Context, clientID string) error {
 	client.RevokedAt = &now
 	s.clients[clientID] = client
 	for _, secret := range s.secrets {
+		changed := false
 		for _, version := range secret.Versions {
 			if access, ok := version.Access[clientID]; ok && access.RevokedAt == nil {
 				access.RevokedAt = &now
+				changed = true
 			}
+		}
+		if changed {
+			s.syncSecretVisibilityLocked(secret)
 		}
 	}
 	for _, pending := range s.pendingAccess {
@@ -167,8 +176,7 @@ func (s *MemoryStore) RevokeClient(_ context.Context, clientID string) error {
 }
 
 func (s *MemoryStore) CreateSecret(_ context.Context, actorClientID string, req model.CreateSecretRequest) (model.SecretVersionRef, error) {
-	req.Name = model.NormalizeSecretName(req.Name)
-	if !model.ValidSecretName(req.Name) {
+	if err := normalizeSecretIdentity(&req); err != nil {
 		return model.SecretVersionRef{}, ErrInvalidInput
 	}
 	if err := validateOpaqueSecretPayload(req.Ciphertext, req.Envelopes); err != nil {
@@ -195,6 +203,9 @@ func (s *MemoryStore) CreateSecret(_ context.Context, actorClientID string, req 
 		if !s.clientActiveLocked(envelope.ClientID) {
 			return model.SecretVersionRef{}, ErrInvalidInput
 		}
+		if existingSecretID, ok := s.activeVisibleSecretIDLocked(envelope.ClientID, req.Namespace, req.Key); ok && existingSecretID != "" {
+			return model.SecretVersionRef{}, ErrConflict
+		}
 	}
 	secretID := id.New()
 	versionID := id.New()
@@ -218,11 +229,14 @@ func (s *MemoryStore) CreateSecret(_ context.Context, actorClientID string, req 
 	}
 	s.secrets[secretID] = &memorySecret{
 		SecretID:          secretID,
+		Namespace:         req.Namespace,
+		Key:               req.Key,
 		Name:              req.Name,
 		CreatedByClientID: actorClientID,
 		CreatedAt:         now,
 		Versions:          []*memoryVersion{version},
 	}
+	s.syncSecretVisibilityLocked(s.secrets[secretID])
 	return model.SecretVersionRef{SecretID: secretID, VersionID: versionID}, nil
 }
 
@@ -247,6 +261,8 @@ func (s *MemoryStore) ListSecrets(_ context.Context, actorClientID string) ([]mo
 		}
 		secrets = append(secrets, model.SecretMetadata{
 			SecretID:          secret.SecretID,
+			Namespace:         secretNamespace(secret),
+			Key:               secretKey(secret),
 			Name:              secret.Name,
 			VersionID:         version.VersionID,
 			Permissions:       access.Permissions,
@@ -273,6 +289,8 @@ func (s *MemoryStore) GetSecret(_ context.Context, actorClientID, secretID strin
 	}
 	return model.SecretReadResponse{
 		SecretID:        secret.SecretID,
+		Namespace:       secretNamespace(secret),
+		Key:             secretKey(secret),
 		VersionID:       version.VersionID,
 		Ciphertext:      version.Ciphertext,
 		CryptoMetadata:  cloneRaw(version.CryptoMetadata),
@@ -350,6 +368,7 @@ func (s *MemoryStore) DeleteSecret(_ context.Context, actorClientID, secretID st
 			pending.RevokedAt = &now
 		}
 	}
+	s.syncSecretVisibilityLocked(secret)
 	return nil
 }
 
@@ -380,6 +399,9 @@ func (s *MemoryStore) ShareSecret(_ context.Context, actorClientID, secretID str
 	if !s.clientActiveLocked(req.TargetClientID) {
 		return ErrInvalidInput
 	}
+	if existingSecretID, ok := s.activeVisibleSecretIDLocked(req.TargetClientID, secretNamespace(secret), secretKey(secret)); ok && existingSecretID != secret.SecretID {
+		return ErrConflict
+	}
 	if existing, ok := version.Access[req.TargetClientID]; ok && activeAccess(existing) {
 		return ErrConflict
 	}
@@ -390,6 +412,7 @@ func (s *MemoryStore) ShareSecret(_ context.Context, actorClientID, secretID str
 		GrantedAt:   time.Now().UTC(),
 		ExpiresAt:   cloneTimePtr(req.ExpiresAt),
 	}
+	s.syncSecretVisibilityLocked(secret)
 	return nil
 }
 
@@ -412,6 +435,9 @@ func (s *MemoryStore) RequestAccessGrant(_ context.Context, actorClientID, secre
 	}
 	if !s.clientActiveLocked(actorClientID) || !s.clientActiveLocked(req.TargetClientID) {
 		return model.AccessGrantRef{}, ErrInvalidInput
+	}
+	if existingSecretID, ok := s.activeVisibleSecretIDLocked(req.TargetClientID, secretNamespace(secret), secretKey(secret)); ok && existingSecretID != secret.SecretID {
+		return model.AccessGrantRef{}, ErrConflict
 	}
 	if existing, ok := version.Access[req.TargetClientID]; ok && activeAccess(existing) {
 		return model.AccessGrantRef{}, ErrConflict
@@ -496,6 +522,9 @@ func (s *MemoryStore) ActivateAccessGrant(_ context.Context, actorClientID, secr
 	if !s.clientActiveLocked(targetClientID) {
 		return ErrInvalidInput
 	}
+	if existingSecretID, ok := s.activeVisibleSecretIDLocked(targetClientID, secretNamespace(secret), secretKey(secret)); ok && existingSecretID != secret.SecretID {
+		return ErrConflict
+	}
 	if existing, ok := version.Access[targetClientID]; ok && activeAccess(existing) {
 		return ErrConflict
 	}
@@ -508,6 +537,7 @@ func (s *MemoryStore) ActivateAccessGrant(_ context.Context, actorClientID, secr
 		ExpiresAt:   cloneTimePtr(pending.ExpiresAt),
 	}
 	pending.ActivatedAt = &now
+	s.syncSecretVisibilityLocked(secret)
 	return nil
 }
 
@@ -535,6 +565,7 @@ func (s *MemoryStore) RevokeAccess(_ context.Context, actorClientID, secretID, t
 	if !revoked {
 		return ErrNotFound
 	}
+	s.syncSecretVisibilityLocked(secret)
 	return nil
 }
 
@@ -564,6 +595,9 @@ func (s *MemoryStore) CreateSecretVersion(_ context.Context, actorClientID, secr
 		if !s.clientActiveLocked(envelope.ClientID) {
 			return model.SecretVersionRef{}, ErrInvalidInput
 		}
+		if existingSecretID, ok := s.activeVisibleSecretIDLocked(envelope.ClientID, secretNamespace(secret), secretKey(secret)); ok && existingSecretID != secret.SecretID {
+			return model.SecretVersionRef{}, ErrConflict
+		}
 	}
 	versionID := id.New()
 	now := time.Now().UTC()
@@ -586,6 +620,7 @@ func (s *MemoryStore) CreateSecretVersion(_ context.Context, actorClientID, secr
 		}
 	}
 	secret.Versions = append(secret.Versions, version)
+	s.syncSecretVisibilityLocked(secret)
 	return model.SecretVersionRef{SecretID: secretID, VersionID: versionID}, nil
 }
 
@@ -635,6 +670,107 @@ func (s *MemoryStore) visibleSecretLocked(actorClientID, secretID string, permis
 		return nil, nil, nil, ErrForbidden
 	}
 	return secret, version, access, nil
+}
+
+func normalizeSecretIdentity(req *model.CreateSecretRequest) error {
+	req.Namespace = model.NormalizeSecretNamespace(req.Namespace)
+	if !model.ValidSecretNamespace(req.Namespace) {
+		return ErrInvalidInput
+	}
+	key := model.NormalizeSecretKey(req.Key)
+	name := model.NormalizeSecretName(req.Name)
+	if key == "" {
+		key = name
+	}
+	if !model.ValidSecretKey(key) {
+		return ErrInvalidInput
+	}
+	if name != "" && name != key {
+		return ErrInvalidInput
+	}
+	req.Key = key
+	req.Name = key
+	return nil
+}
+
+func (s *MemoryStore) activeVisibleSecretIDLocked(clientID, namespace, key string) (string, bool) {
+	secretID, ok := s.visibleKeyspace[visibleKeyspaceKey(clientID, namespace, key)]
+	if !ok {
+		return "", false
+	}
+	secret, ok := s.secrets[secretID]
+	if !ok || secret.DeletedAt != nil {
+		delete(s.visibleKeyspace, visibleKeyspaceKey(clientID, namespace, key))
+		return "", false
+	}
+	version := s.versionLocked(secret, "")
+	if version == nil {
+		delete(s.visibleKeyspace, visibleKeyspaceKey(clientID, namespace, key))
+		return "", false
+	}
+	access, ok := version.Access[clientID]
+	if !ok || !activeAccess(access) {
+		delete(s.visibleKeyspace, visibleKeyspaceKey(clientID, namespace, key))
+		return "", false
+	}
+	return secretID, true
+}
+
+func (s *MemoryStore) syncSecretVisibilityLocked(secret *memorySecret) {
+	if secret == nil {
+		return
+	}
+	if s.visibleKeyspace == nil {
+		s.visibleKeyspace = make(map[string]string)
+	}
+	for key, secretID := range s.visibleKeyspace {
+		if secretID == secret.SecretID {
+			delete(s.visibleKeyspace, key)
+		}
+	}
+	if secret.DeletedAt != nil {
+		return
+	}
+	version := s.versionLocked(secret, "")
+	if version == nil {
+		return
+	}
+	namespace := secretNamespace(secret)
+	key := secretKey(secret)
+	for clientID, access := range version.Access {
+		if activeAccess(access) {
+			s.visibleKeyspace[visibleKeyspaceKey(clientID, namespace, key)] = secret.SecretID
+		}
+	}
+}
+
+func (s *MemoryStore) rebuildVisibleKeyspaceLocked() {
+	s.visibleKeyspace = make(map[string]string)
+	for _, secret := range s.secrets {
+		s.syncSecretVisibilityLocked(secret)
+	}
+}
+
+func visibleKeyspaceKey(clientID, namespace, key string) string {
+	return clientID + "\x00" + model.NormalizeSecretNamespace(namespace) + "\x00" + model.NormalizeSecretKey(key)
+}
+
+func secretNamespace(secret *memorySecret) string {
+	if secret == nil {
+		return model.DefaultSecretNamespace
+	}
+	return model.NormalizeSecretNamespace(secret.Namespace)
+}
+
+func secretKey(secret *memorySecret) string {
+	if secret == nil {
+		return ""
+	}
+	key := model.NormalizeSecretKey(secret.Key)
+	if key != "" {
+		return key
+	}
+	return model.NormalizeSecretName(secret.Name)
 }
 
 func (s *MemoryStore) retireActiveVersionsLocked(secret *memorySecret, retiredAt time.Time) {
