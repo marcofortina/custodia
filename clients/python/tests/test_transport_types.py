@@ -58,6 +58,17 @@ class PythonTransportTypesTest(unittest.TestCase):
             },
         )
 
+    def test_create_secret_payload_to_dict_with_keyspace(self) -> None:
+        payload = CreateSecretPayload(
+            name="user:sys",
+            namespace="db01",
+            key="user:sys",
+            ciphertext="Y2lwaGVy",
+            envelopes=[RecipientEnvelope(client_id="client_alice", envelope="ZW52")],
+        )
+        self.assertEqual(payload.to_dict()["namespace"], "db01")
+        self.assertEqual(payload.to_dict()["key"], "user:sys")
+
     def test_typed_helpers_send_public_payloads(self) -> None:
         client = CustodiaClient(
             server_url="https://vault.example",
@@ -101,8 +112,31 @@ class PythonTransportTypesTest(unittest.TestCase):
                 ),
                 {"ok": True},
             )
+            self.assertEqual(client.get_secret_by_key("db01", "user:sys"), {"ok": True})
+            self.assertEqual(
+                client.share_secret_payload_by_key(
+                    "db01",
+                    "user:sys",
+                    ShareSecretPayload(version_id="version-id", target_client_id="client_bob", envelope="ZW52"),
+                ),
+                {"ok": True},
+            )
+            self.assertEqual(
+                client.create_secret_version_payload_by_key(
+                    "db01",
+                    "user:sys",
+                    CreateSecretVersionPayload(
+                        ciphertext="Y2lwaGVy",
+                        envelopes=[RecipientEnvelope("client_alice", "ZW52")],
+                    ),
+                ),
+                {"ok": True},
+            )
+            self.assertEqual(client.delete_secret_by_key("db01", "user:sys", cascade=True), {"ok": True})
         self.assertEqual(request.call_args_list[0].kwargs["json"]["envelopes"][0]["client_id"], "client_alice")
         self.assertNotIn("plaintext", request.call_args_list[0].kwargs["json"])
+        self.assertEqual(request.call_args_list[-1].args[0], "DELETE")
+        self.assertIn("/v1/secrets/by-key?namespace=db01&key=user%3Asys&cascade=true", request.call_args_list[-1].args[1])
 
 
 if __name__ == "__main__":

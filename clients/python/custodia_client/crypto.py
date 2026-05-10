@@ -392,6 +392,36 @@ class CryptoCustodiaClient:
             payload["expires_at"] = expires_at
         return self.transport.create_secret(payload)
 
+    def create_encrypted_secret_by_key(
+        self,
+        namespace: str,
+        key: str,
+        plaintext: bytes,
+        recipients: Sequence[str] = (),
+        permissions: int = 7,
+        expires_at: str | None = None,
+    ) -> dict[str, Any]:
+        namespace = _normalize_namespace(namespace)
+        key = _require_key(key)
+        dek = self._random(AES_256_GCM_KEY_BYTES)
+        nonce = self._random(AES_GCM_NONCE_BYTES)
+        aad_inputs = CanonicalAADInputs(secret_name=key)
+        metadata = metadata_v1(aad_inputs, nonce)
+        aad = build_canonical_aad(metadata, aad_inputs)
+        ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad)
+        payload: dict[str, Any] = {
+            "namespace": namespace,
+            "key": key,
+            "name": key,
+            "ciphertext": _b64encode(ciphertext),
+            "crypto_metadata": metadata.to_dict(),
+            "envelopes": self._seal_recipient_envelopes(self._normalized_recipients(recipients), dek, aad),
+            "permissions": permissions,
+        }
+        if expires_at:
+            payload["expires_at"] = expires_at
+        return self.transport.create_secret(payload)
+
     def create_encrypted_secret_version(
         self,
         secret_id: str,
@@ -418,11 +448,65 @@ class CryptoCustodiaClient:
             payload["expires_at"] = expires_at
         return self.transport.create_secret_version(secret_id, payload)
 
+    def create_encrypted_secret_version_by_key(
+        self,
+        namespace: str,
+        key: str,
+        plaintext: bytes,
+        recipients: Sequence[str] = (),
+        permissions: int = 7,
+        expires_at: str | None = None,
+    ) -> dict[str, Any]:
+        namespace = _normalize_namespace(namespace)
+        key = _require_key(key)
+        dek = self._random(AES_256_GCM_KEY_BYTES)
+        nonce = self._random(AES_GCM_NONCE_BYTES)
+        aad_inputs = CanonicalAADInputs(secret_name=key)
+        metadata = metadata_v1(aad_inputs, nonce)
+        aad = build_canonical_aad(metadata, aad_inputs)
+        ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad)
+        payload: dict[str, Any] = {
+            "ciphertext": _b64encode(ciphertext),
+            "crypto_metadata": metadata.to_dict(),
+            "envelopes": self._seal_recipient_envelopes(self._normalized_recipients(recipients), dek, aad),
+            "permissions": permissions,
+        }
+        if expires_at:
+            payload["expires_at"] = expires_at
+        return self.transport.create_secret_version_by_key(namespace, key, payload)
+
     def read_decrypted_secret(self, secret_id: str) -> DecryptedSecret:
         secret = self.transport.get_secret(secret_id)
         metadata = parse_metadata(secret.get("crypto_metadata") or {})
         fallback = CanonicalAADInputs(
             secret_id=str(secret.get("secret_id") or ""),
+            version_id=str(secret.get("version_id") or ""),
+        )
+        aad_inputs = metadata.canonical_aad_inputs(fallback)
+        aad = build_canonical_aad(metadata, aad_inputs)
+        if not metadata.content_nonce_b64:
+            raise MalformedCryptoMetadata("missing content nonce")
+        nonce = base64.b64decode(metadata.content_nonce_b64, validate=True)
+        dek = self._open_secret_envelope(str(secret.get("envelope") or ""), aad)
+        ciphertext = base64.b64decode(str(secret.get("ciphertext") or ""), validate=True)
+        plaintext = open_content_aes_256_gcm(dek, nonce, ciphertext, aad)
+        return DecryptedSecret(
+            secret_id=str(secret.get("secret_id") or ""),
+            version_id=str(secret.get("version_id") or ""),
+            plaintext=plaintext,
+            crypto_metadata=dict(metadata.to_dict()),
+            permissions=int(secret.get("permissions") or 0),
+            granted_at=str(secret.get("granted_at") or ""),
+            access_expires_at=secret.get("access_expires_at"),
+        )
+
+    def read_decrypted_secret_by_key(self, namespace: str, key: str) -> DecryptedSecret:
+        namespace = _normalize_namespace(namespace)
+        key = _require_key(key)
+        secret = self.transport.get_secret_by_key(namespace, key)
+        metadata = parse_metadata(secret.get("crypto_metadata") or {})
+        fallback = CanonicalAADInputs(
+            secret_name=key,
             version_id=str(secret.get("version_id") or ""),
         )
         aad_inputs = metadata.canonical_aad_inputs(fallback)
@@ -472,6 +556,38 @@ class CryptoCustodiaClient:
             payload["expires_at"] = expires_at
         return self.transport.share_secret(secret_id, payload)
 
+    def share_encrypted_secret_by_key(
+        self,
+        namespace: str,
+        key: str,
+        target_client_id: str,
+        permissions: int = 4,
+        expires_at: str | None = None,
+    ) -> dict[str, Any]:
+        namespace = _normalize_namespace(namespace)
+        key = _require_key(key)
+        if not target_client_id.strip():
+            raise ValueError("target client id is required")
+        secret = self.transport.get_secret_by_key(namespace, key)
+        metadata = parse_metadata(secret.get("crypto_metadata") or {})
+        fallback = CanonicalAADInputs(
+            secret_name=key,
+            version_id=str(secret.get("version_id") or ""),
+        )
+        aad_inputs = metadata.canonical_aad_inputs(fallback)
+        aad = build_canonical_aad(metadata, aad_inputs)
+        dek = self._open_secret_envelope(str(secret.get("envelope") or ""), aad)
+        envelope = self._seal_recipient_envelopes([target_client_id], dek, aad)[0]
+        payload: dict[str, Any] = {
+            "version_id": str(secret.get("version_id") or ""),
+            "target_client_id": target_client_id,
+            "envelope": envelope["envelope"],
+            "permissions": permissions,
+        }
+        if expires_at:
+            payload["expires_at"] = expires_at
+        return self.transport.share_secret_by_key(namespace, key, payload)
+
     def _normalized_recipients(self, recipients: Sequence[str]) -> list[str]:
         current = self.options.private_key_provider.current_private_key()
         normalized: list[str] = []
@@ -509,6 +625,18 @@ class CryptoCustodiaClient:
         if len(value) != length:
             raise ValueError("random source returned invalid length")
         return value
+
+
+def _normalize_namespace(namespace: str) -> str:
+    namespace = str(namespace or "").strip()
+    return namespace or "default"
+
+
+def _require_key(key: str) -> str:
+    key = str(key or "").strip()
+    if not key:
+        raise ValueError("secret key is required")
+    return key
 
 
 def _hpke_seal(shared_secret: bytes, info: bytes, plaintext: bytes, aad: bytes) -> bytes:

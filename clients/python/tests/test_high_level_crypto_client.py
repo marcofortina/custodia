@@ -66,13 +66,26 @@ class _Transport:
         self.version_payload = {"secret_id": secret_id, **payload}
         return {"secret_id": secret_id, "version_id": "created-version"}
 
+    def create_secret_version_by_key(self, namespace: str, key: str, payload: dict[str, object]) -> dict[str, str]:
+        self.version_payload = {"namespace": namespace, "key": key, **payload}
+        return {"secret_id": "created-secret", "version_id": "created-version"}
+
     def get_secret(self, secret_id: str) -> dict[str, object]:
         if secret_id != self.secret_response.get("secret_id"):
             raise AssertionError("unexpected secret id")
         return self.secret_response
 
+    def get_secret_by_key(self, namespace: str, key: str) -> dict[str, object]:
+        if namespace != self.secret_response.get("namespace") or key != self.secret_response.get("key"):
+            raise AssertionError("unexpected secret keyspace")
+        return self.secret_response
+
     def share_secret(self, secret_id: str, payload: dict[str, object]) -> dict[str, bool]:
         self.shared_payload = {"secret_id": secret_id, **payload}
+        return {"ok": True}
+
+    def share_secret_by_key(self, namespace: str, key: str, payload: dict[str, object]) -> dict[str, bool]:
+        self.shared_payload = {"namespace": namespace, "key": key, **payload}
         return {"ok": True}
 
 
@@ -110,6 +123,49 @@ class PythonHighLevelCryptoClientTest(unittest.TestCase):
         metadata = transport.created_payload["crypto_metadata"]
         self.assertEqual(metadata["content_nonce_b64"], vector["content_nonce_b64"])
         self.assertEqual(metadata["aad"], {"secret_name": "database-password"})
+
+
+    def test_create_encrypted_secret_by_key_sends_keyspace_payload(self) -> None:
+        random_source = _RandomSource([b"A" * 32, b"B" * 12, b"C" * 32])
+        transport = _Transport()
+        crypto = CryptoCustodiaClient(transport, _crypto_options(random_source))
+
+        self.assertEqual(
+            crypto.create_encrypted_secret_by_key("db01", "user:sys", b"secret"),
+            {"secret_id": "created-secret", "version_id": "created-version"},
+        )
+        assert transport.created_payload is not None
+        self.assertEqual(transport.created_payload["namespace"], "db01")
+        self.assertEqual(transport.created_payload["key"], "user:sys")
+        self.assertEqual(transport.created_payload["crypto_metadata"]["aad"], {"secret_name": "user:sys"})
+
+    def test_keyspace_read_share_and_version_helpers(self) -> None:
+        random_source = _RandomSource([b"A" * 32, b"B" * 12, b"C" * 32, b"D" * 32, b"E" * 32, b"F" * 12, b"G" * 32])
+        transport = _Transport()
+        crypto = CryptoCustodiaClient(transport, _crypto_options(random_source))
+        crypto.create_encrypted_secret_by_key("db01", "user:sys", b"secret")
+        assert transport.created_payload is not None
+        transport.secret_response = {
+            "secret_id": "created-secret",
+            "namespace": "db01",
+            "key": "user:sys",
+            "version_id": "created-version",
+            "ciphertext": transport.created_payload["ciphertext"],
+            "crypto_metadata": transport.created_payload["crypto_metadata"],
+            "envelope": transport.created_payload["envelopes"][0]["envelope"],
+            "permissions": 7,
+        }
+
+        self.assertEqual(crypto.read_decrypted_secret_by_key("db01", "user:sys").plaintext, b"secret")
+        self.assertEqual(crypto.share_encrypted_secret_by_key("db01", "user:sys", "client_bob"), {"ok": True})
+        self.assertEqual(transport.shared_payload["namespace"], "db01")
+        self.assertEqual(transport.shared_payload["key"], "user:sys")
+        self.assertEqual(transport.shared_payload["target_client_id"], "client_bob")
+
+        crypto.create_encrypted_secret_version_by_key("db01", "user:sys", b"rotated")
+        assert transport.version_payload is not None
+        self.assertEqual(transport.version_payload["namespace"], "db01")
+        self.assertEqual(transport.version_payload["key"], "user:sys")
 
     def test_read_decrypted_secret_matches_vector(self) -> None:
         vector = _vector("read_secret_authorized_recipient.json")
