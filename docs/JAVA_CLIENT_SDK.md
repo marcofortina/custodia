@@ -29,16 +29,20 @@ var client = CustodiaClient.newClient(
 
 ```java
 String response = client.createSecretPayload("""
-    {"name":"db","ciphertext":"base64cipher","envelopes":[{"client_id":"self","envelope":"base64env"}]}
+    {"namespace":"default","key":"db","ciphertext":"base64cipher","envelopes":[{"client_id":"self","envelope":"base64env"}]}
     """);
 
-String secret = client.getSecretPayload("550e8400-e29b-41d4-a716-446655440000");
+String secret = client.getSecretPayloadByKey("default", "db");
+client.shareSecretPayloadByKey("default", "db", "{\"target_client_id\":\"client_bob\",\"envelope\":\"base64env\",\"permissions\":4}");
+client.createSecretVersionPayloadByKey("default", "db", "{\"ciphertext\":\"base64cipher2\",\"envelopes\":[{\"client_id\":\"self\",\"envelope\":\"base64env2\"}],\"permissions\":7}");
+client.revokeAccessByKey("default", "db", "client_bob");
+client.deleteSecretByKey("default", "db", true);
 ```
 
 The client exposes transport methods for:
 
 - client metadata;
-- secret create/read/list/version/share flows;
+- secret create/read/list/version/share/delete flows;
 - pending access grants;
 - operational status/version/diagnostics;
 - revocation status;
@@ -68,7 +72,7 @@ var crypto = client.withCrypto(new CustodiaCrypto.CryptoOptions(
 ));
 
 crypto.createEncryptedSecret("db", plaintextBytes, List.of("client_bob"), CustodiaClient.PERMISSION_ALL);
-var decrypted = crypto.readDecryptedSecret(secretId);
+var decrypted = crypto.readDecryptedSecret(secretId); // Legacy secret_id crypto compatibility.
 crypto.shareEncryptedSecret(secretId, "client_charlie", CustodiaClient.PERMISSION_READ);
 ```
 

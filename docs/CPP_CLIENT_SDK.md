@@ -23,16 +23,20 @@ The build check requires a C++20 compiler, `pkg-config`, libcurl development hea
 
 ```cpp
 std::string response = client.create_secret_payload(
-    R"({"name":"db","ciphertext":"base64cipher","envelopes":[{"client_id":"self","envelope":"base64env"}]})"
+    R"({"namespace":"default","key":"db","ciphertext":"base64cipher","envelopes":[{"client_id":"self","envelope":"base64env"}]})"
 );
 
-std::string secret = client.get_secret_payload("550e8400-e29b-41d4-a716-446655440000");
+std::string secret = client.get_secret_payload_by_key("default", "db");
+client.share_secret_payload_by_key("default", "db", R"({"target_client_id":"client_bob","envelope":"base64env","permissions":4})");
+client.create_secret_version_payload_by_key("default", "db", R"({"ciphertext":"base64cipher2","envelopes":[{"client_id":"self","envelope":"base64env2"}],"permissions":7})");
+client.revoke_access_by_key("default", "db", "client_bob");
+client.delete_secret_by_key("default", "db", true);
 ```
 
 The client exposes transport methods for:
 
 - client metadata;
-- secret create/read/list/version/share flows;
+- secret create/read/list/version/share/delete flows;
 - pending access grants;
 - operational status/version/diagnostics;
 - revocation status;
@@ -62,7 +66,7 @@ auto crypto = client.with_crypto(custodia::CryptoOptions{
 });
 
 crypto.create_encrypted_secret("db", plaintext_bytes, {"client_bob"});
-auto decrypted = crypto.read_decrypted_secret(secret_id);
+auto decrypted = crypto.read_decrypted_secret(secret_id); // Legacy secret_id crypto compatibility.
 crypto.share_encrypted_secret(secret_id, "client_charlie", custodia::permission_read);
 ```
 

@@ -45,7 +45,8 @@ Publishing packages to external registries is a separate release activity and is
 
 Transport clients must treat secret material as opaque. They may serialize and send:
 
-- `name`;
+- `namespace`;
+- `key`;
 - `ciphertext`;
 - `crypto_metadata`;
 - recipient `envelopes`;
@@ -112,7 +113,7 @@ High-level clients expose equivalent operations across languages:
 | `ShareEncryptedSecret` | Rewrap an existing DEK for a new recipient locally. |
 | `CreateEncryptedSecretVersion` | Create a new locally encrypted version. |
 
-Transport clients expose raw equivalents that accept already prepared opaque payloads.
+Transport clients expose raw equivalents that accept already prepared opaque payloads. New transport methods should address normal read/share/version/revoke/delete flows by `namespace` and `key`; legacy `secret_id` methods remain compatibility paths while high-level crypto wrappers finish migrating.
 
 ## Key resolution
 

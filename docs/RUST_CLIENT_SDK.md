@@ -21,18 +21,23 @@ let client = CustodiaClient::new(CustodiaClientConfig::new(
 
 ```rust
 let payload = serde_json::json!({
-    "name": "db",
+    "namespace": "default",
+    "key": "db",
     "ciphertext": "base64cipher",
     "envelopes": [{"client_id": "self", "envelope": "base64env"}],
 });
 let response = client.create_secret_payload(&payload)?;
-let secret = client.get_secret_payload("550e8400-e29b-41d4-a716-446655440000")?;
+let secret = client.get_secret_payload_by_key("default", "db")?;
+client.share_secret_payload_by_key("default", "db", &serde_json::json!({"target_client_id":"client_bob","envelope":"base64env","permissions":4}))?;
+client.create_secret_version_payload_by_key("default", "db", &serde_json::json!({"ciphertext":"base64cipher2","envelopes":[{"client_id":"self","envelope":"base64env2"}],"permissions":7}))?;
+client.revoke_access_by_key("default", "db", "client_bob")?;
+client.delete_secret_by_key("default", "db", true)?;
 ```
 
 The transport client exposes methods for:
 
 - client metadata;
-- secret create/read/list/version/share flows;
+- secret create/read/list/version/share/delete flows;
 - pending access grants;
 - operational status/version/diagnostics;
 - revocation status;
@@ -60,7 +65,7 @@ crypto.create_encrypted_secret(
     custodia_client::PERMISSION_ALL,
     None,
 )?;
-let decrypted = crypto.read_decrypted_secret(secret_id)?;
+let decrypted = crypto.read_decrypted_secret(secret_id)?; // Legacy secret_id crypto compatibility.
 crypto.share_encrypted_secret(secret_id, "client_charlie", custodia_client::PERMISSION_READ, None)?;
 ```
 
