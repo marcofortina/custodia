@@ -25,6 +25,47 @@ func TestValidClientID(t *testing.T) {
 	}
 }
 
+func TestNormalizeSecretNamespace(t *testing.T) {
+	if got := NormalizeSecretNamespace(""); got != DefaultSecretNamespace {
+		t.Fatalf("unexpected default namespace: %q", got)
+	}
+	if got := NormalizeSecretNamespace("  db01  "); got != "db01" {
+		t.Fatalf("unexpected normalized namespace: %q", got)
+	}
+}
+
+func TestValidSecretNamespace(t *testing.T) {
+	for _, value := range []string{"", "default", "db01", "tenant/prod", "db name"} {
+		if !ValidSecretNamespace(value) {
+			t.Fatalf("expected %q to be valid", value)
+		}
+	}
+	for _, value := range []string{"db\n01"} {
+		if ValidSecretNamespace(value) {
+			t.Fatalf("expected %q to be invalid", value)
+		}
+	}
+}
+
+func TestNormalizeSecretKey(t *testing.T) {
+	if got := NormalizeSecretKey("  user:sys  "); got != "user:sys" {
+		t.Fatalf("unexpected normalized secret key: %q", got)
+	}
+}
+
+func TestValidSecretKey(t *testing.T) {
+	for _, value := range []string{"user:sys", "tenant/prod/api-key", "db password"} {
+		if !ValidSecretKey(value) {
+			t.Fatalf("expected %q to be valid", value)
+		}
+	}
+	for _, value := range []string{"", "   ", "secret\nkey"} {
+		if ValidSecretKey(value) {
+			t.Fatalf("expected %q to be invalid", value)
+		}
+	}
+}
+
 func TestNormalizeSecretName(t *testing.T) {
 	if got := NormalizeSecretName("  db password  "); got != "db password" {
 		t.Fatalf("unexpected normalized secret name: %q", got)

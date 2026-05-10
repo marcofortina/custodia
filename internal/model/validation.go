@@ -15,7 +15,10 @@ import (
 
 const (
 	MaxClientIDLength          = 128
-	MaxSecretNameLength        = 255
+	DefaultSecretNamespace     = "default"
+	MaxSecretNamespaceLength   = 255
+	MaxSecretKeyLength         = 255
+	MaxSecretNameLength        = MaxSecretKeyLength
 	MaxCryptoMetadataBytes     = 16 * 1024
 	MaxOpaqueBlobBytes         = 768 * 1024
 	MaxMTLSSubjectLength       = 512
@@ -61,15 +64,19 @@ func ValidMTLSSubject(value string) bool {
 	return true
 }
 
-// NormalizeSecretName trims surrounding whitespace without changing the caller-defined secret name body.
-func NormalizeSecretName(value string) string {
-	return strings.TrimSpace(value)
+// NormalizeSecretNamespace trims surrounding whitespace and applies the default namespace.
+func NormalizeSecretNamespace(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return DefaultSecretNamespace
+	}
+	return value
 }
 
-// ValidSecretName keeps secret metadata bounded and printable while leaving ciphertext opaque.
-func ValidSecretName(value string) bool {
-	value = NormalizeSecretName(value)
-	if value == "" || len(value) > MaxSecretNameLength {
+// ValidSecretNamespace keeps caller-defined namespaces bounded and printable.
+func ValidSecretNamespace(value string) bool {
+	value = NormalizeSecretNamespace(value)
+	if value == "" || len(value) > MaxSecretNamespaceLength {
 		return false
 	}
 	for _, r := range value {
@@ -78,6 +85,35 @@ func ValidSecretName(value string) bool {
 		}
 	}
 	return true
+}
+
+// NormalizeSecretKey trims surrounding whitespace without changing the caller-defined key body.
+func NormalizeSecretKey(value string) string {
+	return strings.TrimSpace(value)
+}
+
+// ValidSecretKey keeps caller-defined keys bounded and printable while leaving ciphertext opaque.
+func ValidSecretKey(value string) bool {
+	value = NormalizeSecretKey(value)
+	if value == "" || len(value) > MaxSecretKeyLength {
+		return false
+	}
+	for _, r := range value {
+		if unicode.IsControl(r) {
+			return false
+		}
+	}
+	return true
+}
+
+// NormalizeSecretName trims surrounding whitespace without changing the caller-defined secret name body.
+func NormalizeSecretName(value string) string {
+	return NormalizeSecretKey(value)
+}
+
+// ValidSecretName keeps secret metadata bounded and printable while leaving ciphertext opaque.
+func ValidSecretName(value string) bool {
+	return ValidSecretKey(value)
 }
 
 // ValidCryptoMetadata keeps opaque client-selected metadata bounded for storage and audit safety.
