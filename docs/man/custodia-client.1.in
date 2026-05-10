@@ -84,31 +84,33 @@ Pass
 .B --online
 for an mTLS current-client reachability check.
 .TP
-.B secret put --client-id ID|--config FILE --name NAME --value-file FILE
-Encrypt a plaintext file locally and create a secret.
+.B secret put --client-id ID|--config FILE --key KEY [--namespace NS] --value-file FILE
+Encrypt a plaintext file locally and create a secret in the caller-visible namespace/key keyspace.
 .TP
-.B secret get --client-id ID|--config FILE --secret-id ID [--out FILE]
-Read a secret, decrypt locally, and write plaintext output with mode 0600.
+.B secret get --client-id ID|--config FILE --key KEY [--namespace NS] [--out FILE]
+Read a secret by namespace/key, decrypt locally, and write plaintext output with mode 0600.
 .TP
-.B secret share --client-id ID|--config FILE --secret-id ID --target-client-id ID --recipient ID=FILE
+.B secret share --client-id ID|--config FILE --key KEY [--namespace NS] --target-client-id ID --recipient ID=FILE
 Grant another client access by rewrapping local key material to the target
-recipient public key.
+recipient public key. Sharing fails when the target already has the same
+namespace/key in its visible keyspace.
 .TP
-.B secret version put --client-id ID|--config FILE --secret-id ID --value-file FILE [--recipient ID=FILE]
+.B secret update --client-id ID|--config FILE --key KEY [--namespace NS] --value-file FILE [--recipient ID=FILE]
 Create a new encrypted version. Include every recipient that should keep access.
 .TP
-.B secret versions --client-id ID|--config FILE --secret-id ID [--limit N]
+.B secret versions --client-id ID|--config FILE --key KEY [--namespace NS] [--limit N]
 List secret version metadata.
 .TP
-.B secret access list --client-id ID|--config FILE --secret-id ID [--limit N]
+.B secret access list --client-id ID|--config FILE --key KEY [--namespace NS] [--limit N]
 List access grant metadata.
 .TP
-.B secret access revoke --client-id ID|--config FILE --secret-id ID --target-client-id ID --yes
-Revoke future server-side access for a target client. Already downloaded
-material may remain decryptable offline.
+.B secret revoke --client-id ID|--config FILE --key KEY [--namespace NS] --target-client-id ID --yes
+Revoke future server-side access for a target client. Only the owner can revoke
+other clients. Already downloaded material may remain decryptable offline.
 .TP
-.B secret delete --client-id ID|--config FILE --secret-id ID --yes
-Delete a secret from future server-side reads.
+.B secret delete --client-id ID|--config FILE --key KEY [--namespace NS] [--cascade] --yes
+Delete a caller-visible key. Non-owners remove only their own visibility; owners
+are blocked while the key is still shared unless --cascade is supplied.
 .SH GLOBAL OPTIONS
 .TP
 .BI --client-id " ID"
@@ -127,7 +129,16 @@ Custodia API base URL.
 Client mTLS certificate.
 .TP
 .BI --key " FILE"
-Client mTLS private key.
+Client mTLS private key for non-secret commands. In secret commands,
+.B --key
+identifies the secret; use
+.BI --mtls-key " FILE"
+for an explicit mTLS private key path.
+.TP
+.BI --mtls-key " FILE"
+Client mTLS private key for secret commands, where
+.B --key
+is reserved for the secret key.
 .TP
 .BI --ca " FILE"
 Custodia CA certificate. For normal client profiles, use a readable client-local copy such as
@@ -204,9 +215,9 @@ Create and read a secret:
 .PP
 .EX
 custodia-client secret put --client-id client_alice \
-  --name demo --value-file secret.txt > create.json
+  --key demo --value-file secret.txt
 custodia-client secret get --client-id client_alice \
-  --secret-id SECRET_ID --out secret.readback.txt
+  --key demo --out secret.readback.txt
 .EE
 .SH VERSION
 Custodia version: @VERSION@

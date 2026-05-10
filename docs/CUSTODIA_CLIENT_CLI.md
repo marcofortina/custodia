@@ -4,9 +4,9 @@
 
 The CLI never sends plaintext, DEKs, mTLS private keys, application private keys or recipient public keys to the server. It sends only ciphertext, versioned `crypto_metadata` and opaque recipient envelopes.
 
-## Namespace/key migration target
+## Namespace/key addressing
 
-Custodia is moving the normal client workflow to `namespace + key` addressing with `namespace=default` when omitted. The target semantics for create, read, update, share, revoke and delete are frozen in [`SECRET_KEYSPACE_MODEL.md`](SECRET_KEYSPACE_MODEL.md). Until the implementation patches land, the command reference below still describes the current `secret_id`-based CLI.
+The normal client workflow addresses secrets by `namespace + key`, with `namespace=default` when omitted. The full create, read, update, share, revoke and delete semantics are documented in [`SECRET_KEYSPACE_MODEL.md`](SECRET_KEYSPACE_MODEL.md). Legacy `--secret-id` flags remain available for compatibility and advanced troubleshooting.
 
 ## Standard client profile
 
@@ -124,7 +124,7 @@ export CUSTODIA_CA_CERT=/path/to/ca.crt
 export CUSTODIA_CRYPTO_KEY=/path/to/client_alice.x25519.json
 ```
 
-Explicit flags and environment variables override values loaded from the config file.
+Explicit flags and environment variables override values loaded from the config file. In `secret` subcommands, `--key` identifies the secret; when using raw mTLS paths instead of `--client-id`/`--config`, pass the mTLS private key as `--mtls-key` or through `CUSTODIA_CLIENT_KEY`.
 
 ## Put an encrypted secret
 
@@ -140,18 +140,18 @@ Create an encrypted secret. The caller is automatically added as a recipient, so
 ```bash
 custodia-client secret put \
   --client-id "$CLIENT_ID" \
-  --name smoke-demo \
+  --key smoke-demo \
   --value-file "$HOME/custodia-smoke-secret.txt"
 ```
 
-The command prints JSON containing `secret_id` and `version_id`.
+When `--namespace` is omitted the CLI uses `default`. The command prints JSON containing the internal compatibility `secret_id` and `version_id`, but follow-up user flows should address the secret by `namespace/key`.
 
 ## Get and decrypt a secret
 
 ```bash
 custodia-client secret get \
   --client-id "$CLIENT_ID" \
-  --secret-id <secret_id> \
+  --key smoke-demo \
   --out "$HOME/custodia-smoke-secret.readback.txt"
 ```
 
@@ -164,7 +164,7 @@ Bob must have a registered mTLS client certificate and a local application publi
 ```bash
 custodia-client secret share \
   --client-id client_alice \
-  --secret-id <secret_id> \
+  --key smoke-demo \
   --target-client-id client_bob \
   --recipient client_bob=/path/to/client_bob.x25519.pub.json \
   --permissions 4
@@ -180,9 +180,9 @@ Create a rotated plaintext file and include all intended recipients for the new 
 printf 'rotated secret demo value' > "$HOME/custodia-smoke-secret.v2.txt"
 chmod 600 "$HOME/custodia-smoke-secret.v2.txt"
 
-custodia-client secret version put \
+custodia-client secret update \
   --client-id client_alice \
-  --secret-id <secret_id> \
+  --key smoke-demo \
   --value-file "$HOME/custodia-smoke-secret.v2.txt" \
   --recipient client_bob=/path/to/client_bob.x25519.pub.json \
   --permissions 7
@@ -203,7 +203,7 @@ Inspect version metadata for a secret without decrypting payloads:
 ```bash
 custodia-client secret versions \
   --client-id "$CLIENT_ID" \
-  --secret-id <secret_id> \
+  --key smoke-demo \
   --limit 50
 ```
 
@@ -212,7 +212,7 @@ Inspect the server-side access grants for a secret. The output contains grant me
 ```bash
 custodia-client secret access list \
   --client-id "$CLIENT_ID" \
-  --secret-id <secret_id> \
+  --key smoke-demo \
   --limit 50
 ```
 
@@ -221,21 +221,31 @@ custodia-client secret access list \
 Revoke a target client's future server-side access to a secret. This does not make already downloaded ciphertext/envelope material undecryptable; for strong revocation, create a new encrypted version with only the remaining authorized recipients.
 
 ```bash
-custodia-client secret access revoke \
+custodia-client secret revoke \
   --client-id client_alice \
-  --secret-id <secret_id> \
+  --key smoke-demo \
   --target-client-id client_bob \
   --yes
 ```
 
 ## Delete a secret
 
-Delete a secret from future server-side reads. This is a destructive metadata operation and requires explicit confirmation.
+Delete semantics depend on ownership. Owners delete only when no active shares remain, unless `--cascade` is supplied. Non-owners delete only their own visibility/access to a shared key.
 
 ```bash
 custodia-client secret delete \
   --client-id "$CLIENT_ID" \
-  --secret-id <secret_id> \
+  --key smoke-demo \
+  --yes
+```
+
+For owner-side destructive cleanup of an actively shared key:
+
+```bash
+custodia-client secret delete \
+  --client-id "$CLIENT_ID" \
+  --key smoke-demo \
+  --cascade \
   --yes
 ```
 
