@@ -42,7 +42,7 @@ func TestUsageMentionsDoctorCommand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(body), "custodia-admin doctor --server-config FILE --signer-config FILE") {
+	if !strings.Contains(string(body), "custodia-admin doctor [--server-config FILE] [--signer-config FILE]") {
 		t.Fatalf("usage does not mention doctor command: %s", string(body))
 	}
 }
@@ -814,6 +814,51 @@ CUSTODIA_STORE_BACKEND=sqlite
 	}
 	if err := runLiteUpgradeCheck([]string{"--lite-env-file", liteEnv, "--full-env-file", fullEnv}); err == nil {
 		t.Fatal("expected invalid full target error")
+	}
+}
+
+func TestDefaultAdminTransportLoadsServerConfig(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "custodia-server.yaml")
+	writeAdminTestFile(t, configPath, `profile: lite
+server:
+  url: "https://custodia.example.internal:8443"
+signer:
+  client_cert_file: /etc/custodia/admin.crt
+  client_key_file: /etc/custodia/admin.key
+  client_ca_file: /etc/custodia/ca.crt
+`)
+	resolved, err := defaultAdminTransport(cliConfig{}, configPath)
+	if err != nil {
+		t.Fatalf("defaultAdminTransport() error = %v", err)
+	}
+	if resolved.serverURL != "https://custodia.example.internal:8443" || resolved.certFile != "/etc/custodia/admin.crt" || resolved.keyFile != "/etc/custodia/admin.key" || resolved.caFile != "/etc/custodia/ca.crt" {
+		t.Fatalf("unexpected resolved transport: %+v", resolved)
+	}
+}
+
+func TestDefaultAdminTransportKeepsExplicitValues(t *testing.T) {
+	explicit := cliConfig{serverURL: "https://explicit.example:8443", certFile: "admin.crt", keyFile: "admin.key", caFile: "ca.crt"}
+	resolved, err := defaultAdminTransport(explicit, filepath.Join(t.TempDir(), "missing.yaml"))
+	if err != nil {
+		t.Fatalf("defaultAdminTransport() error = %v", err)
+	}
+	if resolved != explicit {
+		t.Fatalf("explicit transport changed: %+v", resolved)
+	}
+}
+
+func TestDefaultAdminTransportRequiresUsableDefaults(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "custodia-server.yaml")
+	writeAdminTestFile(t, configPath, `profile: lite
+server:
+  api_addr: ":8443"
+`)
+	err := func() error {
+		_, err := defaultAdminTransport(cliConfig{}, configPath)
+		return err
+	}()
+	if err == nil || !strings.Contains(err.Error(), "server.url is required") {
+		t.Fatalf("expected missing server.url error, got: %v", err)
 	}
 }
 

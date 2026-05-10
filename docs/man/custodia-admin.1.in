@@ -24,6 +24,12 @@ is the operator CLI for Custodia. It talks to the vault API over mTLS,
 performs metadata-only administration, exports and verifies audit material,
 and orchestrates client certificate workflows.
 .PP
+On standard local installs, first-run admin reads such as
+.B status read
+and
+.B diagnostics read
+derive the server URL and admin mTLS paths from
+.I /etc/custodia/custodia-server.yaml.
 When the admin certificate and key live under
 .I /etc/custodia,
 run the command as the restricted
@@ -31,10 +37,7 @@ run the command as the restricted
 service user, for example:
 .PP
 .EX
-sudo -u custodia custodia-admin --server-url https://localhost:8443 \\
-  --cert /etc/custodia/admin.crt \\
-  --key /etc/custodia/admin.key \\
-  --ca /etc/custodia/ca.crt version server
+sudo -u custodia custodia-admin status read
 .EE
 .SH COMMANDS
 .TP
@@ -49,9 +52,9 @@ Print server build metadata from
 Register client metadata in the vault.
 .TP
 .B ca bootstrap-local --out-dir DIR --admin-client-id ID --server-name NAME
-Generate Lite first-run CA material. The server certificate includes the requested
-server name, localhost, 127.0.0.1, ::1 and any non-loopback IP address resolved
-from the server name.
+Generate Lite first-run CA material. Do not pass localhost as the server name;
+use the DNS name clients and browsers will actually use. IP addresses are supported,
+but DNS is strongly recommended for operational stability.
 .TP
 .B client enrollment create [--config FILE] [--ttl DURATION]
 Create a short-lived, one-shot enrollment token for remote client onboarding. The command reads the configured server URL from the server YAML and prints the token and server URL for transfer to the client host.
@@ -90,13 +93,13 @@ Verify exported audit body/digest/count artifacts.
 .B production check
 Run production configuration checks from an environment file.
 .TP
-.B web totp configure --config FILE [--issuer NAME] [--account NAME]
+.B web totp configure [--config FILE] [--issuer NAME] [--account NAME]
 Generate first-run Web MFA material, append it to the server YAML config, print
 the TOTP secret and provisioning URI, and print a terminal QR code when
 .B qrencode
 is available.
 .TP
-.B doctor --server-config FILE --signer-config FILE [--systemd] [--network]
+.B doctor [--server-config FILE] [--signer-config FILE] [--systemd] [--network]
 Run read-only installation diagnostics. The default mode is offline and checks
 configuration parsing, profile/backend coherence, required files, key modes and
 runtime directories. Optional flags add systemd unit checks and TCP listener
@@ -104,16 +107,16 @@ reachability checks.
 .SH GLOBAL OPTIONS
 .TP
 .BI --server-url " URL"
-Custodia API base URL.
+Custodia API base URL. For first-run admin reads, defaults to the local server YAML when omitted.
 .TP
 .BI --cert " FILE"
-Admin mTLS client certificate.
+Admin mTLS client certificate. For first-run admin reads, defaults to the local server YAML signer client certificate when omitted.
 .TP
 .BI --key " FILE"
-Admin mTLS private key.
+Admin mTLS private key. For first-run admin reads, defaults to the local server YAML signer client key when omitted.
 .TP
 .BI --ca " FILE"
-Custodia CA certificate.
+Custodia CA certificate. For first-run admin reads, defaults to the local server YAML signer client CA when omitted.
 .SH ENVIRONMENT
 .TP
 .B CUSTODIA_SERVER_URL
@@ -164,9 +167,7 @@ sudo -u custodia custodia-admin client enrollment create --ttl 15m
 Configure first-run Web TOTP material in the server YAML:
 .PP
 .EX
-sudo custodia-admin web totp configure \
-  --config /etc/custodia/custodia-server.yaml \
-  --account admin
+sudo custodia-admin web totp configure --account admin
 .EE
 .SH VERSION
 Custodia version: @VERSION@

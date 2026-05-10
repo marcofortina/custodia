@@ -11,12 +11,10 @@ operations.
 
 ## Admin doctor
 
-Run the offline admin doctor first:
+Run the offline admin doctor first. By default it reads `/etc/custodia/custodia-server.yaml` and `/etc/custodia/custodia-signer.yaml`:
 
 ```bash
-sudo -u custodia custodia-admin doctor \
-  --server-config /etc/custodia/custodia-server.yaml \
-  --signer-config /etc/custodia/custodia-signer.yaml
+sudo -u custodia custodia-admin doctor
 ```
 
 The offline check validates:
@@ -49,11 +47,7 @@ Systemd and network checks are opt-in so the offline doctor stays safe in build,
 container and CI environments:
 
 ```bash
-sudo -u custodia custodia-admin doctor \
-  --server-config /etc/custodia/custodia-server.yaml \
-  --signer-config /etc/custodia/custodia-signer.yaml \
-  --systemd \
-  --network
+sudo -u custodia custodia-admin doctor --systemd --network
 ```
 
 `--systemd` checks:

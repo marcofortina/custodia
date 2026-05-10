@@ -49,7 +49,7 @@ sudo -u custodia custodia-admin ca bootstrap-local \
   --generate-ca-passphrase
 ```
 
-Use `--ca-passphrase-file FILE` when you already have a passphrase file managed by your secret-handling process. The generated server certificate includes the requested server name, `localhost`, `127.0.0.1`, `::1` and any non-loopback IP address resolved from the server name.
+Use `--ca-passphrase-file FILE` when you already have a passphrase file managed by your secret-handling process. The generated server certificate includes the requested server name, loopback SANs for compatibility and any non-loopback IP address resolved from the server name. Do not pass `localhost` as the server name; use the DNS name clients and browsers will actually use. IP addresses are supported, but DNS is strongly recommended for operational stability.
 
 ## Configuration
 

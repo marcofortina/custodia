@@ -268,7 +268,7 @@ TEST_CUSTODIA_POSTGRES_URL=postgres://user:pass@localhost:5432/custodia_test?ssl
 
 ### Runtime diagnostics
 
-Use `custodia-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS client to inspect runtime metadata. The diagnostics output is metadata-only and never includes secret payloads or client-side cryptographic material.
+Use `custodia-admin diagnostics read` or `GET /v1/diagnostics` with an admin mTLS client to inspect runtime metadata. On a standard local install, `custodia-admin diagnostics read` and `custodia-admin status read` derive the server URL and admin mTLS paths from `/etc/custodia/custodia-server.yaml`. The diagnostics output is metadata-only and never includes secret payloads or client-side cryptographic material.
 
 For install diagnostics, use read-only doctor commands. See the dedicated
 [doctor diagnostics runbook](docs/DOCTOR.md) for offline, systemd, network and

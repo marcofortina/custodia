@@ -56,7 +56,7 @@ type cliConfig struct {
 func main() {
 	cfg := cliConfig{}
 	flags := flag.NewFlagSet("custodia-admin", flag.ExitOnError)
-	flags.StringVar(&cfg.serverURL, "server-url", env("CUSTODIA_SERVER_URL", "https://localhost:8443"), "Custodia API URL")
+	flags.StringVar(&cfg.serverURL, "server-url", env("CUSTODIA_SERVER_URL", ""), "Custodia API URL")
 	flags.StringVar(&cfg.certFile, "cert", env("CUSTODIA_CLIENT_CERT_FILE", ""), "mTLS client certificate")
 	flags.StringVar(&cfg.keyFile, "key", env("CUSTODIA_CLIENT_KEY_FILE", ""), "mTLS client key")
 	flags.StringVar(&cfg.caFile, "ca", env("CUSTODIA_SERVER_CA_FILE", ""), "server CA certificate")
@@ -96,11 +96,11 @@ func main() {
 	var err error
 	switch args[0] + " " + args[1] {
 	case "status read":
-		err = requestJSON(&cfg, http.MethodGet, "/v1/status", nil, os.Stdout)
+		err = requestDefaultAdminJSON(&cfg, http.MethodGet, "/v1/status", nil, os.Stdout)
 	case "version server":
 		err = requestJSON(&cfg, http.MethodGet, "/v1/version", nil, os.Stdout)
 	case "diagnostics read":
-		err = requestJSON(&cfg, http.MethodGet, "/v1/diagnostics", nil, os.Stdout)
+		err = requestDefaultAdminJSON(&cfg, http.MethodGet, "/v1/diagnostics", nil, os.Stdout)
 	case "revocation status":
 		err = requestJSON(&cfg, http.MethodGet, "/v1/revocation/status", nil, os.Stdout)
 	case "revocation fetch-crl":
@@ -1593,6 +1593,49 @@ func parsePermissionBits(value string) (int, error) {
 	return bits, nil
 }
 
+const defaultAdminServerConfigFile = "/etc/custodia/custodia-server.yaml"
+
+func requestDefaultAdminJSON(cfg *cliConfig, method, path string, payload any, out io.Writer) error {
+	resolved, err := defaultAdminTransport(*cfg, defaultAdminServerConfigFile)
+	if err != nil {
+		return err
+	}
+	return requestJSON(&resolved, method, path, payload, out)
+}
+
+func defaultAdminTransport(cfg cliConfig, configFile string) (cliConfig, error) {
+	if transportComplete(cfg) {
+		return cfg, nil
+	}
+	serverCfg, err := serverconfig.LoadFile(configFile)
+	if err != nil {
+		return cfg, fmt.Errorf("load default admin transport from %s: %w", configFile, err)
+	}
+	if strings.TrimSpace(cfg.serverURL) == "" {
+		cfg.serverURL = strings.TrimSpace(serverCfg.ServerURL)
+	}
+	if strings.TrimSpace(cfg.certFile) == "" {
+		cfg.certFile = strings.TrimSpace(serverCfg.SignerClientCertFile)
+	}
+	if strings.TrimSpace(cfg.keyFile) == "" {
+		cfg.keyFile = strings.TrimSpace(serverCfg.SignerClientKeyFile)
+	}
+	if strings.TrimSpace(cfg.caFile) == "" {
+		cfg.caFile = strings.TrimSpace(serverCfg.SignerClientCAFile)
+	}
+	if strings.TrimSpace(cfg.serverURL) == "" {
+		return cfg, fmt.Errorf("server.url is required in %s or provide --server-url", configFile)
+	}
+	if strings.TrimSpace(cfg.certFile) == "" || strings.TrimSpace(cfg.keyFile) == "" || strings.TrimSpace(cfg.caFile) == "" {
+		return cfg, fmt.Errorf("signer client_cert_file, client_key_file and client_ca_file are required in %s or provide --cert, --key and --ca", configFile)
+	}
+	return cfg, nil
+}
+
+func transportComplete(cfg cliConfig) bool {
+	return strings.TrimSpace(cfg.serverURL) != "" && strings.TrimSpace(cfg.certFile) != "" && strings.TrimSpace(cfg.keyFile) != "" && strings.TrimSpace(cfg.caFile) != ""
+}
+
 func requestJSON(cfg *cliConfig, method, path string, payload any, out io.Writer) error {
 	_, err := requestRaw(cfg, method, path, payload, out)
 	return err
@@ -1664,7 +1707,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, `usage:
   custodia-admin [global flags] status read
   custodia-admin [global flags] version server
-  custodia-admin doctor --server-config FILE --signer-config FILE [--systemd] [--network]
+  custodia-admin doctor [--server-config FILE] [--signer-config FILE] [--systemd] [--network]
   custodia-admin [global flags] client whoami
   custodia-admin [global flags] client list
   custodia-admin [global flags] client get --client-id ID

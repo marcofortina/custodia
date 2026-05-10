@@ -203,12 +203,11 @@ sudo install -d -m 0750 -o custodia -g custodia \
 
 The same installed binaries can run Lite, Full or custom profiles. This quickstart configures Lite.
 
-Set the name clients and browsers will use to reach the server. The value is embedded into the server certificate SAN. The bootstrap certificate also includes `localhost`, `127.0.0.1`, `::1` and, when the name resolves to a non-loopback address, that resolved IP address. Use the DNS name or IP address that browsers and clients will actually use.
+Set the name clients and browsers will use to reach the server. The value is embedded into the server certificate SAN. Never use `localhost` as the server name: it teaches the wrong endpoint, breaks real remote clients and should stay limited to internal loopback SAN compatibility. IP addresses are supported, but a stable DNS name is strongly recommended because it survives address changes and is easier to rotate operationally.
 
 ```bash
 CUSTODIA_SERVER_NAME="$(hostname -f)"
 # Examples:
-# CUSTODIA_SERVER_NAME=localhost
 # CUSTODIA_SERVER_NAME=custodia.example.internal
 # CUSTODIA_SERVER_NAME=192.0.2.10
 ```
@@ -246,9 +245,7 @@ For Full/custom deployments, keep the same binaries and replace the runtime conf
 The bootstrap command wrote `/etc/custodia/custodia-server.yaml`. Generate Web MFA material and append it once:
 
 ```bash
-sudo custodia-admin web totp configure \
-  --config /etc/custodia/custodia-server.yaml \
-  --account admin
+sudo custodia-admin web totp configure --account admin
 ```
 
 The command always prints the TOTP secret and provisioning URI. If `qrencode` is installed, it also prints an ANSI terminal QR code; otherwise it prints a hint and continues. The TOTP secret and provisioning URI are sensitive. Do not commit, paste or share install logs containing them.
@@ -272,30 +269,16 @@ sudo tail -n 100 /var/log/custodia/custodia.log
 
 ## 6. Verify the admin API
 
-Use the same host name or IP embedded in the server certificate:
+Run the read-only doctor after the server and signer are configured. The default paths are `/etc/custodia/custodia-server.yaml` and `/etc/custodia/custodia-signer.yaml`:
 
 ```bash
-CUSTODIA_API="https://${CUSTODIA_SERVER_NAME}:8443"
-CUSTODIA_SIGNER="https://${CUSTODIA_SERVER_NAME}:9444"
+sudo -u custodia custodia-admin doctor
 ```
 
-Run the read-only doctor after the server and signer are configured:
+Read API status with the generated admin mTLS certificate. The command reads the server URL and admin mTLS paths from `/etc/custodia/custodia-server.yaml`:
 
 ```bash
-sudo -u custodia custodia-admin doctor \
-  --server-config /etc/custodia/custodia-server.yaml \
-  --signer-config /etc/custodia/custodia-signer.yaml
-```
-
-Read API status with the generated admin mTLS certificate:
-
-```bash
-sudo -u custodia custodia-admin \
-  --server-url "$CUSTODIA_API" \
-  --cert /etc/custodia/admin.crt \
-  --key /etc/custodia/admin.key \
-  --ca /etc/custodia/ca.crt \
-  status read
+sudo -u custodia custodia-admin status read
 ```
 
 Expected result: JSON status metadata. It must not contain plaintext secrets, DEKs, private keys or envelopes.
@@ -303,12 +286,7 @@ Expected result: JSON status metadata. It must not contain plaintext secrets, DE
 Diagnostics:
 
 ```bash
-sudo -u custodia custodia-admin \
-  --server-url "$CUSTODIA_API" \
-  --cert /etc/custodia/admin.crt \
-  --key /etc/custodia/admin.key \
-  --ca /etc/custodia/ca.crt \
-  diagnostics read
+sudo -u custodia custodia-admin diagnostics read
 ```
 
 ## 7. Open the Web Console
@@ -333,11 +311,7 @@ Import `/tmp/custodia-admin.p12` into your browser certificate store, then open:
 https://SERVER_IP_OR_HOSTNAME:9443/web/login
 ```
 
-Replace `SERVER_IP_OR_HOSTNAME` with the same value used as `CUSTODIA_SERVER_NAME`. For a local-only install, use:
-
-```text
-https://localhost:9443/web/login
-```
+Use the same DNS name or IP address configured as `CUSTODIA_SERVER_NAME`.
 
 After importing it into the browser, remove the temporary bundle:
 
@@ -373,7 +347,8 @@ Enroll Alice from Alice's workstation:
 custodia-client mtls enroll \
   --client-id "$ALICE_ID" \
   --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
-  --enrollment-token "ENROLLMENT_TOKEN"
+  --enrollment-token "ENROLLMENT_TOKEN" \
+  --insecure
 ```
 
 This generates Alice's mTLS private key and CSR locally, sends only the CSR plus token to Custodia, receives Alice's signed certificate plus `ca.crt`, and installs the public material into Alice's standard client profile. The mTLS private key never leaves Alice's workstation.
@@ -397,7 +372,7 @@ SMOKE_READBACK="$HOME/custodia-smoke-secret.readback.txt"
 printf 'super secret demo value' > "$SMOKE_SECRET"
 chmod 600 "$SMOKE_SECRET"
 
-custodia-client secret put   --client-id "$ALICE_ID"   --name smoke-demo   --value-file "$SMOKE_SECRET"   > "$SMOKE_CREATE"
+custodia-client secret put --client-id "$ALICE_ID" --name smoke-demo --value-file "$SMOKE_SECRET" > "$SMOKE_CREATE"
 
 SECRET_ID="$(python3 - <<'PY'
 import json, os
@@ -405,7 +380,7 @@ print(json.load(open(os.path.expanduser('~/custodia-smoke-secret.create.json')))
 PY
 )"
 
-custodia-client secret get   --client-id "$ALICE_ID"   --secret-id "$SECRET_ID"   --out "$SMOKE_READBACK"
+custodia-client secret get --client-id "$ALICE_ID" --secret-id "$SECRET_ID" --out "$SMOKE_READBACK"
 
 cat "$SMOKE_READBACK"
 ```
@@ -430,7 +405,8 @@ export BOB_ID=client_bob
 custodia-client mtls enroll \
   --client-id "$BOB_ID" \
   --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
-  --enrollment-token "ENROLLMENT_TOKEN"
+  --enrollment-token "ENROLLMENT_TOKEN" \
+  --insecure
 ```
 
 Configure Bob's local application encryption key and reusable client profile:
@@ -447,7 +423,7 @@ Transfer Bob's public key to Alice through a trusted channel. The default path i
 ```bash
 BOB_PUBLIC_KEY="$HOME/$BOB_ID.x25519.pub.json"
 
-custodia-client secret share   --client-id "$ALICE_ID"   --secret-id "$SECRET_ID"   --target-client-id "$BOB_ID"   --recipient "$BOB_ID=$BOB_PUBLIC_KEY"   --permissions 4
+custodia-client secret share --client-id "$ALICE_ID" --secret-id "$SECRET_ID" --target-client-id "$BOB_ID" --recipient "$BOB_ID=$BOB_PUBLIC_KEY" --permissions 4
 ```
 
 Transfer the `SECRET_ID` value to Bob when Bob is remote. Bob can now read and decrypt the secret locally:
@@ -455,7 +431,7 @@ Transfer the `SECRET_ID` value to Bob when Bob is remote. Bob can now read and d
 ```bash
 BOB_READBACK="$HOME/custodia-smoke-bob.readback.txt"
 
-custodia-client secret get   --client-id "$BOB_ID"   --secret-id "$SECRET_ID"   --out "$BOB_READBACK"
+custodia-client secret get --client-id "$BOB_ID" --secret-id "$SECRET_ID" --out "$BOB_READBACK"
 
 cat "$BOB_READBACK"
 ```
@@ -469,7 +445,7 @@ super secret demo value
 Delete the smoke secret when the test is complete:
 
 ```bash
-custodia-client secret delete   --client-id "$ALICE_ID"   --secret-id "$SECRET_ID"   --yes
+custodia-client secret delete --client-id "$ALICE_ID" --secret-id "$SECRET_ID" --yes
 ```
 
 The vault received only ciphertext, crypto metadata and opaque envelopes. Plaintext, mTLS private keys and application private keys stayed local to each client. Deletion prevents future server-side reads; material already downloaded by authorized clients remains outside server control.
@@ -499,8 +475,8 @@ Before considering the node ready for real data:
 
 - `systemctl status custodia-server` is healthy;
 - `systemctl status custodia-signer` is healthy when you need client certificate issuance;
-- `custodia-admin doctor` passes against the server and signer configs;
-- `custodia-admin status read` succeeds with the admin certificate;
+- `custodia-admin doctor` passes against the default server and signer configs;
+- `custodia-admin status read` succeeds using the admin transport defaults from `/etc/custodia/custodia-server.yaml`;
 - the Web Console opens through the configured host name/IP and requires TOTP;
 - `custodia-client config check` succeeds for Alice and Bob;
 - `custodia-client doctor --online` succeeds for Alice and Bob;
@@ -517,9 +493,7 @@ Before considering the node ready for real data:
 Run the read-only doctor after the server and signer are configured:
 
 ```bash
-sudo -u custodia custodia-admin doctor \
-  --server-config /etc/custodia/custodia-server.yaml \
-  --signer-config /etc/custodia/custodia-signer.yaml
+sudo -u custodia custodia-admin doctor
 ```
 
 For client-side checks:
