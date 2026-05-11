@@ -12,6 +12,7 @@ package dev.custodia.client;
 import java.net.URI;
 import java.net.http.HttpHeaders;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +21,7 @@ import javax.net.ssl.SSLContext;
 public final class CustodiaClientTest {
     public static void main(String[] args) throws Exception {
         routesOpaqueSecretPayloads();
+        routesHighLevelCryptoByKey();
         validatesHttpErrors();
         exportsAuditMetadataHeaders();
         rejectsInvalidFilterLimit();
@@ -59,6 +61,37 @@ public final class CustodiaClientTest {
 
         client.deleteSecretByKey("db01", "user:sys", true);
         assertEquals("https://vault.test/v1/secrets/by-key?namespace=db01&key=user%3Asys&cascade=true", transport.lastRequest.uri().toString(), "delete by key path");
+    }
+
+
+    private static void routesHighLevelCryptoByKey() throws Exception {
+        CapturingTransport transport = new CapturingTransport(200, "{\"secret_id\":\"s1\",\"version_id\":\"v1\"}");
+        CustodiaClient client = CustodiaClient.withTransport(testConfig(), transport);
+        var alicePrivate = filledBytes(CustodiaCrypto.X25519_KEY_BYTES, 1);
+        var aliceKey = new CustodiaCrypto.X25519PrivateKeyHandle("client_alice", alicePrivate);
+        Map<String, CustodiaCrypto.RecipientPublicKey> recipients = new LinkedHashMap<>();
+        recipients.put("client_alice", CustodiaCrypto.deriveX25519RecipientPublicKey("client_alice", alicePrivate));
+        var crypto = client.withCrypto(new CustodiaCrypto.CryptoOptions(
+            new CustodiaCrypto.StaticPublicKeyResolver(recipients),
+            new CustodiaCrypto.StaticPrivateKeyProvider(aliceKey),
+            new FixedRandomSource()
+        ));
+
+        crypto.createEncryptedSecretByKey(
+            "db01",
+            "user:sys",
+            "local plaintext".getBytes(StandardCharsets.UTF_8),
+            List.of(),
+            CustodiaClient.PERMISSION_ALL
+        );
+
+        String body = new String(transport.lastRequest.body(), StandardCharsets.UTF_8);
+        assertEquals("POST", transport.lastRequest.method(), "crypto by-key method");
+        assertEquals("https://vault.test/v1/secrets", transport.lastRequest.uri().toString(), "crypto by-key uri");
+        assertContains(body, "\"namespace\":\"db01\"", "namespace payload");
+        assertContains(body, "\"key\":\"user:sys\"", "key payload");
+        assertContains(body, "\"secret_name\":\"db01/user:sys\"", "keyspace AAD payload");
+        assertContains(body, "\"client_id\":\"client_alice\"", "owner envelope payload");
     }
 
     private static void validatesHttpErrors() throws Exception {
@@ -135,6 +168,27 @@ public final class CustodiaClientTest {
     private static void assertEquals(Object expected, Object actual, String label) {
         if (!expected.equals(actual)) {
             throw new AssertionError(label + ": expected <" + expected + "> but got <" + actual + ">");
+        }
+    }
+
+    private static void assertContains(String haystack, String needle, String label) {
+        if (!haystack.contains(needle)) {
+            throw new AssertionError(label + ": expected body to contain <" + needle + "> but got <" + haystack + ">");
+        }
+    }
+
+    private static byte[] filledBytes(int length, int value) {
+        byte[] out = new byte[length];
+        Arrays.fill(out, (byte) value);
+        return out;
+    }
+
+    private static final class FixedRandomSource implements CustodiaCrypto.RandomSource {
+        private int value = 10;
+
+        @Override
+        public byte[] randomBytes(int length) {
+            return filledBytes(length, value++);
         }
     }
 

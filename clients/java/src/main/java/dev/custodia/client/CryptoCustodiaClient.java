@@ -60,6 +60,49 @@ public final class CryptoCustodiaClient {
         return transport.createSecretPayload(payload.toString());
     }
 
+    public String createEncryptedSecretByKey(String namespace, String key, byte[] plaintext, List<String> recipients, int permissions)
+        throws IOException, InterruptedException, CustodiaHttpError {
+        return createEncryptedSecretByKey(namespace, key, plaintext, recipients, permissions, null);
+    }
+
+    public String createEncryptedSecretByKey(
+        String namespace,
+        String key,
+        byte[] plaintext,
+        List<String> recipients,
+        int permissions,
+        String expiresAt
+    ) throws IOException, InterruptedException, CustodiaHttpError {
+        String normalizedNamespace = requireText(namespace, "namespace");
+        String normalizedKey = requireText(key, "secret key");
+        byte[] dek = random(CustodiaCrypto.AES256_GCM_KEY_BYTES);
+        byte[] nonce = random(CustodiaCrypto.AES_GCM_NONCE_BYTES);
+        CustodiaCrypto.AADInputs aadInputs = new CustodiaCrypto.AADInputs("", aadSecretNameForKeyspace(normalizedNamespace, normalizedKey), "");
+        CustodiaCrypto.CryptoMetadata metadata = CustodiaCrypto.metadataV1(aadInputs, nonce);
+        byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, aadInputs);
+        byte[] ciphertext = CustodiaCrypto.sealContentAES256GCM(dek, nonce, plaintext, aad);
+
+        StringBuilder payload = new StringBuilder();
+        payload.append('{');
+        appendField(payload, "namespace", normalizedNamespace);
+        payload.append(',');
+        appendField(payload, "key", normalizedKey);
+        payload.append(',');
+        appendField(payload, "ciphertext", CustodiaCrypto.encodeBase64(ciphertext));
+        payload.append(',');
+        payload.append(CustodiaCrypto.quote("crypto_metadata")).append(':').append(CustodiaCrypto.metadataJson(metadata));
+        payload.append(',');
+        payload.append(CustodiaCrypto.quote("envelopes")).append(':').append(sealRecipientEnvelopes(normalizedRecipients(recipients), dek, aad));
+        payload.append(',');
+        payload.append(CustodiaCrypto.quote("permissions")).append(':').append(permissions);
+        if (expiresAt != null && !expiresAt.isBlank()) {
+            payload.append(',');
+            appendField(payload, "expires_at", expiresAt);
+        }
+        payload.append('}');
+        return transport.createSecretPayload(payload.toString());
+    }
+
     public String createEncryptedSecretVersion(String secretId, byte[] plaintext, List<String> recipients, int permissions)
         throws IOException, InterruptedException, CustodiaHttpError {
         return createEncryptedSecretVersion(secretId, plaintext, recipients, permissions, null);
@@ -92,8 +135,63 @@ public final class CryptoCustodiaClient {
         return transport.createSecretVersionPayload(normalizedSecretId, payload.toString());
     }
 
+    public String createEncryptedSecretVersionByKey(String namespace, String key, byte[] plaintext, List<String> recipients, int permissions)
+        throws IOException, InterruptedException, CustodiaHttpError {
+        return createEncryptedSecretVersionByKey(namespace, key, plaintext, recipients, permissions, null);
+    }
+
+    public String createEncryptedSecretVersionByKey(
+        String namespace,
+        String key,
+        byte[] plaintext,
+        List<String> recipients,
+        int permissions,
+        String expiresAt
+    ) throws IOException, InterruptedException, CustodiaHttpError {
+        String normalizedNamespace = requireText(namespace, "namespace");
+        String normalizedKey = requireText(key, "secret key");
+        byte[] dek = random(CustodiaCrypto.AES256_GCM_KEY_BYTES);
+        byte[] nonce = random(CustodiaCrypto.AES_GCM_NONCE_BYTES);
+        CustodiaCrypto.AADInputs aadInputs = new CustodiaCrypto.AADInputs("", aadSecretNameForKeyspace(normalizedNamespace, normalizedKey), "");
+        CustodiaCrypto.CryptoMetadata metadata = CustodiaCrypto.metadataV1(aadInputs, nonce);
+        byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, aadInputs);
+        byte[] ciphertext = CustodiaCrypto.sealContentAES256GCM(dek, nonce, plaintext, aad);
+
+        StringBuilder payload = new StringBuilder();
+        payload.append('{');
+        appendField(payload, "ciphertext", CustodiaCrypto.encodeBase64(ciphertext));
+        payload.append(',');
+        payload.append(CustodiaCrypto.quote("crypto_metadata")).append(':').append(CustodiaCrypto.metadataJson(metadata));
+        payload.append(',');
+        payload.append(CustodiaCrypto.quote("envelopes")).append(':').append(sealRecipientEnvelopes(normalizedRecipients(recipients), dek, aad));
+        payload.append(',');
+        payload.append(CustodiaCrypto.quote("permissions")).append(':').append(permissions);
+        if (expiresAt != null && !expiresAt.isBlank()) {
+            payload.append(',');
+            appendField(payload, "expires_at", expiresAt);
+        }
+        payload.append('}');
+        return transport.createSecretVersionPayloadByKey(normalizedNamespace, normalizedKey, payload.toString());
+    }
+
     public DecryptedSecret readDecryptedSecret(String secretId) throws IOException, InterruptedException, CustodiaHttpError {
         String payload = transport.getSecretPayload(secretId);
+        ParsedSecret secret = ParsedSecret.parse(payload);
+        CustodiaCrypto.CryptoMetadata metadata = secret.metadata();
+        CustodiaCrypto.AADInputs fallback = new CustodiaCrypto.AADInputs(secret.secretId(), "", secret.versionId());
+        CustodiaCrypto.AADInputs aadInputs = metadata.canonicalAADInputs(fallback);
+        byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, aadInputs);
+        if (metadata.contentNonceB64().isBlank()) {
+            throw new CustodiaCrypto.MalformedCryptoMetadataException("missing content nonce");
+        }
+        byte[] nonce = CustodiaCrypto.decodeBase64(metadata.contentNonceB64());
+        byte[] dek = openSecretEnvelope(secret.envelope(), aad);
+        byte[] plaintext = CustodiaCrypto.openContentAES256GCM(dek, nonce, CustodiaCrypto.decodeBase64(secret.ciphertext()), aad);
+        return new DecryptedSecret(secret.secretId(), secret.versionId(), plaintext, metadata, secret.permissions(), secret.grantedAt(), secret.accessExpiresAt());
+    }
+
+    public DecryptedSecret readDecryptedSecretByKey(String namespace, String key) throws IOException, InterruptedException, CustodiaHttpError {
+        String payload = transport.getSecretPayloadByKey(namespace, key);
         ParsedSecret secret = ParsedSecret.parse(payload);
         CustodiaCrypto.CryptoMetadata metadata = secret.metadata();
         CustodiaCrypto.AADInputs fallback = new CustodiaCrypto.AADInputs(secret.secretId(), "", secret.versionId());
@@ -141,6 +239,43 @@ public final class CryptoCustodiaClient {
         }
         request.append('}');
         return transport.shareSecretPayload(secretId, request.toString());
+    }
+
+    public String shareEncryptedSecretByKey(String namespace, String key, String targetClientId, int permissions)
+        throws IOException, InterruptedException, CustodiaHttpError {
+        return shareEncryptedSecretByKey(namespace, key, targetClientId, permissions, null);
+    }
+
+    public String shareEncryptedSecretByKey(String namespace, String key, String targetClientId, int permissions, String expiresAt)
+        throws IOException, InterruptedException, CustodiaHttpError {
+        String normalizedNamespace = requireText(namespace, "namespace");
+        String normalizedKey = requireText(key, "secret key");
+        String normalizedTarget = requireText(targetClientId, "target client id");
+        String payload = transport.getSecretPayloadByKey(normalizedNamespace, normalizedKey);
+        ParsedSecret secret = ParsedSecret.parse(payload);
+        CustodiaCrypto.CryptoMetadata metadata = secret.metadata();
+        CustodiaCrypto.AADInputs fallback = new CustodiaCrypto.AADInputs(secret.secretId(), "", secret.versionId());
+        CustodiaCrypto.AADInputs aadInputs = metadata.canonicalAADInputs(fallback);
+        byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, aadInputs);
+        byte[] dek = openSecretEnvelope(secret.envelope(), aad);
+        String envelope = sealRecipientEnvelopes(List.of(normalizedTarget), dek, aad);
+        String envelopeObject = envelope.substring(1, envelope.length() - 1);
+
+        StringBuilder request = new StringBuilder();
+        request.append('{');
+        appendField(request, "version_id", secret.versionId());
+        request.append(',');
+        appendField(request, "target_client_id", normalizedTarget);
+        request.append(',');
+        request.append(envelopeObject.replaceFirst("^\"client_id\":\"[^\"]+\",", ""));
+        request.append(',');
+        request.append(CustodiaCrypto.quote("permissions")).append(':').append(permissions);
+        if (expiresAt != null && !expiresAt.isBlank()) {
+            request.append(',');
+            appendField(request, "expires_at", expiresAt);
+        }
+        request.append('}');
+        return transport.shareSecretPayloadByKey(normalizedNamespace, normalizedKey, request.toString());
     }
 
     private List<String> normalizedRecipients(List<String> recipients) {
@@ -206,6 +341,10 @@ public final class CryptoCustodiaClient {
             throw new IllegalArgumentException(label + " is required");
         }
         return value.trim();
+    }
+
+    private static String aadSecretNameForKeyspace(String namespace, String key) {
+        return namespace + "/" + key;
     }
 
     private static void appendField(StringBuilder json, String key, String value) {
