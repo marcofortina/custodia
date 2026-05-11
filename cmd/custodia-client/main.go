@@ -673,13 +673,12 @@ func (a *app) runSecretGet(args []string) int {
 	registerCryptoFlagsNoRecipients(fs, &crypto)
 	namespace := fs.String("namespace", "default", "secret namespace")
 	key := fs.String("key", "", "secret key")
-	secretID := fs.String("secret-id", "", "legacy secret id")
 	out := fs.String("out", "-", "plaintext output file or - for stdout")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
-	if strings.TrimSpace(*key) == "" && strings.TrimSpace(*secretID) == "" {
-		fmt.Fprintln(a.stderr, "--key or --secret-id is required")
+	if strings.TrimSpace(*key) == "" {
+		fmt.Fprintln(a.stderr, "--key is required")
 		return 2
 	}
 	cryptoClient, _, err := buildCryptoClient(transport, crypto)
@@ -687,12 +686,7 @@ func (a *app) runSecretGet(args []string) int {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
-	var secret sdk.DecryptedSecret
-	if strings.TrimSpace(*key) != "" {
-		secret, err = cryptoClient.ReadDecryptedSecretByKey(context.Background(), *namespace, *key)
-	} else {
-		secret, err = cryptoClient.ReadDecryptedSecret(context.Background(), *secretID)
-	}
+	secret, err := cryptoClient.ReadDecryptedSecretByKey(context.Background(), *namespace, *key)
 	if err != nil {
 		fmt.Fprintf(a.stderr, "read encrypted secret: %v\n", err)
 		return 1
@@ -714,15 +708,14 @@ func (a *app) runSecretDelete(args []string) int {
 	clientID := fs.String("client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "local client id for the standard profile")
 	namespace := fs.String("namespace", "default", "secret namespace")
 	key := fs.String("key", "", "secret key")
-	secretID := fs.String("secret-id", "", "legacy secret id")
 	cascade := fs.Bool("cascade", false, "delete shared owner secret after revoking active shares")
 	confirmed := fs.Bool("yes", false, "confirm secret deletion or shared-key removal")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
 	transport.profileClientID = strings.TrimSpace(*clientID)
-	if strings.TrimSpace(*key) == "" && strings.TrimSpace(*secretID) == "" {
-		fmt.Fprintln(a.stderr, "--key or --secret-id is required")
+	if strings.TrimSpace(*key) == "" {
+		fmt.Fprintln(a.stderr, "--key is required")
 		return 2
 	}
 	if !*confirmed {
@@ -734,18 +727,11 @@ func (a *app) runSecretDelete(args []string) int {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
-	if strings.TrimSpace(*key) != "" {
-		if err := client.DeleteSecretByKey(*namespace, *key, *cascade); err != nil {
-			fmt.Fprintf(a.stderr, "delete secret: %v\n", err)
-			return 1
-		}
-		return writeJSON(a.stdout, map[string]string{"namespace": strings.TrimSpace(*namespace), "key": strings.TrimSpace(*key), "status": "deleted"})
-	}
-	if err := client.DeleteSecretWithCascade(*secretID, *cascade); err != nil {
+	if err := client.DeleteSecretByKey(*namespace, *key, *cascade); err != nil {
 		fmt.Fprintf(a.stderr, "delete secret: %v\n", err)
 		return 1
 	}
-	return writeJSON(a.stdout, map[string]string{"secret_id": *secretID, "status": "deleted"})
+	return writeJSON(a.stdout, map[string]string{"namespace": strings.TrimSpace(*namespace), "key": strings.TrimSpace(*key), "status": "deleted"})
 }
 
 func (a *app) runSecretShare(args []string) int {
@@ -756,14 +742,13 @@ func (a *app) runSecretShare(args []string) int {
 	registerCryptoFlags(fs, &crypto)
 	namespace := fs.String("namespace", "default", "secret namespace")
 	key := fs.String("key", "", "secret key")
-	secretID := fs.String("secret-id", "", "legacy secret id")
 	targetClientID := fs.String("target-client-id", "", "target recipient client id")
 	permissions := fs.Int("permissions", defaultSharePerms, "target permission bitmask")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
-	if (strings.TrimSpace(*key) == "" && strings.TrimSpace(*secretID) == "") || strings.TrimSpace(*targetClientID) == "" {
-		fmt.Fprintln(a.stderr, "--key or --secret-id and --target-client-id are required")
+	if strings.TrimSpace(*key) == "" || strings.TrimSpace(*targetClientID) == "" {
+		fmt.Fprintln(a.stderr, "--key and --target-client-id are required")
 		return 2
 	}
 	cryptoClient, _, err := buildCryptoClient(transport, crypto)
@@ -771,18 +756,11 @@ func (a *app) runSecretShare(args []string) int {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
-	if strings.TrimSpace(*key) != "" {
-		if err := cryptoClient.ShareEncryptedSecretByKey(context.Background(), *namespace, *key, sdk.ShareEncryptedSecretRequest{TargetClientID: *targetClientID, Permissions: *permissions}); err != nil {
-			fmt.Fprintf(a.stderr, "share encrypted secret: %v\n", err)
-			return 1
-		}
-		return writeJSON(a.stdout, map[string]string{"namespace": strings.TrimSpace(*namespace), "key": strings.TrimSpace(*key), "target_client_id": *targetClientID, "status": "shared"})
-	}
-	if err := cryptoClient.ShareEncryptedSecret(context.Background(), *secretID, sdk.ShareEncryptedSecretRequest{TargetClientID: *targetClientID, Permissions: *permissions}); err != nil {
+	if err := cryptoClient.ShareEncryptedSecretByKey(context.Background(), *namespace, *key, sdk.ShareEncryptedSecretRequest{TargetClientID: *targetClientID, Permissions: *permissions}); err != nil {
 		fmt.Fprintf(a.stderr, "share encrypted secret: %v\n", err)
 		return 1
 	}
-	return writeJSON(a.stdout, map[string]string{"secret_id": *secretID, "target_client_id": *targetClientID, "status": "shared"})
+	return writeJSON(a.stdout, map[string]string{"namespace": strings.TrimSpace(*namespace), "key": strings.TrimSpace(*key), "target_client_id": *targetClientID, "status": "shared"})
 }
 
 func (a *app) runSecretVersion(args []string) int {
@@ -805,14 +783,13 @@ func (a *app) runSecretVersionPut(args []string) int {
 	registerCryptoFlags(fs, &crypto)
 	namespace := fs.String("namespace", "default", "secret namespace")
 	key := fs.String("key", "", "secret key")
-	secretID := fs.String("secret-id", "", "legacy secret id")
 	valueFile := fs.String("value-file", "", "plaintext file to encrypt locally")
 	permissions := fs.Int("permissions", defaultPermissions, "permission bitmask for recipients")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
-	if (strings.TrimSpace(*key) == "" && strings.TrimSpace(*secretID) == "") || strings.TrimSpace(*valueFile) == "" {
-		fmt.Fprintln(a.stderr, "--key or --secret-id and --value-file are required")
+	if strings.TrimSpace(*key) == "" || strings.TrimSpace(*valueFile) == "" {
+		fmt.Fprintln(a.stderr, "--key and --value-file are required")
 		return 2
 	}
 	plaintext, err := os.ReadFile(*valueFile)
@@ -825,12 +802,7 @@ func (a *app) runSecretVersionPut(args []string) int {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
-	var ref sdk.SecretVersionRef
-	if strings.TrimSpace(*key) != "" {
-		ref, err = cryptoClient.CreateEncryptedSecretVersionByKey(context.Background(), *namespace, *key, sdk.CreateEncryptedSecretVersionRequest{Plaintext: plaintext, Recipients: recipients, Permissions: *permissions})
-	} else {
-		ref, err = cryptoClient.CreateEncryptedSecretVersion(context.Background(), *secretID, sdk.CreateEncryptedSecretVersionRequest{Plaintext: plaintext, Recipients: recipients, Permissions: *permissions})
-	}
+	ref, err := cryptoClient.CreateEncryptedSecretVersionByKey(context.Background(), *namespace, *key, sdk.CreateEncryptedSecretVersionRequest{Plaintext: plaintext, Recipients: recipients, Permissions: *permissions})
 	if err != nil {
 		fmt.Fprintf(a.stderr, "create encrypted secret version: %v\n", err)
 		return 1
@@ -845,14 +817,13 @@ func (a *app) runSecretVersionsList(args []string) int {
 	clientID := fs.String("client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "local client id for the standard profile")
 	namespace := fs.String("namespace", "default", "secret namespace")
 	key := fs.String("key", "", "secret key")
-	secretID := fs.String("secret-id", "", "legacy secret id")
 	limit := fs.Int("limit", 100, "maximum rows to return")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
 	transport.profileClientID = strings.TrimSpace(*clientID)
-	if strings.TrimSpace(*key) == "" && strings.TrimSpace(*secretID) == "" {
-		fmt.Fprintln(a.stderr, "--key or --secret-id is required")
+	if strings.TrimSpace(*key) == "" {
+		fmt.Fprintln(a.stderr, "--key is required")
 		return 2
 	}
 	client, err := buildTransportClient(transport)
@@ -860,16 +831,12 @@ func (a *app) runSecretVersionsList(args []string) int {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
-	resolvedSecretID := strings.TrimSpace(*secretID)
-	if strings.TrimSpace(*key) != "" {
-		secret, err := client.GetSecretPayloadByKey(*namespace, *key)
-		if err != nil {
-			fmt.Fprintf(a.stderr, "resolve secret key: %v\n", err)
-			return 1
-		}
-		resolvedSecretID = secret.SecretID
+	secret, err := client.GetSecretPayloadByKey(*namespace, *key)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "resolve secret key: %v\n", err)
+		return 1
 	}
-	versions, err := client.ListSecretVersionsWithLimit(resolvedSecretID, *limit)
+	versions, err := client.ListSecretVersionsWithLimit(secret.SecretID, *limit)
 	if err != nil {
 		fmt.Fprintf(a.stderr, "list secret versions: %v\n", err)
 		return 1
@@ -900,14 +867,13 @@ func (a *app) runSecretAccessList(args []string) int {
 	clientID := fs.String("client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "local client id for the standard profile")
 	namespace := fs.String("namespace", "default", "secret namespace")
 	key := fs.String("key", "", "secret key")
-	secretID := fs.String("secret-id", "", "legacy secret id")
 	limit := fs.Int("limit", 100, "maximum rows to return")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
 	transport.profileClientID = strings.TrimSpace(*clientID)
-	if strings.TrimSpace(*key) == "" && strings.TrimSpace(*secretID) == "" {
-		fmt.Fprintln(a.stderr, "--key or --secret-id is required")
+	if strings.TrimSpace(*key) == "" {
+		fmt.Fprintln(a.stderr, "--key is required")
 		return 2
 	}
 	client, err := buildTransportClient(transport)
@@ -915,16 +881,12 @@ func (a *app) runSecretAccessList(args []string) int {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
-	resolvedSecretID := strings.TrimSpace(*secretID)
-	if strings.TrimSpace(*key) != "" {
-		secret, err := client.GetSecretPayloadByKey(*namespace, *key)
-		if err != nil {
-			fmt.Fprintf(a.stderr, "resolve secret key: %v\n", err)
-			return 1
-		}
-		resolvedSecretID = secret.SecretID
+	secret, err := client.GetSecretPayloadByKey(*namespace, *key)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "resolve secret key: %v\n", err)
+		return 1
 	}
-	access, err := client.ListSecretAccessWithLimit(resolvedSecretID, *limit)
+	access, err := client.ListSecretAccessWithLimit(secret.SecretID, *limit)
 	if err != nil {
 		fmt.Fprintf(a.stderr, "list secret access: %v\n", err)
 		return 1
@@ -939,15 +901,14 @@ func (a *app) runSecretAccessRevoke(args []string) int {
 	clientID := fs.String("client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "local client id for the standard profile")
 	namespace := fs.String("namespace", "default", "secret namespace")
 	key := fs.String("key", "", "secret key")
-	secretID := fs.String("secret-id", "", "legacy secret id")
 	targetClientID := fs.String("target-client-id", "", "target client id whose future access is revoked")
 	confirmed := fs.Bool("yes", false, "confirm access revocation")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
 	transport.profileClientID = strings.TrimSpace(*clientID)
-	if (strings.TrimSpace(*key) == "" && strings.TrimSpace(*secretID) == "") || strings.TrimSpace(*targetClientID) == "" {
-		fmt.Fprintln(a.stderr, "--key or --secret-id and --target-client-id are required")
+	if strings.TrimSpace(*key) == "" || strings.TrimSpace(*targetClientID) == "" {
+		fmt.Fprintln(a.stderr, "--key and --target-client-id are required")
 		return 2
 	}
 	if !*confirmed {
@@ -959,23 +920,11 @@ func (a *app) runSecretAccessRevoke(args []string) int {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
-	resolvedSecretID := strings.TrimSpace(*secretID)
-	if strings.TrimSpace(*key) != "" {
-		secret, err := client.GetSecretPayloadByKey(*namespace, *key)
-		if err != nil {
-			fmt.Fprintf(a.stderr, "resolve secret key: %v\n", err)
-			return 1
-		}
-		resolvedSecretID = secret.SecretID
-	}
-	if err := client.RevokeAccess(resolvedSecretID, *targetClientID); err != nil {
+	if err := client.RevokeAccessByKey(*namespace, *key, *targetClientID); err != nil {
 		fmt.Fprintf(a.stderr, "revoke secret access: %v\n", err)
 		return 1
 	}
-	if strings.TrimSpace(*key) != "" {
-		return writeJSON(a.stdout, map[string]string{"namespace": strings.TrimSpace(*namespace), "key": strings.TrimSpace(*key), "target_client_id": *targetClientID, "status": "revoked"})
-	}
-	return writeJSON(a.stdout, map[string]string{"secret_id": resolvedSecretID, "target_client_id": *targetClientID, "status": "revoked"})
+	return writeJSON(a.stdout, map[string]string{"namespace": strings.TrimSpace(*namespace), "key": strings.TrimSpace(*key), "target_client_id": *targetClientID, "status": "revoked"})
 }
 
 func (a *app) runSecretList(args []string) int {

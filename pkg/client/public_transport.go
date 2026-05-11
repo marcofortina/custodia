@@ -142,6 +142,14 @@ func (c *Client) ShareSecretPayloadByKey(namespace, key string, req ShareSecretP
 	return c.doJSON(http.MethodPost, path, req, nil)
 }
 
+func (c *Client) RevokeAccessByKey(namespace, key, targetClientID string) error {
+	path, err := secretByKeyPath("/v1/secrets/by-key/access/"+pathEscape(targetClientID), namespace, key, false)
+	if err != nil {
+		return err
+	}
+	return c.doJSON(http.MethodDelete, path, nil, nil)
+}
+
 func (c *Client) CreateAccessGrant(secretID string, req AccessGrantPayload) (AccessGrantRef, error) {
 	var ref AccessGrantRef
 	return ref, c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/access-requests", req, &ref)

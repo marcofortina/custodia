@@ -327,7 +327,7 @@ func TestHelpMentionsEncryptedSecretCommands(t *testing.T) {
 	}
 }
 
-func TestMetadataListCommandsRequireKeyOrSecretIDBeforeTransport(t *testing.T) {
+func TestMetadataListCommandsRequireKeyBeforeTransport(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		args []string
@@ -341,7 +341,7 @@ func TestMetadataListCommandsRequireKeyOrSecretIDBeforeTransport(t *testing.T) {
 			if code != 2 {
 				t.Fatalf("expected usage failure, got %d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
 			}
-			if !strings.Contains(stderr.String(), "--key or --secret-id is required") {
+			if !strings.Contains(stderr.String(), "--key is required") {
 				t.Fatalf("expected secret key error, got: %s", stderr.String())
 			}
 		})
@@ -354,8 +354,8 @@ func TestDestructiveSecretCommandsRequireExplicitConfirmation(t *testing.T) {
 		args []string
 		want string
 	}{
-		{name: "secret delete", args: []string{"secret", "delete", "--secret-id", "00000000-0000-0000-0000-000000000001"}, want: "--yes is required to delete a secret"},
-		{name: "access revoke", args: []string{"secret", "access", "revoke", "--secret-id", "00000000-0000-0000-0000-000000000001", "--target-client-id", "client_bob"}, want: "--yes is required to revoke secret access"},
+		{name: "secret delete", args: []string{"secret", "delete", "--key", "smoke-demo"}, want: "--yes is required to delete a secret"},
+		{name: "access revoke", args: []string{"secret", "access", "revoke", "--key", "smoke-demo", "--target-client-id", "client_bob"}, want: "--yes is required to revoke secret access"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer
@@ -372,8 +372,8 @@ func TestDestructiveSecretCommandsRequireExplicitConfirmation(t *testing.T) {
 
 func TestDestructiveSecretCommandsRequireTransportAfterConfirmation(t *testing.T) {
 	for _, args := range [][]string{
-		{"secret", "delete", "--secret-id", "00000000-0000-0000-0000-000000000001", "--yes"},
-		{"secret", "access", "revoke", "--secret-id", "00000000-0000-0000-0000-000000000001", "--target-client-id", "client_bob", "--yes"},
+		{"secret", "delete", "--key", "smoke-demo", "--yes"},
+		{"secret", "access", "revoke", "--key", "smoke-demo", "--target-client-id", "client_bob", "--yes"},
 	} {
 		var stdout, stderr bytes.Buffer
 		code := (&app{stdout: &stdout, stderr: &stderr}).run(args)
