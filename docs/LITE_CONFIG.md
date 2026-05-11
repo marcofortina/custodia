@@ -18,7 +18,7 @@ Example:
 custodia-server --config /etc/custodia/custodia-server.yaml
 ```
 
-The recommended YAML format groups runtime settings into explicit sections such as `server`, `storage`, `rate_limit`, `web`, `tls`, `deployment` and `signer`. Flat scalar keys remain accepted as an alternate pre-release input format, while unknown sections and unknown keys still fail closed.
+Runtime YAML groups settings into explicit sections such as `server`, `storage`, `rate_limit`, `web`, `tls`, `deployment` and `signer`. Flat top-level runtime scalar keys are rejected; unknown sections and unknown keys fail closed.
 
 ## Lite profile
 

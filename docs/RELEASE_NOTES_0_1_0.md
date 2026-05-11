@@ -16,7 +16,7 @@ The server remains a metadata-only control plane: it authenticates clients, vali
 - Keyspace addressing for normal user workflows with `namespace/key`.
 - Hash-chained audit events and export verification helpers.
 - Package builds for server, client and SDK artifacts.
-- Release guardrails for build metadata, package manifests, install smoke, keyspace regressions and client crypto documentation.
+- Release guardrails for build metadata, package manifests, install smoke, structured runtime YAML, keyspace regressions and client crypto documentation.
 
 ## Namespace/key workflow
 
@@ -61,6 +61,10 @@ The server does not derive DEKs, decrypt ciphertext, unwrap envelopes or interpr
 The repository includes Go, Python, Node.js, C++, Java and Rust SDKs. The canonical feature matrix is [`CLIENT_LIBRARIES.md`](CLIENT_LIBRARIES.md).
 
 0.1.0 requires keyspace parity for normal public workflows across all SDKs. Release checks and package smoke tests guard this surface.
+
+## Runtime configuration
+
+Runtime daemon YAML uses structured sections for server and signer settings. Flat top-level runtime scalar keys are rejected so configuration shape stays explicit and auditable for 0.1.0.
 
 ## Release checks
 

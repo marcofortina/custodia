@@ -705,34 +705,10 @@ func loadSignerSimpleYAML(path string) (map[string]string, error) {
 			}
 			values[key] = strings.Join(parsed, ",")
 		default:
-			if !supportedSignerScalarKeys[key] {
-				return nil, fmt.Errorf("unknown signer config key %q", key)
-			}
-			value, err := signerYAMLScalar(raw, key)
-			if err != nil {
-				return nil, err
-			}
-			values[key] = value
+			return nil, fmt.Errorf("unknown top-level signer config key %q; use structured YAML sections", key)
 		}
 	}
 	return values, nil
-}
-
-var supportedSignerScalarKeys = map[string]bool{
-	"addr":                     true,
-	"tls_cert_file":            true,
-	"tls_key_file":             true,
-	"client_ca_file":           true,
-	"ca_cert_file":             true,
-	"ca_key_file":              true,
-	"ca_key_passphrase_file":   true,
-	"key_provider":             true,
-	"pkcs11_sign_command":      true,
-	"default_ttl_hours":        true,
-	"dev_insecure_http":        true,
-	"shutdown_timeout_seconds": true,
-	"audit_log_file":           true,
-	"crl_file":                 true,
 }
 
 var signerConfigSections = map[string]map[string]string{

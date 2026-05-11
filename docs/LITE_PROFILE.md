@@ -76,30 +76,38 @@ Example Lite YAML:
 ```yaml
 profile: lite
 
-api_addr: ":8443"
-web_addr: ":9443"
-log_file: /var/log/custodia/custodia.log
+server:
+  api_addr: ":8443"
+  web_addr: ":9443"
+  log_file: /var/log/custodia/custodia.log
 
-store_backend: sqlite
-database_url: file:/var/lib/custodia/custodia.db
+storage:
+  backend: sqlite
+  database_url: file:/var/lib/custodia/custodia.db
 
 # The web console is served under /web on web_addr. web_addr is required and must be different from api_addr.
 
-rate_limit_backend: memory
-web_mfa_required: true
-web_passkey_enabled: false
+rate_limit:
+  backend: memory
 
-deployment_mode: lite-single-node
-database_ha_target: none
+web:
+  mfa_required: true
+  passkey_enabled: false
 
-client_ca_file: /etc/custodia/client-ca.crt
-client_crl_file: /etc/custodia/client.crl.pem
-tls_cert_file: /etc/custodia/server.crt
-tls_key_file: /etc/custodia/server.key
+deployment:
+  mode: lite-single-node
+  database_ha_target: none
 
-signer_key_provider: file
-signer_ca_cert_file: /etc/custodia/ca.crt
-signer_ca_key_file: /etc/custodia/ca.key
+tls:
+  client_ca_file: /etc/custodia/client-ca.crt
+  client_crl_file: /etc/custodia/client.crl.pem
+  cert_file: /etc/custodia/server.crt
+  key_file: /etc/custodia/server.key
+
+signer:
+  key_provider: file
+  ca_cert_file: /etc/custodia/ca.crt
+  ca_key_file: /etc/custodia/ca.key
 ```
 
 ## SQLite store

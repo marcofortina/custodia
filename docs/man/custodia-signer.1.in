@@ -40,7 +40,15 @@ Print usage information and exit before runtime initialization.
 .SH OPTIONS
 .TP
 .BI --config " FILE"
-Load YAML signer configuration before applying environment overrides.
+Load YAML signer configuration before applying environment overrides. Runtime YAML uses structured sections such as
+.BR server ,
+.BR tls ,
+.BR admin ,
+.BR ca ,
+.BR audit
+and
+.BR revocation ;
+flat top-level runtime scalar keys are rejected.
 .SH ENVIRONMENT
 .TP
 .B CUSTODIA_SIGNER_ADDR

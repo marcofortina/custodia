@@ -39,7 +39,14 @@ Print usage information and exit before runtime initialization.
 .SH OPTIONS
 .TP
 .BI --config " FILE"
-Path to the YAML configuration file.
+Path to the YAML configuration file. Runtime YAML uses structured sections such as
+.BR server ,
+.BR storage ,
+.BR tls ,
+.BR web
+and
+.BR signer ;
+flat top-level runtime scalar keys are rejected.
 .SH ENVIRONMENT
 .TP
 .B CUSTODIA_CONFIG_FILE

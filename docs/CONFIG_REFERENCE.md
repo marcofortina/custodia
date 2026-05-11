@@ -81,7 +81,7 @@ Complete examples live in:
 - `deploy/examples/custodia-server.lite.yaml`
 - `deploy/examples/custodia-server.full.yaml`
 
-The flat scalar form is accepted as an alternate pre-release input format, but the structured form above is the documented format and the only format used by shipped examples.
+Custodia accepts the structured runtime YAML form shown above, plus the top-level identity lists `bootstrap_clients` and `admin_client_ids`. Flat top-level runtime scalar keys are rejected; place runtime settings inside their documented sections.
 
 ## Signer YAML
 
@@ -114,7 +114,7 @@ audit:
   log_file: /var/log/custodia/signer-audit.jsonl
 ```
 
-The complete example lives in `deploy/examples/custodia-signer.yaml`. The flat signer form is accepted as an alternate pre-release input format, but packaged runtime examples use the structured form.
+The complete example lives in `deploy/examples/custodia-signer.yaml`. Signer runtime settings must be placed inside their documented structured sections.
 
 ## Runtime versus checker inputs
 

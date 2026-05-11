@@ -138,7 +138,7 @@ func TestLoadDeployExampleServerConfigs(t *testing.T) {
 	}
 }
 
-func TestDeployExampleServerConfigsAvoidLegacyFlatRuntimeKeys(t *testing.T) {
+func TestDeployExampleServerConfigsAvoidFlatRuntimeKeys(t *testing.T) {
 	flatTopLevelKeys := []string{
 		"api_addr:",
 		"web_addr:",
@@ -189,12 +189,15 @@ func hasTopLevelYAMLKey(payload, key string) bool {
 func TestLoadYAMLConfigWithEnvOverride(t *testing.T) {
 	path := t.TempDir() + "/custodia.yaml"
 	writeConfigTestFile(t, path, `profile: lite
-api_addr: ":9443"
-log_file: /tmp/custodia.log
-store_backend: sqlite
-database_url: file:/tmp/lite.db
-web_mfa_required: true
-web_passkey_enabled: false
+server:
+  api_addr: ":9443"
+  log_file: /tmp/custodia.log
+storage:
+  backend: sqlite
+  database_url: file:/tmp/lite.db
+web:
+  mfa_required: true
+  passkey_enabled: false
 admin_client_ids: admin,ops
 `)
 	t.Setenv("CUSTODIA_STORE_BACKEND", "memory")
@@ -211,6 +214,17 @@ admin_client_ids: admin,ops
 	}
 	if !cfg.AdminClientIDs["admin"] || !cfg.AdminClientIDs["ops"] {
 		t.Fatalf("expected admin client ids from yaml: %+v", cfg.AdminClientIDs)
+	}
+}
+
+func TestLoadYAMLRejectsTopLevelRuntimeScalarKeys(t *testing.T) {
+	path := t.TempDir() + "/custodia.yaml"
+	writeConfigTestFile(t, path, `profile: lite
+api_addr: ":9443"
+store_backend: sqlite
+`)
+	if _, err := LoadWithArgs([]string{"--config", path}); err == nil || !strings.Contains(err.Error(), "structured YAML sections") {
+		t.Fatalf("expected structured YAML section error, got %v", err)
 	}
 }
 
@@ -307,7 +321,8 @@ storage:
 func TestLoadStructuredYAMLConfigWithIdentityLists(t *testing.T) {
 	path := t.TempDir() + "/custodia.yaml"
 	writeConfigTestFile(t, path, `profile: lite
-api_addr: ":9443"
+server:
+  api_addr: ":9443"
 bootstrap_clients:
   - client_id: admin
     mtls_subject: admin
@@ -360,11 +375,12 @@ func writeConfigTestFile(t *testing.T, path, content string) {
 func TestLoadYAMLReadsSharedSignerSettings(t *testing.T) {
 	path := t.TempDir() + "/custodia.yaml"
 	writeConfigTestFile(t, path, `profile: lite
-signer_key_provider: file
-signer_ca_cert_file: /etc/custodia/ca.crt
-signer_ca_key_file: /etc/custodia/ca.key
-signer_ca_key_passphrase_file: /etc/custodia/ca.pass
-signer_pkcs11_sign_command: /usr/local/bin/custodia-pkcs11-sign
+signer:
+  key_provider: file
+  ca_cert_file: /etc/custodia/ca.crt
+  ca_key_file: /etc/custodia/ca.key
+  ca_key_passphrase_file: /etc/custodia/ca.pass
+  pkcs11_sign_command: /usr/local/bin/custodia-pkcs11-sign
 `)
 	cfg, err := LoadWithArgs([]string{"--config", path})
 	if err != nil {
@@ -378,8 +394,9 @@ signer_pkcs11_sign_command: /usr/local/bin/custodia-pkcs11-sign
 func TestLoadSignerSettingsCanBeOverriddenByEnvironment(t *testing.T) {
 	path := t.TempDir() + "/custodia.yaml"
 	writeConfigTestFile(t, path, `profile: lite
-signer_key_provider: file
-signer_ca_cert_file: /etc/custodia/ca.crt
+signer:
+  key_provider: file
+  ca_cert_file: /etc/custodia/ca.crt
 `)
 	t.Setenv("CUSTODIA_SIGNER_KEY_PROVIDER", "pkcs11")
 	t.Setenv("CUSTODIA_SIGNER_CA_CERT_FILE", "/env/ca.crt")

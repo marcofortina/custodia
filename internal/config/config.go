@@ -211,8 +211,8 @@ func parseConfigArgs(args []string) (string, error) {
 }
 
 // loadSimpleYAML supports the auditable subset used by Custodia examples:
-// flat scalar values plus named nested sections for
-// readable server configuration. Unsupported sections and keys still fail closed.
+// structured runtime sections plus documented top-level identity lists.
+// Unsupported sections and keys still fail closed.
 func loadSimpleYAML(path string) (map[string]string, error) {
 	payload, err := os.ReadFile(path)
 	if err != nil {
@@ -235,6 +235,12 @@ func loadSimpleYAML(path string) (map[string]string, error) {
 			continue
 		}
 		switch key {
+		case "profile":
+			value, err := yamlScalar(raw, key)
+			if err != nil {
+				return nil, err
+			}
+			values[key] = value
 		case "bootstrap_clients":
 			parsed, err := yamlBootstrapClients(raw)
 			if err != nil {
@@ -248,64 +254,10 @@ func loadSimpleYAML(path string) (map[string]string, error) {
 			}
 			values[key] = strings.Join(parsed, ",")
 		default:
-			if !supportedServerScalarKeys[key] {
-				return nil, fmt.Errorf("unsupported config key %q", key)
-			}
-			value, err := yamlScalar(raw, key)
-			if err != nil {
-				return nil, err
-			}
-			values[key] = value
+			return nil, fmt.Errorf("unsupported top-level config key %q; use structured YAML sections", key)
 		}
 	}
 	return values, nil
-}
-
-var supportedServerScalarKeys = map[string]bool{
-	"profile":                              true,
-	"api_addr":                             true,
-	"server_url":                           true,
-	"health_addr":                          true,
-	"web_addr":                             true,
-	"log_file":                             true,
-	"store_backend":                        true,
-	"database_url":                         true,
-	"tls_cert_file":                        true,
-	"tls_key_file":                         true,
-	"client_ca_file":                       true,
-	"client_crl_file":                      true,
-	"dev_insecure_http":                    true,
-	"max_envelopes_per_secret":             true,
-	"rate_limit_backend":                   true,
-	"valkey_url":                           true,
-	"client_rate_limit_per_second":         true,
-	"global_rate_limit_per_second":         true,
-	"ip_rate_limit_per_second":             true,
-	"http_read_timeout_seconds":            true,
-	"http_write_timeout_seconds":           true,
-	"http_idle_timeout_seconds":            true,
-	"shutdown_timeout_seconds":             true,
-	"web_mfa_required":                     true,
-	"web_totp_secret":                      true,
-	"web_session_secret":                   true,
-	"web_session_ttl_seconds":              true,
-	"web_passkey_enabled":                  true,
-	"web_passkey_rp_id":                    true,
-	"web_passkey_rp_name":                  true,
-	"web_passkey_challenge_ttl_seconds":    true,
-	"web_passkey_assertion_verify_command": true,
-	"deployment_mode":                      true,
-	"database_ha_target":                   true,
-	"audit_shipment_sink":                  true,
-	"signer_url":                           true,
-	"signer_client_cert_file":              true,
-	"signer_client_key_file":               true,
-	"signer_client_ca_file":                true,
-	"signer_key_provider":                  true,
-	"signer_ca_cert_file":                  true,
-	"signer_ca_key_file":                   true,
-	"signer_ca_key_passphrase_file":        true,
-	"signer_pkcs11_sign_command":           true,
 }
 
 var serverConfigSections = map[string]map[string]string{

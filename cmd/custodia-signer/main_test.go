@@ -216,20 +216,28 @@ func TestSignerAuditsCertificateRequests(t *testing.T) {
 
 func TestLoadConfigWithArgsReadsSignerYAMLAndEnvOverrides(t *testing.T) {
 	path := t.TempDir() + "/custodia-signer.yaml"
-	payload := []byte(`addr: ":9444"
-tls_cert_file: /etc/custodia/server.crt
-tls_key_file: /etc/custodia/server.key
-client_ca_file: /etc/custodia/client-ca.crt
-ca_cert_file: /etc/custodia/ca.crt
-ca_key_file: /etc/custodia/ca.key
-ca_key_passphrase_file: /etc/custodia/ca.pass
-key_provider: file
-admin_subjects: admin, signer_admin
-default_ttl_hours: 12
-dev_insecure_http: false
-shutdown_timeout_seconds: 7
-audit_log_file: /var/log/custodia/signer-audit.jsonl
-crl_file: /etc/custodia/client.crl.pem
+	payload := []byte(`server:
+  addr: ":9444"
+  default_ttl_hours: 12
+  dev_insecure_http: false
+  shutdown_timeout_seconds: 7
+tls:
+  cert_file: /etc/custodia/server.crt
+  key_file: /etc/custodia/server.key
+  client_ca_file: /etc/custodia/client-ca.crt
+ca:
+  cert_file: /etc/custodia/ca.crt
+  key_file: /etc/custodia/ca.key
+  key_passphrase_file: /etc/custodia/ca.pass
+  key_provider: file
+admin:
+  subjects:
+    - admin
+    - signer_admin
+audit:
+  log_file: /var/log/custodia/signer-audit.jsonl
+revocation:
+  crl_file: /etc/custodia/client.crl.pem
 `)
 	if err := os.WriteFile(path, payload, 0o600); err != nil {
 		t.Fatal(err)
@@ -257,6 +265,16 @@ crl_file: /etc/custodia/client.crl.pem
 	}
 }
 
+func TestLoadConfigWithArgsRejectsTopLevelSignerScalarKeys(t *testing.T) {
+	path := t.TempDir() + "/custodia-signer.yaml"
+	if err := os.WriteFile(path, []byte("addr: \":9444\"\nkey_provider: file\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := loadConfigWithArgs([]string{"--config", path}); err == nil || !strings.Contains(err.Error(), "structured YAML sections") {
+		t.Fatalf("expected structured YAML section error, got %v", err)
+	}
+}
+
 func TestLoadConfigWithArgsReadsDeployExampleSignerYAML(t *testing.T) {
 	cfg, err := loadConfigWithArgs([]string{"--config", "../../deploy/examples/custodia-signer.yaml"})
 	if err != nil {
@@ -270,7 +288,7 @@ func TestLoadConfigWithArgsReadsDeployExampleSignerYAML(t *testing.T) {
 	}
 }
 
-func TestDeployExampleSignerConfigAvoidsLegacyFlatRuntimeKeys(t *testing.T) {
+func TestDeployExampleSignerConfigAvoidsFlatRuntimeKeys(t *testing.T) {
 	payload, err := os.ReadFile("../../deploy/examples/custodia-signer.yaml")
 	if err != nil {
 		t.Fatalf("ReadFile() error = %v", err)
@@ -379,7 +397,7 @@ func TestLoadConfigWithArgsRejectsUnknownSignerKey(t *testing.T) {
 	if err := os.WriteFile(path, []byte("unknown_key: nope\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := loadConfigWithArgs([]string{"--config", path}); err == nil || !strings.Contains(err.Error(), "unknown signer config key") {
+	if _, err := loadConfigWithArgs([]string{"--config", path}); err == nil || !strings.Contains(err.Error(), "unknown top-level signer config key") {
 		t.Fatalf("expected unknown key error, got %v", err)
 	}
 }
