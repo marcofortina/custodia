@@ -4,7 +4,7 @@ This document defines the shared client-side crypto contract for Custodia high-l
 
 The server remains metadata/ciphertext/envelope-only. It must never receive plaintext, DEK material, private keys or public-key directory state.
 
-The namespace/key addressing migration binds client workflows to a logical keyspace instead of exposing generated `secret_id` values. The target AAD/resource binding is described in [`SECRET_KEYSPACE_MODEL.md`](SECRET_KEYSPACE_MODEL.md); existing fixtures remain valid until the code migration updates the canonical AAD contract.
+Client workflows bind crypto metadata to the logical `namespace/key` keyspace instead of generated `secret_id` values. Versioned ciphertext is additionally bound to a monotonic `secret_version` value so ciphertext/envelope payloads cannot be swapped across versions of the same key.
 
 ## Versioning
 
@@ -17,9 +17,9 @@ Every encrypted payload must carry versioned crypto metadata:
   "envelope_scheme": "hpke-v1",
   "content_nonce_b64": "base64url-or-standard-base64-nonce",
   "aad": {
-    "secret_id": "optional-stable-secret-id",
-    "secret_name": "optional-secret-name",
-    "version_id": "optional-version-id"
+    "namespace": "default",
+    "key": "database-password",
+    "secret_version": 1
   }
 }
 ```
@@ -61,15 +61,16 @@ Clock -> testability only
 
 ## Required AAD inputs
 
-High-level clients must bind encryption to stable metadata. At minimum, v1 AAD must include:
+High-level clients must bind encryption to stable keyspace metadata. v1 AAD must include:
 
 - crypto version;
 - envelope scheme;
 - content cipher;
-- secret name or secret id when available;
-- version id when creating a new version after the server returns it, or a documented pre-commit AAD value before persistence.
+- namespace;
+- key;
+- secret version.
 
-The exact canonical AAD serialization is deterministic JSON produced by `internal/clientcrypto.BuildCanonicalAAD` and covered by fixtures. The current canonical object order is `version`, `content_cipher`, `envelope_scheme`, then optional resource bindings `secret_id`, `secret_name`, `version_id`. High-level clients persist the selected AAD binding in `crypto_metadata.aad` so read/share/version paths can reproduce the same AAD without asking the server to expose extra plaintext metadata.
+The exact canonical AAD serialization is deterministic JSON produced by `internal/clientcrypto.BuildCanonicalAAD` and covered by fixtures. The canonical object order is `version`, `content_cipher`, `envelope_scheme`, `namespace`, `key`, `secret_version`. High-level clients persist that binding in `crypto_metadata.aad` so read/share/update paths can reproduce the same AAD without using server-generated `secret_id` values.
 
 ## Error model
 
