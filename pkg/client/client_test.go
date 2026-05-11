@@ -245,6 +245,12 @@ func TestClientListAccessGrantRequestsUsesDocumentedAPIPath(t *testing.T) {
 		if r.Method != http.MethodGet || r.URL.EscapedPath() != "/v1/access-requests" {
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
 		}
+		if got := r.URL.Query().Get("namespace"); got != "db01" {
+			t.Fatalf("unexpected namespace filter: %q", got)
+		}
+		if got := r.URL.Query().Get("key"); got != "user:sys" {
+			t.Fatalf("unexpected key filter: %q", got)
+		}
 		if got := r.URL.Query().Get("client_id"); got != "client_bob" {
 			t.Fatalf("unexpected client filter: %q", got)
 		}
@@ -253,7 +259,7 @@ func TestClientListAccessGrantRequestsUsesDocumentedAPIPath(t *testing.T) {
 	defer server.Close()
 
 	custodiaClient := &Client{baseURL: server.URL, http: server.Client()}
-	requests, err := custodiaClient.ListAccessGrantRequests(AccessGrantRequestFilters{Limit: 25, ClientID: "client_bob", Status: "pending"})
+	requests, err := custodiaClient.ListAccessGrantRequests(AccessGrantRequestFilters{Limit: 25, Namespace: "db01", Key: "user:sys", ClientID: "client_bob", Status: "pending"})
 	if err != nil || len(requests) != 1 || requests[0].ClientID != "client_bob" {
 		t.Fatalf("unexpected requests response: %+v err=%v", requests, err)
 	}
@@ -407,8 +413,11 @@ func TestClientAccessRequestFiltersRejectInvalidValues(t *testing.T) {
 	if _, err := custodiaClient.ListAccessGrantRequests(AccessGrantRequestFilters{Limit: 501}); err == nil {
 		t.Fatal("expected invalid limit error")
 	}
-	if _, err := custodiaClient.ListAccessGrantRequests(AccessGrantRequestFilters{SecretID: "not-a-uuid"}); err == nil {
-		t.Fatal("expected invalid secret id error")
+	if _, err := custodiaClient.ListAccessGrantRequests(AccessGrantRequestFilters{Namespace: "   "}); err == nil {
+		t.Fatal("expected invalid namespace error")
+	}
+	if _, err := custodiaClient.ListAccessGrantRequests(AccessGrantRequestFilters{Key: "bad\nkey"}); err == nil {
+		t.Fatal("expected invalid key error")
 	}
 	if _, err := custodiaClient.ListAccessGrantRequests(AccessGrantRequestFilters{Status: "done"}); err == nil {
 		t.Fatal("expected invalid status error")

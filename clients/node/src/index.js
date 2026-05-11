@@ -159,7 +159,8 @@ export class CustodiaClient {
     validateAccessGrantRequestFilters(filters);
     const query = queryParams({
       limit: filters.limit == null ? undefined : String(filters.limit),
-      secret_id: filters.secret_id,
+      namespace: filters.namespace,
+      key: filters.key,
       status: filters.status,
       client_id: filters.client_id,
       requested_by_client_id: filters.requested_by_client_id,
@@ -361,8 +362,11 @@ function validateAuditEventFilters(filters) {
 
 function validateAccessGrantRequestFilters(filters) {
   validateOptionalLimit(filters.limit);
-  if (filters.secret_id !== undefined && !UUID_RE.test(String(filters.secret_id).toLowerCase())) {
-    throw new TypeError("secret id filter is invalid");
+  if (filters.namespace !== undefined && String(filters.namespace).trim() === "") {
+    throw new TypeError("secret namespace filter is invalid");
+  }
+  if (filters.key !== undefined && String(filters.key).trim() === "") {
+    throw new TypeError("secret key filter is invalid");
   }
   if (filters.status !== undefined && !["pending", "activated", "revoked", "expired"].includes(filters.status)) {
     throw new TypeError("status filter is invalid");

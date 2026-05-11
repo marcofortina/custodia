@@ -735,6 +735,31 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 		writeWebMappedError(w, err)
 		return
 	}
+	namespaceFilter := strings.TrimSpace(r.URL.Query().Get("namespace"))
+	if namespaceFilter != "" && !model.ValidSecretNamespace(namespaceFilter) {
+		s.auditFailure(r, "web.access_request_list", "secret_key", namespaceFilter, map[string]string{"reason": "invalid_namespace_filter"})
+		writeWebStatusError(w, http.StatusBadRequest, "invalid_namespace_filter")
+		return
+	}
+	keyFilter := strings.TrimSpace(r.URL.Query().Get("key"))
+	if keyFilter != "" && !model.ValidSecretKey(keyFilter) {
+		s.auditFailure(r, "web.access_request_list", "secret_key", keyFilter, map[string]string{"reason": "invalid_key_filter"})
+		writeWebStatusError(w, http.StatusBadRequest, "invalid_key_filter")
+		return
+	}
+	if namespaceFilter != "" || keyFilter != "" {
+		filtered := requests[:0]
+		for _, request := range requests {
+			if namespaceFilter != "" && request.Namespace != namespaceFilter {
+				continue
+			}
+			if keyFilter != "" && request.Key != keyFilter {
+				continue
+			}
+			filtered = append(filtered, request)
+		}
+		requests = filtered
+	}
 	statusFilter := strings.TrimSpace(r.URL.Query().Get("status"))
 	if statusFilter != "" {
 		if !model.ValidAccessRequestStatus(statusFilter) {
@@ -788,6 +813,8 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 	body := webHero("Access Requests", "Metadata-only pending grant workflow. Envelopes are never rendered here.") +
 		`<form class="console-toolbar" method="get" action="/web/access-requests" hx-get="/web/access-requests" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">` +
 		`<label>Limit<input name="limit" inputmode="numeric" placeholder="100"` + webInputValueAttr(r, "limit") + `></label>` +
+		`<label>Namespace<input name="namespace" placeholder="default"` + webInputValueAttr(r, "namespace") + `></label>` +
+		`<label>Key<input name="key" placeholder="db01/user:sys"` + webInputValueAttr(r, "key") + `></label>` +
 		`<label>Status<select name="status">` + webSelectOption("", "Any", statusFilter) + webSelectOption("pending", "Pending", statusFilter) + webSelectOption("activated", "Activated", statusFilter) + webSelectOption("revoked", "Revoked", statusFilter) + webSelectOption("expired", "Expired", statusFilter) + `</select></label>` +
 		`<label>Target<input name="client_id" placeholder="client_bob"` + webInputValueAttr(r, "client_id") + `></label>` +
 		`<label>Requester<input name="requested_by_client_id" placeholder="admin"` + webInputValueAttr(r, "requested_by_client_id") + `></label>` +

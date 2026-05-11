@@ -9,7 +9,7 @@ Implemented helpers:
 - `get_client(client_id)` admin metadata-only
 - `create_client(payload)` admin metadata-only; certificate signing remains external
 - `revoke_client(payload)` admin metadata-only
-- `list_access_grant_requests(secret_id=None)` admin metadata-only, no envelopes
+- `list_access_grant_requests(namespace=None, key=None)` admin metadata-only, no envelopes
 - `create_secret(payload)`
 - `list_secrets()` metadata-only, no ciphertext or envelopes
 - `get_secret_by_key(namespace, key)` user-facing lookup

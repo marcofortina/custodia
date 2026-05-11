@@ -712,21 +712,40 @@ func (s *Server) handleListAccessGrantRequests(w http.ResponseWriter, r *http.Re
 		}
 		limit = parsed
 	}
-	secretID := strings.TrimSpace(r.URL.Query().Get("secret_id"))
-	if secretID != "" && !model.ValidUUIDID(secretID) {
-		s.auditFailure(r, "secret.access_request_list", "secret", secretID, map[string]string{"reason": "invalid_secret_id_filter"})
-		writeError(w, http.StatusBadRequest, "invalid_secret_id_filter")
+	namespaceFilter := strings.TrimSpace(r.URL.Query().Get("namespace"))
+	if namespaceFilter != "" && !model.ValidSecretNamespace(namespaceFilter) {
+		s.auditFailure(r, "secret.access_request_list", "secret_key", namespaceFilter, map[string]string{"reason": "invalid_namespace_filter"})
+		writeError(w, http.StatusBadRequest, "invalid_namespace_filter")
 		return
 	}
-	requests, err := s.store.ListAccessGrantRequests(r.Context(), secretID)
+	keyFilter := strings.TrimSpace(r.URL.Query().Get("key"))
+	if keyFilter != "" && !model.ValidSecretKey(keyFilter) {
+		s.auditFailure(r, "secret.access_request_list", "secret_key", keyFilter, map[string]string{"reason": "invalid_key_filter"})
+		writeError(w, http.StatusBadRequest, "invalid_key_filter")
+		return
+	}
+	requests, err := s.store.ListAccessGrantRequests(r.Context(), "")
 	if err != nil {
-		s.auditStoreFailure(r, "secret.access_request_list", "secret", secretID, err)
+		s.auditStoreFailure(r, "secret.access_request_list", "secret", "", err)
 		writeMappedError(w, err)
 		return
 	}
+	if namespaceFilter != "" || keyFilter != "" {
+		filtered := requests[:0]
+		for _, request := range requests {
+			if namespaceFilter != "" && request.Namespace != namespaceFilter {
+				continue
+			}
+			if keyFilter != "" && request.Key != keyFilter {
+				continue
+			}
+			filtered = append(filtered, request)
+		}
+		requests = filtered
+	}
 	if status := strings.TrimSpace(r.URL.Query().Get("status")); status != "" {
 		if !model.ValidAccessRequestStatus(status) {
-			s.auditFailure(r, "secret.access_request_list", "secret", secretID, map[string]string{"reason": "invalid_status_filter"})
+			s.auditFailure(r, "secret.access_request_list", "secret", "", map[string]string{"reason": "invalid_status_filter"})
 			writeError(w, http.StatusBadRequest, "invalid_status_filter")
 			return
 		}
@@ -740,7 +759,7 @@ func (s *Server) handleListAccessGrantRequests(w http.ResponseWriter, r *http.Re
 	}
 	if targetClientID := strings.TrimSpace(r.URL.Query().Get("client_id")); targetClientID != "" {
 		if !model.ValidClientID(targetClientID) {
-			s.auditFailure(r, "secret.access_request_list", "secret", secretID, map[string]string{"reason": "invalid_client_id_filter"})
+			s.auditFailure(r, "secret.access_request_list", "secret", "", map[string]string{"reason": "invalid_client_id_filter"})
 			writeError(w, http.StatusBadRequest, "invalid_client_id_filter")
 			return
 		}
@@ -754,7 +773,7 @@ func (s *Server) handleListAccessGrantRequests(w http.ResponseWriter, r *http.Re
 	}
 	if requestedBy := strings.TrimSpace(r.URL.Query().Get("requested_by_client_id")); requestedBy != "" {
 		if !model.ValidClientID(requestedBy) {
-			s.auditFailure(r, "secret.access_request_list", "secret", secretID, map[string]string{"reason": "invalid_requested_by_filter"})
+			s.auditFailure(r, "secret.access_request_list", "secret", "", map[string]string{"reason": "invalid_requested_by_filter"})
 			writeError(w, http.StatusBadRequest, "invalid_requested_by_filter")
 			return
 		}
@@ -769,7 +788,7 @@ func (s *Server) handleListAccessGrantRequests(w http.ResponseWriter, r *http.Re
 	if len(requests) > limit {
 		requests = requests[:limit]
 	}
-	s.audit(r, "secret.access_request_list", "secret", secretID, "success", nil)
+	s.audit(r, "secret.access_request_list", "access_requests", "", "success", nil)
 	writeJSON(w, http.StatusOK, map[string]any{"access_requests": requests})
 }
 

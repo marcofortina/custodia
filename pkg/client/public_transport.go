@@ -192,7 +192,8 @@ func (c *Client) ListAccessGrantMetadata(filters AccessGrantRequestFilters) ([]A
 	if filters.Limit > 0 {
 		query.Set("limit", fmt.Sprintf("%d", filters.Limit))
 	}
-	addQueryFilter(query, "secret_id", filters.SecretID)
+	addQueryFilter(query, "namespace", filters.Namespace)
+	addQueryFilter(query, "key", filters.Key)
 	addQueryFilter(query, "status", filters.Status)
 	addQueryFilter(query, "client_id", filters.ClientID)
 	addQueryFilter(query, "requested_by_client_id", filters.RequestedByClientID)

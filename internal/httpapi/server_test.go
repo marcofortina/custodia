@@ -1655,23 +1655,36 @@ func TestAPIRejectsInvalidSecretIDPath(t *testing.T) {
 	}
 }
 
-func TestAPIAdminAccessRequestsRejectsInvalidSecretIDFilter(t *testing.T) {
+func TestAPIAdminAccessRequestsRejectsInvalidKeyspaceFilters(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()
 	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
 		t.Fatalf("create admin: %v", err)
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
-	req := mtlsRequest(http.MethodGet, "/v1/access-requests?secret_id=not-a-uuid", "", "admin")
-	res := httptest.NewRecorder()
 
-	handler.ServeHTTP(res, req)
-
-	if res.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", res.Code, res.Body.String())
+	tests := []struct {
+		name      string
+		path      string
+		wantError string
+	}{
+		{name: "namespace", path: "/v1/access-requests?namespace=db%0A01", wantError: "invalid_namespace_filter"},
+		{name: "key", path: "/v1/access-requests?key=user%0Asys", wantError: "invalid_key_filter"},
 	}
-	if !strings.Contains(res.Body.String(), "invalid_secret_id_filter") {
-		t.Fatalf("expected invalid secret id filter error, got %s", res.Body.String())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := mtlsRequest(http.MethodGet, tt.path, "", "admin")
+			res := httptest.NewRecorder()
+
+			handler.ServeHTTP(res, req)
+
+			if res.Code != http.StatusBadRequest {
+				t.Fatalf("expected 400, got %d: %s", res.Code, res.Body.String())
+			}
+			if !strings.Contains(res.Body.String(), tt.wantError) {
+				t.Fatalf("expected %s, got %s", tt.wantError, res.Body.String())
+			}
+		})
 	}
 }
 

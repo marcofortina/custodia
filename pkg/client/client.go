@@ -57,7 +57,8 @@ type AuditEventFilters struct {
 
 type AccessGrantRequestFilters struct {
 	Limit               int
-	SecretID            string
+	Namespace           string
+	Key                 string
 	Status              string
 	ClientID            string
 	RequestedByClientID string
@@ -211,7 +212,8 @@ func (c *Client) ListAccessGrantRequests(filters AccessGrantRequestFilters) ([]m
 	if filters.Limit > 0 {
 		query.Set("limit", fmt.Sprintf("%d", filters.Limit))
 	}
-	addQueryFilter(query, "secret_id", filters.SecretID)
+	addQueryFilter(query, "namespace", filters.Namespace)
+	addQueryFilter(query, "key", filters.Key)
 	addQueryFilter(query, "status", filters.Status)
 	addQueryFilter(query, "client_id", filters.ClientID)
 	addQueryFilter(query, "requested_by_client_id", filters.RequestedByClientID)
@@ -476,8 +478,15 @@ func validateAccessGrantRequestFilters(filters AccessGrantRequestFilters) error 
 	if err := validateOptionalLimit(filters.Limit); err != nil {
 		return err
 	}
-	if filters.SecretID != "" && !model.ValidUUIDID(filters.SecretID) {
-		return fmt.Errorf("secret id filter is invalid")
+	if filters.Namespace != "" {
+		if strings.TrimSpace(filters.Namespace) == "" || !model.ValidSecretNamespace(filters.Namespace) {
+			return fmt.Errorf("secret namespace filter is invalid")
+		}
+	}
+	if filters.Key != "" {
+		if strings.TrimSpace(filters.Key) == "" || !model.ValidSecretKey(filters.Key) {
+			return fmt.Errorf("secret key filter is invalid")
+		}
 	}
 	if filters.Status != "" && !model.ValidAccessRequestStatus(filters.Status) {
 		return fmt.Errorf("status filter is invalid")

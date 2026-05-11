@@ -102,7 +102,8 @@ export interface AuditEventFilters {
 
 export interface AccessGrantRequestFilters {
   limit?: number;
-  secret_id?: string;
+  namespace?: string;
+  key?: string;
   status?: "pending" | "activated" | "revoked" | "expired";
   client_id?: string;
   requested_by_client_id?: string;

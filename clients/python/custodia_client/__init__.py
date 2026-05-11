@@ -177,16 +177,18 @@ class CustodiaClient:
 
     def list_access_grant_requests(
         self,
-        secret_id: str | None = None,
+        namespace: str | None = None,
+        key: str | None = None,
         status: str | None = None,
         client_id: str | None = None,
         requested_by_client_id: str | None = None,
         limit: int | None = None,
     ) -> dict[str, Any]:
         _validate_optional_limit(limit)
-        _validate_access_request_filters(secret_id, status, client_id, requested_by_client_id)
+        _validate_access_request_filters(namespace, key, status, client_id, requested_by_client_id)
         query = _query_params(
-            secret_id=secret_id,
+            namespace=namespace,
+            key=key,
             status=status,
             client_id=client_id,
             requested_by_client_id=requested_by_client_id,
@@ -322,7 +324,6 @@ def _query_params(**kwargs: str | None) -> str:
 
 _CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 _AUDIT_TOKEN_RE = re.compile(r"^[A-Za-z0-9._:-]+$")
-_UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 
 
 def _validate_audit_filters(
@@ -345,13 +346,16 @@ def _validate_audit_filters(
 
 
 def _validate_access_request_filters(
-    secret_id: str | None,
+    namespace: str | None,
+    key: str | None,
     status: str | None,
     client_id: str | None,
     requested_by_client_id: str | None,
 ) -> None:
-    if secret_id is not None and not _UUID_RE.fullmatch(secret_id.lower()):
-        raise ValueError("secret id filter is invalid")
+    if namespace is not None and not str(namespace).strip():
+        raise ValueError("secret namespace filter is invalid")
+    if key is not None and not str(key).strip():
+        raise ValueError("secret key filter is invalid")
     if status is not None and status not in {"pending", "activated", "revoked", "expired"}:
         raise ValueError("status filter is invalid")
     if client_id is not None and not _CLIENT_ID_RE.fullmatch(client_id):
