@@ -127,7 +127,7 @@ Production deployments should enforce:
 Security review must fail if a public workflow reintroduces:
 
 - `--secret-id` for normal CLI operations;
-- `name` as a legacy alias for `key`;
+- `name` as a public alias for `key`;
 - high-level crypto helpers addressed by `secret_id`;
 - caller-provided static content nonces in production encryption APIs;
 - server-side plaintext, DEK, private-key or public-key-directory behavior.

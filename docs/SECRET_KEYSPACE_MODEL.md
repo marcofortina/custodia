@@ -7,7 +7,7 @@ internal storage, FK and audit details.
 
 ## Implementation status
 
-The pre-release implementation now treats `namespace/key` as the normal user-facing
+Custodia treats `namespace/key` as the normal user-facing
 addressing model across the client CLI, admin CLI, REST by-key routes, high-level
 crypto SDKs and public transport SDK helpers. Generated `secret_id` values remain
 internal storage, foreign-key and audit identifiers; normal client and operator
@@ -24,7 +24,7 @@ operators can inspect pending/activated grants without using internal identifier
 
 The repository includes public SDK surface tests that reject reintroducing high-level
 or public transport helpers whose normal workflow accepts `secret_id` instead of
-`namespace/key`. This keeps pre-release compatibility shims from leaking back into the
+`namespace/key`. This keeps unsupported `secret_id` and `name` aliases from leaking back into the
 documented SDK surface.
 
 ## User-facing identity
