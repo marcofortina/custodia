@@ -4,6 +4,8 @@ This document defines the shared client-side crypto contract for Custodia high-l
 
 The server remains metadata/ciphertext/envelope-only. It must never receive plaintext, DEK material, private keys or public-key directory state.
 
+Threat assumptions, non-goals and operational boundaries are documented in [`CLIENT_CRYPTO_THREAT_MODEL.md`](CLIENT_CRYPTO_THREAT_MODEL.md).
+
 Client workflows bind crypto metadata to the logical `namespace/key` keyspace instead of generated `secret_id` values. Versioned ciphertext is additionally bound to a monotonic `secret_version` value so ciphertext/envelope payloads cannot be swapped across versions of the same key.
 
 ## Versioning

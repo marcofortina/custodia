@@ -179,3 +179,37 @@ func TestSDKCapabilityMatrixDocumentsKeyspaceParity(t *testing.T) {
 		}
 	}
 }
+
+func TestClientCryptoThreatModelIsDocumented(t *testing.T) {
+	repoRoot := filepath.Join("..", "..")
+	for _, path := range []string{
+		"README.md",
+		"docs/CLIENT_CRYPTO_SPEC.md",
+		"docs/CLIENT_LIBRARIES.md",
+	} {
+		payload, err := os.ReadFile(filepath.Join(repoRoot, path))
+		if err != nil {
+			t.Fatalf("ReadFile(%s) error = %v", path, err)
+		}
+		if !strings.Contains(string(payload), "CLIENT_CRYPTO_THREAT_MODEL.md") {
+			t.Fatalf("%s must link the client crypto threat model", path)
+		}
+	}
+
+	payload, err := os.ReadFile(filepath.Join(repoRoot, "docs", "CLIENT_CRYPTO_THREAT_MODEL.md"))
+	if err != nil {
+		t.Fatalf("ReadFile(docs/CLIENT_CRYPTO_THREAT_MODEL.md) error = %v", err)
+	}
+	content := string(payload)
+	for _, token := range []string{
+		"server remains a metadata-only control plane",
+		"secret_id is intentionally not part of client crypto AAD",
+		"fresh 96-bit random nonce",
+		"Revocation prevents future server-authorized reads",
+		"Use non-sensitive namespace/key names",
+	} {
+		if !strings.Contains(content, token) {
+			t.Fatalf("client crypto threat model is missing %q", token)
+		}
+	}
+}

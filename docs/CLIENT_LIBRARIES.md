@@ -173,6 +173,7 @@ Use these repository documents as the current source of truth:
 - [`CLIENT_LIBRARIES.md`](CLIENT_LIBRARIES.md): SDK capability and boundary matrix.
 - [`CUSTODIA_CLIENT_CLI.md`](CUSTODIA_CLIENT_CLI.md): encrypted secrets CLI usage.
 - [`CLIENT_CRYPTO_SPEC.md`](CLIENT_CRYPTO_SPEC.md): shared crypto metadata, AAD, AEAD and envelope contract.
+- [`CLIENT_CRYPTO_THREAT_MODEL.md`](CLIENT_CRYPTO_THREAT_MODEL.md): client-side crypto trust boundaries, attacker model and non-goals.
 - [Project History Wiki](https://github.com/marcofortina/custodia/wiki/Project-History): development-history notes and phase closure records.
 - [`SDK_RELEASE_POLICY.md`](SDK_RELEASE_POLICY.md): official SDK and public package release criteria.
 
