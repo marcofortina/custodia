@@ -53,11 +53,11 @@ func TestBuildCanonicalAADUsesStableJSONOrder(t *testing.T) {
 		Version:        VersionV1,
 		ContentCipher:  ContentCipherV1,
 		EnvelopeScheme: EnvelopeHPKEV1,
-	}, CanonicalAADInputs{Namespace: "default", Key: "database-password"})
+	}, CanonicalAADInputs{Namespace: "default", Key: "database-password", SecretVersion: 1})
 	if err != nil {
 		t.Fatalf("BuildCanonicalAAD() error = %v", err)
 	}
-	want := `{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","namespace":"default","key":"database-password"}`
+	want := `{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","namespace":"default","key":"database-password","secret_version":1}`
 	if string(aad) != want {
 		t.Fatalf("BuildCanonicalAAD() = %s, want %s", aad, want)
 	}
@@ -79,33 +79,33 @@ func TestBuildCanonicalAADRejectsUnsupportedMetadata(t *testing.T) {
 		Version:        "v2",
 		ContentCipher:  ContentCipherV1,
 		EnvelopeScheme: EnvelopeHPKEV1,
-	}, CanonicalAADInputs{Namespace: "default", Key: "database-password"})
+	}, CanonicalAADInputs{Namespace: "default", Key: "database-password", SecretVersion: 1})
 	if !errors.Is(err, ErrUnsupportedVersion) {
 		t.Fatalf("BuildCanonicalAAD() error = %v, want %v", err, ErrUnsupportedVersion)
 	}
 }
 
 func TestMetadataAADOverridesFallback(t *testing.T) {
-	payload := []byte(`{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","content_nonce_b64":"bm9uY2U=","aad":{"namespace":"db01","key":"user:sys"}}`)
+	payload := []byte(`{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","content_nonce_b64":"bm9uY2U=","aad":{"namespace":"db01","key":"user:sys","secret_version":3}}`)
 	metadata, err := ParseMetadata(payload)
 	if err != nil {
 		t.Fatalf("ParseMetadata() error = %v", err)
 	}
-	if metadata.AAD == nil || metadata.AAD.Namespace != "db01" || metadata.AAD.Key != "user:sys" {
+	if metadata.AAD == nil || metadata.AAD.Namespace != "db01" || metadata.AAD.Key != "user:sys" || metadata.AAD.SecretVersion != 3 {
 		t.Fatalf("metadata AAD = %+v", metadata.AAD)
 	}
-	fallback := CanonicalAADInputs{Namespace: "default", Key: "fallback"}
-	if got := metadata.CanonicalAADInputs(fallback); got.Namespace != "db01" || got.Key != "user:sys" {
+	fallback := CanonicalAADInputs{Namespace: "default", Key: "fallback", SecretVersion: 1}
+	if got := metadata.CanonicalAADInputs(fallback); got.Namespace != "db01" || got.Key != "user:sys" || got.SecretVersion != 3 {
 		t.Fatalf("CanonicalAADInputs() = %+v", got)
 	}
 }
 
 func TestMetadataV1IncludesAADBinding(t *testing.T) {
-	metadata := MetadataV1(CanonicalAADInputs{Namespace: "db01", Key: "user:sys"}, "bm9uY2U=")
+	metadata := MetadataV1(CanonicalAADInputs{Namespace: "db01", Key: "user:sys", SecretVersion: 1}, "bm9uY2U=")
 	if metadata.Version != VersionV1 || metadata.ContentCipher != ContentCipherV1 || metadata.EnvelopeScheme != EnvelopeHPKEV1 || metadata.ContentNonce != "bm9uY2U=" {
 		t.Fatalf("MetadataV1() = %+v", metadata)
 	}
-	if metadata.AAD == nil || metadata.AAD.Namespace != "db01" || metadata.AAD.Key != "user:sys" {
+	if metadata.AAD == nil || metadata.AAD.Namespace != "db01" || metadata.AAD.Key != "user:sys" || metadata.AAD.SecretVersion != 1 {
 		t.Fatalf("MetadataV1() AAD = %+v", metadata.AAD)
 	}
 }

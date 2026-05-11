@@ -60,8 +60,8 @@ func TestValidateVectorRejectsAADHashMismatch(t *testing.T) {
 
 func TestValidateVectorRejectsCanonicalAADMismatch(t *testing.T) {
 	vector := validTestVector()
-	vector.CanonicalAAD = `{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","namespace":"default","key":"other"}`
-	vector.CanonicalAADSHA256 = "9ec4b848f516fd3d15a436e3cf453884cd9edabd35aeebb6b241706b9b5fee87"
+	vector.CanonicalAAD = `{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","namespace":"default","key":"other","secret_version":1}`
+	vector.CanonicalAADSHA256 = "df4944ce09b68ce9c354eecc7e96b39ea7555a09011b2bb889502b80e83a319f"
 	if err := ValidateVector(vector); err == nil {
 		t.Fatal("ValidateVector() error = nil, want canonical AAD mismatch")
 	}
@@ -121,8 +121,8 @@ func validTestVector() Vector {
 			ContentCipher:  ContentCipherV1,
 			EnvelopeScheme: EnvelopeHPKEV1,
 		},
-		AADInputs:          CanonicalAADInputs{Namespace: "default", Key: "database-password"},
-		CanonicalAAD:       `{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","namespace":"default","key":"database-password"}`,
-		CanonicalAADSHA256: "e6b3c0061b0fd7e675c2e8367b6a42689508ecadaff048efb3b794d376ca9de3",
+		AADInputs:          CanonicalAADInputs{Namespace: "default", Key: "database-password", SecretVersion: 1},
+		CanonicalAAD:       `{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","namespace":"default","key":"database-password","secret_version":1}`,
+		CanonicalAADSHA256: "908d3fcaa6fced7ceb6aaabd8e2fc2a22bf55218d833cb0b99564cf49380413a",
 	}
 }

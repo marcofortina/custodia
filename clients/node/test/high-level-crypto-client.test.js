@@ -57,7 +57,7 @@ test("creates encrypted secrets and decrypts returned payloads", async () => {
   assert.equal(created[0].envelopes.length, 2);
   assert.equal(created[0].envelopes[0].client_id, "client_alice");
   assert.equal(created[0].envelopes[1].client_id, "client_bob");
-  assert.deepEqual(created[0].crypto_metadata.aad, { namespace: "default", key: "database-password" });
+  assert.deepEqual(created[0].crypto_metadata.aad, { namespace: "default", key: "database-password", secret_version: 1 });
 
   const decrypted = await crypto.readDecryptedSecret(SECRET_ID);
   assert.equal(decrypted.secretID, SECRET_ID);
@@ -94,7 +94,7 @@ test("creates and reads encrypted secrets by namespace key", async () => {
   await crypto.createEncryptedSecretByKey({ namespace: "db01", key: "user:sys", plaintext: Buffer.from("secret") });
   assert.equal(created[0].namespace, "db01");
   assert.equal(created[0].key, "user:sys");
-  assert.deepEqual(created[0].crypto_metadata.aad, { namespace: "db01", key: "user:sys" });
+  assert.deepEqual(created[0].crypto_metadata.aad, { namespace: "db01", key: "user:sys", secret_version: 1 });
 
   const decrypted = await crypto.readDecryptedSecretByKey("db01", "user:sys");
   assert.equal(decrypted.secretID, SECRET_ID);
@@ -192,7 +192,7 @@ test("shares and versions encrypted secrets by namespace key", async () => {
   assert.equal(shared[0].payload.target_client_id, "client_bob");
   assert.equal(versions[0].namespace, "db01");
   assert.equal(versions[0].key, "user:sys");
-  assert.deepEqual(versions[0].payload.crypto_metadata.aad, { namespace: "db01", key: "user:sys" });
+  assert.deepEqual(versions[0].payload.crypto_metadata.aad, { namespace: "db01", key: "user:sys", secret_version: 2 });
 });
 
 test("creates encrypted secret versions with namespace key AAD binding", async () => {
@@ -200,7 +200,19 @@ test("creates encrypted secret versions with namespace key AAD binding", async (
   const transport = {
     async getSecretPayload(secretID) {
       assert.equal(secretID, SECRET_ID);
-      return { secret_id: SECRET_ID, namespace: "db01", key: "user:sys", version_id: VERSION_ID };
+      return {
+        secret_id: SECRET_ID,
+        namespace: "db01",
+        key: "user:sys",
+        version_id: VERSION_ID,
+        crypto_metadata: {
+          version: "custodia.client-crypto.v1",
+          content_cipher: "aes-256-gcm",
+          envelope_scheme: "hpke-v1",
+          content_nonce_b64: Buffer.alloc(12, 0x62).toString("base64"),
+          aad: { namespace: "db01", key: "user:sys", secret_version: 1 },
+        },
+      };
     },
     async createSecretVersionPayload(secretID, payload) {
       versions.push({ secretID, payload });
@@ -212,7 +224,7 @@ test("creates encrypted secret versions with namespace key AAD binding", async (
   await crypto.createEncryptedSecretVersion({ secretID: SECRET_ID, plaintext: Buffer.from("rotated") });
 
   assert.equal(versions[0].secretID, SECRET_ID);
-  assert.deepEqual(versions[0].payload.crypto_metadata.aad, { namespace: "db01", key: "user:sys" });
+  assert.deepEqual(versions[0].payload.crypto_metadata.aad, { namespace: "db01", key: "user:sys", secret_version: 2 });
   assert.equal(versions[0].payload.envelopes[0].client_id, "client_alice");
 });
 

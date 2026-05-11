@@ -48,7 +48,7 @@ func (c *CryptoClient) CreateEncryptedSecret(ctx context.Context, req CreateEncr
 	if err != nil {
 		return SecretVersionRef{}, err
 	}
-	aadInputs := clientcrypto.CanonicalAADInputs{Namespace: namespace, Key: key}
+	aadInputs := clientcrypto.CanonicalAADInputs{Namespace: namespace, Key: key, SecretVersion: 1}
 	metadata := clientcrypto.MetadataV1(aadInputs, base64.StdEncoding.EncodeToString(nonce))
 	aad, metadataJSON, err := encodeCryptoMetadata(metadata, aadInputs)
 	if err != nil {
@@ -82,7 +82,19 @@ func (c *CryptoClient) CreateEncryptedSecretVersion(ctx context.Context, secretI
 	if strings.TrimSpace(secretID) == "" {
 		return SecretVersionRef{}, fmt.Errorf("secret id is required")
 	}
-	payload, err := c.buildEncryptedSecretVersionPayload(ctx, clientcrypto.CanonicalAADInputs{Namespace: req.Namespace, Key: req.Key}, req)
+	secret, err := c.transport.GetSecretPayload(secretID)
+	if err != nil {
+		return SecretVersionRef{}, err
+	}
+	metadata, _, err := decodeCryptoMetadata(secret.CryptoMetadata, clientcrypto.CanonicalAADInputs{Namespace: secret.Namespace, Key: secret.Key, SecretVersion: 1})
+	if err != nil {
+		return SecretVersionRef{}, err
+	}
+	aadInputs, err := nextSecretVersionAADInputs(metadata, clientcrypto.CanonicalAADInputs{Namespace: secret.Namespace, Key: secret.Key, SecretVersion: 1})
+	if err != nil {
+		return SecretVersionRef{}, err
+	}
+	payload, err := c.buildEncryptedSecretVersionPayload(ctx, aadInputs, req)
 	if err != nil {
 		return SecretVersionRef{}, err
 	}
@@ -94,7 +106,19 @@ func (c *CryptoClient) CreateEncryptedSecretVersionByKey(ctx context.Context, na
 	if err != nil {
 		return SecretVersionRef{}, err
 	}
-	payload, err := c.buildEncryptedSecretVersionPayload(ctx, clientcrypto.CanonicalAADInputs{Namespace: namespace, Key: key}, req)
+	secret, err := c.transport.GetSecretPayloadByKey(namespace, key)
+	if err != nil {
+		return SecretVersionRef{}, err
+	}
+	metadata, _, err := decodeCryptoMetadata(secret.CryptoMetadata, clientcrypto.CanonicalAADInputs{Namespace: namespace, Key: key, SecretVersion: 1})
+	if err != nil {
+		return SecretVersionRef{}, err
+	}
+	aadInputs, err := nextSecretVersionAADInputs(metadata, clientcrypto.CanonicalAADInputs{Namespace: namespace, Key: key, SecretVersion: 1})
+	if err != nil {
+		return SecretVersionRef{}, err
+	}
+	payload, err := c.buildEncryptedSecretVersionPayload(ctx, aadInputs, req)
 	if err != nil {
 		return SecretVersionRef{}, err
 	}
@@ -140,7 +164,7 @@ func (c *CryptoClient) ReadDecryptedSecret(ctx context.Context, secretID string)
 	if err != nil {
 		return DecryptedSecret{}, err
 	}
-	return c.openDecryptedSecret(ctx, secret, clientcrypto.CanonicalAADInputs{Namespace: secret.Namespace, Key: secret.Key})
+	return c.openDecryptedSecret(ctx, secret, clientcrypto.CanonicalAADInputs{Namespace: secret.Namespace, Key: secret.Key, SecretVersion: 1})
 }
 
 func (c *CryptoClient) ReadDecryptedSecretByKey(ctx context.Context, namespace, key string) (DecryptedSecret, error) {
@@ -152,7 +176,7 @@ func (c *CryptoClient) ReadDecryptedSecretByKey(ctx context.Context, namespace, 
 	if err != nil {
 		return DecryptedSecret{}, err
 	}
-	return c.openDecryptedSecret(ctx, secret, clientcrypto.CanonicalAADInputs{Namespace: namespace, Key: key})
+	return c.openDecryptedSecret(ctx, secret, clientcrypto.CanonicalAADInputs{Namespace: namespace, Key: key, SecretVersion: 1})
 }
 
 func (c *CryptoClient) openDecryptedSecret(ctx context.Context, secret SecretReadResponse, fallback clientcrypto.CanonicalAADInputs) (DecryptedSecret, error) {
@@ -230,7 +254,7 @@ func (c *CryptoClient) ShareEncryptedSecretByKey(ctx context.Context, namespace,
 }
 
 func (c *CryptoClient) buildShareSecretPayload(ctx context.Context, secret SecretReadResponse, req ShareEncryptedSecretRequest) (ShareSecretPayload, error) {
-	_, aad, err := decodeCryptoMetadata(secret.CryptoMetadata, clientcrypto.CanonicalAADInputs{Namespace: secret.Namespace, Key: secret.Key})
+	_, aad, err := decodeCryptoMetadata(secret.CryptoMetadata, clientcrypto.CanonicalAADInputs{Namespace: secret.Namespace, Key: secret.Key, SecretVersion: 1})
 	if err != nil {
 		return ShareSecretPayload{}, err
 	}
@@ -350,6 +374,18 @@ func (c *CryptoClient) openSecretEnvelope(ctx context.Context, encodedEnvelope s
 		return nil, err
 	}
 	return dek, nil
+}
+
+func nextSecretVersionAADInputs(metadata clientcrypto.Metadata, fallback clientcrypto.CanonicalAADInputs) (clientcrypto.CanonicalAADInputs, error) {
+	current := metadata.CanonicalAADInputs(fallback)
+	if current.Namespace == "" || current.Key == "" || current.SecretVersion <= 0 {
+		return clientcrypto.CanonicalAADInputs{}, ErrMalformedCryptoMetadata
+	}
+	return clientcrypto.CanonicalAADInputs{
+		Namespace:     current.Namespace,
+		Key:           current.Key,
+		SecretVersion: current.SecretVersion + 1,
+	}, nil
 }
 
 func encodeCryptoMetadata(metadata clientcrypto.Metadata, aadInputs clientcrypto.CanonicalAADInputs) ([]byte, json.RawMessage, error) {

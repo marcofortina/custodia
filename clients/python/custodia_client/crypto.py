@@ -80,6 +80,7 @@ class WrongRecipient(CryptoError):
 class CanonicalAADInputs:
     namespace: str = ""
     key: str = ""
+    secret_version: int = 0
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any] | None) -> "CanonicalAADInputs":
@@ -88,6 +89,7 @@ class CanonicalAADInputs:
         return cls(
             namespace=str(value.get("namespace") or ""),
             key=str(value.get("key") or ""),
+            secret_version=int(value.get("secret_version") or 0),
         )
 
     def to_metadata_dict(self) -> dict[str, str]:
@@ -96,6 +98,8 @@ class CanonicalAADInputs:
             payload["namespace"] = self.namespace
         if self.key:
             payload["key"] = self.key
+        if self.secret_version > 0:
+            payload["secret_version"] = self.secret_version
         return payload
 
 
@@ -169,8 +173,8 @@ def build_canonical_aad(metadata: CryptoMetadata | Mapping[str, Any], inputs: Ca
     if isinstance(metadata, Mapping):
         metadata = CryptoMetadata.from_mapping(metadata)
     validate_metadata(metadata)
-    if not inputs.namespace or not inputs.key:
-        raise MalformedAAD("namespace and key are required")
+    if not inputs.namespace or not inputs.key or inputs.secret_version <= 0:
+        raise MalformedAAD("namespace, key and secret_version are required")
     document: dict[str, str] = {
         "version": metadata.version,
         "content_cipher": metadata.content_cipher,
@@ -178,6 +182,7 @@ def build_canonical_aad(metadata: CryptoMetadata | Mapping[str, Any], inputs: Ca
     }
     document["namespace"] = inputs.namespace
     document["key"] = inputs.key
+    document["secret_version"] = inputs.secret_version
     return json.dumps(document, separators=(",", ":")).encode("utf-8")
 
 
@@ -369,7 +374,7 @@ class CryptoCustodiaClient:
             raise ValueError("secret name is required")
         dek = self._random(AES_256_GCM_KEY_BYTES)
         nonce = self._random(AES_GCM_NONCE_BYTES)
-        aad_inputs = CanonicalAADInputs(namespace="default", key=name)
+        aad_inputs = CanonicalAADInputs(namespace="default", key=name, secret_version=1)
         metadata = metadata_v1(aad_inputs, nonce)
         aad = build_canonical_aad(metadata, aad_inputs)
         ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad)
@@ -397,7 +402,7 @@ class CryptoCustodiaClient:
         key = _require_key(key)
         dek = self._random(AES_256_GCM_KEY_BYTES)
         nonce = self._random(AES_GCM_NONCE_BYTES)
-        aad_inputs = CanonicalAADInputs(namespace=namespace, key=key)
+        aad_inputs = CanonicalAADInputs(namespace=namespace, key=key, secret_version=1)
         metadata = metadata_v1(aad_inputs, nonce)
         aad = build_canonical_aad(metadata, aad_inputs)
         ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad)
@@ -429,7 +434,8 @@ class CryptoCustodiaClient:
         secret = self.transport.get_secret(secret_id)
         namespace = _normalize_namespace(str(secret.get("namespace") or ""))
         key = _require_key(str(secret.get("key") or ""))
-        aad_inputs = CanonicalAADInputs(namespace=namespace, key=key)
+        current_metadata = parse_metadata(secret.get("crypto_metadata") or {})
+        aad_inputs = _next_secret_version_aad_inputs(current_metadata, CanonicalAADInputs(namespace=namespace, key=key, secret_version=1))
         metadata = metadata_v1(aad_inputs, nonce)
         aad = build_canonical_aad(metadata, aad_inputs)
         ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad)
@@ -454,9 +460,11 @@ class CryptoCustodiaClient:
     ) -> dict[str, Any]:
         namespace = _normalize_namespace(namespace)
         key = _require_key(key)
+        secret = self.transport.get_secret_by_key(namespace, key)
+        current_metadata = parse_metadata(secret.get("crypto_metadata") or {})
         dek = self._random(AES_256_GCM_KEY_BYTES)
         nonce = self._random(AES_GCM_NONCE_BYTES)
-        aad_inputs = CanonicalAADInputs(namespace=namespace, key=key)
+        aad_inputs = _next_secret_version_aad_inputs(current_metadata, CanonicalAADInputs(namespace=namespace, key=key, secret_version=1))
         metadata = metadata_v1(aad_inputs, nonce)
         aad = build_canonical_aad(metadata, aad_inputs)
         ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad)
@@ -476,6 +484,7 @@ class CryptoCustodiaClient:
         fallback = CanonicalAADInputs(
             namespace=_normalize_namespace(str(secret.get("namespace") or "")),
             key=_require_key(str(secret.get("key") or "")),
+            secret_version=1,
         )
         aad_inputs = metadata.canonical_aad_inputs(fallback)
         aad = build_canonical_aad(metadata, aad_inputs)
@@ -503,6 +512,7 @@ class CryptoCustodiaClient:
         fallback = CanonicalAADInputs(
             namespace=namespace,
             key=key,
+            secret_version=1,
         )
         aad_inputs = metadata.canonical_aad_inputs(fallback)
         aad = build_canonical_aad(metadata, aad_inputs)
@@ -536,6 +546,7 @@ class CryptoCustodiaClient:
         fallback = CanonicalAADInputs(
             namespace=_normalize_namespace(str(secret.get("namespace") or "")),
             key=_require_key(str(secret.get("key") or "")),
+            secret_version=1,
         )
         aad_inputs = metadata.canonical_aad_inputs(fallback)
         aad = build_canonical_aad(metadata, aad_inputs)  # type: ignore[name-defined]
@@ -568,6 +579,7 @@ class CryptoCustodiaClient:
         fallback = CanonicalAADInputs(
             namespace=namespace,
             key=key,
+            secret_version=1,
         )
         aad_inputs = metadata.canonical_aad_inputs(fallback)
         aad = build_canonical_aad(metadata, aad_inputs)
@@ -620,6 +632,17 @@ class CryptoCustodiaClient:
         if len(value) != length:
             raise ValueError("random source returned invalid length")
         return value
+
+
+def _next_secret_version_aad_inputs(metadata: CryptoMetadata, fallback: CanonicalAADInputs) -> CanonicalAADInputs:
+    current = metadata.canonical_aad_inputs(fallback)
+    if not current.namespace or not current.key or current.secret_version <= 0:
+        raise MalformedCryptoMetadata("missing secret_version in crypto metadata AAD")
+    return CanonicalAADInputs(
+        namespace=current.namespace,
+        key=current.key,
+        secret_version=current.secret_version + 1,
+    )
 
 
 def _normalize_namespace(namespace: str) -> str:

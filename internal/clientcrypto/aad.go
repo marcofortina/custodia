@@ -20,8 +20,9 @@ var ErrMalformedAAD = errors.New("malformed client crypto aad")
 
 // CanonicalAADInputs identifies the stable resource metadata bound into client-side AEAD AAD.
 type CanonicalAADInputs struct {
-	Namespace string `json:"namespace,omitempty"`
-	Key       string `json:"key,omitempty"`
+	Namespace     string `json:"namespace,omitempty"`
+	Key           string `json:"key,omitempty"`
+	SecretVersion int    `json:"secret_version,omitempty"`
 }
 
 type canonicalAADDocument struct {
@@ -30,6 +31,7 @@ type canonicalAADDocument struct {
 	EnvelopeScheme string `json:"envelope_scheme"`
 	Namespace      string `json:"namespace"`
 	Key            string `json:"key"`
+	SecretVersion  int    `json:"secret_version"`
 }
 
 // BuildCanonicalAAD returns the deterministic JSON AAD bytes shared by all crypto clients.
@@ -40,7 +42,7 @@ func BuildCanonicalAAD(metadata Metadata, inputs CanonicalAADInputs) ([]byte, er
 	if err := ValidateMetadata(metadata); err != nil {
 		return nil, err
 	}
-	if inputs.Namespace == "" || inputs.Key == "" {
+	if inputs.Namespace == "" || inputs.Key == "" || inputs.SecretVersion <= 0 {
 		return nil, ErrMalformedAAD
 	}
 	return json.Marshal(canonicalAADDocument{
@@ -49,5 +51,6 @@ func BuildCanonicalAAD(metadata Metadata, inputs CanonicalAADInputs) ([]byte, er
 		EnvelopeScheme: metadata.EnvelopeScheme,
 		Namespace:      inputs.Namespace,
 		Key:            inputs.Key,
+		SecretVersion:  inputs.SecretVersion,
 	})
 }

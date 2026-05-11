@@ -122,7 +122,7 @@ class PythonHighLevelCryptoClientTest(unittest.TestCase):
         self.assertEqual(transport.created_payload["envelopes"], [{"client_id": "client_alice", "envelope": vector["envelopes"][0]["envelope"]}])
         metadata = transport.created_payload["crypto_metadata"]
         self.assertEqual(metadata["content_nonce_b64"], vector["content_nonce_b64"])
-        self.assertEqual(metadata["aad"], {"namespace": "default", "key": "database-password"})
+        self.assertEqual(metadata["aad"], {"namespace": "default", "key": "database-password", "secret_version": 1})
 
 
     def test_create_encrypted_secret_by_key_sends_keyspace_payload(self) -> None:
@@ -137,7 +137,7 @@ class PythonHighLevelCryptoClientTest(unittest.TestCase):
         assert transport.created_payload is not None
         self.assertEqual(transport.created_payload["namespace"], "db01")
         self.assertEqual(transport.created_payload["key"], "user:sys")
-        self.assertEqual(transport.created_payload["crypto_metadata"]["aad"], {"namespace": "db01", "key": "user:sys"})
+        self.assertEqual(transport.created_payload["crypto_metadata"]["aad"], {"namespace": "db01", "key": "user:sys", "secret_version": 1})
 
     def test_keyspace_read_share_and_version_helpers(self) -> None:
         random_source = _RandomSource([b"A" * 32, b"B" * 12, b"C" * 32, b"D" * 32, b"E" * 32, b"F" * 12, b"G" * 32])
@@ -166,6 +166,7 @@ class PythonHighLevelCryptoClientTest(unittest.TestCase):
         assert transport.version_payload is not None
         self.assertEqual(transport.version_payload["namespace"], "db01")
         self.assertEqual(transport.version_payload["key"], "user:sys")
+        self.assertEqual(transport.version_payload["crypto_metadata"]["aad"], {"namespace": "db01", "key": "user:sys", "secret_version": 2})
 
     def test_read_decrypted_secret_matches_vector(self) -> None:
         vector = _vector("read_secret_authorized_recipient.json")
@@ -180,6 +181,7 @@ class PythonHighLevelCryptoClientTest(unittest.TestCase):
                 CanonicalAADInputs(
                     namespace=vector["aad_inputs"]["namespace"],
                     key=vector["aad_inputs"]["key"],
+                    secret_version=vector["aad_inputs"]["secret_version"],
                 ),
                 _b64(vector["content_nonce_b64"]),
             ).to_dict(),
@@ -209,6 +211,7 @@ class PythonHighLevelCryptoClientTest(unittest.TestCase):
                 CanonicalAADInputs(
                     namespace=read_vector["aad_inputs"]["namespace"],
                     key=read_vector["aad_inputs"]["key"],
+                    secret_version=read_vector["aad_inputs"]["secret_version"],
                 ),
                 _b64(read_vector["content_nonce_b64"]),
             ).to_dict(),

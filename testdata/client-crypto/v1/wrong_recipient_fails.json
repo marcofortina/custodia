@@ -8,14 +8,15 @@
   },
   "aad_inputs": {
     "namespace": "db01",
-    "key": "user:sys"
+    "key": "user:sys",
+    "secret_version": 1
   },
-  "canonical_aad": "{\"version\":\"custodia.client-crypto.v1\",\"content_cipher\":\"aes-256-gcm\",\"envelope_scheme\":\"hpke-v1\",\"namespace\":\"db01\",\"key\":\"user:sys\"}",
-  "canonical_aad_sha256": "d6a79353cfe115d66dcf5c50564dfbafa8b464275b251f4782b544f744cb17f2",
+  "canonical_aad": "{\"version\":\"custodia.client-crypto.v1\",\"content_cipher\":\"aes-256-gcm\",\"envelope_scheme\":\"hpke-v1\",\"namespace\":\"db01\",\"key\":\"user:sys\",\"secret_version\":1}",
+  "canonical_aad_sha256": "2b84af9b1b9f482ee5b8206a73aeab1e125a9247b4d1535d7e8c290137a4c6c7",
   "plaintext_b64": "ZXhpc3Rpbmcgc2VjcmV0IHBheWxvYWQ=",
   "content_dek_b64": "U1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1M=",
   "content_nonce_b64": "Y2NjY2NjY2NjY2Nj",
-  "ciphertext": "d+Ub720HWc3YmYcZyQPyyd3EK2QHKMiXgfsMD+EZhzTtIoyXuIg/",
+  "ciphertext": "d+Ub720HWc3YmYcZyQPyyd3EK2QHKMi+yxJHvySpW7HrhWHy6Nqu",
   "envelope": {
     "client_id": "client_alice",
     "recipient_private_key_b64": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
@@ -23,7 +24,7 @@
     "sender_ephemeral_private_key_b64": "Q0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0M=",
     "sender_ephemeral_public_key_b64": "ze/YeDqRtEZkDi4flVmds15ISgBxvSGCs7YNCBLBDHA=",
     "wrong_recipient_private_key_b64": "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI=",
-    "envelope": "ze/YeDqRtEZkDi4flVmds15ISgBxvSGCs7YNCBLBDHDZczDrK3IdDIfEWJA8JD3ERLLFg1eklPtBfJ2tbctFNZ3Qbw6sX1VDpX3S4Ol3x68="
+    "envelope": "ze/YeDqRtEZkDi4flVmds15ISgBxvSGCs7YNCBLBDHDZczDrK3IdDIfEWJA8JD3ERLLFg1eklPtBfJ2tbctFNb19vQo6Wuc3ZWZQFNAidO0="
   },
   "failure": "recipient envelope cannot be opened by another client",
   "expected_error": "wrong_recipient"
