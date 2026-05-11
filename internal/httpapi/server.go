@@ -174,6 +174,7 @@ func New(options Options) http.Handler {
 	mux.Handle("GET /web/status", server.webAdmin(http.HandlerFunc(server.handleWebStatus)))
 	mux.Handle("GET /web/diagnostics", server.webAdmin(http.HandlerFunc(server.handleWebDiagnostics)))
 	mux.Handle("GET /web/clients", server.webAdmin(http.HandlerFunc(server.handleWebClients)))
+	mux.Handle("GET /web/clients/{client_id}", server.webAdmin(http.HandlerFunc(server.handleWebClientDetail)))
 	mux.Handle("GET /web/audit", server.webAdmin(http.HandlerFunc(server.handleWebAudit)))
 	mux.Handle("GET /web/audit/verify", server.webAdmin(http.HandlerFunc(server.handleWebAuditVerify)))
 	mux.Handle("GET /web/access-requests", server.webAdmin(http.HandlerFunc(server.handleWebAccessRequests)))

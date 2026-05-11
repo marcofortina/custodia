@@ -19,6 +19,7 @@ import (
 
 	"html"
 	"net/http"
+	"net/url"
 	"runtime"
 	"strconv"
 	"strings"
@@ -311,6 +312,7 @@ func webHero(title string, description string) string {
 func webBadge(value string) string {
 	normalized := strings.ToLower(strings.TrimSpace(value))
 	normalized = strings.ReplaceAll(normalized, "_", "-")
+	normalized = strings.ReplaceAll(normalized, " ", "-")
 	if normalized == "" {
 		normalized = "unknown"
 	}
@@ -323,6 +325,30 @@ func webKeyspace(namespace, key string) string {
 		namespace = model.DefaultSecretNamespace
 	}
 	return `<span class="console-keyspace"><span class="console-keyspace__namespace">` + html.EscapeString(namespace) + `</span><code>` + html.EscapeString(key) + `</code></span>`
+}
+
+func webPermissions(bits int) string {
+	labels := make([]string, 0, 3)
+	if model.HasPermission(bits, model.PermissionRead) {
+		labels = append(labels, "read")
+	}
+	if model.HasPermission(bits, model.PermissionWrite) {
+		labels = append(labels, "update")
+	}
+	if model.HasPermission(bits, model.PermissionShare) {
+		labels = append(labels, "share")
+	}
+	if len(labels) == 0 {
+		return "none"
+	}
+	return strings.Join(labels, ", ")
+}
+
+func webOptionalTime(value *time.Time) string {
+	if value == nil {
+		return "-"
+	}
+	return html.EscapeString(value.Format(time.RFC3339))
 }
 
 func webTable(columns []string, rows string, emptyColspan int, emptyMessage string) string {
@@ -688,7 +714,7 @@ func (s *Server) handleWebClients(w http.ResponseWriter, r *http.Request) {
 		if !client.IsActive {
 			state = "revoked"
 		}
-		rows += "<tr><td>" + html.EscapeString(client.ClientID) + "</td><td>" + html.EscapeString(client.MTLSSubject) + "</td><td>" + webBadge(state) + "</td></tr>"
+		rows += `<tr><td><a href="/web/clients/` + url.PathEscape(client.ClientID) + `" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">` + html.EscapeString(client.ClientID) + `</a></td><td>` + html.EscapeString(client.MTLSSubject) + `</td><td>` + webBadge(state) + `</td></tr>`
 	}
 	body := webHero("Clients", "mTLS client identities visible to the admin console.") +
 		`<form class="console-toolbar" method="get" action="/web/clients" hx-get="/web/clients" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">` +
@@ -697,6 +723,70 @@ func (s *Server) handleWebClients(w http.ResponseWriter, r *http.Request) {
 		webPaginatedTable([]string{"Client ID", "mTLS subject", "Status"}, rows, 3, "No clients found.", 10, "Clients pagination")
 	s.audit(r, "web.client_list", "client", "", "success", nil)
 	writeWebPage(w, "Clients", body)
+}
+
+func (s *Server) handleWebClientDetail(w http.ResponseWriter, r *http.Request) {
+	clientID := strings.TrimSpace(r.PathValue("client_id"))
+	if !model.ValidClientID(clientID) {
+		s.auditFailure(r, "web.client_detail", "client", clientID, map[string]string{"reason": "invalid_client_id"})
+		writeWebStatusError(w, http.StatusBadRequest, "invalid_client_id")
+		return
+	}
+	client, err := s.store.GetClient(r.Context(), clientID)
+	if err != nil {
+		s.auditStoreFailure(r, "web.client_detail", "client", clientID, err)
+		writeWebMappedError(w, err)
+		return
+	}
+	secrets := []model.SecretMetadata{}
+	if client.IsActive {
+		var err error
+		secrets, err = s.store.ListSecrets(r.Context(), clientID)
+		if err != nil {
+			s.auditStoreFailure(r, "web.client_detail", "client", clientID, err)
+			writeWebMappedError(w, err)
+			return
+		}
+	}
+
+	visibleRows := ""
+	shareRows := ""
+	for _, secret := range secrets {
+		relationship := "shared with this client"
+		if secret.CreatedByClientID == clientID {
+			relationship = "owned by this client"
+		}
+		visibleRows += "<tr><td>" + webKeyspace(secret.Namespace, secret.Key) + "</td><td>" + webBadge(relationship) + "</td><td>" + html.EscapeString(secret.CreatedByClientID) + "</td><td>" + html.EscapeString(webPermissions(secret.Permissions)) + "</td><td>" + html.EscapeString(secret.VersionID) + "</td><td>" + webOptionalTime(secret.AccessExpiresAt) + "</td></tr>"
+		if secret.CreatedByClientID != clientID || !model.HasPermission(secret.Permissions, model.PermissionShare) {
+			continue
+		}
+		accesses, err := s.store.ListSecretAccess(r.Context(), clientID, secret.SecretID)
+		if err != nil {
+			s.auditStoreFailure(r, "web.client_detail", "secret", secret.SecretID, err)
+			writeWebMappedError(w, err)
+			return
+		}
+		for _, access := range accesses {
+			if access.ClientID == clientID {
+				continue
+			}
+			shareRows += "<tr><td>" + webKeyspace(secret.Namespace, secret.Key) + "</td><td>" + html.EscapeString(access.ClientID) + "</td><td>" + html.EscapeString(webPermissions(access.Permissions)) + "</td><td>" + webOptionalTime(access.ExpiresAt) + "</td></tr>"
+		}
+	}
+
+	state := "active"
+	if !client.IsActive {
+		state = "revoked"
+	}
+	body := webHero("Client Detail", "Metadata-only view of one client visible keyspace, ownership and shares.") +
+		`<p><a class="console-button console-button--ghost" href="/web/clients" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">Back to clients</a></p>` +
+		`<dl class="console-panel console-stat"><dt>Client ID</dt><dd>` + html.EscapeString(client.ClientID) + `</dd><dt>mTLS subject</dt><dd>` + html.EscapeString(client.MTLSSubject) + `</dd><dt>Status</dt><dd>` + webBadge(state) + `</dd></dl>` +
+		`<h2>Visible Keyspace</h2><p class="console-muted">Secrets this client can resolve by namespace/key. Secret plaintext, ciphertext, envelopes and DEKs are never rendered.</p>` +
+		webPaginatedTable([]string{"Keyspace", "Relationship", "Owner", "Permissions", "Current version", "Access expires"}, visibleRows, 6, "No visible keyspace entries found for this client.", 10, "Client visible keyspace pagination") +
+		`<h2>Shares From This Client</h2><p class="console-muted">Active metadata-only shares for secrets owned by this client.</p>` +
+		webPaginatedTable([]string{"Keyspace", "Shared with", "Permissions", "Expires"}, shareRows, 4, "No active shares from this client.", 10, "Client shares pagination")
+	s.audit(r, "web.client_detail", "client", clientID, "success", nil)
+	writeWebPage(w, "Client Detail", body)
 }
 
 func (s *Server) handleWebAudit(w http.ResponseWriter, r *http.Request) {

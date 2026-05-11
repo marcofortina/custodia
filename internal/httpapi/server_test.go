@@ -2104,6 +2104,76 @@ func TestWebConsoleRendersMetadataOnlyPages(t *testing.T) {
 	}
 }
 
+func TestWebClientDetailShowsVisibleKeyspaceAndShares(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, clientID := range []string{"admin", "client_alice", "client_bob"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %s: %v", clientID, err)
+		}
+	}
+	if _, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
+		Namespace:  "db01",
+		Key:        "user:sys",
+		Ciphertext: "c2VjcmV0LWNpcGhlcnRleHQ=",
+		Envelopes: []model.RecipientEnvelope{
+			{ClientID: "client_alice", Envelope: "YWxpY2UtZW52ZWxvcGU="},
+			{ClientID: "client_bob", Envelope: "Ym9iLWVudmVsb3Bl"},
+		},
+		Permissions: int(model.PermissionAll),
+	}); err != nil {
+		t.Fatalf("create shared secret: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	listReq := mtlsRequest(http.MethodGet, "/web/clients", "", "admin")
+	listRes := httptest.NewRecorder()
+	handler.ServeHTTP(listRes, listReq)
+	if listRes.Code != http.StatusOK {
+		t.Fatalf("expected clients 200, got %d: %s", listRes.Code, listRes.Body.String())
+	}
+	if !strings.Contains(listRes.Body.String(), `href="/web/clients/client_alice"`) {
+		t.Fatalf("clients page did not link client detail: %s", listRes.Body.String())
+	}
+
+	detailReq := mtlsRequest(http.MethodGet, "/web/clients/client_alice", "", "admin")
+	detailRes := httptest.NewRecorder()
+	handler.ServeHTTP(detailRes, detailReq)
+	if detailRes.Code != http.StatusOK {
+		t.Fatalf("expected client detail 200, got %d: %s", detailRes.Code, detailRes.Body.String())
+	}
+	body := detailRes.Body.String()
+	for _, expected := range []string{
+		"Visible Keyspace",
+		"Shares From This Client",
+		`class="console-keyspace__namespace">db01</span>`,
+		"<code>user:sys</code>",
+		"owned by this client",
+		"client_bob",
+		"read, update, share",
+		"Secret plaintext, ciphertext, envelopes and DEKs are never rendered.",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("client detail expected token %q, got: %s", expected, body)
+		}
+	}
+	for _, forbidden := range []string{"c2VjcmV0LWNpcGhlcnRleHQ=", "YWxpY2UtZW52ZWxvcGU=", "Ym9iLWVudmVsb3Bl"} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("client detail leaked crypto payload token %q: %s", forbidden, body)
+		}
+	}
+
+	sharedReq := mtlsRequest(http.MethodGet, "/web/clients/client_bob", "", "admin")
+	sharedRes := httptest.NewRecorder()
+	handler.ServeHTTP(sharedRes, sharedReq)
+	if sharedRes.Code != http.StatusOK {
+		t.Fatalf("expected shared client detail 200, got %d: %s", sharedRes.Code, sharedRes.Body.String())
+	}
+	if !strings.Contains(sharedRes.Body.String(), "shared with this client") || !strings.Contains(sharedRes.Body.String(), "client_alice") {
+		t.Fatalf("shared client detail did not show owner/relationship: %s", sharedRes.Body.String())
+	}
+}
+
 func TestWebConsoleRendersResponsiveHTMXSkeleton(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()
