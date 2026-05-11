@@ -1909,22 +1909,6 @@ func TestWebAccessRequestsRejectsInvalidClientFilter(t *testing.T) {
 	}
 }
 
-func TestWebAccessRequestsRejectsInvalidSecretFilter(t *testing.T) {
-	ctx := context.Background()
-	memoryStore := store.NewMemoryStore()
-	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
-		t.Fatalf("create admin: %v", err)
-	}
-	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
-
-	req := mtlsRequest(http.MethodGet, "/web/access-requests?secret_id=latest", "", "admin")
-	res := httptest.NewRecorder()
-	handler.ServeHTTP(res, req)
-	if res.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", res.Code, res.Body.String())
-	}
-}
-
 func TestWebAccessRequestsRejectsInvalidStatusFilter(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()
@@ -2403,10 +2387,9 @@ func TestWebConsoleFilterFormsPreserveSubmittedValues(t *testing.T) {
 			},
 		},
 		{
-			path: "/web/access-requests?limit=25&secret_id=00000000-0000-4000-8000-000000000001&status=pending&client_id=client_bob&requested_by_client_id=admin",
+			path: "/web/access-requests?limit=25&status=pending&client_id=client_bob&requested_by_client_id=admin",
 			expected: []string{
 				`name="limit" inputmode="numeric" placeholder="100" value="25"`,
-				`name="secret_id" placeholder="secret UUID" value="00000000-0000-4000-8000-000000000001"`,
 				`<option value="pending" selected>Pending</option>`,
 				`name="client_id" placeholder="client_bob" value="client_bob"`,
 				`name="requested_by_client_id" placeholder="admin" value="admin"`,

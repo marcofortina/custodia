@@ -44,7 +44,7 @@ The metadata console supports bounded query filters for operational views:
 - `/web/audit?limit=100&outcome=failure&action=secret.read&actor_client_id=client_alice&resource_type=secret&resource_id=<id>`
 - `/web/audit/verify?limit=500`
 - `/web/clients?active=true`
-- `/web/access-requests?limit=100&secret_id=<id>&status=pending&client_id=client_bob&requested_by_client_id=admin`
+- `/web/access-requests?limit=100&status=pending&client_id=client_bob&requested_by_client_id=admin`
 
 Invalid filters return `400` and are audited as failures. These filters only affect metadata records already visible to an admin mTLS identity; the web console still never renders ciphertext, envelopes, plaintext or key material.
 

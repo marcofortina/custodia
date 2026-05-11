@@ -729,13 +729,7 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 	if !ok {
 		return
 	}
-	secretID := strings.TrimSpace(r.URL.Query().Get("secret_id"))
-	if secretID != "" && !model.ValidUUIDID(secretID) {
-		s.auditFailure(r, "web.access_request_list", "secret", secretID, map[string]string{"reason": "invalid_secret_id_filter"})
-		writeWebStatusError(w, http.StatusBadRequest, "invalid_secret_id_filter")
-		return
-	}
-	requests, err := s.store.ListAccessGrantRequests(r.Context(), secretID)
+	requests, err := s.store.ListAccessGrantRequests(r.Context(), "")
 	if err != nil {
 		s.auditStoreFailure(r, "web.access_request_list", "secret", "", err)
 		writeWebMappedError(w, err)
@@ -758,7 +752,7 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 	}
 	if targetClientID := strings.TrimSpace(r.URL.Query().Get("client_id")); targetClientID != "" {
 		if !model.ValidClientID(targetClientID) {
-			s.auditFailure(r, "web.access_request_list", "secret", secretID, map[string]string{"reason": "invalid_client_id_filter"})
+			s.auditFailure(r, "web.access_request_list", "secret", "", map[string]string{"reason": "invalid_client_id_filter"})
 			writeWebStatusError(w, http.StatusBadRequest, "invalid_client_id_filter")
 			return
 		}
@@ -772,7 +766,7 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 	}
 	if requestedBy := strings.TrimSpace(r.URL.Query().Get("requested_by_client_id")); requestedBy != "" {
 		if !model.ValidClientID(requestedBy) {
-			s.auditFailure(r, "web.access_request_list", "secret", secretID, map[string]string{"reason": "invalid_requested_by_filter"})
+			s.auditFailure(r, "web.access_request_list", "secret", "", map[string]string{"reason": "invalid_requested_by_filter"})
 			writeWebStatusError(w, http.StatusBadRequest, "invalid_requested_by_filter")
 			return
 		}
@@ -794,7 +788,6 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 	body := webHero("Access Requests", "Metadata-only pending grant workflow. Envelopes are never rendered here.") +
 		`<form class="console-toolbar" method="get" action="/web/access-requests" hx-get="/web/access-requests" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">` +
 		`<label>Limit<input name="limit" inputmode="numeric" placeholder="100"` + webInputValueAttr(r, "limit") + `></label>` +
-		`<label>Secret<input name="secret_id" placeholder="secret UUID"` + webInputValueAttr(r, "secret_id") + `></label>` +
 		`<label>Status<select name="status">` + webSelectOption("", "Any", statusFilter) + webSelectOption("pending", "Pending", statusFilter) + webSelectOption("activated", "Activated", statusFilter) + webSelectOption("revoked", "Revoked", statusFilter) + webSelectOption("expired", "Expired", statusFilter) + `</select></label>` +
 		`<label>Target<input name="client_id" placeholder="client_bob"` + webInputValueAttr(r, "client_id") + `></label>` +
 		`<label>Requester<input name="requested_by_client_id" placeholder="admin"` + webInputValueAttr(r, "requested_by_client_id") + `></label>` +
