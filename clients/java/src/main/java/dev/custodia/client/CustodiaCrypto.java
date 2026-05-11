@@ -113,22 +113,31 @@ public final class CustodiaCrypto {
 
     public static ContentCiphertext sealContentAES256GCM(byte[] key, byte[] plaintext, byte[] aad, RandomSource randomSource) {
         Objects.requireNonNull(randomSource, "randomSource");
-        byte[] nonce = randomSource.randomBytes(AES_GCM_NONCE_BYTES);
-        return new ContentCiphertext(nonce, sealAES256GCMWithNonce(key, nonce, plaintext, aad, "content encryption failed"));
-    }
-
-    // HPKE derives a fresh AEAD nonce from the per-recipient key schedule; content encryption must use sealContentAES256GCM.
-    @SuppressWarnings("java/static-initialization-vector")
-    private static byte[] sealAES256GCMWithNonce(byte[] key, byte[] nonce, byte[] plaintext, byte[] aad, String errorMessage) {
         assertLength(key, AES256_GCM_KEY_BYTES, "invalid content key");
+        byte[] nonce = randomSource.randomBytes(AES_GCM_NONCE_BYTES);
         assertLength(nonce, AES_GCM_NONCE_BYTES, "invalid content nonce");
         try {
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(AES_GCM_TAG_BYTES * 8, nonce));
             cipher.updateAAD(aad);
+            return new ContentCiphertext(nonce, cipher.doFinal(plaintext));
+        } catch (GeneralSecurityException err) {
+            throw new CryptoException("content encryption failed", err);
+        }
+    }
+
+    // HPKE derives this AEAD nonce from the per-recipient key schedule. Do not use this helper for content encryption.
+    private static byte[] sealHPKEEnvelopeAES256GCM(byte[] key, byte[] nonce, byte[] plaintext, byte[] aad) {
+        assertLength(key, AES256_GCM_KEY_BYTES, "invalid HPKE envelope key");
+        assertLength(nonce, AES_GCM_NONCE_BYTES, "invalid HPKE envelope nonce");
+        try {
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            // lgtm[java/static-initialization-vector] HPKE AEAD nonces are deterministically derived from a fresh ephemeral shared secret.
+            cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(AES_GCM_TAG_BYTES * 8, nonce));
+            cipher.updateAAD(aad);
             return cipher.doFinal(plaintext);
         } catch (GeneralSecurityException err) {
-            throw new CryptoException(errorMessage, err);
+            throw new CryptoException("HPKE envelope encryption failed", err);
         }
     }
 
@@ -256,7 +265,7 @@ public final class CustodiaCrypto {
 
     private static byte[] hpkeSeal(byte[] sharedSecret, byte[] info, byte[] plaintext, byte[] aad) {
         HPKEKeySchedule schedule = hpkeKeySchedule(sharedSecret, info);
-        return sealAES256GCMWithNonce(schedule.key(), schedule.nonce(), plaintext, aad, "HPKE envelope encryption failed");
+        return sealHPKEEnvelopeAES256GCM(schedule.key(), schedule.nonce(), plaintext, aad);
     }
 
     private static byte[] hpkeOpen(byte[] sharedSecret, byte[] info, byte[] ciphertext, byte[] aad) {
