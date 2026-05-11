@@ -78,28 +78,24 @@ class WrongRecipient(CryptoError):
 
 @dataclass(frozen=True)
 class CanonicalAADInputs:
-    secret_id: str = ""
-    secret_name: str = ""
-    version_id: str = ""
+    namespace: str = ""
+    key: str = ""
 
     @classmethod
     def from_mapping(cls, value: Mapping[str, Any] | None) -> "CanonicalAADInputs":
         if value is None:
             return cls()
         return cls(
-            secret_id=str(value.get("secret_id") or ""),
-            secret_name=str(value.get("secret_name") or ""),
-            version_id=str(value.get("version_id") or ""),
+            namespace=str(value.get("namespace") or ""),
+            key=str(value.get("key") or ""),
         )
 
     def to_metadata_dict(self) -> dict[str, str]:
         payload: dict[str, str] = {}
-        if self.secret_id:
-            payload["secret_id"] = self.secret_id
-        if self.secret_name:
-            payload["secret_name"] = self.secret_name
-        if self.version_id:
-            payload["version_id"] = self.version_id
+        if self.namespace:
+            payload["namespace"] = self.namespace
+        if self.key:
+            payload["key"] = self.key
         return payload
 
 
@@ -173,19 +169,15 @@ def build_canonical_aad(metadata: CryptoMetadata | Mapping[str, Any], inputs: Ca
     if isinstance(metadata, Mapping):
         metadata = CryptoMetadata.from_mapping(metadata)
     validate_metadata(metadata)
-    if not inputs.secret_id and not inputs.secret_name:
-        raise MalformedAAD("secret_id or secret_name is required")
+    if not inputs.namespace or not inputs.key:
+        raise MalformedAAD("namespace and key are required")
     document: dict[str, str] = {
         "version": metadata.version,
         "content_cipher": metadata.content_cipher,
         "envelope_scheme": metadata.envelope_scheme,
     }
-    if inputs.secret_id:
-        document["secret_id"] = inputs.secret_id
-    if inputs.secret_name:
-        document["secret_name"] = inputs.secret_name
-    if inputs.version_id:
-        document["version_id"] = inputs.version_id
+    document["namespace"] = inputs.namespace
+    document["key"] = inputs.key
     return json.dumps(document, separators=(",", ":")).encode("utf-8")
 
 
@@ -377,7 +369,7 @@ class CryptoCustodiaClient:
             raise ValueError("secret name is required")
         dek = self._random(AES_256_GCM_KEY_BYTES)
         nonce = self._random(AES_GCM_NONCE_BYTES)
-        aad_inputs = CanonicalAADInputs(secret_name=name)
+        aad_inputs = CanonicalAADInputs(namespace="default", key=name)
         metadata = metadata_v1(aad_inputs, nonce)
         aad = build_canonical_aad(metadata, aad_inputs)
         ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad)
@@ -405,7 +397,7 @@ class CryptoCustodiaClient:
         key = _require_key(key)
         dek = self._random(AES_256_GCM_KEY_BYTES)
         nonce = self._random(AES_GCM_NONCE_BYTES)
-        aad_inputs = CanonicalAADInputs(secret_name=key)
+        aad_inputs = CanonicalAADInputs(namespace=namespace, key=key)
         metadata = metadata_v1(aad_inputs, nonce)
         aad = build_canonical_aad(metadata, aad_inputs)
         ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad)
@@ -434,7 +426,10 @@ class CryptoCustodiaClient:
             raise ValueError("secret id is required")
         dek = self._random(AES_256_GCM_KEY_BYTES)
         nonce = self._random(AES_GCM_NONCE_BYTES)
-        aad_inputs = CanonicalAADInputs(secret_id=secret_id)
+        secret = self.transport.get_secret(secret_id)
+        namespace = _normalize_namespace(str(secret.get("namespace") or ""))
+        key = _require_key(str(secret.get("key") or ""))
+        aad_inputs = CanonicalAADInputs(namespace=namespace, key=key)
         metadata = metadata_v1(aad_inputs, nonce)
         aad = build_canonical_aad(metadata, aad_inputs)
         ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad)
@@ -461,7 +456,7 @@ class CryptoCustodiaClient:
         key = _require_key(key)
         dek = self._random(AES_256_GCM_KEY_BYTES)
         nonce = self._random(AES_GCM_NONCE_BYTES)
-        aad_inputs = CanonicalAADInputs(secret_name=key)
+        aad_inputs = CanonicalAADInputs(namespace=namespace, key=key)
         metadata = metadata_v1(aad_inputs, nonce)
         aad = build_canonical_aad(metadata, aad_inputs)
         ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad)
@@ -479,8 +474,8 @@ class CryptoCustodiaClient:
         secret = self.transport.get_secret(secret_id)
         metadata = parse_metadata(secret.get("crypto_metadata") or {})
         fallback = CanonicalAADInputs(
-            secret_id=str(secret.get("secret_id") or ""),
-            version_id=str(secret.get("version_id") or ""),
+            namespace=_normalize_namespace(str(secret.get("namespace") or "")),
+            key=_require_key(str(secret.get("key") or "")),
         )
         aad_inputs = metadata.canonical_aad_inputs(fallback)
         aad = build_canonical_aad(metadata, aad_inputs)
@@ -506,8 +501,8 @@ class CryptoCustodiaClient:
         secret = self.transport.get_secret_by_key(namespace, key)
         metadata = parse_metadata(secret.get("crypto_metadata") or {})
         fallback = CanonicalAADInputs(
-            secret_name=key,
-            version_id=str(secret.get("version_id") or ""),
+            namespace=namespace,
+            key=key,
         )
         aad_inputs = metadata.canonical_aad_inputs(fallback)
         aad = build_canonical_aad(metadata, aad_inputs)
@@ -539,8 +534,8 @@ class CryptoCustodiaClient:
         secret = self.transport.get_secret(secret_id)
         metadata = parse_metadata(secret.get("crypto_metadata") or {})
         fallback = CanonicalAADInputs(
-            secret_id=str(secret.get("secret_id") or ""),
-            version_id=str(secret.get("version_id") or ""),
+            namespace=_normalize_namespace(str(secret.get("namespace") or "")),
+            key=_require_key(str(secret.get("key") or "")),
         )
         aad_inputs = metadata.canonical_aad_inputs(fallback)
         aad = build_canonical_aad(metadata, aad_inputs)  # type: ignore[name-defined]
@@ -571,8 +566,8 @@ class CryptoCustodiaClient:
         secret = self.transport.get_secret_by_key(namespace, key)
         metadata = parse_metadata(secret.get("crypto_metadata") or {})
         fallback = CanonicalAADInputs(
-            secret_name=key,
-            version_id=str(secret.get("version_id") or ""),
+            namespace=namespace,
+            key=key,
         )
         aad_inputs = metadata.canonical_aad_inputs(fallback)
         aad = build_canonical_aad(metadata, aad_inputs)

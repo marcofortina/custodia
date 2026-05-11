@@ -56,10 +56,9 @@ export class CiphertextAuthenticationFailed extends CryptoError {}
 export class WrongRecipient extends CryptoError {}
 
 export class CanonicalAADInputs {
-  constructor({ secretID = "", secretName = "", versionID = "" } = {}) {
-    this.secretID = secretID;
-    this.secretName = secretName;
-    this.versionID = versionID;
+  constructor({ namespace = "", key = "" } = {}) {
+    this.namespace = namespace;
+    this.key = key;
   }
 
   static fromMapping(value) {
@@ -67,26 +66,23 @@ export class CanonicalAADInputs {
       return new CanonicalAADInputs();
     }
     return new CanonicalAADInputs({
-      secretID: String(value.secret_id ?? value.secretID ?? ""),
-      secretName: String(value.secret_name ?? value.secretName ?? ""),
-      versionID: String(value.version_id ?? value.versionID ?? ""),
+      namespace: String(value.namespace ?? ""),
+      key: String(value.key ?? ""),
     });
   }
 
   toMetadataObject() {
     const payload = {};
-    if (this.secretID) {
-      payload.secret_id = this.secretID;
+    if (this.namespace) {
+      payload.namespace = this.namespace;
     }
-    if (this.secretName) {
-      payload.secret_name = this.secretName;
-    }
-    if (this.versionID) {
-      payload.version_id = this.versionID;
+    if (this.key) {
+      payload.key = this.key;
     }
     return payload;
   }
 }
+
 
 export class CryptoMetadata {
   constructor({
@@ -176,23 +172,16 @@ export function buildCanonicalAAD(metadata, inputs) {
     metadata = CryptoMetadata.fromMapping(metadata);
   }
   validateMetadata(metadata);
-  if (!inputs.secretID && !inputs.secretName) {
-    throw new MalformedAAD("secret_id or secret_name is required");
+  if (!inputs.namespace || !inputs.key) {
+    throw new MalformedAAD("namespace and key are required");
   }
   const document = {
     version: metadata.version,
     content_cipher: metadata.contentCipher,
     envelope_scheme: metadata.envelopeScheme,
   };
-  if (inputs.secretID) {
-    document.secret_id = inputs.secretID;
-  }
-  if (inputs.secretName) {
-    document.secret_name = inputs.secretName;
-  }
-  if (inputs.versionID) {
-    document.version_id = inputs.versionID;
-  }
+  document.namespace = inputs.namespace;
+  document.key = inputs.key;
   return Buffer.from(JSON.stringify(document), "utf8");
 }
 
@@ -374,7 +363,7 @@ export class CryptoCustodiaClient {
     }
     const dek = this.random(AES256GCMKeyBytes);
     const nonce = this.random(AESGCMNonceBytes);
-    const aadInputs = new CanonicalAADInputs({ secretName: name });
+    const aadInputs = new CanonicalAADInputs({ namespace: "default", key: name });
     const metadata = metadataV1(aadInputs, nonce);
     const aad = buildCanonicalAAD(metadata, aadInputs);
     const ciphertext = sealContentAES256GCM(dek, nonce, Buffer.from(plaintext), aad);
@@ -396,7 +385,7 @@ export class CryptoCustodiaClient {
     key = requireSecretKey(key);
     const dek = this.random(AES256GCMKeyBytes);
     const nonce = this.random(AESGCMNonceBytes);
-    const aadInputs = new CanonicalAADInputs({ secretName: key });
+    const aadInputs = new CanonicalAADInputs({ namespace, key });
     const metadata = metadataV1(aadInputs, nonce);
     const aad = buildCanonicalAAD(metadata, aadInputs);
     const ciphertext = sealContentAES256GCM(dek, nonce, Buffer.from(plaintext), aad);
@@ -421,7 +410,11 @@ export class CryptoCustodiaClient {
     }
     const dek = this.random(AES256GCMKeyBytes);
     const nonce = this.random(AESGCMNonceBytes);
-    const aadInputs = new CanonicalAADInputs({ secretID });
+    const existing = await this.transport.getSecretPayload(secretID);
+    const aadInputs = new CanonicalAADInputs({
+      namespace: normalizeNamespace(existing.namespace ?? ""),
+      key: requireSecretKey(existing.key ?? ""),
+    });
     const metadata = metadataV1(aadInputs, nonce);
     const aad = buildCanonicalAAD(metadata, aadInputs);
     const ciphertext = sealContentAES256GCM(dek, nonce, Buffer.from(plaintext), aad);
@@ -442,7 +435,7 @@ export class CryptoCustodiaClient {
     key = requireSecretKey(key);
     const dek = this.random(AES256GCMKeyBytes);
     const nonce = this.random(AESGCMNonceBytes);
-    const aadInputs = new CanonicalAADInputs({ secretName: key });
+    const aadInputs = new CanonicalAADInputs({ namespace, key });
     const metadata = metadataV1(aadInputs, nonce);
     const aad = buildCanonicalAAD(metadata, aadInputs);
     const ciphertext = sealContentAES256GCM(dek, nonce, Buffer.from(plaintext), aad);
@@ -462,8 +455,8 @@ export class CryptoCustodiaClient {
     const secret = await this.transport.getSecretPayload(secretID);
     const metadata = parseMetadata(secret.crypto_metadata ?? {});
     const fallback = new CanonicalAADInputs({
-      secretID: String(secret.secret_id ?? ""),
-      versionID: String(secret.version_id ?? ""),
+      namespace: normalizeNamespace(secret.namespace ?? ""),
+      key: requireSecretKey(secret.key ?? ""),
     });
     const aadInputs = metadata.canonicalAADInputs(fallback);
     const aad = buildCanonicalAAD(metadata, aadInputs);
@@ -491,8 +484,8 @@ export class CryptoCustodiaClient {
     const secret = await this.transport.getSecretPayloadByKey(namespace, key);
     const metadata = parseMetadata(secret.crypto_metadata ?? {});
     const fallback = new CanonicalAADInputs({
-      secretName: key,
-      versionID: String(secret.version_id ?? ""),
+      namespace,
+      key,
     });
     const aadInputs = metadata.canonicalAADInputs(fallback);
     const aad = buildCanonicalAAD(metadata, aadInputs);
@@ -521,8 +514,8 @@ export class CryptoCustodiaClient {
     const secret = await this.transport.getSecretPayload(secretID);
     const metadata = parseMetadata(secret.crypto_metadata ?? {});
     const fallback = new CanonicalAADInputs({
-      secretID: String(secret.secret_id ?? ""),
-      versionID: String(secret.version_id ?? ""),
+      namespace: normalizeNamespace(secret.namespace ?? ""),
+      key: requireSecretKey(secret.key ?? ""),
     });
     const aadInputs = metadata.canonicalAADInputs(fallback);
     const aad = buildCanonicalAAD(metadata, aadInputs);
@@ -549,8 +542,8 @@ export class CryptoCustodiaClient {
     const secret = await this.transport.getSecretPayloadByKey(namespace, key);
     const metadata = parseMetadata(secret.crypto_metadata ?? {});
     const fallback = new CanonicalAADInputs({
-      secretName: key,
-      versionID: String(secret.version_id ?? ""),
+      namespace,
+      key,
     });
     const aadInputs = metadata.canonicalAADInputs(fallback);
     const aad = buildCanonicalAAD(metadata, aadInputs);

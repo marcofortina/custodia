@@ -122,7 +122,7 @@ class PythonHighLevelCryptoClientTest(unittest.TestCase):
         self.assertEqual(transport.created_payload["envelopes"], [{"client_id": "client_alice", "envelope": vector["envelopes"][0]["envelope"]}])
         metadata = transport.created_payload["crypto_metadata"]
         self.assertEqual(metadata["content_nonce_b64"], vector["content_nonce_b64"])
-        self.assertEqual(metadata["aad"], {"secret_name": "database-password"})
+        self.assertEqual(metadata["aad"], {"namespace": "default", "key": "database-password"})
 
 
     def test_create_encrypted_secret_by_key_sends_keyspace_payload(self) -> None:
@@ -137,7 +137,7 @@ class PythonHighLevelCryptoClientTest(unittest.TestCase):
         assert transport.created_payload is not None
         self.assertEqual(transport.created_payload["namespace"], "db01")
         self.assertEqual(transport.created_payload["key"], "user:sys")
-        self.assertEqual(transport.created_payload["crypto_metadata"]["aad"], {"secret_name": "user:sys"})
+        self.assertEqual(transport.created_payload["crypto_metadata"]["aad"], {"namespace": "db01", "key": "user:sys"})
 
     def test_keyspace_read_share_and_version_helpers(self) -> None:
         random_source = _RandomSource([b"A" * 32, b"B" * 12, b"C" * 32, b"D" * 32, b"E" * 32, b"F" * 12, b"G" * 32])
@@ -171,13 +171,15 @@ class PythonHighLevelCryptoClientTest(unittest.TestCase):
         vector = _vector("read_secret_authorized_recipient.json")
         transport = _Transport()
         transport.secret_response = {
-            "secret_id": vector["aad_inputs"]["secret_id"],
-            "version_id": vector["aad_inputs"]["version_id"],
+            "secret_id": "secret-id",
+            "namespace": vector["aad_inputs"]["namespace"],
+            "key": vector["aad_inputs"]["key"],
+            "version_id": "version-id",
             "ciphertext": vector["ciphertext"],
             "crypto_metadata": metadata_v1(
                 CanonicalAADInputs(
-                    secret_id=vector["aad_inputs"]["secret_id"],
-                    version_id=vector["aad_inputs"]["version_id"],
+                    namespace=vector["aad_inputs"]["namespace"],
+                    key=vector["aad_inputs"]["key"],
                 ),
                 _b64(vector["content_nonce_b64"]),
             ).to_dict(),
@@ -187,10 +189,10 @@ class PythonHighLevelCryptoClientTest(unittest.TestCase):
         }
         crypto = CryptoCustodiaClient(transport, _crypto_options(_RandomSource([])))
 
-        decrypted = crypto.read_decrypted_secret(vector["aad_inputs"]["secret_id"])
+        decrypted = crypto.read_decrypted_secret("secret-id")
         self.assertEqual(decrypted.plaintext, _b64(vector["plaintext_b64"]))
-        self.assertEqual(decrypted.secret_id, vector["aad_inputs"]["secret_id"])
-        self.assertEqual(decrypted.version_id, vector["aad_inputs"]["version_id"])
+        self.assertEqual(decrypted.secret_id, "secret-id")
+        self.assertEqual(decrypted.version_id, "version-id")
 
     def test_share_encrypted_secret_matches_vector(self) -> None:
         read_vector = _vector("read_secret_authorized_recipient.json")
@@ -198,13 +200,15 @@ class PythonHighLevelCryptoClientTest(unittest.TestCase):
         random_source = _RandomSource([_b64(share_vector["envelope"]["sender_ephemeral_private_key_b64"])])
         transport = _Transport()
         transport.secret_response = {
-            "secret_id": read_vector["aad_inputs"]["secret_id"],
-            "version_id": read_vector["aad_inputs"]["version_id"],
+            "secret_id": "secret-id",
+            "namespace": read_vector["aad_inputs"]["namespace"],
+            "key": read_vector["aad_inputs"]["key"],
+            "version_id": "version-id",
             "ciphertext": read_vector["ciphertext"],
             "crypto_metadata": metadata_v1(
                 CanonicalAADInputs(
-                    secret_id=read_vector["aad_inputs"]["secret_id"],
-                    version_id=read_vector["aad_inputs"]["version_id"],
+                    namespace=read_vector["aad_inputs"]["namespace"],
+                    key=read_vector["aad_inputs"]["key"],
                 ),
                 _b64(read_vector["content_nonce_b64"]),
             ).to_dict(),
@@ -214,12 +218,12 @@ class PythonHighLevelCryptoClientTest(unittest.TestCase):
         }
         crypto = CryptoCustodiaClient(transport, _crypto_options(random_source))
 
-        self.assertEqual(crypto.share_encrypted_secret(read_vector["aad_inputs"]["secret_id"], "client_bob"), {"ok": True})
+        self.assertEqual(crypto.share_encrypted_secret("secret-id", "client_bob"), {"ok": True})
         self.assertEqual(
             transport.shared_payload,
             {
-                "secret_id": read_vector["aad_inputs"]["secret_id"],
-                "version_id": read_vector["aad_inputs"]["version_id"],
+                "secret_id": "secret-id",
+                "version_id": "version-id",
                 "target_client_id": "client_bob",
                 "envelope": share_vector["envelope"]["envelope"],
                 "permissions": 4,
