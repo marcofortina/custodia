@@ -37,7 +37,6 @@ type memorySecret struct {
 	SecretID          string
 	Namespace         string
 	Key               string
-	Name              string
 	CreatedByClientID string
 	CreatedAt         time.Time
 	DeletedAt         *time.Time
@@ -231,7 +230,6 @@ func (s *MemoryStore) CreateSecret(_ context.Context, actorClientID string, req 
 		SecretID:          secretID,
 		Namespace:         req.Namespace,
 		Key:               req.Key,
-		Name:              req.Name,
 		CreatedByClientID: actorClientID,
 		CreatedAt:         now,
 		Versions:          []*memoryVersion{version},
@@ -263,7 +261,6 @@ func (s *MemoryStore) ListSecrets(_ context.Context, actorClientID string) ([]mo
 			SecretID:          secret.SecretID,
 			Namespace:         secretNamespace(secret),
 			Key:               secretKey(secret),
-			Name:              secret.Name,
 			VersionID:         version.VersionID,
 			Permissions:       access.Permissions,
 			CreatedAt:         secret.CreatedAt,
@@ -753,19 +750,10 @@ func normalizeSecretIdentity(req *model.CreateSecretRequest) error {
 	if !model.ValidSecretNamespace(req.Namespace) {
 		return ErrInvalidInput
 	}
-	key := model.NormalizeSecretKey(req.Key)
-	name := model.NormalizeSecretName(req.Name)
-	if key == "" {
-		key = name
-	}
-	if !model.ValidSecretKey(key) {
+	req.Key = model.NormalizeSecretKey(req.Key)
+	if !model.ValidSecretKey(req.Key) {
 		return ErrInvalidInput
 	}
-	if name != "" && name != key {
-		return ErrInvalidInput
-	}
-	req.Key = key
-	req.Name = key
 	return nil
 }
 
@@ -842,11 +830,7 @@ func secretKey(secret *memorySecret) string {
 	if secret == nil {
 		return ""
 	}
-	key := model.NormalizeSecretKey(secret.Key)
-	if key != "" {
-		return key
-	}
-	return model.NormalizeSecretName(secret.Name)
+	return model.NormalizeSecretKey(secret.Key)
 }
 
 func (s *MemoryStore) retireActiveVersionsLocked(secret *memorySecret, retiredAt time.Time) {

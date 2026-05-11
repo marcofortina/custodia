@@ -190,9 +190,9 @@ func (s *PostgresStore) CreateSecret(ctx context.Context, actorClientID string, 
 	}
 	var ref model.SecretVersionRef
 	err = tx.QueryRow(ctx, `
-		INSERT INTO secrets (namespace, key, name, created_by_client_id)
-		VALUES ($1, $2, $3, $4)
-		RETURNING secret_id::text`, req.Namespace, req.Key, req.Name, actorClientID).Scan(&ref.SecretID)
+		INSERT INTO secrets (namespace, key, created_by_client_id)
+		VALUES ($1, $2, $3)
+		RETURNING secret_id::text`, req.Namespace, req.Key, actorClientID).Scan(&ref.SecretID)
 	if err != nil {
 		return model.SecretVersionRef{}, mapPostgresError(err)
 	}
@@ -235,7 +235,7 @@ func (s *PostgresStore) ListSecrets(ctx context.Context, actorClientID string) (
 		return nil, ErrForbidden
 	}
 	rows, err := s.pool.Query(ctx, `
-		SELECT s.secret_id::text, s.namespace, s.key, s.name, v.version_id::text, a.permissions, s.created_at, s.created_by_client_id, a.expires_at
+		SELECT s.secret_id::text, s.namespace, s.key, v.version_id::text, a.permissions, s.created_at, s.created_by_client_id, a.expires_at
 		FROM secrets s
 		JOIN LATERAL (
 			SELECT version_id, secret_id, created_at
@@ -258,7 +258,7 @@ func (s *PostgresStore) ListSecrets(ctx context.Context, actorClientID string) (
 	secrets := make([]model.SecretMetadata, 0)
 	for rows.Next() {
 		var secret model.SecretMetadata
-		if err := rows.Scan(&secret.SecretID, &secret.Namespace, &secret.Key, &secret.Name, &secret.VersionID, &secret.Permissions, &secret.CreatedAt, &secret.CreatedByClientID, &secret.AccessExpiresAt); err != nil {
+		if err := rows.Scan(&secret.SecretID, &secret.Namespace, &secret.Key, &secret.VersionID, &secret.Permissions, &secret.CreatedAt, &secret.CreatedByClientID, &secret.AccessExpiresAt); err != nil {
 			return nil, mapPostgresError(err)
 		}
 		secrets = append(secrets, secret)

@@ -40,7 +40,7 @@ func (c *Client) WithCrypto(options CryptoOptions) (*CryptoClient, error) {
 // The creator is automatically included as a recipient so the secret remains
 // readable by the client that created it.
 func (c *CryptoClient) CreateEncryptedSecret(ctx context.Context, req CreateEncryptedSecretRequest) (SecretVersionRef, error) {
-	namespace, key, legacyName, err := normalizeSecretKeyRequest(req.Namespace, req.Key, req.Name)
+	namespace, key, err := normalizeSecretKeyRequest(req.Namespace, req.Key)
 	if err != nil {
 		return SecretVersionRef{}, err
 	}
@@ -69,7 +69,6 @@ func (c *CryptoClient) CreateEncryptedSecret(ctx context.Context, req CreateEncr
 	return c.transport.CreateSecretPayload(CreateSecretPayload{
 		Namespace:      namespace,
 		Key:            key,
-		Name:           legacyName,
 		Ciphertext:     base64.StdEncoding.EncodeToString(ciphertext),
 		CryptoMetadata: metadataJSON,
 		Envelopes:      envelopes,
@@ -102,7 +101,7 @@ func (c *CryptoClient) CreateEncryptedSecretVersion(ctx context.Context, secretI
 }
 
 func (c *CryptoClient) CreateEncryptedSecretVersionByKey(ctx context.Context, namespace, key string, req CreateEncryptedSecretVersionRequest) (SecretVersionRef, error) {
-	namespace, key, _, err := normalizeSecretKeyRequest(firstNonEmpty(namespace, req.Namespace), firstNonEmpty(key, req.Key), "")
+	namespace, key, err := normalizeSecretKeyRequest(firstNonEmpty(namespace, req.Namespace), firstNonEmpty(key, req.Key))
 	if err != nil {
 		return SecretVersionRef{}, err
 	}
@@ -168,7 +167,7 @@ func (c *CryptoClient) ReadDecryptedSecret(ctx context.Context, secretID string)
 }
 
 func (c *CryptoClient) ReadDecryptedSecretByKey(ctx context.Context, namespace, key string) (DecryptedSecret, error) {
-	namespace, key, _, err := normalizeSecretKeyRequest(namespace, key, "")
+	namespace, key, err := normalizeSecretKeyRequest(namespace, key)
 	if err != nil {
 		return DecryptedSecret{}, err
 	}
@@ -235,7 +234,7 @@ func (c *CryptoClient) ShareEncryptedSecret(ctx context.Context, secretID string
 }
 
 func (c *CryptoClient) ShareEncryptedSecretByKey(ctx context.Context, namespace, key string, req ShareEncryptedSecretRequest) error {
-	namespace, key, _, err := normalizeSecretKeyRequest(firstNonEmpty(namespace, req.Namespace), firstNonEmpty(key, req.Key), "")
+	namespace, key, err := normalizeSecretKeyRequest(firstNonEmpty(namespace, req.Namespace), firstNonEmpty(key, req.Key))
 	if err != nil {
 		return err
 	}
@@ -278,20 +277,16 @@ func (c *CryptoClient) buildShareSecretPayload(ctx context.Context, secret Secre
 	}, nil
 }
 
-func normalizeSecretKeyRequest(namespace, key, legacyName string) (string, string, string, error) {
+func normalizeSecretKeyRequest(namespace, key string) (string, string, error) {
 	namespace = strings.TrimSpace(namespace)
 	if namespace == "" {
 		namespace = "default"
 	}
 	key = strings.TrimSpace(key)
-	legacyName = strings.TrimSpace(legacyName)
 	if key == "" {
-		key = legacyName
+		return "", "", fmt.Errorf("secret key is required")
 	}
-	if key == "" {
-		return "", "", "", fmt.Errorf("secret key is required")
-	}
-	return namespace, key, firstNonEmpty(legacyName, key), nil
+	return namespace, key, nil
 }
 
 func (c *CryptoClient) generateContentKeyAndNonce() ([]byte, []byte, error) {

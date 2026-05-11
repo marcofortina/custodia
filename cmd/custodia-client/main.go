@@ -631,13 +631,12 @@ func (a *app) runSecretPut(args []string) int {
 	registerCryptoFlags(fs, &crypto)
 	namespace := fs.String("namespace", "default", "secret namespace")
 	key := fs.String("key", "", "secret key")
-	name := fs.String("name", "", "legacy secret name")
 	valueFile := fs.String("value-file", "", "plaintext file to encrypt locally")
 	permissions := fs.Int("permissions", defaultPermissions, "permission bitmask for recipients")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
-	secretKey := strings.TrimSpace(firstNonEmpty(*key, *name))
+	secretKey := strings.TrimSpace(*key)
 	if secretKey == "" || strings.TrimSpace(*valueFile) == "" {
 		fmt.Fprintln(a.stderr, "--key and --value-file are required")
 		return 2
@@ -655,7 +654,6 @@ func (a *app) runSecretPut(args []string) int {
 	ref, err := cryptoClient.CreateEncryptedSecret(context.Background(), sdk.CreateEncryptedSecretRequest{
 		Namespace:   *namespace,
 		Key:         secretKey,
-		Name:        *name,
 		Plaintext:   plaintext,
 		Recipients:  recipients,
 		Permissions: *permissions,

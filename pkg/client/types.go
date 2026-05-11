@@ -46,7 +46,6 @@ type RevokeClientPayload struct {
 type CreateSecretPayload struct {
 	Namespace      string              `json:"namespace,omitempty"`
 	Key            string              `json:"key,omitempty"`
-	Name           string              `json:"name,omitempty"`
 	Ciphertext     string              `json:"ciphertext"`
 	CryptoMetadata json.RawMessage     `json:"crypto_metadata,omitempty"`
 	Envelopes      []RecipientEnvelope `json:"envelopes"`
@@ -97,7 +96,6 @@ type SecretMetadata struct {
 	SecretID          string     `json:"secret_id"`
 	Namespace         string     `json:"namespace,omitempty"`
 	Key               string     `json:"key,omitempty"`
-	Name              string     `json:"name"`
 	VersionID         string     `json:"version_id"`
 	Permissions       int        `json:"permissions"`
 	CreatedAt         time.Time  `json:"created_at"`

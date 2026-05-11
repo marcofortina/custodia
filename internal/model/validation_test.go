@@ -66,25 +66,6 @@ func TestValidSecretKey(t *testing.T) {
 	}
 }
 
-func TestNormalizeSecretName(t *testing.T) {
-	if got := NormalizeSecretName("  db password  "); got != "db password" {
-		t.Fatalf("unexpected normalized secret name: %q", got)
-	}
-}
-
-func TestValidSecretName(t *testing.T) {
-	for _, value := range []string{"db password", "tenant/prod/api-key"} {
-		if !ValidSecretName(value) {
-			t.Fatalf("expected %q to be valid", value)
-		}
-	}
-	for _, value := range []string{"", "   ", "secret\nname"} {
-		if ValidSecretName(value) {
-			t.Fatalf("expected %q to be invalid", value)
-		}
-	}
-}
-
 func TestValidCryptoMetadata(t *testing.T) {
 	if !ValidCryptoMetadata(make([]byte, MaxCryptoMetadataBytes)) {
 		t.Fatal("expected max-sized crypto metadata to be valid")

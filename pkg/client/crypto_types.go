@@ -21,7 +21,6 @@ type CryptoClient struct {
 type CreateEncryptedSecretRequest struct {
 	Namespace   string
 	Key         string
-	Name        string
 	Plaintext   []byte
 	Recipients  []string
 	Permissions int

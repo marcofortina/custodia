@@ -67,7 +67,7 @@ func (clock) Now() time.Time { return time.Unix(1, 0).UTC() }
 func TestPublicTypesCompile(t *testing.T) {
     _ = custodia.Config{ServerURL: "https://vault.example"}
     _ = custodia.CreateSecretPayload{
-        Name: "secret",
+        Key: "secret",
         Ciphertext: "Y2lwaGVy",
         Envelopes: []custodia.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52"}},
         Permissions: custodia.PermissionRead,
@@ -77,7 +77,7 @@ func TestPublicTypesCompile(t *testing.T) {
     _ = custodia.RuntimeDiagnostics{Goroutines: 1}
     _ = custodia.RevocationStatus{Configured: true}
     _ = custodia.AuditEvent{Action: "secret.read", ResourceType: "secret", Outcome: "success"}
-    _ = custodia.CreateEncryptedSecretRequest{Name: "secret", Plaintext: []byte("value"), Recipients: []string{"client_alice"}, Permissions: custodia.PermissionRead}
+    _ = custodia.CreateEncryptedSecretRequest{Key: "secret", Plaintext: []byte("value"), Recipients: []string{"client_alice"}, Permissions: custodia.PermissionRead}
     _ = custodia.CreateEncryptedSecretVersionRequest{Plaintext: []byte("value"), Permissions: custodia.PermissionRead}
     _ = custodia.ShareEncryptedSecretRequest{TargetClientID: "client_bob", Permissions: custodia.PermissionRead}
     _ = custodia.DecryptedSecret{SecretID: "secret", VersionID: "version", Plaintext: []byte("value")}

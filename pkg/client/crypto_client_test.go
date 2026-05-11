@@ -75,7 +75,7 @@ func TestGoCryptoClientCreateEncryptedSecretPostsOpaquePayload(t *testing.T) {
 	if created.SecretID != "secret-id" || created.VersionID != "version-id" {
 		t.Fatalf("created = %+v", created)
 	}
-	if received.Namespace != "db01" || received.Key != "user:sys" || received.Name != "user:sys" || received.Permissions != PermissionAll {
+	if received.Namespace != "db01" || received.Key != "user:sys" || received.Permissions != PermissionAll {
 		t.Fatalf("received = %+v", received)
 	}
 	if len(received.Envelopes) != 2 || received.Envelopes[0].ClientID != "client_alice" || received.Envelopes[1].ClientID != "client_bob" {
@@ -454,7 +454,7 @@ func TestGoCryptoClientRejectsRandomSourceFailures(t *testing.T) {
 	server := httptest.NewServer(http.NotFoundHandler())
 	defer server.Close()
 	cryptoClient := mustCryptoClient(t, server, mustResolver(t, map[string][]byte{"client_alice": alicePrivate}), aliceHandle, strings.NewReader("short"))
-	_, err := cryptoClient.CreateEncryptedSecret(context.Background(), CreateEncryptedSecretRequest{Name: "secret", Plaintext: []byte("value"), Permissions: PermissionRead})
+	_, err := cryptoClient.CreateEncryptedSecret(context.Background(), CreateEncryptedSecretRequest{Key: "secret", Plaintext: []byte("value"), Permissions: PermissionRead})
 	if !errors.Is(err, ErrRandomSourceFailed) {
 		t.Fatalf("CreateEncryptedSecret() error = %v, want ErrRandomSourceFailed", err)
 	}

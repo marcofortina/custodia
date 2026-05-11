@@ -242,7 +242,7 @@ func TestAPIAdminAccessRequestsFilterByRequester(t *testing.T) {
 			t.Fatalf("create client %s: %v", clientID, err)
 		}
 	}
-	ref, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{Name: "secret", Ciphertext: "Y2lwaGVydGV4dA==", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}}, Permissions: int(model.PermissionAll)})
+	ref, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{Key: "secret", Ciphertext: "Y2lwaGVydGV4dA==", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}}, Permissions: int(model.PermissionAll)})
 	if err != nil {
 		t.Fatalf("create secret: %v", err)
 	}
@@ -279,7 +279,7 @@ func TestAPIAdminAccessRequestsFilterByTargetClientID(t *testing.T) {
 			t.Fatalf("create client %s: %v", clientID, err)
 		}
 	}
-	ref, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{Name: "secret", Ciphertext: "Y2lwaGVydGV4dA==", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}}, Permissions: int(model.PermissionAll)})
+	ref, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{Key: "secret", Ciphertext: "Y2lwaGVydGV4dA==", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}}, Permissions: int(model.PermissionAll)})
 	if err != nil {
 		t.Fatalf("create secret: %v", err)
 	}
@@ -543,7 +543,7 @@ func TestAPIAdminCreatesClientMetadata(t *testing.T) {
 	}
 	assertLastAudit(t, memoryStore, "client.create", "success", "")
 
-	createBody := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_bob","envelope":"ZW52ZWxvcGUtZm9yLWJvYg=="}],"permissions":7}`
+	createBody := `{"key":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_bob","envelope":"ZW52ZWxvcGUtZm9yLWJvYg=="}],"permissions":7}`
 	req = mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_bob")
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -577,7 +577,7 @@ func TestAPICreateAndReadOpaqueSecret(t *testing.T) {
 		t.Fatalf("create client: %v", err)
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
-	createBody := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
+	createBody := `{"key":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -708,7 +708,7 @@ func TestAPIRejectsInvalidPermissionBits(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	body := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":8}`
+	body := `{"key":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":8}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", body, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -726,7 +726,7 @@ func TestAPIRejectsInvalidOpaquePayloadEncoding(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	body := `{"name":"secret","ciphertext":"not base64","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
+	body := `{"key":"secret","ciphertext":"not base64","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", body, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -745,7 +745,7 @@ func TestAPIRejectsUnsupportedJSONContentType(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/secrets", strings.NewReader(`{"name":"secret"}`))
+	req := httptest.NewRequest(http.MethodPost, "/v1/secrets", strings.NewReader(`{"key":"secret"}`))
 	req.TLS = &tls.ConnectionState{PeerCertificates: []*x509.Certificate{{DNSNames: []string{"client_alice"}, Subject: pkix.Name{CommonName: "client_alice"}}}}
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -764,7 +764,7 @@ func TestAPIRejectsTrailingJSONPayload(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	body := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}{}`
+	body := `{"key":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}{}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", body, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -783,7 +783,7 @@ func TestAPIRejectsOversizedJSONPayload(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	body := `{"name":"` + strings.Repeat("a", maxJSONBodyBytes+1) + `"}`
+	body := `{"key":"` + strings.Repeat("a", maxJSONBodyBytes+1) + `"}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", body, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -802,7 +802,7 @@ func TestAPIDefaultsEnvelopeLimitWhenOptionIsUnset(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	body := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
+	body := `{"key":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", body, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -820,7 +820,7 @@ func TestAPIRejectsTooManyCreateEnvelopes(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 1, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	body := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"},{"client_id":"client_bob","envelope":"ZW52ZWxvcGUtZm9yLWJvYg=="}],"permissions":7}`
+	body := `{"key":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"},{"client_id":"client_bob","envelope":"ZW52ZWxvcGUtZm9yLWJvYg=="}],"permissions":7}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", body, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -839,7 +839,7 @@ func TestAPIRejectsTooManyVersionEnvelopes(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 1, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	createBody := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
+	createBody := `{"key":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -887,7 +887,7 @@ func TestAPIAuditsForbiddenSecretRead(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	createBody := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
+	createBody := `{"key":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -922,7 +922,7 @@ func TestAPIGrantRequestRequiresActivationByShareClient(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	createBody := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
+	createBody := `{"key":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -984,7 +984,7 @@ func TestAPICreateSecretVersionSupersedesOldVersionAccessWorkflow(t *testing.T) 
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	createBody := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dC12MQ==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtYWxpY2UtdjE="}],"permissions":7}`
+	createBody := `{"key":"secret","ciphertext":"Y2lwaGVydGV4dC12MQ==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtYWxpY2UtdjE="}],"permissions":7}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -1053,7 +1053,7 @@ func TestAPIListsOnlyReadableSecretMetadata(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	createBody := `{"name":"visible","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
+	createBody := `{"key":"visible","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -1073,7 +1073,7 @@ func TestAPIListsOnlyReadableSecretMetadata(t *testing.T) {
 	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
 		t.Fatalf("decode list: %v", err)
 	}
-	if len(payload.Secrets) != 1 || payload.Secrets[0].Name != "visible" || payload.Secrets[0].VersionID == "" || payload.Secrets[0].CreatedByClientID != "client_alice" {
+	if len(payload.Secrets) != 1 || payload.Secrets[0].Key != "visible" || payload.Secrets[0].VersionID == "" || payload.Secrets[0].CreatedByClientID != "client_alice" {
 		t.Fatalf("unexpected alice metadata list: %+v", payload.Secrets)
 	}
 	assertLastAudit(t, memoryStore, "secret.list", "success", "")
@@ -1103,7 +1103,7 @@ func TestAdminCanListAuditEvents(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	createBody := `{"name":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
+	createBody := `{"key":"secret","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"}],"permissions":7}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -1325,7 +1325,7 @@ func TestAPIListsSecretAccessMetadataOnlyForShareClient(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	createBody := `{"name":"shared","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"},{"client_id":"client_bob","envelope":"ZW52ZWxvcGUtZm9yLWJvYg=="}],"permissions":7}`
+	createBody := `{"key":"shared","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtZm9yLWFsaWNl"},{"client_id":"client_bob","envelope":"ZW52ZWxvcGUtZm9yLWJvYg=="}],"permissions":7}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -1367,7 +1367,7 @@ func TestAPIListsSecretVersionsMetadataOnly(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	createBody := `{"name":"rotated","ciphertext":"Y2lwaGVydGV4dC12MQ==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtdjE="}],"permissions":7}`
+	createBody := `{"key":"rotated","ciphertext":"Y2lwaGVydGV4dC12MQ==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtdjE="}],"permissions":7}`
 	req := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
 	res := httptest.NewRecorder()
 	handler.ServeHTTP(res, req)
@@ -1525,7 +1525,7 @@ func TestAPIAdminListsPendingAccessRequestsWithStatusFilter(t *testing.T) {
 		}
 	}
 	created, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "secret",
+		Key:         "secret",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
 		Permissions: int(model.PermissionAll),
@@ -1564,7 +1564,7 @@ func TestAPIAdminListsPendingAccessRequestsWithoutEnvelopes(t *testing.T) {
 		}
 	}
 	created, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "secret",
+		Key:         "secret",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
 		Permissions: int(model.PermissionAll),
@@ -1718,7 +1718,7 @@ func TestAPISecretListSupportsLimit(t *testing.T) {
 		t.Fatalf("create client: %v", err)
 	}
 	for _, name := range []string{"secret-a", "secret-b"} {
-		if _, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{Name: name, Ciphertext: "Y2lwaGVydGV4dA==", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}}, Permissions: int(model.PermissionAll)}); err != nil {
+		if _, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{Key: name, Ciphertext: "Y2lwaGVydGV4dA==", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}}, Permissions: int(model.PermissionAll)}); err != nil {
 			t.Fatalf("create secret %s: %v", name, err)
 		}
 	}
@@ -1748,7 +1748,7 @@ func TestAPISecretVersionListSupportsLimit(t *testing.T) {
 	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
 		t.Fatalf("create client: %v", err)
 	}
-	ref, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{Name: "secret", Ciphertext: "Y2lwaGVydGV4dA==", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}}, Permissions: int(model.PermissionAll)})
+	ref, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{Key: "secret", Ciphertext: "Y2lwaGVydGV4dA==", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}}, Permissions: int(model.PermissionAll)})
 	if err != nil {
 		t.Fatalf("create secret: %v", err)
 	}
@@ -1783,7 +1783,7 @@ func TestAPISecretAccessListSupportsLimit(t *testing.T) {
 			t.Fatalf("create client %s: %v", clientID, err)
 		}
 	}
-	ref, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{Name: "secret", Ciphertext: "Y2lwaGVydGV4dA==", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}, {ClientID: "client_bob", Envelope: "ZW52ZWxvcGUy"}}, Permissions: int(model.PermissionAll)})
+	ref, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{Key: "secret", Ciphertext: "Y2lwaGVydGV4dA==", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}, {ClientID: "client_bob", Envelope: "ZW52ZWxvcGUy"}}, Permissions: int(model.PermissionAll)})
 	if err != nil {
 		t.Fatalf("create secret: %v", err)
 	}
@@ -2004,7 +2004,7 @@ func TestWebConsoleDataTablesAreClientPaginated(t *testing.T) {
 			t.Fatalf("append audit %d: %v", i, err)
 		}
 	}
-	ref, err := memoryStore.CreateSecret(ctx, "admin", model.CreateSecretRequest{Name: "pagination secret", Ciphertext: "c2VjcmV0LWNpcGhlcnRleHQ=", Envelopes: []model.RecipientEnvelope{{ClientID: "admin", Envelope: "c2VjcmV0LWVudmVsb3Bl"}}, Permissions: int(model.PermissionAll)})
+	ref, err := memoryStore.CreateSecret(ctx, "admin", model.CreateSecretRequest{Key: "pagination secret", Ciphertext: "c2VjcmV0LWNpcGhlcnRleHQ=", Envelopes: []model.RecipientEnvelope{{ClientID: "admin", Envelope: "c2VjcmV0LWVudmVsb3Bl"}}, Permissions: int(model.PermissionAll)})
 	if err != nil {
 		t.Fatalf("create secret: %v", err)
 	}
@@ -2045,7 +2045,7 @@ func TestWebConsoleRendersMetadataOnlyPages(t *testing.T) {
 			t.Fatalf("create client %s: %v", clientID, err)
 		}
 	}
-	ref, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{Name: "db password", Ciphertext: "c2VjcmV0LWNpcGhlcnRleHQ=", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "c2VjcmV0LWVudmVsb3Bl"}}, Permissions: int(model.PermissionAll)})
+	ref, err := memoryStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{Key: "db password", Ciphertext: "c2VjcmV0LWNpcGhlcnRleHQ=", Envelopes: []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "c2VjcmV0LWVudmVsb3Bl"}}, Permissions: int(model.PermissionAll)})
 	if err != nil {
 		t.Fatalf("create secret: %v", err)
 	}

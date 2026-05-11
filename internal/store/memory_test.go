@@ -23,7 +23,7 @@ func TestMemoryStoreListsAccessRequestsNewestFirst(t *testing.T) {
 	mustCreateClient(t, store, "client_bob", "client_bob")
 	mustCreateClient(t, store, "client_charlie", "client_charlie")
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "secret",
+		Key:         "secret",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
 		Permissions: int(model.PermissionAll),
@@ -58,7 +58,7 @@ func TestMemoryStoreListsSecretAccessByClientID(t *testing.T) {
 	mustCreateClient(t, store, "client_bob", "client_bob")
 	mustCreateClient(t, store, "client_charlie", "client_charlie")
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:       "secret",
+		Key:        "secret",
 		Ciphertext: "Y2lwaGVydGV4dA==",
 		Envelopes: []model.RecipientEnvelope{
 			{ClientID: "client_charlie", Envelope: "ZW52ZWxvcGU="},
@@ -88,7 +88,7 @@ func TestMemoryStoreListSecretsReleasesReadLock(t *testing.T) {
 	store := NewMemoryStore()
 	mustCreateClient(t, store, "client_alice", "client_alice")
 	if _, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "secret",
+		Key:         "secret",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
 		Permissions: int(model.PermissionAll),
@@ -119,7 +119,7 @@ func TestMemoryStoreListsSecretsNewestFirst(t *testing.T) {
 	store := NewMemoryStore()
 	mustCreateClient(t, store, "client_alice", "client_alice")
 	older, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "older",
+		Key:         "older",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
 		Permissions: int(model.PermissionAll),
@@ -128,7 +128,7 @@ func TestMemoryStoreListsSecretsNewestFirst(t *testing.T) {
 		t.Fatalf("create older secret: %v", err)
 	}
 	younger, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "younger",
+		Key:         "younger",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
 		Permissions: int(model.PermissionAll),
@@ -145,7 +145,7 @@ func TestMemoryStoreListsSecretsNewestFirst(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list secrets: %v", err)
 	}
-	if len(secrets) != 2 || secrets[0].Name != "younger" || secrets[1].Name != "older" {
+	if len(secrets) != 2 || secrets[0].Key != "younger" || secrets[1].Key != "older" {
 		t.Fatalf("expected newest-first secret ordering, got %+v", secrets)
 	}
 }
@@ -155,7 +155,7 @@ func TestMemoryStoreDefaultsSecretNamespaceAndKey(t *testing.T) {
 	store := NewMemoryStore()
 	mustCreateClient(t, store, "client_alice", "client_alice")
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "  user:sys  ",
+		Key:         "  user:sys  ",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
 		Permissions: int(model.PermissionAll),
@@ -176,8 +176,8 @@ func TestMemoryStoreDefaultsSecretNamespaceAndKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list secrets: %v", err)
 	}
-	if len(secrets) != 1 || secrets[0].Namespace != model.DefaultSecretNamespace || secrets[0].Key != "user:sys" || secrets[0].Name != "user:sys" {
-		t.Fatalf("expected metadata to expose namespace/key compat fields, got %+v", secrets)
+	if len(secrets) != 1 || secrets[0].Namespace != model.DefaultSecretNamespace || secrets[0].Key != "user:sys" {
+		t.Fatalf("expected metadata to expose namespace/key fields, got %+v", secrets)
 	}
 }
 
@@ -320,7 +320,7 @@ func TestMemoryStoreSecretLifecycleKeepsEnvelopePerClient(t *testing.T) {
 	mustCreateClient(t, store, "client_bob", "client_bob")
 
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:       "db_prod_password",
+		Key:        "db_prod_password",
 		Ciphertext: "Y2lwaGVydGV4dC1mb3Itc2VydmVyLXN0b3JhZ2U=",
 		Envelopes: []model.RecipientEnvelope{
 			{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"},
@@ -438,7 +438,7 @@ func TestMemoryStoreRevokeRequiresOwner(t *testing.T) {
 	mustCreateClient(t, store, "client_charlie", "client_charlie")
 
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "secret",
+		Key:         "secret",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtYWxpY2U="}},
 		Permissions: int(model.PermissionAll),
@@ -477,7 +477,7 @@ func TestMemoryStoreRequiresCreatorEnvelope(t *testing.T) {
 	mustCreateClient(t, store, "client_bob", "client_bob")
 
 	_, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:       "db_prod_password",
+		Key:        "db_prod_password",
 		Ciphertext: "Y2lwaGVydGV4dA==",
 		Envelopes: []model.RecipientEnvelope{
 			{ClientID: "client_bob", Envelope: "ZW52ZWxvcGUtZm9yLWJvYg=="},
@@ -495,7 +495,7 @@ func TestMemoryStoreRevokesFutureReadsOnly(t *testing.T) {
 	mustCreateClient(t, store, "client_alice", "client_alice")
 	mustCreateClient(t, store, "client_bob", "client_bob")
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:       "secret",
+		Key:        "secret",
 		Ciphertext: "Y2lwaGVydGV4dC12MQ==",
 		Envelopes: []model.RecipientEnvelope{
 			{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"},
@@ -522,7 +522,7 @@ func TestMemoryStoreRejectsInvalidPermissionBits(t *testing.T) {
 
 	for _, permissions := range []int{0, 8, -1} {
 		_, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-			Name:        "secret",
+			Key:         "secret",
 			Ciphertext:  "Y2lwaGVydGV4dA==",
 			Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"}},
 			Permissions: permissions,
@@ -533,7 +533,7 @@ func TestMemoryStoreRejectsInvalidPermissionBits(t *testing.T) {
 	}
 
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "secret",
+		Key:         "secret",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"}},
 		Permissions: int(model.PermissionAll),
@@ -573,7 +573,7 @@ func TestMemoryStoreRejectsInvalidOpaquePayloadEncoding(t *testing.T) {
 	mustCreateClient(t, store, "client_bob", "client_bob")
 
 	_, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "secret",
+		Key:         "secret",
 		Ciphertext:  "not base64",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"}},
 		Permissions: int(model.PermissionAll),
@@ -583,7 +583,7 @@ func TestMemoryStoreRejectsInvalidOpaquePayloadEncoding(t *testing.T) {
 	}
 
 	_, err = store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "secret",
+		Key:         "secret",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "not base64"}},
 		Permissions: int(model.PermissionAll),
@@ -593,7 +593,7 @@ func TestMemoryStoreRejectsInvalidOpaquePayloadEncoding(t *testing.T) {
 	}
 
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "secret",
+		Key:         "secret",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"}},
 		Permissions: int(model.PermissionAll),
@@ -628,7 +628,7 @@ func TestMemoryStoreRejectsDuplicateRecipientEnvelopes(t *testing.T) {
 	mustCreateClient(t, store, "client_alice", "client_alice")
 
 	_, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:       "secret",
+		Key:        "secret",
 		Ciphertext: "Y2lwaGVydGV4dA==",
 		Envelopes: []model.RecipientEnvelope{
 			{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"},
@@ -649,7 +649,7 @@ func TestMemoryStoreCreateSecretVersionSupersedesOlderVersionsAndPendingGrants(t
 	mustCreateClient(t, store, "client_bob", "client_bob")
 
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:       "secret",
+		Key:        "secret",
 		Ciphertext: "Y2lwaGVydGV4dC12MQ==",
 		Envelopes: []model.RecipientEnvelope{
 			{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtYWxpY2UtdjE="},
@@ -717,7 +717,7 @@ func TestMemoryStoreGrantRequestRequiresClientSideEnvelopeActivation(t *testing.
 	mustCreateClient(t, store, "client_bob", "client_bob")
 
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:       "secret",
+		Key:        "secret",
 		Ciphertext: "Y2lwaGVydGV4dA==",
 		Envelopes: []model.RecipientEnvelope{
 			{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"},
@@ -765,7 +765,7 @@ func TestMemoryStoreExpiresAccessGrants(t *testing.T) {
 	past := time.Now().UTC().Add(-time.Hour)
 
 	if _, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "expired",
+		Key:         "expired",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"}},
 		Permissions: int(model.PermissionAll),
@@ -775,7 +775,7 @@ func TestMemoryStoreExpiresAccessGrants(t *testing.T) {
 	}
 
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "secret",
+		Key:         "secret",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"}},
 		Permissions: int(model.PermissionAll),
@@ -808,7 +808,7 @@ func TestMemoryStoreRevokeClientRevokesAccessAndPendingGrants(t *testing.T) {
 	mustCreateClient(t, store, "client_charlie", "client_charlie")
 
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:       "secret",
+		Key:        "secret",
 		Ciphertext: "Y2lwaGVydGV4dA==",
 		Envelopes: []model.RecipientEnvelope{
 			{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"},
@@ -849,7 +849,7 @@ func TestMemoryStoreExpiredPendingGrantCannotBeActivated(t *testing.T) {
 	mustCreateClient(t, store, "client_bob", "client_bob")
 
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "secret",
+		Key:         "secret",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGUtZm9yLWFsaWNl"}},
 		Permissions: int(model.PermissionAll),
@@ -882,7 +882,7 @@ func TestMemoryStoreRejectsInvalidClientIdentifiers(t *testing.T) {
 	}
 	mustCreateClient(t, store, "client_alice", "client_alice")
 	_, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "secret",
+		Key:         "secret",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client/alice", Envelope: "ZW52ZWxvcGU="}},
 		Permissions: int(model.PermissionAll),
@@ -892,19 +892,19 @@ func TestMemoryStoreRejectsInvalidClientIdentifiers(t *testing.T) {
 	}
 }
 
-func TestMemoryStoreRejectsInvalidSecretNames(t *testing.T) {
+func TestMemoryStoreRejectsInvalidSecretKeys(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryStore()
 	mustCreateClient(t, store, "client_alice", "client_alice")
-	for _, name := range []string{"", "   ", "secret\nname"} {
+	for _, key := range []string{"", "   ", "secret\nname"} {
 		_, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-			Name:        name,
+			Key:         key,
 			Ciphertext:  "Y2lwaGVydGV4dA==",
 			Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
 			Permissions: int(model.PermissionAll),
 		})
 		if err != ErrInvalidInput {
-			t.Fatalf("expected invalid secret name %q to be rejected, got %v", name, err)
+			t.Fatalf("expected invalid secret key %q to be rejected, got %v", key, err)
 		}
 	}
 }
@@ -918,7 +918,7 @@ func TestMemoryStoreRejectsOversizedCryptoMetadata(t *testing.T) {
 		oversized[i] = 'x'
 	}
 	_, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:           "secret",
+		Key:            "secret",
 		Ciphertext:     "Y2lwaGVydGV4dA==",
 		CryptoMetadata: oversized,
 		Envelopes:      []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
@@ -936,7 +936,7 @@ func TestMemoryStoreDeleteSecretRevokesPendingAccessRequests(t *testing.T) {
 	mustCreateClient(t, store, "client_alice", "client_alice")
 	mustCreateClient(t, store, "client_bob", "client_bob")
 	created, err := store.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "secret",
+		Key:         "secret",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
 		Permissions: int(model.PermissionAll),
@@ -959,14 +959,14 @@ func TestMemoryStoreDeleteSecretRevokesPendingAccessRequests(t *testing.T) {
 	}
 }
 
-func TestMemoryStoreNormalizesSecretNames(t *testing.T) {
+func TestMemoryStoreNormalizesSecretKeys(t *testing.T) {
 	ctx := context.Background()
 	vaultStore := NewMemoryStore()
 	if err := vaultStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
 		t.Fatalf("create client: %v", err)
 	}
 	_, err := vaultStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:       "  db password  ",
+		Key:        "  db password  ",
 		Ciphertext: "Y2lwaGVydGV4dA==",
 		Envelopes: []model.RecipientEnvelope{{
 			ClientID: "client_alice",
@@ -981,8 +981,8 @@ func TestMemoryStoreNormalizesSecretNames(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list secrets: %v", err)
 	}
-	if len(secrets) != 1 || secrets[0].Name != "db password" {
-		t.Fatalf("expected normalized secret name, got %+v", secrets)
+	if len(secrets) != 1 || secrets[0].Key != "db password" {
+		t.Fatalf("expected normalized secret key, got %+v", secrets)
 	}
 }
 
@@ -994,7 +994,7 @@ func TestMemoryStoreSecretMetadataIncludesAccessExpiration(t *testing.T) {
 	}
 	expiresAt := time.Now().UTC().Add(time.Hour)
 	_, err := vaultStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:       "expiring",
+		Key:        "expiring",
 		Ciphertext: "Y2lwaGVydGV4dA==",
 		Envelopes: []model.RecipientEnvelope{{
 			ClientID: "client_alice",

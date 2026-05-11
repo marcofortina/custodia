@@ -74,7 +74,7 @@ func TestPublicGoTransportMethodsAvoidInternalTypes(t *testing.T) {
 		t.Fatalf("CurrentClientInfo() = %+v err=%v", current, err)
 	}
 	created, err := custodiaClient.CreateSecretPayload(CreateSecretPayload{
-		Name:        "secret",
+		Key:         "secret",
 		Ciphertext:  "Y2lwaGVy",
 		Envelopes:   []RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52"}},
 		Permissions: PermissionRead,

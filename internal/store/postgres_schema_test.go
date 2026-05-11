@@ -168,7 +168,7 @@ func TestPostgresStoreMaintainsVisibleSecretKeyspace(t *testing.T) {
 
 	for _, expected := range []string{
 		"normalizeSecretIdentity(&req)",
-		"INSERT INTO secrets (namespace, key, name, created_by_client_id)",
+		"INSERT INTO secrets (namespace, key, created_by_client_id)",
 		"activeVisibleSecretIDByKey(ctx, tx, envelope.ClientID, req.Namespace, req.Key)",
 		"insertSecretVisibility(ctx, tx, envelope.ClientID, req.Namespace, req.Key, ref.SecretID, visibilityType)",
 		"activeVisibleSecretIDByKey(ctx, tx, req.TargetClientID, namespace, key)",

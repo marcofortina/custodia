@@ -18,7 +18,6 @@ const (
 	DefaultSecretNamespace     = "default"
 	MaxSecretNamespaceLength   = 255
 	MaxSecretKeyLength         = 255
-	MaxSecretNameLength        = MaxSecretKeyLength
 	MaxCryptoMetadataBytes     = 16 * 1024
 	MaxOpaqueBlobBytes         = 768 * 1024
 	MaxMTLSSubjectLength       = 512
@@ -104,16 +103,6 @@ func ValidSecretKey(value string) bool {
 		}
 	}
 	return true
-}
-
-// NormalizeSecretName trims surrounding whitespace without changing the caller-defined secret name body.
-func NormalizeSecretName(value string) string {
-	return NormalizeSecretKey(value)
-}
-
-// ValidSecretName keeps secret metadata bounded and printable while leaving ciphertext opaque.
-func ValidSecretName(value string) bool {
-	return ValidSecretKey(value)
 }
 
 // ValidCryptoMetadata keeps opaque client-selected metadata bounded for storage and audit safety.

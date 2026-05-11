@@ -31,7 +31,7 @@ func TestSQLiteStorePersistsClientAndSecretLifecycle(t *testing.T) {
 		t.Fatalf("CreateClient(bob) error = %v", err)
 	}
 	created, err := vaultStore.CreateSecret(ctx, "client_alice", model.CreateSecretRequest{
-		Name:        "db-secret",
+		Key:         "db-secret",
 		Ciphertext:  "Y2lwaGVydGV4dA==",
 		Envelopes:   []model.RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52ZWxvcGU="}},
 		Permissions: int(model.PermissionAll),
