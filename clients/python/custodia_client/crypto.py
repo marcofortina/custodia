@@ -362,33 +362,6 @@ class CryptoCustodiaClient:
     def __post_init__(self) -> None:
         self.options.validate()
 
-    def create_encrypted_secret(
-        self,
-        name: str,
-        plaintext: bytes,
-        recipients: Sequence[str] = (),
-        permissions: int = 7,
-        expires_at: str | None = None,
-    ) -> dict[str, Any]:
-        name = _require_key(name)
-        dek = self._random(AES_256_GCM_KEY_BYTES)
-        nonce = self._random(AES_GCM_NONCE_BYTES)
-        aad_inputs = CanonicalAADInputs(namespace="default", key=name, secret_version=1)
-        metadata = metadata_v1(aad_inputs, nonce)
-        aad = build_canonical_aad(metadata, aad_inputs)
-        ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad)
-        payload: dict[str, Any] = {
-            "namespace": "default",
-            "key": name,
-            "ciphertext": _b64encode(ciphertext),
-            "crypto_metadata": metadata.to_dict(),
-            "envelopes": self._seal_recipient_envelopes(self._normalized_recipients(recipients), dek, aad),
-            "permissions": permissions,
-        }
-        if expires_at:
-            payload["expires_at"] = expires_at
-        return self.transport.create_secret(payload)
-
     def create_encrypted_secret_by_key(
         self,
         namespace: str,

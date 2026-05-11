@@ -26,42 +26,6 @@ public final class CryptoCustodiaClient {
         this.options = Objects.requireNonNull(options, "options");
     }
 
-    public String createEncryptedSecret(String name, byte[] plaintext, List<String> recipients, int permissions)
-        throws IOException, InterruptedException, CustodiaHttpError {
-        return createEncryptedSecret(name, plaintext, recipients, permissions, null);
-    }
-
-    public String createEncryptedSecret(String name, byte[] plaintext, List<String> recipients, int permissions, String expiresAt)
-        throws IOException, InterruptedException, CustodiaHttpError {
-        String normalizedName = requireText(name, "secret name");
-        byte[] dek = random(CustodiaCrypto.AES256_GCM_KEY_BYTES);
-        byte[] nonce = random(CustodiaCrypto.AES_GCM_NONCE_BYTES);
-        CustodiaCrypto.AADInputs aadInputs = new CustodiaCrypto.AADInputs("default", normalizedName, 1);
-        CustodiaCrypto.CryptoMetadata metadata = CustodiaCrypto.metadataV1(aadInputs, nonce);
-        byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, aadInputs);
-        byte[] ciphertext = CustodiaCrypto.sealContentAES256GCM(dek, nonce, plaintext, aad);
-
-        StringBuilder payload = new StringBuilder();
-        payload.append('{');
-        appendField(payload, "namespace", "default");
-        payload.append(',');
-        appendField(payload, "key", normalizedName);
-        payload.append(',');
-        appendField(payload, "ciphertext", CustodiaCrypto.encodeBase64(ciphertext));
-        payload.append(',');
-        payload.append(CustodiaCrypto.quote("crypto_metadata")).append(':').append(CustodiaCrypto.metadataJson(metadata));
-        payload.append(',');
-        payload.append(CustodiaCrypto.quote("envelopes")).append(':').append(sealRecipientEnvelopes(normalizedRecipients(recipients), dek, aad));
-        payload.append(',');
-        payload.append(CustodiaCrypto.quote("permissions")).append(':').append(permissions);
-        if (expiresAt != null && !expiresAt.isBlank()) {
-            payload.append(',');
-            appendField(payload, "expires_at", expiresAt);
-        }
-        payload.append('}');
-        return transport.createSecretPayload(payload.toString());
-    }
-
     public String createEncryptedSecretByKey(String namespace, String key, byte[] plaintext, List<String> recipients, int permissions)
         throws IOException, InterruptedException, CustodiaHttpError {
         return createEncryptedSecretByKey(namespace, key, plaintext, recipients, permissions, null);

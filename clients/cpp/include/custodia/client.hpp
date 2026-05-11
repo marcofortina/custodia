@@ -220,12 +220,6 @@ class CryptoClient final {
  public:
   CryptoClient(Client& transport, CryptoOptions options);
 
-  std::string create_encrypted_secret(
-      const std::string& name,
-      const std::vector<std::uint8_t>& plaintext,
-      const std::vector<std::string>& recipients = {},
-      int permissions = permission_all,
-      const std::string& expires_at = "");
   std::string create_encrypted_secret_by_key(
       const std::string& namespace_name,
       const std::string& key,

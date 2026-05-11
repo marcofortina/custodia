@@ -375,28 +375,6 @@ export class CryptoCustodiaClient {
     this.options.validate();
   }
 
-  async createEncryptedSecret({ name, plaintext, recipients = [], permissions = 7, expiresAt } = {}) {
-    const key = requireSecretKey(name);
-    const dek = this.random(AES256GCMKeyBytes);
-    const nonce = this.random(AESGCMNonceBytes);
-    const aadInputs = new CanonicalAADInputs({ namespace: "default", key, secretVersion: 1 });
-    const metadata = metadataV1(aadInputs, nonce);
-    const aad = buildCanonicalAAD(metadata, aadInputs);
-    const ciphertext = sealContentAES256GCM(dek, nonce, Buffer.from(plaintext), aad);
-    const payload = {
-      namespace: "default",
-      key,
-      ciphertext: encodeBase64(ciphertext),
-      crypto_metadata: metadata.toJSON(),
-      envelopes: this.sealRecipientEnvelopes(this.normalizedRecipients(recipients), dek, aad),
-      permissions,
-    };
-    if (expiresAt) {
-      payload.expires_at = expiresAt;
-    }
-    return this.transport.createSecretPayload(payload);
-  }
-
   async createEncryptedSecretByKey({ namespace = "default", key, plaintext, recipients = [], permissions = 7, expiresAt } = {}) {
     namespace = normalizeNamespace(namespace);
     key = requireSecretKey(key);

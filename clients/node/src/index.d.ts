@@ -298,13 +298,6 @@ export class DecryptedSecret {
 
 export class CryptoCustodiaClient {
   constructor(transport: CustodiaClient, options: CryptoOptions);
-  createEncryptedSecret(payload: {
-    name: string;
-    plaintext: Uint8Array;
-    recipients?: string[];
-    permissions?: number;
-    expiresAt?: string;
-  }): Promise<JsonObject>;
   createEncryptedSecretByKey(payload: {
     namespace?: string;
     key: string;

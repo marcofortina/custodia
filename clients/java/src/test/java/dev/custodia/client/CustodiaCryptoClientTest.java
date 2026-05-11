@@ -73,7 +73,8 @@ public final class CustodiaCryptoClientTest {
         CustodiaClient client = CustodiaClient.withTransport(testConfig(), transport);
         CryptoCustodiaClient crypto = client.withCrypto(testOptions(DEK_SINGLE, NONCE_SINGLE, EPHEMERAL_SINGLE));
 
-        String response = crypto.createEncryptedSecret(
+        String response = crypto.createEncryptedSecretByKey(
+            "default",
             "database-password",
             b64("ZGF0YWJhc2UgcGFzc3dvcmQ6IGNvcnJlY3QgaG9yc2UgYmF0dGVyeSBzdGFwbGU="),
             List.of(),

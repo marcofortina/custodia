@@ -617,39 +617,6 @@ CryptoClient::CryptoClient(Client& transport, CryptoOptions options) : transport
   }
 }
 
-std::string CryptoClient::create_encrypted_secret(
-    const std::string& name,
-    const std::vector<std::uint8_t>& plaintext,
-    const std::vector<std::string>& recipients,
-    int permissions,
-    const std::string& expires_at) {
-  auto normalized_name = require_text(name, "secret name");
-  auto dek = random(kAES256GCMKeyBytes);
-  auto nonce = random(kAESGCMNonceBytes);
-  AADInputs aad_inputs{"default", normalized_name, 1};
-  auto metadata = metadata_v1(aad_inputs, nonce);
-  auto aad = build_canonical_aad(metadata, aad_inputs);
-  auto ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad);
-
-  std::ostringstream payload;
-  payload << '{';
-  append_json_field(payload, "namespace", "default");
-  payload << ',';
-  append_json_field(payload, "key", normalized_name);
-  payload << ',';
-  append_json_field(payload, "ciphertext", base64_encode(ciphertext));
-  payload << ',' << json_quote("crypto_metadata") << ':' << metadata_json(metadata);
-  payload << ',' << json_quote("envelopes") << ':' << seal_recipient_envelopes(normalized_recipients(recipients), dek, aad);
-  payload << ',';
-  append_json_int(payload, "permissions", permissions);
-  if (!expires_at.empty()) {
-    payload << ',';
-    append_json_field(payload, "expires_at", expires_at);
-  }
-  payload << '}';
-  return transport_->create_secret_payload(payload.str());
-}
-
 std::string CryptoClient::create_encrypted_secret_by_key(
     const std::string& namespace_name,
     const std::string& key,

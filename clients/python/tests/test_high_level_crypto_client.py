@@ -113,7 +113,7 @@ class PythonHighLevelCryptoClientTest(unittest.TestCase):
         crypto = CryptoCustodiaClient(transport, _crypto_options(random_source))
 
         self.assertEqual(
-            crypto.create_encrypted_secret("database-password", _b64(vector["plaintext_b64"])),
+            crypto.create_encrypted_secret_by_key("default", "database-password", _b64(vector["plaintext_b64"])),
             {"secret_id": "created-secret", "version_id": "created-version"},
         )
         assert transport.created_payload is not None

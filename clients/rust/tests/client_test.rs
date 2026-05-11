@@ -329,7 +329,8 @@ fn high_level_crypto_client_creates_and_reads_local_plaintext() {
     ]));
 
     crypto
-        .create_encrypted_secret(
+        .create_encrypted_secret_by_key(
+            "default",
             "db/password",
             b"local plaintext",
             &["client_bob".to_string()],

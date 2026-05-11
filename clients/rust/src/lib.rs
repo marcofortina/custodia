@@ -600,41 +600,6 @@ impl CryptoCustodiaClient {
         Self { transport, options }
     }
 
-    pub fn create_encrypted_secret(
-        &self,
-        name: &str,
-        plaintext: &[u8],
-        recipients: &[String],
-        permissions: u8,
-        expires_at: Option<&str>,
-    ) -> Result<Value> {
-        if name.trim().is_empty() {
-            return Err(CustodiaError::InvalidConfig("secret name is required".to_string()));
-        }
-        let dek = self.random(AES_256_GCM_KEY_BYTES)?;
-        let nonce = self.random(AES_GCM_NONCE_BYTES)?;
-        let aad_inputs = CanonicalAADInputs {
-            namespace: "default".to_string(),
-            key: name.to_string(),
-            secret_version: 1,
-        };
-        let metadata = metadata_v1(aad_inputs.clone(), &nonce);
-        let aad = build_canonical_aad(&metadata, &aad_inputs)?;
-        let ciphertext = seal_content_aes_256_gcm(&dek, &nonce, plaintext, &aad)?;
-        let mut payload = json!({
-            "namespace": "default",
-            "key": name,
-            "ciphertext": encode_base64(&ciphertext),
-            "crypto_metadata": metadata.to_value(),
-            "envelopes": self.seal_recipient_envelopes(&self.normalized_recipients(recipients)?, &dek, &aad)?,
-            "permissions": permissions,
-        });
-        if let Some(expires_at) = expires_at {
-            payload["expires_at"] = Value::String(expires_at.to_string());
-        }
-        self.transport.create_secret_payload(&payload)
-    }
-
     pub fn create_encrypted_secret_by_key(
         &self,
         namespace: &str,

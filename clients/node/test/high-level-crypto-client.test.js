@@ -49,7 +49,7 @@ test("creates encrypted secrets and decrypts returned payloads", async () => {
   };
 
   const crypto = new CryptoCustodiaClient(transport, cryptoOptions([Buffer.alloc(32, 0x51), Buffer.alloc(12, 0x61), Buffer.alloc(32, 0x41)]));
-  assert.deepEqual(await crypto.createEncryptedSecret({ name: "database-password", plaintext: Buffer.from("secret"), recipients: ["client_bob"] }), {
+  assert.deepEqual(await crypto.createEncryptedSecretByKey({ namespace: "default", key: "database-password", plaintext: Buffer.from("secret"), recipients: ["client_bob"] }), {
     secret_id: SECRET_ID,
     version_id: VERSION_ID,
   });
@@ -133,7 +133,7 @@ test("shares encrypted secrets by rewrapping the existing DEK", async () => {
     transport,
     cryptoOptions([Buffer.alloc(32, 0x51), Buffer.alloc(12, 0x61), Buffer.alloc(32, 0x41), Buffer.alloc(32, 0x44)]),
   );
-  await crypto.createEncryptedSecret({ name: "database-password", plaintext: Buffer.from("secret") });
+  await crypto.createEncryptedSecretByKey({ namespace: "default", key: "database-password", plaintext: Buffer.from("secret") });
   assert.deepEqual(await crypto.shareEncryptedSecret({ secretID: SECRET_ID, targetClientID: "client_bob" }), { status: "shared" });
 
   assert.equal(shared.length, 1);
@@ -237,7 +237,7 @@ test("exposes withCrypto from the transport client", () => {
     transport: async () => ({ status: 200, headers: {}, body: "{}" }),
   });
 
-  assert.ok(client.withCrypto(cryptoOptions()).createEncryptedSecret);
+  assert.ok(client.withCrypto(cryptoOptions()).createEncryptedSecretByKey);
 });
 
 function cryptoOptions(chunks = []) {

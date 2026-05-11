@@ -197,7 +197,8 @@ void creates_encrypted_secret_with_deterministic_vector_payload() {
   random_values.push(b64("QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE="));
   auto crypto = client.with_crypto(crypto_options(std::move(random_values)));
 
-  auto response = crypto.create_encrypted_secret(
+  auto response = crypto.create_encrypted_secret_by_key(
+      "default",
       "database-password",
       b64("ZGF0YWJhc2UgcGFzc3dvcmQ6IGNvcnJlY3QgaG9yc2UgYmF0dGVyeSBzdGFwbGU="));
 
