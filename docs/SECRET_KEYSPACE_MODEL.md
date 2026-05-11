@@ -17,6 +17,16 @@ The metadata-only web console intentionally omits secret-id filtering from the a
 request page. Operators can still filter by status, target client and requester without
 exposing an internal identifier as a primary workflow concept.
 
+The access-request workflow also exposes and filters by `namespace/key`, so web/API/SDK
+operators can inspect pending/activated grants without using internal identifiers.
+
+## Regression guardrails
+
+The repository includes public SDK surface tests that reject reintroducing high-level
+or public transport helpers whose normal workflow accepts `secret_id` instead of
+`namespace/key`. This keeps pre-release compatibility shims from leaking back into the
+documented SDK surface.
+
 ## User-facing identity
 
 Custodia user workflows address secrets by:

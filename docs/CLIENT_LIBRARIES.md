@@ -108,12 +108,12 @@ High-level clients expose equivalent operations across languages:
 
 | Operation | Description |
 | --- | --- |
-| `CreateEncryptedSecret` | Encrypt plaintext locally and create opaque server payloads. |
-| `ReadDecryptedSecret` | Fetch authorized opaque payloads and decrypt locally. |
-| `ShareEncryptedSecret` | Rewrap an existing DEK for a new recipient locally. |
-| `CreateEncryptedSecretVersion` | Create a new locally encrypted version. |
+| `CreateEncryptedSecret` with `namespace/key` request fields | Encrypt plaintext locally and create opaque server payloads. |
+| `ReadDecryptedSecretByKey` | Fetch authorized opaque payloads by `namespace/key` and decrypt locally. |
+| `ShareEncryptedSecretByKey` | Rewrap an existing DEK for a new recipient locally, addressed by `namespace/key`. |
+| `CreateEncryptedSecretVersionByKey` | Create a new locally encrypted version for `namespace/key`. |
 
-Transport clients expose raw equivalents that accept already prepared opaque payloads. Normal read/share/version/revoke/delete flows address secrets by `namespace` and `key`; generated server identifiers are internal details for operator tooling and low-level diagnostics.
+Transport clients expose raw equivalents that accept already prepared opaque payloads. Normal read/share/version/revoke/delete/access-request flows address secrets by `namespace` and `key`; generated server identifiers are internal storage/FK/audit correlation details and are not part of the public SDK workflow surface.
 
 ## Key resolution
 

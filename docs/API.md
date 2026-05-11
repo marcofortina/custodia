@@ -4,7 +4,9 @@ All `/v1/*` routes require mTLS. The authenticated `client_id` is extracted from
 
 ## Secret addressing
 
-Custodia user-facing secret workflows address secrets through the caller-visible `namespace/key` keyspace. The contract is documented in [`SECRET_KEYSPACE_MODEL.md`](SECRET_KEYSPACE_MODEL.md). Generated server identifiers are internal storage/audit details and are not required for normal read/share/version/delete flows.
+Custodia user-facing secret workflows address secrets through the caller-visible `namespace/key` keyspace. The contract is documented in [`SECRET_KEYSPACE_MODEL.md`](SECRET_KEYSPACE_MODEL.md). Generated server identifiers are internal storage/audit details and are not required for normal read/share/version/delete/access-request flows.
+
+The `/v1/secrets/{secret_id}` family is retained only for internal operator tooling and audit correlation. Public CLI and SDK workflows should use the by-key routes documented below.
 
 
 ## Client metadata create
