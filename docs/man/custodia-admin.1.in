@@ -90,6 +90,25 @@ Export bounded audit metadata.
 .B audit verify-export
 Verify exported audit body/digest/count artifacts.
 .TP
+.B secret versions --key KEY [--namespace NS] [--limit N]
+List metadata for versions of the selected namespace/key secret. The command does
+not print ciphertext or recipient envelopes.
+.TP
+.B access list --key KEY [--namespace NS] [--limit N]
+List active access metadata for the selected namespace/key secret.
+.TP
+.B access grant-request --key KEY [--namespace NS] --client-id ID --permissions read[,write,share]
+Create a pending access grant request for a target client. The selected secret is
+resolved by namespace/key; generated server ids are not part of normal operator
+input.
+.TP
+.B access activate --key KEY [--namespace NS] --client-id ID --envelope-file FILE
+Activate a pending grant using the opaque client-generated envelope stored in
+FILE.
+.TP
+.B access revoke --key KEY [--namespace NS] --client-id ID
+Revoke future server-side access for the selected client and namespace/key secret.
+.TP
 .B production check
 Run production configuration checks from an environment file.
 .TP

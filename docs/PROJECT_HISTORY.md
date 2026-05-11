@@ -12,6 +12,7 @@ Wiki pages:
 - [Phase 3 Closure](https://github.com/marcofortina/custodia/wiki/Phase-3-Closure)
 - [Phase 4 Closure](https://github.com/marcofortina/custodia/wiki/Phase-4-Closure)
 - [Phase 5 Closure](https://github.com/marcofortina/custodia/wiki/Phase-5-Closure)
+- [Phase 6 Closure](https://github.com/marcofortina/custodia/wiki/Phase-6-Closure)
 - [Implementation Ledger](https://github.com/marcofortina/custodia/wiki/Implementation-Ledger)
 
 Current product documentation remains in this repository under `docs/` and is versioned with code changes.
