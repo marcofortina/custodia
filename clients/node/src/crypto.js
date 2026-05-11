@@ -398,34 +398,6 @@ export class CryptoCustodiaClient {
     return this.transport.createSecretPayload(payload);
   }
 
-  async createEncryptedSecretVersion({ secretID, plaintext, recipients = [], permissions = 7, expiresAt } = {}) {
-    if (!String(secretID ?? "").trim()) {
-      throw new TypeError("secret id is required");
-    }
-    const dek = this.random(AES256GCMKeyBytes);
-    const nonce = this.random(AESGCMNonceBytes);
-    const existing = await this.transport.getSecretPayload(secretID);
-    const currentMetadata = parseMetadata(existing.crypto_metadata ?? {});
-    const aadInputs = nextSecretVersionAADInputs(currentMetadata, new CanonicalAADInputs({
-      namespace: normalizeNamespace(existing.namespace ?? ""),
-      key: requireSecretKey(existing.key ?? ""),
-      secretVersion: 1,
-    }));
-    const metadata = metadataV1(aadInputs, nonce);
-    const aad = buildCanonicalAAD(metadata, aadInputs);
-    const ciphertext = sealContentAES256GCM(dek, nonce, Buffer.from(plaintext), aad);
-    const payload = {
-      ciphertext: encodeBase64(ciphertext),
-      crypto_metadata: metadata.toJSON(),
-      envelopes: this.sealRecipientEnvelopes(this.normalizedRecipients(recipients), dek, aad),
-      permissions,
-    };
-    if (expiresAt) {
-      payload.expires_at = expiresAt;
-    }
-    return this.transport.createSecretVersionPayload(secretID, payload);
-  }
-
   async createEncryptedSecretVersionByKey({ namespace = "default", key, plaintext, recipients = [], permissions = 7, expiresAt } = {}) {
     namespace = normalizeNamespace(namespace);
     key = requireSecretKey(key);
@@ -447,34 +419,6 @@ export class CryptoCustodiaClient {
       payload.expires_at = expiresAt;
     }
     return this.transport.createSecretVersionPayloadByKey(namespace, key, payload);
-  }
-
-  async readDecryptedSecret(secretID) {
-    const secret = await this.transport.getSecretPayload(secretID);
-    const metadata = parseMetadata(secret.crypto_metadata ?? {});
-    const fallback = new CanonicalAADInputs({
-      namespace: normalizeNamespace(secret.namespace ?? ""),
-      key: requireSecretKey(secret.key ?? ""),
-      secretVersion: 1,
-    });
-    const aadInputs = metadata.canonicalAADInputs(fallback);
-    const aad = buildCanonicalAAD(metadata, aadInputs);
-    if (!metadata.contentNonceB64) {
-      throw new MalformedCryptoMetadata("missing content nonce");
-    }
-    const nonce = decodeBase64(metadata.contentNonceB64);
-    const dek = this.openSecretEnvelope(String(secret.envelope ?? ""), aad);
-    const ciphertext = decodeBase64(String(secret.ciphertext ?? ""));
-    const plaintext = openContentAES256GCM(dek, nonce, ciphertext, aad);
-    return new DecryptedSecret({
-      secretID: String(secret.secret_id ?? ""),
-      versionID: String(secret.version_id ?? ""),
-      plaintext,
-      cryptoMetadata: metadata.toJSON(),
-      permissions: Number(secret.permissions ?? 0),
-      grantedAt: String(secret.granted_at ?? ""),
-      accessExpiresAt: secret.access_expires_at ?? null,
-    });
   }
 
   async readDecryptedSecretByKey(namespace, key) {
@@ -505,33 +449,6 @@ export class CryptoCustodiaClient {
       grantedAt: String(secret.granted_at ?? ""),
       accessExpiresAt: secret.access_expires_at ?? null,
     });
-  }
-
-  async shareEncryptedSecret({ secretID, targetClientID, permissions = 4, expiresAt } = {}) {
-    if (!String(targetClientID ?? "").trim()) {
-      throw new TypeError("target client id is required");
-    }
-    const secret = await this.transport.getSecretPayload(secretID);
-    const metadata = parseMetadata(secret.crypto_metadata ?? {});
-    const fallback = new CanonicalAADInputs({
-      namespace: normalizeNamespace(secret.namespace ?? ""),
-      key: requireSecretKey(secret.key ?? ""),
-      secretVersion: 1,
-    });
-    const aadInputs = metadata.canonicalAADInputs(fallback);
-    const aad = buildCanonicalAAD(metadata, aadInputs);
-    const dek = this.openSecretEnvelope(String(secret.envelope ?? ""), aad);
-    const envelope = this.sealRecipientEnvelopes([targetClientID], dek, aad)[0];
-    const payload = {
-      version_id: String(secret.version_id ?? ""),
-      target_client_id: targetClientID,
-      envelope: envelope.envelope,
-      permissions,
-    };
-    if (expiresAt) {
-      payload.expires_at = expiresAt;
-    }
-    return this.transport.shareSecretPayload(secretID, payload);
   }
 
   async shareEncryptedSecretByKey({ namespace = "default", key, targetClientID, permissions = 4, expiresAt } = {}) {

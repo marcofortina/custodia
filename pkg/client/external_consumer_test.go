@@ -114,9 +114,9 @@ func TestPublicMethodSignaturesCompile(t *testing.T) {
     var _ func(*custodia.Client, custodia.CryptoOptions) (*custodia.CryptoClient, error) = custodia.NewCryptoClient
     var _ func(*custodia.Client, custodia.CryptoOptions) (*custodia.CryptoClient, error) = (*custodia.Client).WithCrypto
     var _ func(*custodia.CryptoClient, context.Context, custodia.CreateEncryptedSecretRequest) (custodia.SecretVersionRef, error) = (*custodia.CryptoClient).CreateEncryptedSecret
-    var _ func(*custodia.CryptoClient, context.Context, string, custodia.CreateEncryptedSecretVersionRequest) (custodia.SecretVersionRef, error) = (*custodia.CryptoClient).CreateEncryptedSecretVersion
-    var _ func(*custodia.CryptoClient, context.Context, string) (custodia.DecryptedSecret, error) = (*custodia.CryptoClient).ReadDecryptedSecret
-    var _ func(*custodia.CryptoClient, context.Context, string, custodia.ShareEncryptedSecretRequest) error = (*custodia.CryptoClient).ShareEncryptedSecret
+    var _ func(*custodia.CryptoClient, context.Context, string, string, custodia.CreateEncryptedSecretVersionRequest) (custodia.SecretVersionRef, error) = (*custodia.CryptoClient).CreateEncryptedSecretVersionByKey
+    var _ func(*custodia.CryptoClient, context.Context, string, string) (custodia.DecryptedSecret, error) = (*custodia.CryptoClient).ReadDecryptedSecretByKey
+    var _ func(*custodia.CryptoClient, context.Context, string, string, custodia.ShareEncryptedSecretRequest) error = (*custodia.CryptoClient).ShareEncryptedSecretByKey
 }
 `), 0o600); err != nil {
 		t.Fatalf("write consumer test: %v", err)

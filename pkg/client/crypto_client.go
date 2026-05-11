@@ -77,29 +77,6 @@ func (c *CryptoClient) CreateEncryptedSecret(ctx context.Context, req CreateEncr
 	})
 }
 
-func (c *CryptoClient) CreateEncryptedSecretVersion(ctx context.Context, secretID string, req CreateEncryptedSecretVersionRequest) (SecretVersionRef, error) {
-	if strings.TrimSpace(secretID) == "" {
-		return SecretVersionRef{}, fmt.Errorf("secret id is required")
-	}
-	secret, err := c.transport.GetSecretPayload(secretID)
-	if err != nil {
-		return SecretVersionRef{}, err
-	}
-	metadata, _, err := decodeCryptoMetadata(secret.CryptoMetadata, clientcrypto.CanonicalAADInputs{Namespace: secret.Namespace, Key: secret.Key, SecretVersion: 1})
-	if err != nil {
-		return SecretVersionRef{}, err
-	}
-	aadInputs, err := nextSecretVersionAADInputs(metadata, clientcrypto.CanonicalAADInputs{Namespace: secret.Namespace, Key: secret.Key, SecretVersion: 1})
-	if err != nil {
-		return SecretVersionRef{}, err
-	}
-	payload, err := c.buildEncryptedSecretVersionPayload(ctx, aadInputs, req)
-	if err != nil {
-		return SecretVersionRef{}, err
-	}
-	return c.transport.CreateSecretVersionPayload(secretID, payload)
-}
-
 func (c *CryptoClient) CreateEncryptedSecretVersionByKey(ctx context.Context, namespace, key string, req CreateEncryptedSecretVersionRequest) (SecretVersionRef, error) {
 	namespace, key, err := normalizeSecretKeyRequest(firstNonEmpty(namespace, req.Namespace), firstNonEmpty(key, req.Key))
 	if err != nil {
@@ -158,14 +135,6 @@ func (c *CryptoClient) buildEncryptedSecretVersionPayload(ctx context.Context, a
 // ReadDecryptedSecret downloads the caller's authorized envelope and opens it locally.
 // Authentication failures are mapped to stable SDK errors instead of exposing
 // low-level crypto library details.
-func (c *CryptoClient) ReadDecryptedSecret(ctx context.Context, secretID string) (DecryptedSecret, error) {
-	secret, err := c.transport.GetSecretPayload(secretID)
-	if err != nil {
-		return DecryptedSecret{}, err
-	}
-	return c.openDecryptedSecret(ctx, secret, clientcrypto.CanonicalAADInputs{Namespace: secret.Namespace, Key: secret.Key, SecretVersion: 1})
-}
-
 func (c *CryptoClient) ReadDecryptedSecretByKey(ctx context.Context, namespace, key string) (DecryptedSecret, error) {
 	namespace, key, err := normalizeSecretKeyRequest(namespace, key)
 	if err != nil {
@@ -218,21 +187,6 @@ func (c *CryptoClient) openDecryptedSecret(ctx context.Context, secret SecretRea
 // ShareEncryptedSecret rewraps the existing DEK for a new recipient.
 // The server authorizes the share operation but does not learn the DEK or the
 // recipient public key trust source used by the client.
-func (c *CryptoClient) ShareEncryptedSecret(ctx context.Context, secretID string, req ShareEncryptedSecretRequest) error {
-	if strings.TrimSpace(req.TargetClientID) == "" {
-		return fmt.Errorf("target client id is required")
-	}
-	secret, err := c.transport.GetSecretPayload(secretID)
-	if err != nil {
-		return err
-	}
-	payload, err := c.buildShareSecretPayload(ctx, secret, req)
-	if err != nil {
-		return err
-	}
-	return c.transport.ShareSecretPayload(secretID, payload)
-}
-
 func (c *CryptoClient) ShareEncryptedSecretByKey(ctx context.Context, namespace, key string, req ShareEncryptedSecretRequest) error {
 	namespace, key, err := normalizeSecretKeyRequest(firstNonEmpty(namespace, req.Namespace), firstNonEmpty(key, req.Key))
 	if err != nil {

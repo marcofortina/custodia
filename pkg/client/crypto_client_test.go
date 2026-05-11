@@ -94,29 +94,6 @@ func TestGoCryptoClientCreateEncryptedSecretPostsOpaquePayload(t *testing.T) {
 	}
 }
 
-func TestGoCryptoClientReadDecryptedSecret(t *testing.T) {
-	alicePrivate := bytes.Repeat([]byte("1"), 32)
-	aliceHandle := mustX25519Handle(t, "client_alice", alicePrivate)
-	response := buildEncryptedReadResponse(t, "secret-id", "version-id", []byte("server stored ciphertext only"), alicePrivate, bytes.Repeat([]byte("C"), 32))
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet || r.URL.EscapedPath() != "/v1/secrets/secret-id" {
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
-		}
-		_ = json.NewEncoder(w).Encode(response)
-	}))
-	defer server.Close()
-
-	cryptoClient := mustCryptoClient(t, server, staticPublicKeyResolver{}, aliceHandle, bytes.NewReader(nil))
-	secret, err := cryptoClient.ReadDecryptedSecret(context.Background(), "secret-id")
-	if err != nil {
-		t.Fatalf("ReadDecryptedSecret() error = %v", err)
-	}
-	if string(secret.Plaintext) != "server stored ciphertext only" || secret.SecretID != "secret-id" || secret.VersionID != "version-id" {
-		t.Fatalf("secret = %+v", secret)
-	}
-}
-
 func TestGoCryptoClientReadDecryptedSecretByKey(t *testing.T) {
 	alicePrivate := bytes.Repeat([]byte("1"), 32)
 	aliceHandle := mustX25519Handle(t, "client_alice", alicePrivate)
@@ -145,47 +122,6 @@ func TestGoCryptoClientReadDecryptedSecretByKey(t *testing.T) {
 	}
 	if string(secret.Plaintext) != "server stored ciphertext only" || secret.Namespace != "db01" || secret.Key != "user:sys" {
 		t.Fatalf("secret = %+v", secret)
-	}
-}
-
-func TestGoCryptoClientShareEncryptedSecretAddsRecipientEnvelope(t *testing.T) {
-	alicePrivate := bytes.Repeat([]byte("1"), 32)
-	bobPrivate := bytes.Repeat([]byte("2"), 32)
-	aliceHandle := mustX25519Handle(t, "client_alice", alicePrivate)
-	resolver := mustResolver(t, map[string][]byte{"client_bob": bobPrivate})
-	response := buildEncryptedReadResponse(t, "secret-id", "version-id", []byte("share existing DEK"), alicePrivate, bytes.Repeat([]byte("C"), 32))
-
-	var shared ShareSecretPayload
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method + " " + r.URL.EscapedPath() {
-		case "GET /v1/secrets/secret-id":
-			_ = json.NewEncoder(w).Encode(response)
-		case "POST /v1/secrets/secret-id/share":
-			if err := json.NewDecoder(r.Body).Decode(&shared); err != nil {
-				t.Fatalf("decode share request: %v", err)
-			}
-			_ = json.NewEncoder(w).Encode(map[string]string{"status": "shared"})
-		default:
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
-		}
-	}))
-	defer server.Close()
-
-	cryptoClient := mustCryptoClient(t, server, resolver, aliceHandle, deterministicRandom(bytes.Repeat([]byte("D"), 32)))
-	if err := cryptoClient.ShareEncryptedSecret(context.Background(), "secret-id", ShareEncryptedSecretRequest{TargetClientID: "client_bob", Permissions: PermissionRead}); err != nil {
-		t.Fatalf("ShareEncryptedSecret() error = %v", err)
-	}
-	if shared.VersionID != "version-id" || shared.TargetClientID != "client_bob" || shared.Permissions != PermissionRead {
-		t.Fatalf("shared = %+v", shared)
-	}
-	_, aad := mustParseMetadataAndAAD(t, response.CryptoMetadata, clientcrypto.CanonicalAADInputs{Namespace: "db01", Key: "user:sys", SecretVersion: 1})
-	bobHandle := mustX25519Handle(t, "client_bob", bobPrivate)
-	opened, err := bobHandle.OpenEnvelope(context.Background(), mustDecodeEnvelope(t, shared.Envelope), aad)
-	if err != nil {
-		t.Fatalf("bob OpenEnvelope() error = %v", err)
-	}
-	if !bytes.Equal(opened, bytes.Repeat([]byte("S"), 32)) {
-		t.Fatalf("shared DEK mismatch")
 	}
 }
 
@@ -218,50 +154,6 @@ func TestGoCryptoClientShareEncryptedSecretByKeyAddsRecipientEnvelope(t *testing
 	}
 	if shared.VersionID != "version-id" || shared.TargetClientID != "client_bob" || shared.Permissions != PermissionRead {
 		t.Fatalf("shared = %+v", shared)
-	}
-}
-
-func TestGoCryptoClientCreateEncryptedSecretVersion(t *testing.T) {
-	alicePrivate := bytes.Repeat([]byte("1"), 32)
-	aliceHandle := mustX25519Handle(t, "client_alice", alicePrivate)
-	resolver := mustResolver(t, map[string][]byte{"client_alice": alicePrivate})
-
-	response := buildEncryptedReadResponse(t, "secret-id", "version-id", []byte("current secret"), alicePrivate, bytes.Repeat([]byte("C"), 32))
-	var received CreateSecretVersionPayload
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method + " " + r.URL.EscapedPath() {
-		case "GET /v1/secrets/secret-id":
-			_ = json.NewEncoder(w).Encode(response)
-		case "POST /v1/secrets/secret-id/versions":
-			if err := json.NewDecoder(r.Body).Decode(&received); err != nil {
-				t.Fatalf("decode request: %v", err)
-			}
-			_ = json.NewEncoder(w).Encode(SecretVersionRef{SecretID: "secret-id", VersionID: "new-version"})
-		default:
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
-		}
-	}))
-	defer server.Close()
-
-	cryptoClient := mustCryptoClient(t, server, resolver, aliceHandle, deterministicRandom(
-		bytes.Repeat([]byte("V"), 32),
-		bytes.Repeat([]byte("v"), 12),
-		bytes.Repeat([]byte("E"), 32),
-	))
-	created, err := cryptoClient.CreateEncryptedSecretVersion(context.Background(), "secret-id", CreateEncryptedSecretVersionRequest{Namespace: "db01", Key: "user:sys", Plaintext: []byte("rotated secret"), Permissions: PermissionRead})
-	if err != nil {
-		t.Fatalf("CreateEncryptedSecretVersion() error = %v", err)
-	}
-	if created.VersionID != "new-version" {
-		t.Fatalf("created = %+v", created)
-	}
-	metadata, aad := mustParseMetadataAndAAD(t, received.CryptoMetadata, clientcrypto.CanonicalAADInputs{Namespace: "db01", Key: "user:sys", SecretVersion: 1})
-	if metadata.AAD == nil || metadata.AAD.Namespace != "db01" || metadata.AAD.Key != "user:sys" || metadata.AAD.SecretVersion != 2 {
-		t.Fatalf("metadata = %+v", metadata)
-	}
-	plaintext := mustOpenPostedSecret(t, aliceHandle, received.Ciphertext, received.Envelopes[0].Envelope, metadata.ContentNonce, aad)
-	if string(plaintext) != "rotated secret" {
-		t.Fatalf("plaintext = %q", plaintext)
 	}
 }
 

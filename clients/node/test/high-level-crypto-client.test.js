@@ -32,8 +32,9 @@ test("creates encrypted secrets and decrypts returned payloads", async () => {
       created.push(payload);
       return { secret_id: SECRET_ID, version_id: VERSION_ID };
     },
-    async getSecretPayload(secretID) {
-      assert.equal(secretID, SECRET_ID);
+    async getSecretPayloadByKey(namespace, key) {
+      assert.equal(namespace, "default");
+      assert.equal(key, "database-password");
       const payload = created[0];
       return {
         secret_id: SECRET_ID,
@@ -59,7 +60,7 @@ test("creates encrypted secrets and decrypts returned payloads", async () => {
   assert.equal(created[0].envelopes[1].client_id, "client_bob");
   assert.deepEqual(created[0].crypto_metadata.aad, { namespace: "default", key: "database-password", secret_version: 1 });
 
-  const decrypted = await crypto.readDecryptedSecret(SECRET_ID);
+  const decrypted = await crypto.readDecryptedSecretByKey("default", "database-password");
   assert.equal(decrypted.secretID, SECRET_ID);
   assert.equal(decrypted.versionID, VERSION_ID);
   assert.equal(decrypted.plaintext.toString("utf8"), "secret");
@@ -101,49 +102,6 @@ test("creates and reads encrypted secrets by namespace key", async () => {
   assert.equal(decrypted.versionID, VERSION_ID);
   assert.equal(decrypted.plaintext.toString("utf8"), "secret");
 });
-
-test("shares encrypted secrets by rewrapping the existing DEK", async () => {
-  const created = [];
-  const shared = [];
-  const transport = {
-    async createSecretPayload(payload) {
-      created.push(payload);
-      return { secret_id: SECRET_ID, version_id: VERSION_ID };
-    },
-    async getSecretPayload() {
-      const payload = created[0];
-      return {
-        secret_id: SECRET_ID,
-        namespace: "default",
-        key: "database-password",
-        version_id: VERSION_ID,
-        ciphertext: payload.ciphertext,
-        crypto_metadata: payload.crypto_metadata,
-        envelope: payload.envelopes[0].envelope,
-        permissions: payload.permissions,
-      };
-    },
-    async shareSecretPayload(secretID, payload) {
-      shared.push({ secretID, payload });
-      return { status: "shared" };
-    },
-  };
-
-  const crypto = new CryptoCustodiaClient(
-    transport,
-    cryptoOptions([Buffer.alloc(32, 0x51), Buffer.alloc(12, 0x61), Buffer.alloc(32, 0x41), Buffer.alloc(32, 0x44)]),
-  );
-  await crypto.createEncryptedSecretByKey({ namespace: "default", key: "database-password", plaintext: Buffer.from("secret") });
-  assert.deepEqual(await crypto.shareEncryptedSecret({ secretID: SECRET_ID, targetClientID: "client_bob" }), { status: "shared" });
-
-  assert.equal(shared.length, 1);
-  assert.equal(shared[0].secretID, SECRET_ID);
-  assert.equal(shared[0].payload.version_id, VERSION_ID);
-  assert.equal(shared[0].payload.target_client_id, "client_bob");
-  assert.equal(shared[0].payload.permissions, 4);
-  assert.ok(shared[0].payload.envelope);
-});
-
 
 test("shares and versions encrypted secrets by namespace key", async () => {
   const created = [];
@@ -193,39 +151,6 @@ test("shares and versions encrypted secrets by namespace key", async () => {
   assert.equal(versions[0].namespace, "db01");
   assert.equal(versions[0].key, "user:sys");
   assert.deepEqual(versions[0].payload.crypto_metadata.aad, { namespace: "db01", key: "user:sys", secret_version: 2 });
-});
-
-test("creates encrypted secret versions with namespace key AAD binding", async () => {
-  const versions = [];
-  const transport = {
-    async getSecretPayload(secretID) {
-      assert.equal(secretID, SECRET_ID);
-      return {
-        secret_id: SECRET_ID,
-        namespace: "db01",
-        key: "user:sys",
-        version_id: VERSION_ID,
-        crypto_metadata: {
-          version: "custodia.client-crypto.v1",
-          content_cipher: "aes-256-gcm",
-          envelope_scheme: "hpke-v1",
-          content_nonce_b64: Buffer.alloc(12, 0x62).toString("base64"),
-          aad: { namespace: "db01", key: "user:sys", secret_version: 1 },
-        },
-      };
-    },
-    async createSecretVersionPayload(secretID, payload) {
-      versions.push({ secretID, payload });
-      return { secret_id: secretID, version_id: VERSION_ID };
-    },
-  };
-  const crypto = new CryptoCustodiaClient(transport, cryptoOptions([Buffer.alloc(32, 0x53), Buffer.alloc(12, 0x63), Buffer.alloc(32, 0x43)]));
-
-  await crypto.createEncryptedSecretVersion({ secretID: SECRET_ID, plaintext: Buffer.from("rotated") });
-
-  assert.equal(versions[0].secretID, SECRET_ID);
-  assert.deepEqual(versions[0].payload.crypto_metadata.aad, { namespace: "db01", key: "user:sys", secret_version: 2 });
-  assert.equal(versions[0].payload.envelopes[0].client_id, "client_alice");
 });
 
 test("exposes withCrypto from the transport client", () => {

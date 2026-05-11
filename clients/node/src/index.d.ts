@@ -306,13 +306,6 @@ export class CryptoCustodiaClient {
     permissions?: number;
     expiresAt?: string;
   }): Promise<JsonObject>;
-  createEncryptedSecretVersion(payload: {
-    secretID: string;
-    plaintext: Uint8Array;
-    recipients?: string[];
-    permissions?: number;
-    expiresAt?: string;
-  }): Promise<JsonObject>;
   createEncryptedSecretVersionByKey(payload: {
     namespace?: string;
     key: string;
@@ -321,14 +314,7 @@ export class CryptoCustodiaClient {
     permissions?: number;
     expiresAt?: string;
   }): Promise<JsonObject>;
-  readDecryptedSecret(secretID: string): Promise<DecryptedSecret>;
   readDecryptedSecretByKey(namespace: string, key: string): Promise<DecryptedSecret>;
-  shareEncryptedSecret(payload: {
-    secretID: string;
-    targetClientID: string;
-    permissions?: number;
-    expiresAt?: string;
-  }): Promise<JsonObject>;
   shareEncryptedSecretByKey(payload: {
     namespace?: string;
     key: string;
