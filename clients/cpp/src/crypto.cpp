@@ -234,8 +234,8 @@ std::vector<std::uint8_t> build_canonical_aad(const CryptoMetadata& metadata, co
   if (metadata.envelope_scheme != kEnvelopeSchemeHPKEV1) {
     throw CryptoError("unsupported envelope scheme");
   }
-  if (inputs.secret_id.empty() && inputs.secret_name.empty()) {
-    throw CryptoError("secret_id or secret_name is required");
+  if (inputs.namespace_name.empty() || inputs.key.empty() || inputs.secret_version <= 0) {
+    throw CryptoError("namespace, key and secret_version are required");
   }
   std::ostringstream json;
   json << '{';
@@ -244,18 +244,11 @@ std::vector<std::uint8_t> build_canonical_aad(const CryptoMetadata& metadata, co
   append_json_field(json, "content_cipher", metadata.content_cipher);
   json << ',';
   append_json_field(json, "envelope_scheme", metadata.envelope_scheme);
-  if (!inputs.secret_id.empty()) {
-    json << ',';
-    append_json_field(json, "secret_id", inputs.secret_id);
-  }
-  if (!inputs.secret_name.empty()) {
-    json << ',';
-    append_json_field(json, "secret_name", inputs.secret_name);
-  }
-  if (!inputs.version_id.empty()) {
-    json << ',';
-    append_json_field(json, "version_id", inputs.version_id);
-  }
+  json << ',';
+  append_json_field(json, "namespace", inputs.namespace_name);
+  json << ',';
+  append_json_field(json, "key", inputs.key);
+  json << ',' << json_quote("secret_version") << ':' << inputs.secret_version;
   json << '}';
   return bytes(json.str());
 }
@@ -438,20 +431,10 @@ std::string metadata_json(const CryptoMetadata& metadata) {
   }
   if (metadata.aad.has_value()) {
     json << ',' << json_quote("aad") << ':' << '{';
-    bool wrote = false;
-    if (!metadata.aad->secret_id.empty()) {
-      append_json_field(json, "secret_id", metadata.aad->secret_id);
-      wrote = true;
-    }
-    if (!metadata.aad->secret_name.empty()) {
-      if (wrote) json << ',';
-      append_json_field(json, "secret_name", metadata.aad->secret_name);
-      wrote = true;
-    }
-    if (!metadata.aad->version_id.empty()) {
-      if (wrote) json << ',';
-      append_json_field(json, "version_id", metadata.aad->version_id);
-    }
+    append_json_field(json, "namespace", metadata.aad->namespace_name);
+    json << ',';
+    append_json_field(json, "key", metadata.aad->key);
+    json << ',' << json_quote("secret_version") << ':' << metadata.aad->secret_version;
     json << '}';
   }
   json << '}';
@@ -470,10 +453,6 @@ std::string require_text(std::string value, const std::string& label) {
     throw std::invalid_argument(label + " is required");
   }
   return std::string(first, last);
-}
-
-std::string aad_secret_name_for_keyspace(const std::string& namespace_name, const std::string& key) {
-  return namespace_name + "/" + key;
 }
 
 void append_json_int(std::ostringstream& json, const std::string& key, int value) {
@@ -575,6 +554,8 @@ std::string json_object_field(const std::string& json, const std::string& field)
 
 struct ParsedSecret {
   std::string secret_id;
+  std::string namespace_name;
+  std::string key;
   std::string version_id;
   std::string ciphertext;
   CryptoMetadata metadata;
@@ -590,9 +571,9 @@ ParsedSecret parse_secret(const std::string& json) {
   std::optional<AADInputs> aad;
   if (!aad_object.empty()) {
     aad = AADInputs{
-        json_string_field(aad_object, "secret_id"),
-        json_string_field(aad_object, "secret_name"),
-        json_string_field(aad_object, "version_id")};
+        json_string_field(aad_object, "namespace"),
+        json_string_field(aad_object, "key"),
+        json_int_field(aad_object, "secret_version")};
   }
   CryptoMetadata metadata{
       json_string_field(metadata_object, "version"),
@@ -600,9 +581,11 @@ ParsedSecret parse_secret(const std::string& json) {
       json_string_field(metadata_object, "envelope_scheme"),
       json_string_field(metadata_object, "content_nonce_b64"),
       aad};
-  (void)build_canonical_aad(metadata, metadata.canonical_aad_inputs(AADInputs{"probe", "", ""}));
+  (void)build_canonical_aad(metadata, metadata.canonical_aad_inputs(AADInputs{"default", "probe", 1}));
   return ParsedSecret{
       json_string_field(json, "secret_id"),
+      json_string_field(json, "namespace"),
+      json_string_field(json, "key"),
       json_string_field(json, "version_id"),
       json_string_field(json, "ciphertext"),
       metadata,
@@ -643,14 +626,16 @@ std::string CryptoClient::create_encrypted_secret(
   auto normalized_name = require_text(name, "secret name");
   auto dek = random(kAES256GCMKeyBytes);
   auto nonce = random(kAESGCMNonceBytes);
-  AADInputs aad_inputs{"", normalized_name, ""};
+  AADInputs aad_inputs{"default", normalized_name, 1};
   auto metadata = metadata_v1(aad_inputs, nonce);
   auto aad = build_canonical_aad(metadata, aad_inputs);
   auto ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad);
 
   std::ostringstream payload;
   payload << '{';
-  append_json_field(payload, "name", normalized_name);
+  append_json_field(payload, "namespace", "default");
+  payload << ',';
+  append_json_field(payload, "key", normalized_name);
   payload << ',';
   append_json_field(payload, "ciphertext", base64_encode(ciphertext));
   payload << ',' << json_quote("crypto_metadata") << ':' << metadata_json(metadata);
@@ -676,7 +661,7 @@ std::string CryptoClient::create_encrypted_secret_by_key(
   auto normalized_key = require_text(key, "secret key");
   auto dek = random(kAES256GCMKeyBytes);
   auto nonce = random(kAESGCMNonceBytes);
-  AADInputs aad_inputs{"", aad_secret_name_for_keyspace(normalized_namespace, normalized_key), ""};
+  AADInputs aad_inputs{normalized_namespace, normalized_key, 1};
   auto metadata = metadata_v1(aad_inputs, nonce);
   auto aad = build_canonical_aad(metadata, aad_inputs);
   auto ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad);
@@ -707,9 +692,11 @@ std::string CryptoClient::create_encrypted_secret_version(
     int permissions,
     const std::string& expires_at) {
   auto normalized_secret_id = require_text(secret_id, "secret id");
+  auto current_secret = parse_secret(transport_->get_secret_payload(normalized_secret_id));
+  auto current_aad_inputs = current_secret.metadata.canonical_aad_inputs(AADInputs{current_secret.namespace_name, current_secret.key, 1});
+  auto aad_inputs = AADInputs{current_aad_inputs.namespace_name, current_aad_inputs.key, current_aad_inputs.secret_version + 1};
   auto dek = random(kAES256GCMKeyBytes);
   auto nonce = random(kAESGCMNonceBytes);
-  AADInputs aad_inputs{normalized_secret_id, "", ""};
   auto metadata = metadata_v1(aad_inputs, nonce);
   auto aad = build_canonical_aad(metadata, aad_inputs);
   auto ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad);
@@ -738,9 +725,11 @@ std::string CryptoClient::create_encrypted_secret_version_by_key(
     const std::string& expires_at) {
   auto normalized_namespace = require_text(namespace_name, "namespace");
   auto normalized_key = require_text(key, "secret key");
+  auto current_secret = parse_secret(transport_->get_secret_payload_by_key(normalized_namespace, normalized_key));
+  auto current_aad_inputs = current_secret.metadata.canonical_aad_inputs(AADInputs{normalized_namespace, normalized_key, 1});
+  auto aad_inputs = AADInputs{current_aad_inputs.namespace_name, current_aad_inputs.key, current_aad_inputs.secret_version + 1};
   auto dek = random(kAES256GCMKeyBytes);
   auto nonce = random(kAESGCMNonceBytes);
-  AADInputs aad_inputs{"", aad_secret_name_for_keyspace(normalized_namespace, normalized_key), ""};
   auto metadata = metadata_v1(aad_inputs, nonce);
   auto aad = build_canonical_aad(metadata, aad_inputs);
   auto ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad);
@@ -762,7 +751,7 @@ std::string CryptoClient::create_encrypted_secret_version_by_key(
 
 DecryptedSecret CryptoClient::read_decrypted_secret(const std::string& secret_id) {
   auto secret = parse_secret(transport_->get_secret_payload(secret_id));
-  auto aad_inputs = secret.metadata.canonical_aad_inputs(AADInputs{secret.secret_id, "", secret.version_id});
+  auto aad_inputs = secret.metadata.canonical_aad_inputs(AADInputs{secret.namespace_name, secret.key, 1});
   auto aad = build_canonical_aad(secret.metadata, aad_inputs);
   if (secret.metadata.content_nonce_b64.empty()) {
     throw CryptoError("missing content nonce");
@@ -773,8 +762,10 @@ DecryptedSecret CryptoClient::read_decrypted_secret(const std::string& secret_id
 }
 
 DecryptedSecret CryptoClient::read_decrypted_secret_by_key(const std::string& namespace_name, const std::string& key) {
-  auto secret = parse_secret(transport_->get_secret_payload_by_key(namespace_name, key));
-  auto aad_inputs = secret.metadata.canonical_aad_inputs(AADInputs{secret.secret_id, "", secret.version_id});
+  auto normalized_namespace = require_text(namespace_name, "namespace");
+  auto normalized_key = require_text(key, "secret key");
+  auto secret = parse_secret(transport_->get_secret_payload_by_key(normalized_namespace, normalized_key));
+  auto aad_inputs = secret.metadata.canonical_aad_inputs(AADInputs{normalized_namespace, normalized_key, 1});
   auto aad = build_canonical_aad(secret.metadata, aad_inputs);
   if (secret.metadata.content_nonce_b64.empty()) {
     throw CryptoError("missing content nonce");
@@ -791,7 +782,7 @@ std::string CryptoClient::share_encrypted_secret(
     const std::string& expires_at) {
   auto target = require_text(target_client_id, "target client id");
   auto secret = parse_secret(transport_->get_secret_payload(secret_id));
-  auto aad_inputs = secret.metadata.canonical_aad_inputs(AADInputs{secret.secret_id, "", secret.version_id});
+  auto aad_inputs = secret.metadata.canonical_aad_inputs(AADInputs{secret.namespace_name, secret.key, 1});
   auto aad = build_canonical_aad(secret.metadata, aad_inputs);
   auto dek = open_secret_envelope(secret.envelope, aad);
   auto envelope_json = envelope_object_without_client_id(seal_recipient_envelopes({target}, dek, aad));
@@ -822,7 +813,7 @@ std::string CryptoClient::share_encrypted_secret_by_key(
   auto normalized_key = require_text(key, "secret key");
   auto target = require_text(target_client_id, "target client id");
   auto secret = parse_secret(transport_->get_secret_payload_by_key(normalized_namespace, normalized_key));
-  auto aad_inputs = secret.metadata.canonical_aad_inputs(AADInputs{secret.secret_id, "", secret.version_id});
+  auto aad_inputs = secret.metadata.canonical_aad_inputs(AADInputs{normalized_namespace, normalized_key, 1});
   auto aad = build_canonical_aad(secret.metadata, aad_inputs);
   auto dek = open_secret_envelope(secret.envelope, aad);
   auto envelope_json = envelope_object_without_client_id(seal_recipient_envelopes({target}, dek, aad));

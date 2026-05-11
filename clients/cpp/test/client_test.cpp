@@ -155,12 +155,12 @@ void exports_audit_metadata_headers() {
 
 void validates_shared_crypto_vectors() {
   custodia::CryptoMetadata metadata{};
-  auto aad = custodia::build_canonical_aad(metadata, custodia::AADInputs{"", "database-password", ""});
+  auto aad = custodia::build_canonical_aad(metadata, custodia::AADInputs{"default", "database-password", 1});
   expect_eq(
-      R"({"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","secret_name":"database-password"})",
+      R"({"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","namespace":"default","key":"database-password","secret_version":1})",
       std::string(aad.begin(), aad.end()),
       "canonical aad");
-  expect_eq("32f7c1471093f0a85a963d5cfeaf3aeec8edcd52577175c6b4a826c5063144bf", custodia::canonical_aad_sha256(aad), "aad sha");
+  expect_eq("908d3fcaa6fced7ceb6aaabd8e2fc2a22bf55218d833cb0b99564cf49380413a", custodia::canonical_aad_sha256(aad), "aad sha");
 
   auto alice_private = b64("MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=");
   expect_eq("BPXykWLDGo3voY5udCIk7oBvwXGKJ4voWbpWIEArjzo=", custodia::base64_encode(custodia::derive_x25519_public_key(alice_private)), "alice public key");
@@ -170,7 +170,7 @@ void validates_shared_crypto_vectors() {
   auto plaintext = b64("ZGF0YWJhc2UgcGFzc3dvcmQ6IGNvcnJlY3QgaG9yc2UgYmF0dGVyeSBzdGFwbGU=");
   auto ciphertext = custodia::seal_content_aes_256_gcm(dek, nonce, plaintext, aad);
   expect_eq(
-      "94P22VzLbeb3J+osVz4T/Pr3Qx0LBv8TbYL/BKfId08ZJV6XCPThpSrEt2h4N+zSXBrZBDJM6o0a8r/q1gqj",
+      "94P22VzLbeb3J+osVz4T/Pr3Qx0LBv8TbYL/BKfId08ZJV6XCPThpSrEt2h4N+ywCz9Jb/eBlP+Xx5iQuZ/d",
       custodia::base64_encode(ciphertext),
       "ciphertext");
   expect_bytes(plaintext, custodia::open_content_aes_256_gcm(dek, nonce, ciphertext, aad), "plaintext roundtrip");
@@ -181,7 +181,7 @@ void validates_shared_crypto_vectors() {
       dek,
       aad);
   expect_eq(
-      "ehpOcJvwhaxJSroEabmx7aCrH3ixaqu3n/7akGI+hSIIS8IcAryGTNuiRs8bUbEeIim/t9y6DjZ/88RjRh0q2dWBY0/F6EA3484TSix3NNA=",
+      "ehpOcJvwhaxJSroEabmx7aCrH3ixaqu3n/7akGI+hSIIS8IcAryGTNuiRs8bUbEeIim/t9y6DjZ/88RjRh0q2f2CJAjK13CAjuAd46txQ0M=",
       custodia::base64_encode(envelope),
       "envelope");
   expect_bytes(dek, custodia::open_hpke_v1_envelope(alice_private, envelope, aad), "opened envelope");
@@ -202,15 +202,16 @@ void creates_encrypted_secret_with_deterministic_vector_payload() {
       b64("ZGF0YWJhc2UgcGFzc3dvcmQ6IGNvcnJlY3QgaG9yc2UgYmF0dGVyeSBzdGFwbGU="));
 
   expect_eq(R"({"secret_id":"s1"})", response, "create response");
-  expect_contains(*transport->last_request.body, R"("name":"database-password")", "create name");
+  expect_contains(*transport->last_request.body, R"("namespace":"default")", "create namespace");
+  expect_contains(*transport->last_request.body, R"("key":"database-password")", "create key");
   expect_contains(*transport->last_request.body, R"("content_nonce_b64":"YWFhYWFhYWFhYWFh")", "create nonce");
   expect_contains(
       *transport->last_request.body,
-      R"("ciphertext":"94P22VzLbeb3J+osVz4T/Pr3Qx0LBv8TbYL/BKfId08ZJV6XCPThpSrEt2h4N+zSXBrZBDJM6o0a8r/q1gqj")",
+      R"("ciphertext":"94P22VzLbeb3J+osVz4T/Pr3Qx0LBv8TbYL/BKfId08ZJV6XCPThpSrEt2h4N+ywCz9Jb/eBlP+Xx5iQuZ/d")",
       "create ciphertext");
   expect_contains(
       *transport->last_request.body,
-      R"("envelope":"ehpOcJvwhaxJSroEabmx7aCrH3ixaqu3n/7akGI+hSIIS8IcAryGTNuiRs8bUbEeIim/t9y6DjZ/88RjRh0q2dWBY0/F6EA3484TSix3NNA=")",
+      R"("envelope":"ehpOcJvwhaxJSroEabmx7aCrH3ixaqu3n/7akGI+hSIIS8IcAryGTNuiRs8bUbEeIim/t9y6DjZ/88RjRh0q2f2CJAjK13CAjuAd46txQ0M=")",
       "create envelope");
 }
 
@@ -218,7 +219,7 @@ void reads_decrypted_secret_with_persisted_aad_metadata() {
   auto transport = std::make_shared<FakeTransport>();
   transport->response = custodia::Response{
       .status = 200,
-      .body = R"({"secret_id":"550e8400-e29b-41d4-a716-446655440000","version_id":"660e8400-e29b-41d4-a716-446655440000","ciphertext":"d+Ub720HWc3YmYcZyQPyyd3EK2QHKMg7iaKMgGg6Ir5RRRmfzoUe","crypto_metadata":{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","content_nonce_b64":"Y2NjY2NjY2NjY2Nj","aad":{"secret_id":"550e8400-e29b-41d4-a716-446655440000","version_id":"660e8400-e29b-41d4-a716-446655440000"}},"envelope":"ze/YeDqRtEZkDi4flVmds15ISgBxvSGCs7YNCBLBDHDZczDrK3IdDIfEWJA8JD3ERLLFg1eklPtBfJ2tbctFNV8yFiD0BrjltlAaV/RogLk=","permissions":7})",
+      .body = R"({"secret_id":"550e8400-e29b-41d4-a716-446655440000","namespace":"db01","key":"user:sys","version_id":"660e8400-e29b-41d4-a716-446655440000","ciphertext":"d+Ub720HWc3YmYcZyQPyyd3EK2QHKMi+yxJHvySpW7HrhWHy6Nqu","crypto_metadata":{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","content_nonce_b64":"Y2NjY2NjY2NjY2Nj","aad":{"namespace":"db01","key":"user:sys","secret_version":1}},"envelope":"ze/YeDqRtEZkDi4flVmds15ISgBxvSGCs7YNCBLBDHDZczDrK3IdDIfEWJA8JD3ERLLFg1eklPtBfJ2tbctFNb19vQo6Wuc3ZWZQFNAidO0=","permissions":7})",
       .headers = {}};
   auto client = test_client(transport);
   auto crypto = client.with_crypto(crypto_options());
@@ -250,14 +251,14 @@ void creates_encrypted_secret_by_key_payload() {
   expect_eq("https://vault.test/v1/secrets", transport->last_request.url, "create by key url");
   expect_contains(*transport->last_request.body, R"("namespace":"db01")", "create namespace");
   expect_contains(*transport->last_request.body, R"("key":"user:sys")", "create key");
-  expect_contains(*transport->last_request.body, R"("secret_name":"db01/user:sys")", "create keyspace aad");
+  expect_contains(*transport->last_request.body, R"("namespace":"db01")", "create keyspace aad");
 }
 
 void reads_decrypted_secret_by_key() {
   auto transport = std::make_shared<FakeTransport>();
   transport->response = custodia::Response{
       .status = 200,
-      .body = R"({"secret_id":"550e8400-e29b-41d4-a716-446655440000","version_id":"660e8400-e29b-41d4-a716-446655440000","ciphertext":"d+Ub720HWc3YmYcZyQPyyd3EK2QHKMg7iaKMgGg6Ir5RRRmfzoUe","crypto_metadata":{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","content_nonce_b64":"Y2NjY2NjY2NjY2Nj","aad":{"secret_id":"550e8400-e29b-41d4-a716-446655440000","version_id":"660e8400-e29b-41d4-a716-446655440000"}},"envelope":"ze/YeDqRtEZkDi4flVmds15ISgBxvSGCs7YNCBLBDHDZczDrK3IdDIfEWJA8JD3ERLLFg1eklPtBfJ2tbctFNV8yFiD0BrjltlAaV/RogLk=","permissions":7})",
+      .body = R"({"secret_id":"550e8400-e29b-41d4-a716-446655440000","namespace":"db01","key":"user:sys","version_id":"660e8400-e29b-41d4-a716-446655440000","ciphertext":"d+Ub720HWc3YmYcZyQPyyd3EK2QHKMi+yxJHvySpW7HrhWHy6Nqu","crypto_metadata":{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","content_nonce_b64":"Y2NjY2NjY2NjY2Nj","aad":{"namespace":"db01","key":"user:sys","secret_version":1}},"envelope":"ze/YeDqRtEZkDi4flVmds15ISgBxvSGCs7YNCBLBDHDZczDrK3IdDIfEWJA8JD3ERLLFg1eklPtBfJ2tbctFNb19vQo6Wuc3ZWZQFNAidO0=","permissions":7})",
       .headers = {}};
   auto client = test_client(transport);
   auto crypto = client.with_crypto(crypto_options());
@@ -270,7 +271,7 @@ void reads_decrypted_secret_by_key() {
 
 void creates_encrypted_secret_version_by_key_payload() {
   auto transport = std::make_shared<FakeTransport>();
-  transport->response = custodia::Response{.status = 200, .body = R"({"version_id":"v2"})", .headers = {}};
+  transport->response = custodia::Response{.status = 200, .body = R"({"secret_id":"550e8400-e29b-41d4-a716-446655440000","namespace":"db01","key":"user:sys","version_id":"660e8400-e29b-41d4-a716-446655440000","ciphertext":"d+Ub720HWc3YmYcZyQPyyd3EK2QHKMi+yxJHvySpW7HrhWHy6Nqu","crypto_metadata":{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","content_nonce_b64":"Y2NjY2NjY2NjY2Nj","aad":{"namespace":"db01","key":"user:sys","secret_version":1}},"envelope":"ze/YeDqRtEZkDi4flVmds15ISgBxvSGCs7YNCBLBDHDZczDrK3IdDIfEWJA8JD3ERLLFg1eklPtBfJ2tbctFNb19vQo6Wuc3ZWZQFNAidO0=","permissions":7})", .headers = {}};
   auto client = test_client(transport);
   std::queue<std::vector<std::uint8_t>> random_values;
   random_values.push(b64("UVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVFRUVE="));
@@ -281,7 +282,7 @@ void creates_encrypted_secret_version_by_key_payload() {
   crypto.create_encrypted_secret_version_by_key("db01", "user:sys", b64("bmV3IHNlY3JldA=="));
 
   expect_eq("https://vault.test/v1/secrets/by-key/versions?namespace=db01&key=user%3Asys", transport->last_request.url, "version by key url");
-  expect_contains(*transport->last_request.body, R"("secret_name":"db01/user:sys")", "version by key aad");
+  expect_contains(*transport->last_request.body, R"("secret_version":2)", "version by key aad version");
 }
 
 void validates_config() {

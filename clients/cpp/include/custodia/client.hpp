@@ -82,9 +82,9 @@ class Transport {
 };
 
 struct AADInputs {
-  std::string secret_id;
-  std::string secret_name;
-  std::string version_id;
+  std::string namespace_name;
+  std::string key;
+  int secret_version{0};
 };
 
 struct CryptoMetadata {
