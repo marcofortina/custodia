@@ -12,8 +12,15 @@ import (
 	"testing"
 )
 
-func TestParseMetadataAcceptsSupportedV1(t *testing.T) {
-	metadata, err := ParseMetadata([]byte(`{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1"}`))
+func TestParseMetadataRejectsEmptyPayload(t *testing.T) {
+	if _, err := ParseMetadata(nil); !errors.Is(err, ErrMalformedMetadata) {
+		t.Fatalf("ParseMetadata(nil) error = %v, want %v", err, ErrMalformedMetadata)
+	}
+}
+
+func TestParseMetadataValidatesRequiredAlgorithms(t *testing.T) {
+	payload := []byte(`{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1"}`)
+	metadata, err := ParseMetadata(payload)
 	if err != nil {
 		t.Fatalf("ParseMetadata() error = %v", err)
 	}
@@ -22,24 +29,22 @@ func TestParseMetadataAcceptsSupportedV1(t *testing.T) {
 	}
 }
 
-func TestParseMetadataRejectsUnsupportedVersion(t *testing.T) {
-	_, err := ParseMetadata([]byte(`{"version":"custodia.client-crypto.v2","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1"}`))
-	if !errors.Is(err, ErrUnsupportedVersion) {
-		t.Fatalf("ParseMetadata() error = %v, want %v", err, ErrUnsupportedVersion)
+func TestParseMetadataRejectsUnsupportedValues(t *testing.T) {
+	cases := []struct {
+		name    string
+		payload string
+		want    error
+	}{
+		{"version", `{"version":"v2","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1"}`, ErrUnsupportedVersion},
+		{"cipher", `{"version":"custodia.client-crypto.v1","content_cipher":"aes-128-gcm","envelope_scheme":"hpke-v1"}`, ErrUnsupportedContentCipher},
+		{"envelope", `{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"rsa"}`, ErrUnsupportedEnvelopeScheme},
 	}
-}
-
-func TestParseMetadataRejectsUnsupportedContentCipher(t *testing.T) {
-	_, err := ParseMetadata([]byte(`{"version":"custodia.client-crypto.v1","content_cipher":"xchacha20-poly1305","envelope_scheme":"hpke-v1"}`))
-	if !errors.Is(err, ErrUnsupportedContentCipher) {
-		t.Fatalf("ParseMetadata() error = %v, want %v", err, ErrUnsupportedContentCipher)
-	}
-}
-
-func TestParseMetadataRejectsUnsupportedEnvelopeScheme(t *testing.T) {
-	_, err := ParseMetadata([]byte(`{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"rsa-unsupported"}`))
-	if !errors.Is(err, ErrUnsupportedEnvelopeScheme) {
-		t.Fatalf("ParseMetadata() error = %v, want %v", err, ErrUnsupportedEnvelopeScheme)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := ParseMetadata([]byte(tc.payload)); !errors.Is(err, tc.want) {
+				t.Fatalf("ParseMetadata() error = %v, want %v", err, tc.want)
+			}
+		})
 	}
 }
 
@@ -48,26 +53,11 @@ func TestBuildCanonicalAADUsesStableJSONOrder(t *testing.T) {
 		Version:        VersionV1,
 		ContentCipher:  ContentCipherV1,
 		EnvelopeScheme: EnvelopeHPKEV1,
-	}, CanonicalAADInputs{SecretName: "database-password"})
+	}, CanonicalAADInputs{Namespace: "default", Key: "database-password"})
 	if err != nil {
 		t.Fatalf("BuildCanonicalAAD() error = %v", err)
 	}
-	want := `{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","secret_name":"database-password"}`
-	if string(aad) != want {
-		t.Fatalf("BuildCanonicalAAD() = %s, want %s", aad, want)
-	}
-}
-
-func TestBuildCanonicalAADIncludesPersistedResourceIDs(t *testing.T) {
-	aad, err := BuildCanonicalAAD(Metadata{
-		Version:        VersionV1,
-		ContentCipher:  ContentCipherV1,
-		EnvelopeScheme: EnvelopeHPKEV1,
-	}, CanonicalAADInputs{SecretID: "550e8400-e29b-41d4-a716-446655440000", VersionID: "660e8400-e29b-41d4-a716-446655440000"})
-	if err != nil {
-		t.Fatalf("BuildCanonicalAAD() error = %v", err)
-	}
-	want := `{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","secret_id":"550e8400-e29b-41d4-a716-446655440000","version_id":"660e8400-e29b-41d4-a716-446655440000"}`
+	want := `{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","namespace":"default","key":"database-password"}`
 	if string(aad) != want {
 		t.Fatalf("BuildCanonicalAAD() = %s, want %s", aad, want)
 	}
@@ -86,42 +76,36 @@ func TestBuildCanonicalAADRejectsMissingResourceBinding(t *testing.T) {
 
 func TestBuildCanonicalAADRejectsUnsupportedMetadata(t *testing.T) {
 	_, err := BuildCanonicalAAD(Metadata{
-		Version:        "custodia.client-crypto.v2",
+		Version:        "v2",
 		ContentCipher:  ContentCipherV1,
 		EnvelopeScheme: EnvelopeHPKEV1,
-	}, CanonicalAADInputs{SecretName: "database-password"})
+	}, CanonicalAADInputs{Namespace: "default", Key: "database-password"})
 	if !errors.Is(err, ErrUnsupportedVersion) {
 		t.Fatalf("BuildCanonicalAAD() error = %v, want %v", err, ErrUnsupportedVersion)
 	}
 }
 
-func TestParseMetadataAcceptsPersistedAADBindingAndNonce(t *testing.T) {
-	payload := []byte(`{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","content_nonce_b64":"bm9uY2U=","aad":{"secret_name":"database-password"}}`)
+func TestMetadataAADOverridesFallback(t *testing.T) {
+	payload := []byte(`{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","content_nonce_b64":"bm9uY2U=","aad":{"namespace":"db01","key":"user:sys"}}`)
 	metadata, err := ParseMetadata(payload)
 	if err != nil {
 		t.Fatalf("ParseMetadata() error = %v", err)
 	}
-	if metadata.ContentNonce != "bm9uY2U=" {
-		t.Fatalf("ContentNonce = %q", metadata.ContentNonce)
+	if metadata.AAD == nil || metadata.AAD.Namespace != "db01" || metadata.AAD.Key != "user:sys" {
+		t.Fatalf("metadata AAD = %+v", metadata.AAD)
 	}
-	if metadata.AAD == nil || metadata.AAD.SecretName != "database-password" {
-		t.Fatalf("AAD = %+v", metadata.AAD)
-	}
-	fallback := CanonicalAADInputs{SecretID: "fallback"}
-	if got := metadata.CanonicalAADInputs(fallback); got.SecretName != "database-password" {
+	fallback := CanonicalAADInputs{Namespace: "default", Key: "fallback"}
+	if got := metadata.CanonicalAADInputs(fallback); got.Namespace != "db01" || got.Key != "user:sys" {
 		t.Fatalf("CanonicalAADInputs() = %+v", got)
 	}
 }
 
-func TestMetadataV1PersistsAADBindingAndNonce(t *testing.T) {
-	metadata := MetadataV1(CanonicalAADInputs{SecretID: "secret-id", VersionID: "version-id"}, "bm9uY2U=")
-	if err := ValidateMetadata(metadata); err != nil {
-		t.Fatalf("ValidateMetadata() error = %v", err)
+func TestMetadataV1IncludesAADBinding(t *testing.T) {
+	metadata := MetadataV1(CanonicalAADInputs{Namespace: "db01", Key: "user:sys"}, "bm9uY2U=")
+	if metadata.Version != VersionV1 || metadata.ContentCipher != ContentCipherV1 || metadata.EnvelopeScheme != EnvelopeHPKEV1 || metadata.ContentNonce != "bm9uY2U=" {
+		t.Fatalf("MetadataV1() = %+v", metadata)
 	}
-	if metadata.AAD == nil || metadata.AAD.SecretID != "secret-id" || metadata.AAD.VersionID != "version-id" {
-		t.Fatalf("AAD = %+v", metadata.AAD)
-	}
-	if metadata.ContentNonce != "bm9uY2U=" {
-		t.Fatalf("ContentNonce = %q", metadata.ContentNonce)
+	if metadata.AAD == nil || metadata.AAD.Namespace != "db01" || metadata.AAD.Key != "user:sys" {
+		t.Fatalf("MetadataV1() AAD = %+v", metadata.AAD)
 	}
 }

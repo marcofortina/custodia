@@ -7,10 +7,11 @@
     "envelope_scheme": "hpke-v1"
   },
   "aad_inputs": {
-    "secret_name": "unsupported-version"
+    "namespace": "default",
+    "key": "unsupported-version"
   },
-  "canonical_aad": "{\"version\":\"custodia.client-crypto.v2\",\"content_cipher\":\"aes-256-gcm\",\"envelope_scheme\":\"hpke-v1\",\"secret_name\":\"unsupported-version\"}",
-  "canonical_aad_sha256": "92f90dfcec3b361235b4bc711ccfeeabc3f69b193fd73bcb364a87a964bdbe56",
+  "canonical_aad": "{\"version\":\"custodia.client-crypto.v2\",\"content_cipher\":\"aes-256-gcm\",\"envelope_scheme\":\"hpke-v1\",\"namespace\":\"default\",\"key\":\"unsupported-version\"}",
+  "canonical_aad_sha256": "0c7ecef1a1a9bd9b60a25d1e1e7b5c4245391f54f466548e66f1fae324e63d38",
   "failure": "unsupported crypto metadata version",
   "expected_error": "unsupported_crypto_version"
 }

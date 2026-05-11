@@ -81,8 +81,8 @@ func TestGoCryptoClientCreateEncryptedSecretPostsOpaquePayload(t *testing.T) {
 	if len(received.Envelopes) != 2 || received.Envelopes[0].ClientID != "client_alice" || received.Envelopes[1].ClientID != "client_bob" {
 		t.Fatalf("envelopes = %+v", received.Envelopes)
 	}
-	metadata, aad := mustParseMetadataAndAAD(t, received.CryptoMetadata, clientcrypto.CanonicalAADInputs{SecretName: "user:sys"})
-	if metadata.AAD == nil || metadata.AAD.SecretName != "user:sys" || metadata.ContentNonce == "" {
+	metadata, aad := mustParseMetadataAndAAD(t, received.CryptoMetadata, clientcrypto.CanonicalAADInputs{Namespace: "db01", Key: "user:sys"})
+	if metadata.AAD == nil || metadata.AAD.Namespace != "db01" || metadata.AAD.Key != "user:sys" || metadata.ContentNonce == "" {
 		t.Fatalf("metadata = %+v", metadata)
 	}
 	plaintext := mustOpenPostedSecret(t, aliceHandle, received.Ciphertext, received.Envelopes[0].Envelope, metadata.ContentNonce, aad)
@@ -178,7 +178,7 @@ func TestGoCryptoClientShareEncryptedSecretAddsRecipientEnvelope(t *testing.T) {
 	if shared.VersionID != "version-id" || shared.TargetClientID != "client_bob" || shared.Permissions != PermissionRead {
 		t.Fatalf("shared = %+v", shared)
 	}
-	_, aad := mustParseMetadataAndAAD(t, response.CryptoMetadata, clientcrypto.CanonicalAADInputs{SecretID: "secret-id", VersionID: "version-id"})
+	_, aad := mustParseMetadataAndAAD(t, response.CryptoMetadata, clientcrypto.CanonicalAADInputs{Namespace: "db01", Key: "user:sys"})
 	bobHandle := mustX25519Handle(t, "client_bob", bobPrivate)
 	opened, err := bobHandle.OpenEnvelope(context.Background(), mustDecodeEnvelope(t, shared.Envelope), aad)
 	if err != nil {
@@ -243,15 +243,15 @@ func TestGoCryptoClientCreateEncryptedSecretVersion(t *testing.T) {
 		bytes.Repeat([]byte("v"), 12),
 		bytes.Repeat([]byte("E"), 32),
 	))
-	created, err := cryptoClient.CreateEncryptedSecretVersion(context.Background(), "secret-id", CreateEncryptedSecretVersionRequest{Plaintext: []byte("rotated secret"), Permissions: PermissionRead})
+	created, err := cryptoClient.CreateEncryptedSecretVersion(context.Background(), "secret-id", CreateEncryptedSecretVersionRequest{Namespace: "db01", Key: "user:sys", Plaintext: []byte("rotated secret"), Permissions: PermissionRead})
 	if err != nil {
 		t.Fatalf("CreateEncryptedSecretVersion() error = %v", err)
 	}
 	if created.VersionID != "new-version" {
 		t.Fatalf("created = %+v", created)
 	}
-	metadata, aad := mustParseMetadataAndAAD(t, received.CryptoMetadata, clientcrypto.CanonicalAADInputs{SecretID: "secret-id"})
-	if metadata.AAD == nil || metadata.AAD.SecretID != "secret-id" {
+	metadata, aad := mustParseMetadataAndAAD(t, received.CryptoMetadata, clientcrypto.CanonicalAADInputs{Namespace: "db01", Key: "user:sys"})
+	if metadata.AAD == nil || metadata.AAD.Namespace != "db01" || metadata.AAD.Key != "user:sys" {
 		t.Fatalf("metadata = %+v", metadata)
 	}
 	plaintext := mustOpenPostedSecret(t, aliceHandle, received.Ciphertext, received.Envelopes[0].Envelope, metadata.ContentNonce, aad)
@@ -295,8 +295,8 @@ func TestGoCryptoClientCreateEncryptedSecretVersionByKey(t *testing.T) {
 	if created.VersionID != "new-version" {
 		t.Fatalf("created = %+v", created)
 	}
-	metadata, _ := mustParseMetadataAndAAD(t, received.CryptoMetadata, clientcrypto.CanonicalAADInputs{SecretName: "user:sys"})
-	if metadata.AAD == nil || metadata.AAD.SecretName != "user:sys" {
+	metadata, _ := mustParseMetadataAndAAD(t, received.CryptoMetadata, clientcrypto.CanonicalAADInputs{Namespace: "db01", Key: "user:sys"})
+	if metadata.AAD == nil || metadata.AAD.Namespace != "db01" || metadata.AAD.Key != "user:sys" {
 		t.Fatalf("metadata = %+v", metadata)
 	}
 }
@@ -365,7 +365,7 @@ func buildEncryptedReadResponse(t *testing.T, secretID string, versionID string,
 	t.Helper()
 	dek := bytes.Repeat([]byte("S"), 32)
 	nonce := bytes.Repeat([]byte("c"), 12)
-	aadInputs := clientcrypto.CanonicalAADInputs{SecretID: secretID, VersionID: versionID}
+	aadInputs := clientcrypto.CanonicalAADInputs{Namespace: "db01", Key: "user:sys"}
 	metadata := clientcrypto.MetadataV1(aadInputs, base64.StdEncoding.EncodeToString(nonce))
 	aad, metadataJSON, err := encodeCryptoMetadata(metadata, aadInputs)
 	if err != nil {
@@ -382,6 +382,8 @@ func buildEncryptedReadResponse(t *testing.T, secretID string, versionID string,
 	}
 	return SecretReadResponse{
 		SecretID:        secretID,
+		Namespace:       "db01",
+		Key:             "user:sys",
 		VersionID:       versionID,
 		Ciphertext:      base64.StdEncoding.EncodeToString(ciphertext),
 		CryptoMetadata:  metadataJSON,
