@@ -27,6 +27,8 @@ std::string response = client.create_secret_payload(
 );
 
 std::string secret = client.get_secret_payload_by_key("default", "db");
+std::string versions = client.list_secret_version_metadata_by_key("default", "db", 50);
+std::string access = client.list_secret_access_metadata_by_key("default", "db", 50);
 client.share_secret_payload_by_key("default", "db", R"({"target_client_id":"client_bob","envelope":"base64env","permissions":4})");
 client.create_secret_version_payload_by_key("default", "db", R"({"ciphertext":"base64cipher2","envelopes":[{"client_id":"self","envelope":"base64env2"}],"permissions":7})");
 client.revoke_access_by_key("default", "db", "client_bob");

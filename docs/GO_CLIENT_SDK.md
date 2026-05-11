@@ -17,7 +17,8 @@ Use the public Phase 5 methods and types for new integrations:
 
 ```go
 created, err := c.CreateSecretPayload(client.CreateSecretPayload{
-    Name:       "database-password",
+    Namespace:  "default",
+    Key:        "database-password",
     Ciphertext: "base64-opaque-ciphertext",
     Envelopes: []client.RecipientEnvelope{
         {ClientID: "client_alice", Envelope: "base64-opaque-envelope"},
@@ -26,7 +27,7 @@ created, err := c.CreateSecretPayload(client.CreateSecretPayload{
 })
 ```
 
-These types and methods are SDK-facing transport APIs. `pkg/client/types.go` and `pkg/client/public_transport.go` deliberately avoid importing or exposing `custodia/internal/*`.
+These types and methods are SDK-facing transport APIs. `pkg/client/types.go` and `pkg/client/public_transport.go` deliberately avoid importing or exposing `custodia/internal/*`. New integrations should prefer the `namespace/key` helpers for read, share, revoke, version metadata, access metadata, update and delete flows.
 
 
 ## Public operational methods
@@ -101,7 +102,7 @@ if err := opts.Validate(); err != nil {
 
 ## Internal-model helpers
 
-Internal-model methods such as `CreateSecret`, `GetSecret`, `ShareSecret`, `Me`, `ListSecrets`, `ListClients`, `Status`, `Version`, `Diagnostics`, `RevocationStatus` and `ListAuditEvents` remain for monorepo use, but several expose internal model types and are documented as internal-model helpers. New external consumers should use the public transport, operational and `namespace/key` crypto methods.
+Internal-model methods such as `CreateSecret`, `GetSecret`, `ShareSecret`, `Me`, `ListSecrets`, `ListClients`, `Status`, `Version`, `Diagnostics`, `RevocationStatus` and `ListAuditEvents` remain for monorepo use, but several expose internal model types and are documented as internal-model helpers. New external consumers should use the public transport, operational and `namespace/key` methods.
 
 ## External consumer contract
 

@@ -33,6 +33,8 @@ String response = client.createSecretPayload("""
     """);
 
 String secret = client.getSecretPayloadByKey("default", "db");
+String versions = client.listSecretVersionMetadataByKey("default", "db", 50);
+String access = client.listSecretAccessMetadataByKey("default", "db", 50);
 client.shareSecretPayloadByKey("default", "db", "{\"target_client_id\":\"client_bob\",\"envelope\":\"base64env\",\"permissions\":4}");
 client.createSecretVersionPayloadByKey("default", "db", "{\"ciphertext\":\"base64cipher2\",\"envelopes\":[{\"client_id\":\"self\",\"envelope\":\"base64env2\"}],\"permissions\":7}");
 client.revokeAccessByKey("default", "db", "client_bob");

@@ -38,7 +38,7 @@ Returns metadata for secrets whose latest active version is readable by the call
 
 Resolves the authenticated caller's visible keyspace and returns the latest readable version. `namespace` defaults to `default` when omitted; `key` is required.
 
-`GET /v1/secrets/{secret_id}` is an internal-id endpoint for operator tooling and low-level SDK code. Normal clients should use the by-key route.
+`GET /v1/secrets/{secret_id}` is an internal-id endpoint for operator tooling. Normal clients should use the by-key route.
 
 Returns the latest readable version for the caller only:
 
@@ -59,7 +59,7 @@ Returns the latest readable version for the caller only:
 
 Resolves the caller-visible secret by namespace/key and requires `share` on the selected version. The request must include a base64-encoded envelope generated client-side for the target client.
 
-`POST /v1/secrets/{secret_id}/share` is an internal-id endpoint for operator tooling and low-level SDK code.
+`POST /v1/secrets/{secret_id}/share` is an internal-id endpoint for operator tooling.
 
 ## Secret new version
 
@@ -67,7 +67,7 @@ Resolves the caller-visible secret by namespace/key and requires `share` on the 
 
 Resolves the caller-visible secret by namespace/key and requires `write`. Used for strong revocation and client-side cryptographic rotation by uploading new base64-encoded ciphertext and new opaque envelopes. Creating a new version supersedes previous active versions and cancels pending access grants for those versions, so future reads and activations use only the latest client-side material. Requests with more than `CUSTODIA_MAX_ENVELOPES_PER_SECRET` recipients are rejected with `413 Payload Too Large`; the default limit is `100`.
 
-`POST /v1/secrets/{secret_id}/versions` is an internal-id endpoint for operator tooling and low-level SDK code.
+`POST /v1/secrets/{secret_id}/versions` is an internal-id endpoint for operator tooling.
 
 ## Secret version metadata
 
@@ -124,7 +124,7 @@ Requires the caller to have `share` on the pending request version. The request 
 
 Resolves the owner-visible secret by namespace/key and revokes an active access grant. Only the owner can revoke another client's access.
 
-`DELETE /v1/secrets/{secret_id}/access/{client_id}` is an internal-id endpoint for operator tooling and low-level SDK code. Previously downloaded ciphertext and envelope remain outside server control.
+`DELETE /v1/secrets/{secret_id}/access/{client_id}` is an internal-id endpoint for operator tooling. Previously downloaded ciphertext and envelope remain outside server control.
 
 ## Audit events
 

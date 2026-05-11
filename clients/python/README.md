@@ -13,11 +13,14 @@ Implemented helpers:
 - `create_secret(payload)`
 - `list_secrets()` metadata-only, no ciphertext or envelopes
 - `get_secret_by_key(namespace, key)` user-facing lookup
+- `list_secret_versions_by_key(namespace, key)` metadata-only, no ciphertext or crypto metadata
+- `list_secret_access_by_key(namespace, key)` metadata-only, no envelopes
 - `get_secret(secret_id)` internal-id lookup for operator tooling
-- `list_secret_versions(secret_id)` metadata-only, no ciphertext or crypto metadata
-- `list_secret_access(secret_id)` metadata-only, no envelopes
+- `list_secret_versions(secret_id)` internal-id metadata lookup for operator tooling
+- `list_secret_access(secret_id)` internal-id metadata lookup for operator tooling
 - `status()` admin metadata-only operational status
 - `share_secret_by_key(namespace, key, payload)` user-facing lookup
+- `revoke_access_by_key(namespace, key, client_id)` user-facing revoke
 - `share_secret(secret_id, payload)` internal-id lookup for operator tooling
 - `request_access_grant(secret_id, payload)`
 - `activate_access_grant(secret_id, client_id, payload)`
