@@ -307,7 +307,9 @@ fn high_level_crypto_client_creates_keyspace_payload() {
     let create_body: serde_json::Value = serde_json::from_str(fake.requests()[0].body.as_ref().unwrap()).unwrap();
     assert_eq!(create_body["namespace"], "db01");
     assert_eq!(create_body["key"], "user:sys");
-    assert_eq!(create_body["crypto_metadata"]["aad"]["secret_name"], "db01/user:sys");
+    assert_eq!(create_body["crypto_metadata"]["aad"]["namespace"], "db01");
+    assert_eq!(create_body["crypto_metadata"]["aad"]["key"], "user:sys");
+    assert_eq!(create_body["crypto_metadata"]["aad"]["secret_version"], 1);
     assert_eq!(create_body["envelopes"].as_array().unwrap().len(), 2);
 }
 
@@ -337,10 +339,13 @@ fn high_level_crypto_client_creates_and_reads_local_plaintext() {
         .unwrap();
 
     let create_body: serde_json::Value = serde_json::from_str(fake.requests()[0].body.as_ref().unwrap()).unwrap();
-    assert_eq!(create_body["name"], "db/password");
+    assert_eq!(create_body["namespace"], "default");
+    assert_eq!(create_body["key"], "db/password");
     assert_ne!(create_body["ciphertext"], "local plaintext");
     assert_eq!(create_body["crypto_metadata"]["version"], custodia_client::CRYPTO_VERSION_V1);
-    assert_eq!(create_body["crypto_metadata"]["aad"]["secret_name"], "db/password");
+    assert_eq!(create_body["crypto_metadata"]["aad"]["namespace"], "default");
+    assert_eq!(create_body["crypto_metadata"]["aad"]["key"], "db/password");
+    assert_eq!(create_body["crypto_metadata"]["aad"]["secret_version"], 1);
     assert_eq!(create_body["envelopes"].as_array().unwrap().len(), 2);
 
     let alice_envelope = create_body["envelopes"]
@@ -352,6 +357,8 @@ fn high_level_crypto_client_creates_and_reads_local_plaintext() {
         .clone();
     fake.push_response(json_response(json!({
         "secret_id": "550e8400-e29b-41d4-a716-446655440000",
+        "namespace": "db01",
+        "key": "user:sys",
         "version_id": "11111111-1111-4111-8111-111111111111",
         "ciphertext": create_body["ciphertext"],
         "crypto_metadata": create_body["crypto_metadata"],
@@ -373,8 +380,9 @@ fn high_level_crypto_client_shares_existing_dek_without_plaintext_server_side() 
 
     let nonce = random_test_bytes(custodia_client::AES_GCM_NONCE_BYTES);
     let aad_inputs = custodia_client::CanonicalAADInputs {
-        secret_id: "550e8400-e29b-41d4-a716-446655440000".to_string(),
-        ..Default::default()
+        namespace: "db01".to_string(),
+        key: "user:sys".to_string(),
+        secret_version: 1,
     };
     let metadata = custodia_client::metadata_v1(aad_inputs.clone(), &nonce);
     let aad = custodia_client::build_canonical_aad(&metadata, &aad_inputs).unwrap();
@@ -386,6 +394,8 @@ fn high_level_crypto_client_shares_existing_dek_without_plaintext_server_side() 
 
     fake.push_response(json_response(json!({
         "secret_id": "550e8400-e29b-41d4-a716-446655440000",
+        "namespace": "db01",
+        "key": "user:sys",
         "version_id": "11111111-1111-4111-8111-111111111111",
         "ciphertext": custodia_client::encode_base64(&custodia_client::seal_content_aes_256_gcm(&dek, &nonce, b"secret", &aad).unwrap()),
         "crypto_metadata": metadata.to_value(),

@@ -79,11 +79,11 @@ pub type CryptoResult<T> = std::result::Result<T, CryptoError>;
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CanonicalAADInputs {
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub secret_id: String,
+    pub namespace: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub secret_name: String,
-    #[serde(default, skip_serializing_if = "String::is_empty")]
-    pub version_id: String,
+    pub key: String,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub secret_version: u32,
 }
 
 impl CanonicalAADInputs {
@@ -92,9 +92,9 @@ impl CanonicalAADInputs {
             return Self::default();
         };
         Self {
-            secret_id: string_field(map.get("secret_id")).unwrap_or_default(),
-            secret_name: string_field(map.get("secret_name")).unwrap_or_default(),
-            version_id: string_field(map.get("version_id")).unwrap_or_default(),
+            namespace: string_field(map.get("namespace")).unwrap_or_default(),
+            key: string_field(map.get("key")).unwrap_or_default(),
+            secret_version: value_u32(map.get("secret_version")),
         }
     }
 }
@@ -136,12 +136,9 @@ struct CanonicalAADDocument<'a> {
     version: &'a str,
     content_cipher: &'a str,
     envelope_scheme: &'a str,
-    #[serde(skip_serializing_if = "str::is_empty")]
-    secret_id: &'a str,
-    #[serde(skip_serializing_if = "str::is_empty")]
-    secret_name: &'a str,
-    #[serde(skip_serializing_if = "str::is_empty")]
-    version_id: &'a str,
+    namespace: &'a str,
+    key: &'a str,
+    secret_version: u32,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -324,16 +321,16 @@ pub fn validate_metadata(metadata: &CryptoMetadata) -> CryptoResult<()> {
 
 pub fn build_canonical_aad(metadata: &CryptoMetadata, inputs: &CanonicalAADInputs) -> CryptoResult<Vec<u8>> {
     validate_metadata(metadata)?;
-    if inputs.secret_id.is_empty() && inputs.secret_name.is_empty() {
+    if inputs.namespace.is_empty() || inputs.key.is_empty() || inputs.secret_version == 0 {
         return Err(CryptoError::MalformedAAD);
     }
     serde_json::to_vec(&CanonicalAADDocument {
         version: &metadata.version,
         content_cipher: &metadata.content_cipher,
         envelope_scheme: &metadata.envelope_scheme,
-        secret_id: &inputs.secret_id,
-        secret_name: &inputs.secret_name,
-        version_id: &inputs.version_id,
+        namespace: &inputs.namespace,
+        key: &inputs.key,
+        secret_version: inputs.secret_version,
     })
     .map_err(|err| CryptoError::MalformedCryptoMetadata(err.to_string()))
 }
@@ -533,4 +530,20 @@ fn string_field(value: Option<&Value>) -> Option<String> {
         Some(value) if !value.is_null() => Some(value.to_string()),
         _ => None,
     }
+}
+
+fn value_u32(value: Option<&Value>) -> u32 {
+    match value {
+        Some(Value::Number(value)) => value
+            .as_u64()
+            .filter(|parsed| *parsed <= u32::MAX as u64)
+            .map(|parsed| parsed as u32)
+            .unwrap_or_default(),
+        Some(Value::String(value)) => value.parse::<u32>().unwrap_or_default(),
+        _ => 0,
+    }
+}
+
+fn is_zero(value: &u32) -> bool {
+    *value == 0
 }
