@@ -102,7 +102,7 @@ if err := opts.Validate(); err != nil {
 
 ## Internal-model helpers
 
-Internal-model methods such as `CreateSecret`, `GetSecret`, `ShareSecret`, `Me`, `ListSecrets`, `ListClients`, `Status`, `Version`, `Diagnostics`, `RevocationStatus` and `ListAuditEvents` remain for monorepo use, but several expose internal model types and are documented as internal-model helpers. New external consumers should use the public transport, operational and `namespace/key` methods.
+Internal-model methods such as `CreateSecret`, `GetSecret`, `ListSecretVersions`, `ListSecretAccess`, `ShareSecret`, `RequestAccessGrant`, `ActivateAccessGrant`, `RevokeAccess`, `CreateSecretVersion`, `DeleteSecret`, `Me`, `ListSecrets`, `ListClients`, `Status`, `Version`, `Diagnostics`, `RevocationStatus` and `ListAuditEvents` remain for monorepo/operator use. Several expose internal model types or generated internal ids and are deliberately not the public workflow surface. New external consumers should use the public transport, operational and `namespace/key` methods.
 
 ## External consumer contract
 
