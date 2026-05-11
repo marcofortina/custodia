@@ -98,6 +98,7 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 - SDK release policy: [`docs/SDK_RELEASE_POLICY.md`](docs/SDK_RELEASE_POLICY.md)
 - Linux DEB/RPM packaging: [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md)
 - Start here / install quickstart: [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
+- Release notes for 0.1.0: [`docs/RELEASE_NOTES_0_1_0.md`](docs/RELEASE_NOTES_0_1_0.md)
 - SBOM artifacts: [`docs/SBOM.md`](docs/SBOM.md)
 
 ## Linux packages
@@ -128,7 +129,7 @@ Generate a release SBOM:
 VERSION=0.1.0 make sbom
 ```
 
-For a clean machine first run, start with **[`docs/QUICKSTART.md`](docs/QUICKSTART.md)**.
+For a clean machine first run, start with **[`docs/QUICKSTART.md`](docs/QUICKSTART.md)**. For the release scope and final pre-release guardrails, see **[`docs/RELEASE_NOTES_0_1_0.md`](docs/RELEASE_NOTES_0_1_0.md)**.
 
 The package split is:
 

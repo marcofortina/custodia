@@ -1,6 +1,6 @@
 # Custodia release check
 
-`make release-check` is the local pre-release gate for the repository baseline.
+`make release-check` is the local pre-release gate for the repository baseline. For the 0.1.0 release scope, see [`RELEASE_NOTES_0_1_0.md`](RELEASE_NOTES_0_1_0.md).
 
 It runs:
 
