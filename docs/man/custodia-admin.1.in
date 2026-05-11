@@ -97,6 +97,10 @@ not print ciphertext or recipient envelopes.
 .B access list --key KEY [--namespace NS] [--limit N]
 List active access metadata for the selected namespace/key secret.
 .TP
+.B access requests [--limit N] [--namespace NS] [--key KEY] [--status STATUS]
+List pending/activated/revoked access request metadata. Optional namespace/key
+filters match the public keyspace workflow; internal server ids are not required.
+.TP
 .B access grant-request --key KEY [--namespace NS] --client-id ID --permissions read[,write,share]
 Create a pending access grant request for a target client. The selected secret is
 resolved by namespace/key; generated server ids are not part of normal operator

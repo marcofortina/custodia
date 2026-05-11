@@ -1423,7 +1423,8 @@ func runAccessList(cfg *cliConfig, args []string) error {
 func runAccessRequests(cfg *cliConfig, args []string) error {
 	cmd := flag.NewFlagSet("access requests", flag.ExitOnError)
 	limit := cmd.Int("limit", 100, "maximum pending grant metadata rows to return, up to 500")
-	secretID := cmd.String("secret-id", "", "optional secret id filter")
+	namespace := cmd.String("namespace", "", "optional secret namespace filter")
+	key := cmd.String("key", "", "optional secret key filter")
 	status := cmd.String("status", "", "optional status filter: pending, activated, revoked or expired")
 	clientID := cmd.String("client-id", "", "optional target client id filter")
 	requestedBy := cmd.String("requested-by-client-id", "", "optional requester client id filter")
@@ -1431,8 +1432,11 @@ func runAccessRequests(cfg *cliConfig, args []string) error {
 	if *limit <= 0 || *limit > 500 {
 		return fmt.Errorf("--limit must be between 1 and 500")
 	}
-	if trimmed := strings.TrimSpace(*secretID); trimmed != "" && !model.ValidUUIDID(trimmed) {
-		return fmt.Errorf("--secret-id is invalid")
+	if trimmed := strings.TrimSpace(*namespace); trimmed != "" && !model.ValidSecretNamespace(trimmed) {
+		return fmt.Errorf("--namespace is invalid")
+	}
+	if trimmed := strings.TrimSpace(*key); trimmed != "" && !model.ValidSecretKey(trimmed) {
+		return fmt.Errorf("--key is invalid")
 	}
 	if trimmed := strings.TrimSpace(*status); trimmed != "" && !model.ValidAccessRequestStatus(trimmed) {
 		return fmt.Errorf("--status is invalid")
@@ -1445,7 +1449,8 @@ func runAccessRequests(cfg *cliConfig, args []string) error {
 	}
 	query := url.Values{}
 	query.Set("limit", strconv.Itoa(*limit))
-	addQueryFilter(query, "secret_id", *secretID)
+	addQueryFilter(query, "namespace", *namespace)
+	addQueryFilter(query, "key", *key)
 	addQueryFilter(query, "status", *status)
 	addQueryFilter(query, "client_id", *clientID)
 	addQueryFilter(query, "requested_by_client_id", *requestedBy)
@@ -1732,7 +1737,7 @@ func usage() {
   custodia-admin [global flags] audit verify [--limit N]
   custodia-admin [global flags] secret versions --key KEY [--namespace NS]
   custodia-admin [global flags] access list --key KEY [--namespace NS]
-  custodia-admin [global flags] access requests [--limit N] [--secret-id ID] [--status STATUS]
+  custodia-admin [global flags] access requests [--limit N] [--namespace NS] [--key KEY] [--status STATUS]
   custodia-admin [global flags] access grant-request --key KEY [--namespace NS] --client-id ID --permissions read[,write,share]
   custodia-admin [global flags] access activate --key KEY [--namespace NS] --client-id ID --envelope-file FILE
   custodia-admin [global flags] access revoke --key KEY [--namespace NS] --client-id ID

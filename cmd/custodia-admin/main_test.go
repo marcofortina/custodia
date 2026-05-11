@@ -167,8 +167,11 @@ func TestRunAccessListRejectsInvalidLimit(t *testing.T) {
 }
 
 func TestRunAccessRequestsRejectsInvalidFilters(t *testing.T) {
-	if err := runAccessRequests(&cliConfig{}, []string{"--secret-id", "not-a-uuid"}); err == nil {
-		t.Fatal("expected invalid secret id filter error")
+	if err := runAccessRequests(&cliConfig{}, []string{"--namespace", "bad\nnamespace"}); err == nil {
+		t.Fatal("expected invalid namespace filter error")
+	}
+	if err := runAccessRequests(&cliConfig{}, []string{"--key", "bad\nkey"}); err == nil {
+		t.Fatal("expected invalid key filter error")
 	}
 	if err := runAccessRequests(&cliConfig{}, []string{"--status", "done"}); err == nil {
 		t.Fatal("expected invalid status filter error")
