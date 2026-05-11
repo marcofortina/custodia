@@ -16,6 +16,7 @@ The Custodia web console is an admin-only, metadata-only surface.
 - `/web/status` — operational status.
 - `/web/diagnostics` — runtime counters and uptime metadata only.
 - `/web/clients` — client metadata.
+- `/web/clients/{client_id}` — client detail drilldown with metadata-only visible keyspace, ownership and share summaries.
 - `/web/access-requests` — pending grant metadata.
 - `/web/audit` — latest audit metadata.
 - `/web/audit/verify` — audit hash-chain verification summary.
@@ -24,6 +25,8 @@ The Custodia web console is an admin-only, metadata-only surface.
 Unknown HTML console routes and handled web-console `4xx`/`5xx` responses render the shared styled error page instead of Go's plain fallback bodies. JSON-only passkey endpoints remain JSON/error surfaces and must not render the HTML console shell.
 
 The API remains the source of truth for automation. The web console is a responsive, metadata-only operator surface even when TOTP/passkey web authentication is enabled. Authenticated pages include a logout button that clears only the web MFA session cookie; mTLS identity remains controlled by the browser certificate.
+
+Client detail pages are scoped by client because `namespace/key` is not globally unique. The admin drilldown shows the keyspace visible to that client, whether each entry is owned by the client or shared with the client, and share metadata for secrets owned by that client. It still never renders plaintext, ciphertext, recipient envelopes, DEKs or client-side key material.
 
 ## Local assets and refresh behavior
 
@@ -35,19 +38,18 @@ The console serves local embedded assets only:
 
 The web CSP allows local scripts/styles only and does not require inline styles. Authenticated console pages include an AJAX refresh control with a default 10-second interval and selectable 5/10/15/30-second intervals. Refreshes swap only `#console-main`, preserve the current URL/query string, pause when the tab is hidden and avoid refreshing while a filter input is focused.
 
-Client-side pagination is enabled for bounded data tables on Clients, Access Requests and Audit Events with 10 rows per page.
+Client-side pagination is enabled for bounded data tables on Clients, Client Detail, Access Requests and Audit Events with 10 rows per page.
 
 ## Query filters
 
-The metadata console supports bounded query filters for operational views. Access-request workflows use public `namespace/key` filters and intentionally do not expose internal secret-id filters:
+The metadata console supports bounded query filters for operational views. Client detail drilldown is intentionally path-based and always scoped to one client id, because namespace/key pairs are not globally unique. Access-request workflows use public `namespace/key` filters and intentionally do not expose internal secret-id filters:
 
 - `/web/audit?limit=100&outcome=failure&action=secret.read&actor_client_id=client_alice&resource_type=secret&resource_id=<id>`
 - `/web/audit/verify?limit=500`
 - `/web/clients?active=true`
 - `/web/access-requests?limit=100&namespace=db01&key=user:sys&status=pending&client_id=client_bob&requested_by_client_id=admin`
 
-Invalid filters return `400` and are audited as failures. These filters only affect metadata records already visible to an admin mTLS identity; the web console still never renders ciphertext, envelopes, plaintext or key material.
-
+Invalid filters return `400` and are audited as failures. These filters only affect metadata records already visible to an admin mTLS identity; the web console still never renders ciphertext, envelopes, plaintext or key material. Client detail pages show `namespace/key`, relationship, owner, permissions and active share metadata only.
 
 ## Runtime diagnostics
 

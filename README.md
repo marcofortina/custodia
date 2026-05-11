@@ -242,7 +242,7 @@ Production signer mode requires mTLS and a dedicated CA material backend. See `d
 
 ## Web metadata console
 
-The admin web console is intentionally metadata-only. It requires an admin mTLS identity and never renders ciphertext, envelopes, plaintext, or key material. See `docs/WEB_CONSOLE.md` for the current page map and security boundary.
+The admin web console is intentionally metadata-only. It requires an admin mTLS identity and never renders ciphertext, envelopes, plaintext, or key material. Client drilldown pages show only metadata such as visible keyspace, owner/relationship and share permissions. See `docs/WEB_CONSOLE.md` for the current page map and security boundary.
 
 ## HTTP timeout guardrails
 
