@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -140,10 +141,10 @@ func (a *app) usage() {
   custodia-client config write --client-id ID [--server-url URL --out FILE --cert FILE --key FILE --ca FILE --crypto-key FILE]
   custodia-client config check --client-id ID|--config FILE
   custodia-client doctor --client-id ID|--config FILE [--online]
-  custodia-client secret put --client-id ID --key KEY [--namespace NS] --value-file FILE [--recipient ID=PUBLIC.json]
+  custodia-client secret put --client-id ID --key KEY [--namespace NS] --value-file FILE [--recipient ID=PUBLIC.json] [--permissions read[,write,share]|all|BITS]
   custodia-client secret get --client-id ID --key KEY [--namespace NS] [--out FILE]
-  custodia-client secret update --client-id ID --key KEY [--namespace NS] --value-file FILE [--recipient ID=PUBLIC.json]
-  custodia-client secret share --client-id ID --key KEY [--namespace NS] --target-client-id ID --recipient ID=PUBLIC.json
+  custodia-client secret update --client-id ID --key KEY [--namespace NS] --value-file FILE [--recipient ID=PUBLIC.json] [--permissions read[,write,share]|all|BITS]
+  custodia-client secret share --client-id ID --key KEY [--namespace NS] --target-client-id ID --recipient ID=PUBLIC.json [--permissions read[,write,share]|all|BITS]
   custodia-client secret versions --client-id ID --key KEY [--namespace NS] [--limit N]
   custodia-client secret access list --client-id ID --key KEY [--namespace NS] [--limit N]
   custodia-client secret access revoke --client-id ID --key KEY [--namespace NS] --target-client-id ID --yes
@@ -671,13 +672,18 @@ func (a *app) runSecretPut(args []string) int {
 	namespace := fs.String("namespace", "default", "secret namespace")
 	key := fs.String("key", "", "secret key")
 	valueFile := fs.String("value-file", "", "plaintext file to encrypt locally")
-	permissions := fs.Int("permissions", defaultPermissions, "permission bitmask for recipients")
+	permissions := fs.String("permissions", "all", "permission bits or names: read, write, share, all")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
 	secretKey := strings.TrimSpace(*key)
 	if secretKey == "" || strings.TrimSpace(*valueFile) == "" {
 		fmt.Fprintln(a.stderr, "--key and --value-file are required")
+		return 2
+	}
+	permissionBits, err := parsePermissionBits(*permissions, defaultPermissions)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 2
 	}
 	plaintext, err := os.ReadFile(*valueFile)
@@ -695,7 +701,7 @@ func (a *app) runSecretPut(args []string) int {
 		Key:         secretKey,
 		Plaintext:   plaintext,
 		Recipients:  recipients,
-		Permissions: *permissions,
+		Permissions: permissionBits,
 	})
 	if err != nil {
 		fmt.Fprintf(a.stderr, "create encrypted secret: %v\n", err)
@@ -782,7 +788,7 @@ func (a *app) runSecretShare(args []string) int {
 	namespace := fs.String("namespace", "default", "secret namespace")
 	key := fs.String("key", "", "secret key")
 	targetClientID := fs.String("target-client-id", "", "target recipient client id")
-	permissions := fs.Int("permissions", defaultSharePerms, "target permission bitmask")
+	permissions := fs.String("permissions", "read", "permission bits or names: read, write, share, all")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
@@ -790,12 +796,17 @@ func (a *app) runSecretShare(args []string) int {
 		fmt.Fprintln(a.stderr, "--key and --target-client-id are required")
 		return 2
 	}
+	permissionBits, err := parsePermissionBits(*permissions, defaultSharePerms)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 2
+	}
 	cryptoClient, _, err := buildCryptoClient(transport, crypto)
 	if err != nil {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
-	if err := cryptoClient.ShareEncryptedSecretByKey(context.Background(), *namespace, *key, sdk.ShareEncryptedSecretRequest{TargetClientID: *targetClientID, Permissions: *permissions}); err != nil {
+	if err := cryptoClient.ShareEncryptedSecretByKey(context.Background(), *namespace, *key, sdk.ShareEncryptedSecretRequest{TargetClientID: *targetClientID, Permissions: permissionBits}); err != nil {
 		fmt.Fprintf(a.stderr, "share encrypted secret: %v\n", err)
 		return 1
 	}
@@ -823,12 +834,17 @@ func (a *app) runSecretVersionPut(args []string) int {
 	namespace := fs.String("namespace", "default", "secret namespace")
 	key := fs.String("key", "", "secret key")
 	valueFile := fs.String("value-file", "", "plaintext file to encrypt locally")
-	permissions := fs.Int("permissions", defaultPermissions, "permission bitmask for recipients")
+	permissions := fs.String("permissions", "all", "permission bits or names: read, write, share, all")
 	if !parseFlags(fs, args, a.stderr) {
 		return 2
 	}
 	if strings.TrimSpace(*key) == "" || strings.TrimSpace(*valueFile) == "" {
 		fmt.Fprintln(a.stderr, "--key and --value-file are required")
+		return 2
+	}
+	permissionBits, err := parsePermissionBits(*permissions, defaultPermissions)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 2
 	}
 	plaintext, err := os.ReadFile(*valueFile)
@@ -841,7 +857,7 @@ func (a *app) runSecretVersionPut(args []string) int {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
-	ref, err := cryptoClient.CreateEncryptedSecretVersionByKey(context.Background(), *namespace, *key, sdk.CreateEncryptedSecretVersionRequest{Plaintext: plaintext, Recipients: recipients, Permissions: *permissions})
+	ref, err := cryptoClient.CreateEncryptedSecretVersionByKey(context.Background(), *namespace, *key, sdk.CreateEncryptedSecretVersionRequest{Plaintext: plaintext, Recipients: recipients, Permissions: permissionBits})
 	if err != nil {
 		fmt.Fprintf(a.stderr, "create encrypted secret version: %v\n", err)
 		return 1
@@ -996,6 +1012,41 @@ func parseFlags(fs *flag.FlagSet, args []string, stderr io.Writer) bool {
 	return true
 }
 
+func parsePermissionBits(value string, fallback int) (int, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return fallback, nil
+	}
+	if bits, err := strconv.Atoi(value); err == nil {
+		if !model.ValidPermissionBits(bits) {
+			return 0, fmt.Errorf("invalid --permissions value %q; use read, write, share, all, or a valid bitmask", value)
+		}
+		return bits, nil
+	}
+
+	bits := 0
+	for _, token := range strings.Split(value, ",") {
+		switch strings.ToLower(strings.TrimSpace(token)) {
+		case "read":
+			bits |= int(model.PermissionRead)
+		case "write":
+			bits |= int(model.PermissionWrite)
+		case "share":
+			bits |= int(model.PermissionShare)
+		case "all":
+			bits |= int(model.PermissionAll)
+		case "":
+			return 0, fmt.Errorf("invalid --permissions value %q; empty permission token", value)
+		default:
+			return 0, fmt.Errorf("invalid --permissions value %q; use read, write, share, all, or a valid bitmask", value)
+		}
+	}
+	if !model.ValidPermissionBits(bits) {
+		return 0, fmt.Errorf("invalid --permissions value %q; use read, write, share, all, or a valid bitmask", value)
+	}
+	return bits, nil
+}
+
 func registerTransportFlags(fs *flag.FlagSet, flags *transportFlags) {
 	registerTransportFlagsWithKeyName(fs, flags, "key")
 }
@@ -1054,7 +1105,7 @@ func buildCryptoClient(transport transportFlags, crypto cryptoFlags) (*sdk.Crypt
 		crypto.cryptoKey = paths.CryptoPrivate
 	}
 	if strings.TrimSpace(crypto.cryptoKey) == "" {
-		return nil, nil, fmt.Errorf("--crypto-key is required")
+		return nil, nil, fmt.Errorf("--crypto-key is required; pass --client-id for a standard profile created by key generate/config write, pass --config, or pass --crypto-key explicitly")
 	}
 	keyFile, privateKey, err := readPrivateKeyFile(crypto.cryptoKey)
 	if err != nil {

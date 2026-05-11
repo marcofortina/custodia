@@ -147,6 +147,53 @@ func TestWritePublicKeyUsesDocumentedJSONShape(t *testing.T) {
 	}
 }
 
+func TestParsePermissionBitsAcceptsNamesAndBitmasks(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		want  int
+	}{
+		{value: "read", want: sdk.PermissionRead},
+		{value: "write,read", want: sdk.PermissionWrite | sdk.PermissionRead},
+		{value: "share, write, read", want: sdk.PermissionAll},
+		{value: "all", want: sdk.PermissionAll},
+		{value: "4", want: sdk.PermissionRead},
+	} {
+		t.Run(tc.value, func(t *testing.T) {
+			got, err := parsePermissionBits(tc.value, sdk.PermissionAll)
+			if err != nil {
+				t.Fatalf("parsePermissionBits(%q) error = %v", tc.value, err)
+			}
+			if got != tc.want {
+				t.Fatalf("parsePermissionBits(%q) = %d, want %d", tc.value, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestParsePermissionBitsRejectsInvalidNames(t *testing.T) {
+	if _, err := parsePermissionBits("read,admin", sdk.PermissionAll); err == nil {
+		t.Fatal("expected invalid permission error")
+	}
+}
+
+func TestSecretShareMissingProfileExplainsCryptoKeyFallbacks(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{
+		"secret", "share",
+		"--key", "smoke-demo",
+		"--target-client-id", "client_bob",
+		"--recipient", "client_bob=/tmp/client_bob.x25519.pub.json",
+	})
+	if code != 1 {
+		t.Fatalf("expected runtime failure, got %d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	for _, want := range []string{"--crypto-key is required", "--client-id", "--config", "--crypto-key explicitly"} {
+		if !strings.Contains(stderr.String(), want) {
+			t.Fatalf("expected %q in error, got: %s", want, stderr.String())
+		}
+	}
+}
+
 func TestKeyInspectReportsLocalPublicFingerprint(t *testing.T) {
 	dir := t.TempDir()
 	privatePath := filepath.Join(dir, "client_alice.x25519.json")

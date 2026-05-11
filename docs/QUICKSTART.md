@@ -333,7 +333,7 @@ sudo -u custodia custodia-admin client enrollment create --ttl 15m
 
 The command reads `/etc/custodia/custodia-server.yaml`, contacts the configured server URL, and prints a one-shot enrollment token plus the server URL. Transfer those values to the client host. The token is sensitive and expires quickly.
 
-Enrollment uses normal TLS certificate validation by default. The server URL must match the server certificate SAN. For disposable first-run labs with an untrusted local CA, `custodia-client mtls enroll` also supports `--insecure`, but do not use it for real remote clients.
+Enrollment uses normal TLS certificate validation by default. The server URL must match the server certificate SAN. This Quickstart uses a locally generated lab CA that is not installed in the client trust store yet, so the first disposable lab enrollment uses `--insecure`. For real remote clients, install/trust the Custodia CA first and remove `--insecure`.
 
 Set Alice's client id on Alice's workstation:
 
@@ -392,7 +392,7 @@ Create another enrollment token for Bob on the server/admin host:
 sudo -u custodia custodia-admin client enrollment create --ttl 15m
 ```
 
-Transfer Bob's enrollment values to Bob. Enroll Bob from Bob's workstation. Enrollment uses normal TLS verification by default; use `--insecure` only for disposable first-run labs:
+Transfer Bob's enrollment values to Bob. Enroll Bob from Bob's workstation. This disposable lab flow still uses the locally generated untrusted CA, so the example keeps `--insecure`. Remove it for real remote clients after installing/trusting the Custodia CA:
 
 ```bash
 export BOB_ID=client_bob
@@ -413,17 +413,23 @@ custodia-client config check --client-id "$BOB_ID"
 custodia-client doctor --client-id "$BOB_ID" --online
 ```
 
-Transfer Bob's public key to Alice through a trusted channel. The default path is `$HOME/.config/custodia/$BOB_ID/$BOB_ID.x25519.pub.json`, or `$XDG_CONFIG_HOME/custodia/$BOB_ID/$BOB_ID.x25519.pub.json` when `XDG_CONFIG_HOME` is set. Alice can then share the secret with Bob:
+Bob must transfer his application public key to Alice through a trusted channel. The default source path on Bob is `$HOME/.config/custodia/client_bob/client_bob.x25519.pub.json`, or `$XDG_CONFIG_HOME/custodia/client_bob/client_bob.x25519.pub.json` when `XDG_CONFIG_HOME` is set. Alice can then share the secret with Bob:
 
 ```bash
+ALICE_ID=client_alice
+SMOKE_NAMESPACE=default
+SMOKE_KEY=smoke-demo
+BOB_ID=client_bob
 BOB_PUBLIC_KEY="$HOME/$BOB_ID.x25519.pub.json"
 
-custodia-client secret share --client-id "$ALICE_ID" --namespace "$SMOKE_NAMESPACE" --key "$SMOKE_KEY" --target-client-id "$BOB_ID" --recipient "$BOB_ID=$BOB_PUBLIC_KEY" --permissions 4
+custodia-client secret share --client-id "$ALICE_ID" --namespace "$SMOKE_NAMESPACE" --key "$SMOKE_KEY" --target-client-id "$BOB_ID" --recipient "$BOB_ID=$BOB_PUBLIC_KEY" --permissions read
 ```
 
 Transfer the namespace/key values to Bob when Bob is remote. Bob can now read and decrypt the shared secret locally without knowing any owner or internal server id:
 
 ```bash
+SMOKE_NAMESPACE=default
+SMOKE_KEY=smoke-demo
 BOB_READBACK="$HOME/custodia-smoke-bob.readback.txt"
 
 custodia-client secret get --client-id "$BOB_ID" --namespace "$SMOKE_NAMESPACE" --key "$SMOKE_KEY" --out "$BOB_READBACK"

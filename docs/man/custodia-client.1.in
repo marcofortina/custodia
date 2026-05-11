@@ -84,18 +84,18 @@ Pass
 .B --online
 for an mTLS current-client reachability check.
 .TP
-.B secret put --client-id ID|--config FILE --key KEY [--namespace NS] --value-file FILE
+.B secret put --client-id ID|--config FILE --key KEY [--namespace NS] --value-file FILE [--permissions read[,write,share]|all|BITS]
 Encrypt a plaintext file locally and create a secret in the caller-visible namespace/key keyspace.
 .TP
 .B secret get --client-id ID|--config FILE --key KEY [--namespace NS] [--out FILE]
 Read a secret by namespace/key, decrypt locally, and write plaintext output with mode 0600.
 .TP
-.B secret share --client-id ID|--config FILE --key KEY [--namespace NS] --target-client-id ID --recipient ID=FILE
+.B secret share --client-id ID|--config FILE --key KEY [--namespace NS] --target-client-id ID --recipient ID=FILE [--permissions read[,write,share]|all|BITS]
 Grant another client access by rewrapping local key material to the target
 recipient public key. Sharing fails when the target already has the same
 namespace/key in its visible keyspace.
 .TP
-.B secret update --client-id ID|--config FILE --key KEY [--namespace NS] --value-file FILE [--recipient ID=FILE]
+.B secret update --client-id ID|--config FILE --key KEY [--namespace NS] --value-file FILE [--recipient ID=FILE] [--permissions read[,write,share]|all|BITS]
 Create a new encrypted version. Include every recipient that should keep access.
 .TP
 .B secret versions --client-id ID|--config FILE --key KEY [--namespace NS] [--limit N]

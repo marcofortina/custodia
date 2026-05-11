@@ -167,10 +167,12 @@ custodia-client secret share \
   --key smoke-demo \
   --target-client-id client_bob \
   --recipient client_bob=/path/to/client_bob.x25519.pub.json \
-  --permissions 4
+  --permissions read
 ```
 
 The CLI opens Alice's current envelope locally, rewraps the existing DEK for Bob, and sends only Bob's opaque envelope to the server.
+
+`--permissions` accepts readable names (`read`, `write`, `share`, `all`) or comma-separated combinations such as `read,write`. Numeric bitmasks remain accepted for advanced/debug workflows.
 
 ## Create a new encrypted version
 
@@ -185,7 +187,7 @@ custodia-client secret update \
   --key smoke-demo \
   --value-file "$HOME/custodia-smoke-secret.v2.txt" \
   --recipient client_bob=/path/to/client_bob.x25519.pub.json \
-  --permissions 7
+  --permissions all
 ```
 
 The creator is automatically included as a recipient. Other authorized clients must be provided explicitly with `--recipient` so they can read the new version.
