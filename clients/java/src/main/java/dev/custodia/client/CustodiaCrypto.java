@@ -114,11 +114,11 @@ public final class CustodiaCrypto {
     public static ContentCiphertext sealContentAES256GCM(byte[] key, byte[] plaintext, byte[] aad, RandomSource randomSource) {
         Objects.requireNonNull(randomSource, "randomSource");
         assertLength(key, AES256_GCM_KEY_BYTES, "invalid content key");
-        byte[] nonce = randomSource.randomBytes(AES_GCM_NONCE_BYTES);
-        assertLength(nonce, AES_GCM_NONCE_BYTES, "invalid content nonce");
         try {
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(AES_GCM_TAG_BYTES * 8, nonce));
+            cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new RandomSourceSecureRandom(randomSource));
+            byte[] nonce = cipher.getIV();
+            assertLength(nonce, AES_GCM_NONCE_BYTES, "invalid content nonce");
             cipher.updateAAD(aad);
             return new ContentCiphertext(nonce, cipher.doFinal(plaintext));
         } catch (GeneralSecurityException err) {
@@ -457,6 +457,23 @@ public final class CustodiaCrypto {
             byte[] out = new byte[length];
             secureRandom.nextBytes(out);
             return out;
+        }
+    }
+
+    private static final class RandomSourceSecureRandom extends SecureRandom {
+        private final transient RandomSource randomSource;
+
+        RandomSourceSecureRandom(RandomSource randomSource) {
+            this.randomSource = Objects.requireNonNull(randomSource, "randomSource");
+        }
+
+        @Override
+        public void nextBytes(byte[] bytes) {
+            byte[] generated = randomSource.randomBytes(bytes.length);
+            if (generated.length != bytes.length) {
+                throw new CryptoException("invalid generated content nonce length");
+            }
+            System.arraycopy(generated, 0, bytes, 0, bytes.length);
         }
     }
 
