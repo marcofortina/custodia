@@ -40,19 +40,19 @@ public final class CustodiaCryptoClientTest {
             "",
             null
         );
-        byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, new CustodiaCrypto.AADInputs("", "database-password", ""));
+        byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, new CustodiaCrypto.AADInputs("default", "database-password", 1));
         assertEquals(
-            "{\"version\":\"custodia.client-crypto.v1\",\"content_cipher\":\"aes-256-gcm\",\"envelope_scheme\":\"hpke-v1\",\"secret_name\":\"database-password\"}",
+            "{\"version\":\"custodia.client-crypto.v1\",\"content_cipher\":\"aes-256-gcm\",\"envelope_scheme\":\"hpke-v1\",\"namespace\":\"default\",\"key\":\"database-password\",\"secret_version\":1}",
             new String(aad, StandardCharsets.UTF_8),
             "canonical aad"
         );
-        assertEquals("32f7c1471093f0a85a963d5cfeaf3aeec8edcd52577175c6b4a826c5063144bf", CustodiaCrypto.canonicalAADSHA256(aad), "aad sha");
+        assertEquals("908d3fcaa6fced7ceb6aaabd8e2fc2a22bf55218d833cb0b99564cf49380413a", CustodiaCrypto.canonicalAADSHA256(aad), "aad sha");
         assertBytes(ALICE_PUBLIC, CustodiaCrypto.deriveX25519PublicKey(ALICE_PRIVATE), "alice public key");
 
         byte[] plaintext = b64("ZGF0YWJhc2UgcGFzc3dvcmQ6IGNvcnJlY3QgaG9yc2UgYmF0dGVyeSBzdGFwbGU=");
         byte[] ciphertext = CustodiaCrypto.sealContentAES256GCM(DEK_SINGLE, NONCE_SINGLE, plaintext, aad);
         assertEquals(
-            "94P22VzLbeb3J+osVz4T/Pr3Qx0LBv8TbYL/BKfId08ZJV6XCPThpSrEt2h4N+zSXBrZBDJM6o0a8r/q1gqj",
+            "94P22VzLbeb3J+osVz4T/Pr3Qx0LBv8TbYL/BKfId08ZJV6XCPThpSrEt2h4N+ywCz9Jb/eBlP+Xx5iQuZ/d",
             CustodiaCrypto.encodeBase64(ciphertext),
             "ciphertext"
         );
@@ -60,7 +60,7 @@ public final class CustodiaCryptoClientTest {
 
         byte[] envelope = CustodiaCrypto.sealHPKEV1Envelope(ALICE_PUBLIC, EPHEMERAL_SINGLE, DEK_SINGLE, aad);
         assertEquals(
-            "ehpOcJvwhaxJSroEabmx7aCrH3ixaqu3n/7akGI+hSIIS8IcAryGTNuiRs8bUbEeIim/t9y6DjZ/88RjRh0q2dWBY0/F6EA3484TSix3NNA=",
+            "ehpOcJvwhaxJSroEabmx7aCrH3ixaqu3n/7akGI+hSIIS8IcAryGTNuiRs8bUbEeIim/t9y6DjZ/88RjRh0q2f2CJAjK13CAjuAd46txQ0M=",
             CustodiaCrypto.encodeBase64(envelope),
             "envelope"
         );
@@ -82,16 +82,17 @@ public final class CustodiaCryptoClientTest {
 
         assertEquals("{\"secret_id\":\"s1\"}", response, "create response");
         String body = new String(transport.lastRequest.body(), StandardCharsets.UTF_8);
-        assertContains(body, "\"name\":\"database-password\"", "create name");
+        assertContains(body, "\"namespace\":\"default\"", "create namespace");
+        assertContains(body, "\"key\":\"database-password\"", "create key");
         assertContains(body, "\"content_nonce_b64\":\"YWFhYWFhYWFhYWFh\"", "create nonce");
-        assertContains(body, "\"ciphertext\":\"94P22VzLbeb3J+osVz4T/Pr3Qx0LBv8TbYL/BKfId08ZJV6XCPThpSrEt2h4N+zSXBrZBDJM6o0a8r/q1gqj\"", "create ciphertext");
-        assertContains(body, "\"envelope\":\"ehpOcJvwhaxJSroEabmx7aCrH3ixaqu3n/7akGI+hSIIS8IcAryGTNuiRs8bUbEeIim/t9y6DjZ/88RjRh0q2dWBY0/F6EA3484TSix3NNA=\"", "create envelope");
+        assertContains(body, "\"ciphertext\":\"94P22VzLbeb3J+osVz4T/Pr3Qx0LBv8TbYL/BKfId08ZJV6XCPThpSrEt2h4N+ywCz9Jb/eBlP+Xx5iQuZ/d\"", "create ciphertext");
+        assertContains(body, "\"envelope\":\"ehpOcJvwhaxJSroEabmx7aCrH3ixaqu3n/7akGI+hSIIS8IcAryGTNuiRs8bUbEeIim/t9y6DjZ/88RjRh0q2f2CJAjK13CAjuAd46txQ0M=\"", "create envelope");
     }
 
     private static void readsDecryptedSecretWithPersistedAADMetadata() throws Exception {
         QueueTransport transport = new QueueTransport();
         transport.enqueue(200, """
-            {"secret_id":"550e8400-e29b-41d4-a716-446655440000","version_id":"660e8400-e29b-41d4-a716-446655440000","ciphertext":"d+Ub720HWc3YmYcZyQPyyd3EK2QHKMg7iaKMgGg6Ir5RRRmfzoUe","crypto_metadata":{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","content_nonce_b64":"Y2NjY2NjY2NjY2Nj","aad":{"secret_id":"550e8400-e29b-41d4-a716-446655440000","version_id":"660e8400-e29b-41d4-a716-446655440000"}},"envelope":"ze/YeDqRtEZkDi4flVmds15ISgBxvSGCs7YNCBLBDHDZczDrK3IdDIfEWJA8JD3ERLLFg1eklPtBfJ2tbctFNV8yFiD0BrjltlAaV/RogLk=","permissions":7}
+            {"secret_id":"550e8400-e29b-41d4-a716-446655440000","namespace":"db01","key":"user:sys","version_id":"660e8400-e29b-41d4-a716-446655440000","ciphertext":"d+Ub720HWc3YmYcZyQPyyd3EK2QHKMi+yxJHvySpW7HrhWHy6Nqu","crypto_metadata":{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","content_nonce_b64":"Y2NjY2NjY2NjY2Nj","aad":{"namespace":"db01","key":"user:sys","secret_version":1}},"envelope":"ze/YeDqRtEZkDi4flVmds15ISgBxvSGCs7YNCBLBDHDZczDrK3IdDIfEWJA8JD3ERLLFg1eklPtBfJ2tbctFNb19vQo6Wuc3ZWZQFNAidO0=","permissions":7}
             """.trim());
         CustodiaClient client = CustodiaClient.withTransport(testConfig(), transport);
         CryptoCustodiaClient crypto = client.withCrypto(testOptions());

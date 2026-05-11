@@ -60,8 +60,10 @@ public final class CustodiaCrypto {
 
     public static byte[] buildCanonicalAAD(CryptoMetadata metadata, AADInputs inputs) {
         validateMetadata(metadata);
-        if ((inputs.secretId() == null || inputs.secretId().isBlank()) && (inputs.secretName() == null || inputs.secretName().isBlank())) {
-            throw new MalformedAADException("secret_id or secret_name is required");
+        if (inputs.namespace() == null || inputs.namespace().isBlank()
+            || inputs.key() == null || inputs.key().isBlank()
+            || inputs.secretVersion() <= 0) {
+            throw new MalformedAADException("namespace, key and secret_version are required");
         }
         StringBuilder json = new StringBuilder();
         json.append('{');
@@ -70,18 +72,12 @@ public final class CustodiaCrypto {
         appendJsonField(json, "content_cipher", metadata.contentCipher());
         json.append(',');
         appendJsonField(json, "envelope_scheme", metadata.envelopeScheme());
-        if (inputs.secretId() != null && !inputs.secretId().isBlank()) {
-            json.append(',');
-            appendJsonField(json, "secret_id", inputs.secretId());
-        }
-        if (inputs.secretName() != null && !inputs.secretName().isBlank()) {
-            json.append(',');
-            appendJsonField(json, "secret_name", inputs.secretName());
-        }
-        if (inputs.versionId() != null && !inputs.versionId().isBlank()) {
-            json.append(',');
-            appendJsonField(json, "version_id", inputs.versionId());
-        }
+        json.append(',');
+        appendJsonField(json, "namespace", inputs.namespace());
+        json.append(',');
+        appendJsonField(json, "key", inputs.key());
+        json.append(',');
+        json.append(quote("secret_version")).append(':').append(inputs.secretVersion());
         json.append('}');
         return json.toString().getBytes(StandardCharsets.UTF_8);
     }
@@ -217,24 +213,11 @@ public final class CustodiaCrypto {
     static String aadJson(AADInputs aad) {
         StringBuilder json = new StringBuilder();
         json.append('{');
-        boolean wrote = false;
-        if (aad.secretId() != null && !aad.secretId().isBlank()) {
-            appendJsonField(json, "secret_id", aad.secretId());
-            wrote = true;
-        }
-        if (aad.secretName() != null && !aad.secretName().isBlank()) {
-            if (wrote) {
-                json.append(',');
-            }
-            appendJsonField(json, "secret_name", aad.secretName());
-            wrote = true;
-        }
-        if (aad.versionId() != null && !aad.versionId().isBlank()) {
-            if (wrote) {
-                json.append(',');
-            }
-            appendJsonField(json, "version_id", aad.versionId());
-        }
+        appendJsonField(json, "namespace", aad.namespace());
+        json.append(',');
+        appendJsonField(json, "key", aad.key());
+        json.append(',');
+        json.append(quote("secret_version")).append(':').append(aad.secretVersion());
         json.append('}');
         return json.toString();
     }
@@ -385,11 +368,10 @@ public final class CustodiaCrypto {
 
     private record HPKEKeySchedule(byte[] key, byte[] nonce) {}
 
-    public record AADInputs(String secretId, String secretName, String versionId) {
+    public record AADInputs(String namespace, String key, int secretVersion) {
         public AADInputs {
-            secretId = secretId == null ? "" : secretId;
-            secretName = secretName == null ? "" : secretName;
-            versionId = versionId == null ? "" : versionId;
+            namespace = namespace == null ? "" : namespace;
+            key = key == null ? "" : key;
         }
     }
 

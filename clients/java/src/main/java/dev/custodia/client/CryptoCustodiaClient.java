@@ -36,14 +36,16 @@ public final class CryptoCustodiaClient {
         String normalizedName = requireText(name, "secret name");
         byte[] dek = random(CustodiaCrypto.AES256_GCM_KEY_BYTES);
         byte[] nonce = random(CustodiaCrypto.AES_GCM_NONCE_BYTES);
-        CustodiaCrypto.AADInputs aadInputs = new CustodiaCrypto.AADInputs("", normalizedName, "");
+        CustodiaCrypto.AADInputs aadInputs = new CustodiaCrypto.AADInputs("default", normalizedName, 1);
         CustodiaCrypto.CryptoMetadata metadata = CustodiaCrypto.metadataV1(aadInputs, nonce);
         byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, aadInputs);
         byte[] ciphertext = CustodiaCrypto.sealContentAES256GCM(dek, nonce, plaintext, aad);
 
         StringBuilder payload = new StringBuilder();
         payload.append('{');
-        appendField(payload, "name", normalizedName);
+        appendField(payload, "namespace", "default");
+        payload.append(',');
+        appendField(payload, "key", normalizedName);
         payload.append(',');
         appendField(payload, "ciphertext", CustodiaCrypto.encodeBase64(ciphertext));
         payload.append(',');
@@ -77,7 +79,7 @@ public final class CryptoCustodiaClient {
         String normalizedKey = requireText(key, "secret key");
         byte[] dek = random(CustodiaCrypto.AES256_GCM_KEY_BYTES);
         byte[] nonce = random(CustodiaCrypto.AES_GCM_NONCE_BYTES);
-        CustodiaCrypto.AADInputs aadInputs = new CustodiaCrypto.AADInputs("", aadSecretNameForKeyspace(normalizedNamespace, normalizedKey), "");
+        CustodiaCrypto.AADInputs aadInputs = new CustodiaCrypto.AADInputs(normalizedNamespace, normalizedKey, 1);
         CustodiaCrypto.CryptoMetadata metadata = CustodiaCrypto.metadataV1(aadInputs, nonce);
         byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, aadInputs);
         byte[] ciphertext = CustodiaCrypto.sealContentAES256GCM(dek, nonce, plaintext, aad);
@@ -111,9 +113,15 @@ public final class CryptoCustodiaClient {
     public String createEncryptedSecretVersion(String secretId, byte[] plaintext, List<String> recipients, int permissions, String expiresAt)
         throws IOException, InterruptedException, CustodiaHttpError {
         String normalizedSecretId = requireText(secretId, "secret id");
+        ParsedSecret currentSecret = ParsedSecret.parse(transport.getSecretPayload(normalizedSecretId));
+        CustodiaCrypto.AADInputs currentAADInputs = currentSecret.metadata().canonicalAADInputs(
+            new CustodiaCrypto.AADInputs(currentSecret.namespace(), currentSecret.key(), 1)
+        );
+        CustodiaCrypto.AADInputs aadInputs = new CustodiaCrypto.AADInputs(
+            currentAADInputs.namespace(), currentAADInputs.key(), currentAADInputs.secretVersion() + 1
+        );
         byte[] dek = random(CustodiaCrypto.AES256_GCM_KEY_BYTES);
         byte[] nonce = random(CustodiaCrypto.AES_GCM_NONCE_BYTES);
-        CustodiaCrypto.AADInputs aadInputs = new CustodiaCrypto.AADInputs(normalizedSecretId, "", "");
         CustodiaCrypto.CryptoMetadata metadata = CustodiaCrypto.metadataV1(aadInputs, nonce);
         byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, aadInputs);
         byte[] ciphertext = CustodiaCrypto.sealContentAES256GCM(dek, nonce, plaintext, aad);
@@ -150,9 +158,15 @@ public final class CryptoCustodiaClient {
     ) throws IOException, InterruptedException, CustodiaHttpError {
         String normalizedNamespace = requireText(namespace, "namespace");
         String normalizedKey = requireText(key, "secret key");
+        ParsedSecret currentSecret = ParsedSecret.parse(transport.getSecretPayloadByKey(normalizedNamespace, normalizedKey));
+        CustodiaCrypto.AADInputs currentAADInputs = currentSecret.metadata().canonicalAADInputs(
+            new CustodiaCrypto.AADInputs(normalizedNamespace, normalizedKey, 1)
+        );
+        CustodiaCrypto.AADInputs aadInputs = new CustodiaCrypto.AADInputs(
+            currentAADInputs.namespace(), currentAADInputs.key(), currentAADInputs.secretVersion() + 1
+        );
         byte[] dek = random(CustodiaCrypto.AES256_GCM_KEY_BYTES);
         byte[] nonce = random(CustodiaCrypto.AES_GCM_NONCE_BYTES);
-        CustodiaCrypto.AADInputs aadInputs = new CustodiaCrypto.AADInputs("", aadSecretNameForKeyspace(normalizedNamespace, normalizedKey), "");
         CustodiaCrypto.CryptoMetadata metadata = CustodiaCrypto.metadataV1(aadInputs, nonce);
         byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, aadInputs);
         byte[] ciphertext = CustodiaCrypto.sealContentAES256GCM(dek, nonce, plaintext, aad);
@@ -178,7 +192,7 @@ public final class CryptoCustodiaClient {
         String payload = transport.getSecretPayload(secretId);
         ParsedSecret secret = ParsedSecret.parse(payload);
         CustodiaCrypto.CryptoMetadata metadata = secret.metadata();
-        CustodiaCrypto.AADInputs fallback = new CustodiaCrypto.AADInputs(secret.secretId(), "", secret.versionId());
+        CustodiaCrypto.AADInputs fallback = new CustodiaCrypto.AADInputs(secret.namespace(), secret.key(), 1);
         CustodiaCrypto.AADInputs aadInputs = metadata.canonicalAADInputs(fallback);
         byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, aadInputs);
         if (metadata.contentNonceB64().isBlank()) {
@@ -194,7 +208,7 @@ public final class CryptoCustodiaClient {
         String payload = transport.getSecretPayloadByKey(namespace, key);
         ParsedSecret secret = ParsedSecret.parse(payload);
         CustodiaCrypto.CryptoMetadata metadata = secret.metadata();
-        CustodiaCrypto.AADInputs fallback = new CustodiaCrypto.AADInputs(secret.secretId(), "", secret.versionId());
+        CustodiaCrypto.AADInputs fallback = new CustodiaCrypto.AADInputs(secret.namespace(), secret.key(), 1);
         CustodiaCrypto.AADInputs aadInputs = metadata.canonicalAADInputs(fallback);
         byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, aadInputs);
         if (metadata.contentNonceB64().isBlank()) {
@@ -217,7 +231,7 @@ public final class CryptoCustodiaClient {
         String payload = transport.getSecretPayload(secretId);
         ParsedSecret secret = ParsedSecret.parse(payload);
         CustodiaCrypto.CryptoMetadata metadata = secret.metadata();
-        CustodiaCrypto.AADInputs fallback = new CustodiaCrypto.AADInputs(secret.secretId(), "", secret.versionId());
+        CustodiaCrypto.AADInputs fallback = new CustodiaCrypto.AADInputs(secret.namespace(), secret.key(), 1);
         CustodiaCrypto.AADInputs aadInputs = metadata.canonicalAADInputs(fallback);
         byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, aadInputs);
         byte[] dek = openSecretEnvelope(secret.envelope(), aad);
@@ -254,7 +268,7 @@ public final class CryptoCustodiaClient {
         String payload = transport.getSecretPayloadByKey(normalizedNamespace, normalizedKey);
         ParsedSecret secret = ParsedSecret.parse(payload);
         CustodiaCrypto.CryptoMetadata metadata = secret.metadata();
-        CustodiaCrypto.AADInputs fallback = new CustodiaCrypto.AADInputs(secret.secretId(), "", secret.versionId());
+        CustodiaCrypto.AADInputs fallback = new CustodiaCrypto.AADInputs(secret.namespace(), secret.key(), 1);
         CustodiaCrypto.AADInputs aadInputs = metadata.canonicalAADInputs(fallback);
         byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, aadInputs);
         byte[] dek = openSecretEnvelope(secret.envelope(), aad);
@@ -343,10 +357,6 @@ public final class CryptoCustodiaClient {
         return value.trim();
     }
 
-    private static String aadSecretNameForKeyspace(String namespace, String key) {
-        return namespace + "/" + key;
-    }
-
     private static void appendField(StringBuilder json, String key, String value) {
         json.append(CustodiaCrypto.quote(key)).append(':').append(CustodiaCrypto.quote(value));
     }
@@ -367,6 +377,8 @@ public final class CryptoCustodiaClient {
 
     private record ParsedSecret(
         String secretId,
+        String namespace,
+        String key,
         String versionId,
         String ciphertext,
         CustodiaCrypto.CryptoMetadata metadata,
@@ -381,9 +393,9 @@ public final class CryptoCustodiaClient {
             String aadObject = objectField(metadataObject, "aad");
             if (!aadObject.isBlank()) {
                 aad = new CustodiaCrypto.AADInputs(
-                    stringField(aadObject, "secret_id"),
-                    stringField(aadObject, "secret_name"),
-                    stringField(aadObject, "version_id")
+                    stringField(aadObject, "namespace"),
+                    stringField(aadObject, "key"),
+                    intField(aadObject, "secret_version")
                 );
             }
             CustodiaCrypto.CryptoMetadata metadata = new CustodiaCrypto.CryptoMetadata(
@@ -396,6 +408,8 @@ public final class CryptoCustodiaClient {
             CustodiaCrypto.validateMetadata(metadata);
             return new ParsedSecret(
                 stringField(json, "secret_id"),
+                stringField(json, "namespace"),
+                stringField(json, "key"),
                 stringField(json, "version_id"),
                 stringField(json, "ciphertext"),
                 metadata,

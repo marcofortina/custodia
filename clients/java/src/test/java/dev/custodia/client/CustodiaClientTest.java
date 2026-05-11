@@ -90,7 +90,7 @@ public final class CustodiaClientTest {
         assertEquals("https://vault.test/v1/secrets", transport.lastRequest.uri().toString(), "crypto by-key uri");
         assertContains(body, "\"namespace\":\"db01\"", "namespace payload");
         assertContains(body, "\"key\":\"user:sys\"", "key payload");
-        assertContains(body, "\"secret_name\":\"db01/user:sys\"", "keyspace AAD payload");
+        assertContains(body, "\"secret_version\":1", "keyspace AAD payload");
         assertContains(body, "\"client_id\":\"client_alice\"", "owner envelope payload");
     }
 
