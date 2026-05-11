@@ -93,6 +93,13 @@ DELETE /v1/secrets/by-key?namespace=db01&key=user:sys&cascade=true
 
 `DELETE /v1/secrets/{secret_id}` is an internal-id endpoint and accepts the same optional `cascade=true` query parameter.
 
+
+## Access grant request listing
+
+`GET /v1/access-requests?namespace=db01&key=user:sys&status=pending&limit=50`
+
+Lists pending/activated/revoked/expired access grant metadata. Filters use the same `namespace/key` vocabulary as the rest of the normal operator workflow; responses may still include internal `secret_id`/`version_id` fields for audit correlation.
+
 ## Access grant request
 
 `POST /v1/secrets/by-key/access-requests?namespace=db01&key=user:sys`

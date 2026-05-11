@@ -108,7 +108,7 @@ The transport surface mirrors the Go/Python public transport helpers:
 - `revokeAccessByKey(namespace, key, clientID)`;
 - `createSecretVersionPayloadByKey(namespace, key, payload)`;
 - `deleteSecretPayloadByKey(namespace, key, { cascade })`;
-- `listAccessGrantMetadata(filters)`;
+- `listAccessGrantMetadata({ namespace, key, status, client_id, limit })`;
 - `statusInfo()`;
 - `versionInfo()`;
 - `diagnosticsInfo()`;
