@@ -12,9 +12,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"custodia/internal/certutil"
@@ -390,6 +393,68 @@ func TestTransportClientRequiresMTLSOptions(t *testing.T) {
 	_, err := buildTransportClient(transportFlags{serverURL: "https://127.0.0.1:8443"})
 	if err == nil || !strings.Contains(err.Error(), "--server-url, --cert, --key and --ca are required") {
 		t.Fatalf("expected mTLS option error, got: %v", err)
+	}
+}
+
+func TestMTLSEnrollDoesNotWriteLocalMaterialWhenClaimFails(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, `{"error":"invalid_token"}`, http.StatusUnauthorized)
+	}))
+	defer server.Close()
+
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{
+		"mtls", "enroll",
+		"--client-id", "client_alice",
+		"--server-url", server.URL,
+		"--enrollment-token", "bad-token",
+		"--insecure",
+	})
+	if code == 0 {
+		t.Fatalf("expected enrollment failure")
+	}
+	profile := filepath.Join(dir, "custodia", "client_alice")
+	if _, err := os.Stat(profile); !os.IsNotExist(err) {
+		t.Fatalf("expected no enrollment profile material after failed claim, stat err=%v", err)
+	}
+}
+
+func TestMTLSEnrollChecksLocalTargetsBeforeClaimingToken(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	profile := filepath.Join(dir, "custodia", "client_alice")
+	if err := os.MkdirAll(profile, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(profile, "client_alice.key"), []byte("stale key\n"), keyFileMode); err != nil {
+		t.Fatal(err)
+	}
+
+	var hits int32
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&hits, 1)
+		http.Error(w, "must not be called", http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{
+		"mtls", "enroll",
+		"--client-id", "client_alice",
+		"--server-url", server.URL,
+		"--enrollment-token", "unused-token",
+		"--insecure",
+	})
+	if code == 0 {
+		t.Fatalf("expected local preflight failure")
+	}
+	if atomic.LoadInt32(&hits) != 0 {
+		t.Fatalf("enrollment claim was called despite existing local target")
+	}
+	if !strings.Contains(stderr.String(), "refusing to overwrite existing enrollment file") {
+		t.Fatalf("unexpected error: %s", stderr.String())
 	}
 }
 

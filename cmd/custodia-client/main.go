@@ -194,20 +194,12 @@ func (a *app) runMTLSEnroll(args []string) int {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 2
 	}
-	if err := ensureClientProfileDir(paths.Dir); err != nil {
+	if err := ensureEnrollmentTargetsAvailable(paths); err != nil {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
 	generated, err := certutil.GenerateClientCSR(id)
 	if err != nil {
-		fmt.Fprintf(a.stderr, "%v\n", err)
-		return 1
-	}
-	if err := writeExclusive(paths.MTLSKey, generated.PrivateKeyPEM, keyFileMode); err != nil {
-		fmt.Fprintf(a.stderr, "%v\n", err)
-		return 1
-	}
-	if err := writeExclusive(paths.MTLSCSR, generated.CSRPem, publicFileMode); err != nil {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
@@ -217,15 +209,11 @@ func (a *app) runMTLSEnroll(args []string) int {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
-	if err := writeExclusive(paths.MTLSCert, []byte(response.CertificatePEM), publicFileMode); err != nil {
+	if err := ensureClientProfileDir(paths.Dir); err != nil {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
-	if err := writeExclusive(paths.CA, []byte(response.CAPEM), publicFileMode); err != nil {
-		fmt.Fprintf(a.stderr, "%v\n", err)
-		return 1
-	}
-	if err := writeExclusive(paths.ServerURL, []byte(strings.TrimSpace(response.ServerURL)+"\n"), publicFileMode); err != nil {
+	if err := writeEnrollmentArtifacts(paths, generated, response); err != nil {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
@@ -235,6 +223,57 @@ func (a *app) runMTLSEnroll(args []string) int {
 	fmt.Fprintf(a.stdout, "installed CA certificate to %s\n", paths.CA)
 	fmt.Fprintf(a.stdout, "saved server URL to %s\n", paths.ServerURL)
 	return 0
+}
+
+func ensureEnrollmentTargetsAvailable(paths clientProfilePaths) error {
+	for _, path := range []string{paths.MTLSKey, paths.MTLSCSR, paths.MTLSCert, paths.CA, paths.ServerURL} {
+		if strings.TrimSpace(path) == "" {
+			return fmt.Errorf("enrollment output path is required")
+		}
+		if _, err := os.Stat(path); err == nil {
+			return fmt.Errorf("refusing to overwrite existing enrollment file: %s", path)
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("check enrollment file %s: %w", path, err)
+		}
+	}
+	return nil
+}
+
+func writeEnrollmentArtifacts(paths clientProfilePaths, generated *certutil.ClientCSR, response model.ClientEnrollmentClaimResponse) error {
+	created := make([]string, 0, 5)
+	write := func(path string, body []byte, mode os.FileMode) error {
+		if err := writeExclusive(path, body, mode); err != nil {
+			return err
+		}
+		created = append(created, path)
+		return nil
+	}
+	cleanup := func() {
+		for i := len(created) - 1; i >= 0; i-- {
+			_ = os.Remove(created[i])
+		}
+	}
+	if err := write(paths.MTLSKey, generated.PrivateKeyPEM, keyFileMode); err != nil {
+		cleanup()
+		return err
+	}
+	if err := write(paths.MTLSCSR, generated.CSRPem, publicFileMode); err != nil {
+		cleanup()
+		return err
+	}
+	if err := write(paths.MTLSCert, []byte(response.CertificatePEM), publicFileMode); err != nil {
+		cleanup()
+		return err
+	}
+	if err := write(paths.CA, []byte(response.CAPEM), publicFileMode); err != nil {
+		cleanup()
+		return err
+	}
+	if err := write(paths.ServerURL, []byte(strings.TrimSpace(response.ServerURL)+"\n"), publicFileMode); err != nil {
+		cleanup()
+		return err
+	}
+	return nil
 }
 
 func claimEnrollment(serverURL string, insecure bool, claim model.ClientEnrollmentClaimRequest) (model.ClientEnrollmentClaimResponse, error) {
