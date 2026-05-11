@@ -50,6 +50,12 @@ public final class CustodiaClientTest {
         client.getSecretPayloadByKey("db01", "user:sys");
         assertEquals("https://vault.test/v1/secrets/by-key?namespace=db01&key=user%3Asys", transport.lastRequest.uri().toString(), "read by key path");
 
+        client.listSecretVersionMetadataByKey("db01", "user:sys", 10);
+        assertEquals("https://vault.test/v1/secrets/by-key/versions?namespace=db01&key=user%3Asys&limit=10", transport.lastRequest.uri().toString(), "versions by key path");
+
+        client.listSecretAccessMetadataByKey("db01", "user:sys", 10);
+        assertEquals("https://vault.test/v1/secrets/by-key/access?namespace=db01&key=user%3Asys&limit=10", transport.lastRequest.uri().toString(), "access by key path");
+
         client.shareSecretPayloadByKey("db01", "user:sys", "{\"target_client_id\":\"client_bob\"}");
         assertEquals("https://vault.test/v1/secrets/by-key/share?namespace=db01&key=user%3Asys", transport.lastRequest.uri().toString(), "share by key path");
 

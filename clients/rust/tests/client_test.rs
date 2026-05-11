@@ -62,6 +62,13 @@ fn json_response(body: serde_json::Value) -> TransportResponse {
     }
 }
 
+fn assert_url_seen(urls: &[String], expected_suffix: &str) {
+    assert!(
+        urls.iter().any(|url| url.ends_with(expected_suffix)),
+        "expected to see URL ending with {expected_suffix}, got {urls:?}"
+    );
+}
+
 fn random_test_bytes(length: usize) -> Vec<u8> {
     use custodia_client::{OsRandomSource, RandomSource};
 
@@ -113,6 +120,8 @@ fn builds_metadata_and_operational_paths() {
         json!({"secrets": []}),
         json!({"versions": []}),
         json!({"access": []}),
+        json!({"versions": []}),
+        json!({"access": []}),
         json!({"access_requests": []}),
         json!({"secret_id": "s1"}),
         json!({"status": "shared"}),
@@ -138,6 +147,8 @@ fn builds_metadata_and_operational_paths() {
     client
         .list_secret_access_metadata("550e8400-e29b-41d4-a716-446655440000", Some(3))
         .unwrap();
+    client.list_secret_version_metadata_by_key("db01", "user:sys", Some(10)).unwrap();
+    client.list_secret_access_metadata_by_key("db01", "user:sys", Some(10)).unwrap();
     client
         .list_access_grant_metadata(&AccessGrantFilters {
             limit: Some(7),
@@ -173,14 +184,17 @@ fn builds_metadata_and_operational_paths() {
     assert_eq!(urls[0], "https://vault.example.test:8443/v1/clients?limit=10&active=true");
     assert_eq!(urls[1], "https://vault.example.test:8443/v1/secrets?limit=5");
     assert!(urls[2].contains("/v1/secrets/550e8400-e29b-41d4-a716-446655440000/versions?limit=2"));
-    assert!(urls[4].contains("/v1/access-requests?"));
-    assert!(urls[4].contains("status=pending"));
-    assert_eq!(urls[5], "https://vault.example.test:8443/v1/secrets/by-key?namespace=db01&key=user%3Asys");
-    assert_eq!(urls[6], "https://vault.example.test:8443/v1/secrets/by-key/share?namespace=db01&key=user%3Asys");
-    assert_eq!(urls[7], "https://vault.example.test:8443/v1/secrets/by-key/versions?namespace=db01&key=user%3Asys");
-    assert_eq!(urls[8], "https://vault.example.test:8443/v1/secrets/by-key/access/client_bob?namespace=db01&key=user%3Asys");
-    assert_eq!(urls[9], "https://vault.example.test:8443/v1/secrets/by-key?namespace=db01&key=user%3Asys&cascade=true");
-    assert!(urls[15].contains("/v1/audit-events?"));
+    assert!(urls[3].contains("/v1/secrets/550e8400-e29b-41d4-a716-446655440000/access?limit=3"));
+
+    assert_url_seen(&urls, "/v1/secrets/by-key/versions?namespace=db01&key=user%3Asys&limit=10");
+    assert_url_seen(&urls, "/v1/secrets/by-key/access?namespace=db01&key=user%3Asys&limit=10");
+    assert_url_seen(&urls, "/v1/access-requests?limit=7&status=pending&client_id=client_alice");
+    assert_url_seen(&urls, "/v1/secrets/by-key?namespace=db01&key=user%3Asys");
+    assert_url_seen(&urls, "/v1/secrets/by-key/share?namespace=db01&key=user%3Asys");
+    assert_url_seen(&urls, "/v1/secrets/by-key/versions?namespace=db01&key=user%3Asys");
+    assert_url_seen(&urls, "/v1/secrets/by-key/access/client_bob?namespace=db01&key=user%3Asys");
+    assert_url_seen(&urls, "/v1/secrets/by-key?namespace=db01&key=user%3Asys&cascade=true");
+    assert_url_seen(&urls, "/v1/audit-events?limit=9&outcome=success&action=secret.read");
 }
 
 #[test]

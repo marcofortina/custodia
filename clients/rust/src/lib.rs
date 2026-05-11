@@ -250,6 +250,15 @@ impl CustodiaClient {
         )
     }
 
+    pub fn list_secret_version_metadata_by_key(&self, namespace: &str, key: &str, limit: Option<u32>) -> Result<Value> {
+        let mut query = vec![
+            ("namespace".to_string(), namespace.to_string()),
+            ("key".to_string(), key.to_string()),
+        ];
+        push_optional(&mut query, "limit", limit.map(|value| value.to_string()));
+        self.request_json("GET", &with_query("/v1/secrets/by-key/versions", &query), None)
+    }
+
     pub fn list_secret_access_metadata(&self, secret_id: &str, limit: Option<u32>) -> Result<Value> {
         let mut query = Vec::new();
         push_optional(&mut query, "limit", limit.map(|value| value.to_string()));
@@ -258,6 +267,15 @@ impl CustodiaClient {
             &with_query(&format!("/v1/secrets/{}/access", path_escape(secret_id)), &query),
             None,
         )
+    }
+
+    pub fn list_secret_access_metadata_by_key(&self, namespace: &str, key: &str, limit: Option<u32>) -> Result<Value> {
+        let mut query = vec![
+            ("namespace".to_string(), namespace.to_string()),
+            ("key".to_string(), key.to_string()),
+        ];
+        push_optional(&mut query, "limit", limit.map(|value| value.to_string()));
+        self.request_json("GET", &with_query("/v1/secrets/by-key/access", &query), None)
     }
 
     pub fn share_secret_payload(&self, secret_id: &str, payload: &Value) -> Result<Value> {

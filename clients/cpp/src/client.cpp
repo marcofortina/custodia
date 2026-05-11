@@ -248,6 +248,15 @@ std::string Client::list_secret_version_metadata(const std::string& secret_id, i
   return request_json("GET", with_query("/v1/secrets/" + path_escape(secret_id) + "/versions", filters));
 }
 
+std::string Client::list_secret_version_metadata_by_key(const std::string& namespace_name, const std::string& key, int limit) {
+  validate_optional_limit(limit);
+  Filters filters{{"namespace", namespace_name}, {"key", key}};
+  if (limit > 0) {
+    filters.emplace_back("limit", std::to_string(limit));
+  }
+  return request_json("GET", with_query("/v1/secrets/by-key/versions", filters));
+}
+
 std::string Client::list_secret_access_metadata(const std::string& secret_id, int limit) {
   validate_optional_limit(limit);
   Filters filters;
@@ -255,6 +264,15 @@ std::string Client::list_secret_access_metadata(const std::string& secret_id, in
     filters.emplace_back("limit", std::to_string(limit));
   }
   return request_json("GET", with_query("/v1/secrets/" + path_escape(secret_id) + "/access", filters));
+}
+
+std::string Client::list_secret_access_metadata_by_key(const std::string& namespace_name, const std::string& key, int limit) {
+  validate_optional_limit(limit);
+  Filters filters{{"namespace", namespace_name}, {"key", key}};
+  if (limit > 0) {
+    filters.emplace_back("limit", std::to_string(limit));
+  }
+  return request_json("GET", with_query("/v1/secrets/by-key/access", filters));
 }
 
 std::string Client::share_secret_payload(const std::string& secret_id, const std::string& payload_json) {
