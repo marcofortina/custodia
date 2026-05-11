@@ -227,6 +227,11 @@ class CustodiaClient:
             path += f"?{query}"
         return self._request("GET", path)
 
+    def list_secret_versions_by_key(self, namespace: str, key: str, limit: int | None = None) -> dict[str, Any]:
+        _validate_optional_limit(limit)
+        query = _query_params(namespace=namespace or "default", key=key, limit=str(limit) if limit is not None else None)
+        return self._request("GET", f"/v1/secrets/by-key/versions?{query}")
+
     def list_secret_access(self, secret_id: str, limit: int | None = None) -> dict[str, Any]:
         _validate_optional_limit(limit)
         query = _query_params(limit=str(limit) if limit is not None else None)
@@ -234,6 +239,11 @@ class CustodiaClient:
         if query:
             path += f"?{query}"
         return self._request("GET", path)
+
+    def list_secret_access_by_key(self, namespace: str, key: str, limit: int | None = None) -> dict[str, Any]:
+        _validate_optional_limit(limit)
+        query = _query_params(namespace=namespace or "default", key=key, limit=str(limit) if limit is not None else None)
+        return self._request("GET", f"/v1/secrets/by-key/access?{query}")
 
     def status(self) -> dict[str, Any]:
         return self._request("GET", "/v1/status")
@@ -287,6 +297,10 @@ class CustodiaClient:
 
     def revoke_access(self, secret_id: str, client_id: str) -> dict[str, Any]:
         return self._request("DELETE", f"/v1/secrets/{_path_escape(secret_id)}/access/{_path_escape(client_id)}")
+
+    def revoke_access_by_key(self, namespace: str, key: str, client_id: str) -> dict[str, Any]:
+        query = _query_params(namespace=namespace or "default", key=key)
+        return self._request("DELETE", f"/v1/secrets/by-key/access/{_path_escape(client_id)}?{query}")
 
     def create_secret_version(self, secret_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("POST", f"/v1/secrets/{_path_escape(secret_id)}/versions", json=payload)

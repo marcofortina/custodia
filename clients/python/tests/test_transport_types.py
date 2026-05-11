@@ -112,6 +112,8 @@ class PythonTransportTypesTest(unittest.TestCase):
                 {"ok": True},
             )
             self.assertEqual(client.get_secret_by_key("db01", "user:sys"), {"ok": True})
+            self.assertEqual(client.list_secret_versions_by_key("db01", "user:sys", limit=10), {"ok": True})
+            self.assertEqual(client.list_secret_access_by_key("db01", "user:sys", limit=10), {"ok": True})
             self.assertEqual(
                 client.share_secret_payload_by_key(
                     "db01",
@@ -120,6 +122,7 @@ class PythonTransportTypesTest(unittest.TestCase):
                 ),
                 {"ok": True},
             )
+            self.assertEqual(client.revoke_access_by_key("db01", "user:sys", "client_bob"), {"ok": True})
             self.assertEqual(
                 client.create_secret_version_payload_by_key(
                     "db01",
@@ -134,6 +137,10 @@ class PythonTransportTypesTest(unittest.TestCase):
             self.assertEqual(client.delete_secret_by_key("db01", "user:sys", cascade=True), {"ok": True})
         self.assertEqual(request.call_args_list[0].kwargs["json"]["envelopes"][0]["client_id"], "client_alice")
         self.assertNotIn("plaintext", request.call_args_list[0].kwargs["json"])
+        paths = [call.args[1] for call in request.call_args_list]
+        self.assertTrue(any(path.endswith("/v1/secrets/by-key/versions?namespace=db01&key=user%3Asys&limit=10") for path in paths))
+        self.assertTrue(any(path.endswith("/v1/secrets/by-key/access?namespace=db01&key=user%3Asys&limit=10") for path in paths))
+        self.assertTrue(any(path.endswith("/v1/secrets/by-key/access/client_bob?namespace=db01&key=user%3Asys") for path in paths))
         self.assertEqual(request.call_args_list[-1].args[0], "DELETE")
         self.assertIn("/v1/secrets/by-key?namespace=db01&key=user%3Asys&cascade=true", request.call_args_list[-1].args[1])
 

@@ -153,11 +153,14 @@ test("covers namespace key transport paths", async () => {
   const { client, calls } = clientWithTransport(async () => ({ status: 200, headers: {}, body: "{}" }));
 
   await client.getSecretPayloadByKey("db01", "user:sys");
+  await client.listSecretVersionMetadataByKey("db01", "user:sys", 10);
+  await client.listSecretAccessMetadataByKey("db01", "user:sys", 10);
   await client.shareSecretPayloadByKey("db01", "user:sys", {
     version_id: "version-1",
     target_client_id: "client_bob",
     envelope: "base64-envelope",
   });
+  await client.revokeAccessByKey("db01", "user:sys", "client_bob");
   await client.createSecretVersionPayloadByKey("db01", "user:sys", {
     ciphertext: "base64-ciphertext-v2",
     envelopes: [{ client_id: "client_alice", envelope: "base64-envelope-v2" }],
@@ -168,7 +171,10 @@ test("covers namespace key transport paths", async () => {
     calls.map((call) => `${call.method} ${new URL(call.url).pathname}${new URL(call.url).search}`),
     [
       "GET /v1/secrets/by-key?namespace=db01&key=user%3Asys",
+      "GET /v1/secrets/by-key/versions?namespace=db01&key=user%3Asys&limit=10",
+      "GET /v1/secrets/by-key/access?namespace=db01&key=user%3Asys&limit=10",
       "POST /v1/secrets/by-key/share?namespace=db01&key=user%3Asys",
+      "DELETE /v1/secrets/by-key/access/client_bob?namespace=db01&key=user%3Asys",
       "POST /v1/secrets/by-key/versions?namespace=db01&key=user%3Asys",
       "DELETE /v1/secrets/by-key?namespace=db01&key=user%3Asys&cascade=true",
     ],
