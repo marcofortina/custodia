@@ -421,7 +421,7 @@ BOB_PUBLIC_KEY="$HOME/$BOB_ID.x25519.pub.json"
 custodia-client secret share --client-id "$ALICE_ID" --namespace "$SMOKE_NAMESPACE" --key "$SMOKE_KEY" --target-client-id "$BOB_ID" --recipient "$BOB_ID=$BOB_PUBLIC_KEY" --permissions 4
 ```
 
-Transfer the namespace/key values to Bob when Bob is remote. Bob can now read and decrypt the shared secret locally without knowing Alice's internal secret id:
+Transfer the namespace/key values to Bob when Bob is remote. Bob can now read and decrypt the shared secret locally without knowing any owner or internal server id:
 
 ```bash
 BOB_READBACK="$HOME/custodia-smoke-bob.readback.txt"

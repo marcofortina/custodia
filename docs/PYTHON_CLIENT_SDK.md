@@ -38,7 +38,8 @@ client = CustodiaClient(
 
 created = client.create_secret_payload(
     CreateSecretPayload(
-        name="database-password",
+        namespace="db01",
+        key="user:sys",
         ciphertext="base64-opaque-ciphertext",
         envelopes=[RecipientEnvelope("client_alice", "base64-opaque-envelope")],
         permissions=PermissionRead,
@@ -51,10 +52,10 @@ created = client.create_secret_payload(
 Use `CustodiaClient.with_crypto(CryptoOptions(...))` when the application wants
 the SDK to encrypt/decrypt locally. The wrapper supports:
 
-- `create_encrypted_secret(...)`;
-- `read_decrypted_secret(...)`;
-- `share_encrypted_secret(...)`;
-- `create_encrypted_secret_version(...)`.
+- `create_encrypted_secret_by_key(...)`;
+- `read_decrypted_secret_by_key(...)`;
+- `share_encrypted_secret_by_key(...)`;
+- `create_encrypted_secret_version_by_key(...)`.
 
 ```python
 from custodia_client import (
@@ -80,11 +81,14 @@ crypto = client.with_crypto(CryptoOptions(
     ),
 ))
 
-created = crypto.create_encrypted_secret(
-    name="database-password",
+created = crypto.create_encrypted_secret_by_key(
+    namespace="db01",
+    key="user:sys",
     plaintext=b"correct horse battery staple",
     recipients=["client_bob"],
 )
+
+secret = crypto.read_decrypted_secret_by_key("db01", "user:sys")
 ```
 
 `StaticPublicKeyResolver` is a small helper for pinned/local maps and tests.
@@ -104,7 +108,8 @@ client = CustodiaClient(
 )
 
 created = client.create_secret({
-    "name": "database-password",
+    "namespace": "db01",
+    "key": "user:sys",
     "ciphertext": "base64-opaque-ciphertext",
     "envelopes": [
         {"client_id": "client_alice", "envelope": "base64-opaque-envelope"},

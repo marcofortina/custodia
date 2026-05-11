@@ -33,7 +33,8 @@ const client = new CustodiaClient({
 });
 
 const created = await client.createSecretPayload({
-  name: "database-password",
+  namespace: "db01",
+  key: "user:sys",
   ciphertext: "base64-opaque-ciphertext",
   envelopes: [
     { client_id: "client_alice", envelope: "base64-opaque-envelope" },
@@ -42,7 +43,8 @@ const created = await client.createSecretPayload({
   crypto_metadata: { version: "custodia.client-crypto.v1" },
 });
 
-console.log(created.secret_id, created.version_id);
+const secret = await client.getSecretPayloadByKey("db01", "user:sys");
+console.log(created.version_id, secret.key);
 ```
 
 ## High-level crypto example
@@ -77,13 +79,14 @@ const crypto = client.withCrypto(new CryptoOptions({
   }),
 }));
 
-await crypto.createEncryptedSecret({
-  name: "database-password",
+await crypto.createEncryptedSecretByKey({
+  namespace: "db01",
+  key: "user:sys",
   plaintext: Buffer.from("secret"),
   recipients: ["client_bob"],
 });
 
-const decrypted = await crypto.readDecryptedSecret("550e8400-e29b-41d4-a716-446655440000");
+const decrypted = await crypto.readDecryptedSecretByKey("db01", "user:sys");
 console.log(decrypted.plaintext.toString("utf8"));
 ```
 
@@ -97,15 +100,14 @@ The transport surface mirrors the Go/Python public transport helpers:
 - `createClientInfo(payload)`;
 - `revokeClientInfo(payload)`;
 - `createSecretPayload(payload)`;
-- `getSecretPayload(secretID)`;
+- `getSecretPayloadByKey(namespace, key)`;
 - `listSecretMetadata(limit)`;
-- `listSecretVersionMetadata(secretID, limit)`;
-- `listSecretAccessMetadata(secretID, limit)`;
-- `shareSecretPayload(secretID, payload)`;
-- `createAccessGrant(secretID, payload)`;
-- `activateAccessGrantPayload(secretID, targetClientID, payload)`;
-- `revokeAccess(secretID, clientID)`;
-- `createSecretVersionPayload(secretID, payload)`;
+- `listSecretVersionMetadata(secretID, limit)` for operator metadata by internal id;
+- `listSecretAccessMetadata(secretID, limit)` for operator metadata by internal id;
+- `shareSecretPayloadByKey(namespace, key, payload)`;
+- `revokeAccessByKey(namespace, key, clientID)`;
+- `createSecretVersionPayloadByKey(namespace, key, payload)`;
+- `deleteSecretPayloadByKey(namespace, key, { cascade })`;
 - `listAccessGrantMetadata(filters)`;
 - `statusInfo()`;
 - `versionInfo()`;
@@ -122,10 +124,10 @@ HTTP errors are raised as `CustodiaHttpError` with status, response headers and 
 The high-level crypto surface exposes:
 
 - `client.withCrypto(options)`;
-- `createEncryptedSecret({ name, plaintext, recipients, permissions, expiresAt })`;
-- `readDecryptedSecret(secretID)`;
-- `shareEncryptedSecret({ secretID, targetClientID, permissions, expiresAt })`;
-- `createEncryptedSecretVersion({ secretID, plaintext, recipients, permissions, expiresAt })`.
+- `createEncryptedSecretByKey({ namespace, key, plaintext, recipients, permissions, expiresAt })`;
+- `readDecryptedSecretByKey(namespace, key)`;
+- `shareEncryptedSecretByKey({ namespace, key, targetClientID, permissions, expiresAt })`;
+- `createEncryptedSecretVersionByKey({ namespace, key, plaintext, recipients, permissions, expiresAt })`.
 
 The shared primitives and contracts are exported for integration tests and resolver/provider implementations:
 

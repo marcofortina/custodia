@@ -15,7 +15,7 @@ The server does not expose a public-key directory and does not mediate trust bet
 - mTLS authenticates the caller.
 - When `CUSTODIA_CLIENT_CRL_FILE` is configured, the TLS layer rejects revoked client certificate serials before request handling. The CRL must be signed by the configured client CA.
 - The `clients` table maps certificate subject to `client_id`.
-- `secret_access` authorizes each `(secret_id, version_id, client_id)` tuple.
+- `secret_visibility` resolves each caller-visible `(client_id, namespace, key)` tuple to the owned secret; `secret_access` authorizes the readable/updatable version for each client.
 - Permissions use a bitmask: share=1, write=2, read=4.
 
 ## Revocation semantics

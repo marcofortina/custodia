@@ -93,7 +93,7 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 - Alice/Bob first encrypted secret smoke test: [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](docs/CUSTODIA_ALICE_BOB_SMOKE.md)
 - Bash SDK helper: [`docs/BASH_SDK.md`](docs/BASH_SDK.md)
 - Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
-- Namespace/key secret keyspace migration model: [`docs/SECRET_KEYSPACE_MODEL.md`](docs/SECRET_KEYSPACE_MODEL.md)
+- Namespace/key secret keyspace model: [`docs/SECRET_KEYSPACE_MODEL.md`](docs/SECRET_KEYSPACE_MODEL.md)
 - SDK release policy: [`docs/SDK_RELEASE_POLICY.md`](docs/SDK_RELEASE_POLICY.md)
 - Linux DEB/RPM packaging: [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md)
 - Start here / install quickstart: [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
@@ -224,13 +224,11 @@ The server validates authorization, the configured envelope-count cap and base64
 custodia-admin client create --client-id client_bob --mtls-subject client_bob
 custodia-admin client list
 custodia-admin client revoke --client-id client_bob --reason compromised
-custodia-admin access grant-request --secret-id SECRET --client-id client_bob --permissions read
 custodia-admin audit list --limit 100
 custodia-admin audit verify --limit 500
-custodia-admin access activate --secret-id SECRET --client-id client_bob --envelope-file bob.envelope
 ```
 
-Client creation registers metadata only. Certificate issuance/signing remains outside the vault server and belongs to the dedicated `custodia-signer` service. Lite package installs include `custodia-signer.service`; source installs can copy `deploy/examples/custodia-signer.service`.
+Client creation registers metadata only. Secret sharing is performed by the client workflow with `namespace/key`; the server stores only opaque ciphertext and recipient envelopes. Certificate issuance/signing remains outside the vault server and belongs to the dedicated `custodia-signer` service. Lite package installs include `custodia-signer.service`; source installs can copy `deploy/examples/custodia-signer.service`.
 
 Development signer example:
 

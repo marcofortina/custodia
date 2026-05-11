@@ -24,7 +24,6 @@ const client = new CustodiaClient({
 const ref = await client.createSecretPayload({
   namespace: "db01",
   key: "user:sys",
-  name: "user:sys",
   ciphertext: "base64-ciphertext",
   envelopes: [{ client_id: "client_alice", envelope: "base64-envelope" }],
   permissions: PermissionAll,
@@ -32,7 +31,7 @@ const ref = await client.createSecretPayload({
 });
 
 const secret = await client.getSecretPayloadByKey("db01", "user:sys");
-console.log(ref.secret_id, ref.version_id, secret.key);
+console.log(ref.version_id, secret.key);
 ```
 
 ## Crypto example

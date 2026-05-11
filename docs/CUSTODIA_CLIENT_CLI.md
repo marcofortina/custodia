@@ -6,7 +6,7 @@ The CLI never sends plaintext, DEKs, mTLS private keys, application private keys
 
 ## Namespace/key addressing
 
-The normal client workflow addresses secrets by `namespace + key`, with `namespace=default` when omitted. The full create, read, update, share, revoke and delete semantics are documented in [`SECRET_KEYSPACE_MODEL.md`](SECRET_KEYSPACE_MODEL.md). Legacy `--secret-id` flags remain available for compatibility and advanced troubleshooting.
+The normal client workflow addresses secrets by `namespace + key`, with `namespace=default` when omitted. The full create, read, update, share, revoke and delete semantics are documented in [`SECRET_KEYSPACE_MODEL.md`](SECRET_KEYSPACE_MODEL.md). Generated server ids are internal details and are not needed for normal CLI flows.
 
 ## Standard client profile
 
@@ -144,7 +144,7 @@ custodia-client secret put \
   --value-file "$HOME/custodia-smoke-secret.txt"
 ```
 
-When `--namespace` is omitted the CLI uses `default`. The command prints JSON containing the internal compatibility `secret_id` and `version_id`, but follow-up user flows should address the secret by `namespace/key`.
+When `--namespace` is omitted the CLI uses `default`. The command prints JSON containing internal server identifiers for audit/debugging, but follow-up user flows should address the secret by `namespace/key`.
 
 ## Get and decrypt a secret
 

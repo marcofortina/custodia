@@ -1,8 +1,8 @@
 # Secret keyspace model
 
-This document freezes the target model for the namespace/key secret-addressing migration.
-It is an implementation guide for the next code patches; current released commands may
-still expose `secret_id` until the migration is complete.
+This document defines the Custodia namespace/key secret-addressing model.
+User workflows address secrets by `namespace/key`; generated server identifiers are
+internal storage, FK and audit details.
 
 ## User-facing identity
 
@@ -67,7 +67,7 @@ custodia-client secret get --namespace db01 --key user:sys --out sys-db01.txt
 Lookup:
 
 ```text
-bob + db01 + user:sys -> internal secret_id owned by alice
+bob + db01 + user:sys -> Alice-owned secret visible to Bob
 ```
 
 ## Ownership and uniqueness
@@ -245,16 +245,15 @@ Bob decrypts locally with his application private key.
 ## Crypto and AAD
 
 Client crypto must bind metadata to the logical address, not to a user-visible UUID.
-Recommended v1 AAD fields after the migration:
+Current v1 AAD fields:
 
 ```text
 crypto version
 content cipher
 envelope scheme
-owner client id
 namespace
 key
-version id or documented pre-commit version marker
+secret_version
 ```
 
 The server still stores and returns opaque ciphertext, metadata and envelopes only. It

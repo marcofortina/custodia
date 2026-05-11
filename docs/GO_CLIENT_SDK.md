@@ -62,21 +62,22 @@ if err != nil {
 }
 
 created, err := cryptoClient.CreateEncryptedSecret(ctx, client.CreateEncryptedSecretRequest{
-    Name:        "database-password",
+    Namespace:   "db01",
+    Key:         "user:sys",
     Plaintext:   []byte("correct horse battery staple"),
     Recipients:  []string{"client_bob"},
     Permissions: client.PermissionAll,
 })
 
-secret, err := cryptoClient.ReadDecryptedSecret(ctx, created.SecretID)
+secret, err := cryptoClient.ReadDecryptedSecretByKey(ctx, "db01", "user:sys")
 
-err = cryptoClient.ShareEncryptedSecret(ctx, created.SecretID, client.ShareEncryptedSecretRequest{
+err = cryptoClient.ShareEncryptedSecretByKey(ctx, "db01", "user:sys", client.ShareEncryptedSecretRequest{
     TargetClientID: "client_charlie",
     Permissions:    client.PermissionRead,
 })
 ```
 
-`CreateEncryptedSecret` automatically includes the current private-key provider client id as a recipient so the creator can read the secret later. `CreateEncryptedSecretVersion` encrypts a new version locally and posts only opaque payloads. `ShareEncryptedSecret` opens the caller's existing envelope locally to recover the DEK, creates a new envelope for the target recipient, and sends only that envelope to the server.
+`CreateEncryptedSecret` automatically includes the current private-key provider client id as a recipient so the creator can read the secret later. `CreateEncryptedSecretVersionByKey` encrypts a new version locally and posts only opaque payloads. `ShareEncryptedSecretByKey` opens the caller's existing envelope locally to recover the DEK, creates a new envelope for the target recipient, and sends only that envelope to the server.
 
 Crypto metadata persists the content nonce and canonical AAD binding used by the client. This avoids relying on server-side plaintext names during read paths and keeps decryption deterministic across create/read/share/version operations.
 
@@ -98,9 +99,9 @@ if err := opts.Validate(); err != nil {
 
 `PublicKeyResolver` resolves recipient encryption keys outside Custodia. `PrivateKeyProvider` returns a local decrypter handle. `RandomSource` is caller-provided CSPRNG input and `Clock` exists for deterministic metadata/tests. These contracts keep the server out of public-key discovery and private-key handling.
 
-## Legacy methods
+## Internal-model helpers
 
-Internal-model methods such as `CreateSecret`, `GetSecret`, `ShareSecret`, `Me`, `ListSecrets`, `ListClients`, `Status`, `Version`, `Diagnostics`, `RevocationStatus` and `ListAuditEvents` remain for monorepo use, but several expose internal model types and are documented as internal-model helpers. New external consumers should use the public Phase 5 transport and operational methods.
+Internal-model methods such as `CreateSecret`, `GetSecret`, `ShareSecret`, `Me`, `ListSecrets`, `ListClients`, `Status`, `Version`, `Diagnostics`, `RevocationStatus` and `ListAuditEvents` remain for monorepo use, but several expose internal model types and are documented as internal-model helpers. New external consumers should use the public transport, operational and `namespace/key` crypto methods.
 
 ## External consumer contract
 

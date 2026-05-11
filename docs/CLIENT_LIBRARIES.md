@@ -93,9 +93,9 @@ High-level crypto clients persist enough metadata for deterministic read/decrypt
   "envelope_scheme": "hpke-v1",
   "content_nonce_b64": "base64url-or-base64-nonce",
   "aad": {
-    "schema": "custodia-secret-aad-v1",
-    "secret_id": "...",
-    "version_id": "..."
+    "namespace": "db01",
+    "key": "user:sys",
+    "secret_version": 1
   }
 }
 ```
@@ -113,7 +113,7 @@ High-level clients expose equivalent operations across languages:
 | `ShareEncryptedSecret` | Rewrap an existing DEK for a new recipient locally. |
 | `CreateEncryptedSecretVersion` | Create a new locally encrypted version. |
 
-Transport clients expose raw equivalents that accept already prepared opaque payloads. New transport methods should address normal read/share/version/revoke/delete flows by `namespace` and `key`; legacy `secret_id` methods remain compatibility paths while high-level crypto wrappers finish migrating.
+Transport clients expose raw equivalents that accept already prepared opaque payloads. Normal read/share/version/revoke/delete flows address secrets by `namespace` and `key`; generated server identifiers are internal details for operator tooling and low-level diagnostics.
 
 ## Key resolution
 
