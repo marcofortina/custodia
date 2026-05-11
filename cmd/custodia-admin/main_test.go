@@ -134,33 +134,33 @@ func TestRunClientListRejectsInvalidActiveFilter(t *testing.T) {
 	}
 }
 
-func TestRunSecretCommandsRejectInvalidIDs(t *testing.T) {
-	if err := runSecretVersions(&cliConfig{}, []string{"--secret-id", "not-a-uuid"}); err == nil {
-		t.Fatal("expected invalid secret version id error")
+func TestRunSecretCommandsRejectInvalidKeyspace(t *testing.T) {
+	if err := runSecretVersions(&cliConfig{}, []string{"--key", "bad\nkey"}); err == nil {
+		t.Fatal("expected invalid secret version key error")
 	}
-	if err := runAccessList(&cliConfig{}, []string{"--secret-id", "not-a-uuid"}); err == nil {
-		t.Fatal("expected invalid access list secret id error")
+	if err := runAccessList(&cliConfig{}, []string{"--namespace", "bad\nnamespace", "--key", "user:sys"}); err == nil {
+		t.Fatal("expected invalid access list namespace error")
 	}
-	if err := runAccessGrantRequest(&cliConfig{}, []string{"--secret-id", "not-a-uuid", "--client-id", "client_bob", "--permissions", "read"}); err == nil {
-		t.Fatal("expected invalid grant request secret id error")
+	if err := runAccessGrantRequest(&cliConfig{}, []string{"--key", "", "--client-id", "client_bob", "--permissions", "read"}); err == nil {
+		t.Fatal("expected missing grant request key error")
 	}
-	if err := runAccessGrantRequest(&cliConfig{}, []string{"--secret-id", "550e8400-e29b-41d4-a716-446655440000", "--client-id", "client bad", "--permissions", "read"}); err == nil {
+	if err := runAccessGrantRequest(&cliConfig{}, []string{"--key", "user:sys", "--client-id", "client bad", "--permissions", "read"}); err == nil {
 		t.Fatal("expected invalid grant request client id error")
 	}
-	if err := runAccessGrantRequest(&cliConfig{}, []string{"--secret-id", "550e8400-e29b-41d4-a716-446655440000", "--client-id", "client_bob", "--permissions", "read", "--version-id", "latest"}); err == nil {
+	if err := runAccessGrantRequest(&cliConfig{}, []string{"--key", "user:sys", "--client-id", "client_bob", "--permissions", "read", "--version-id", "latest"}); err == nil {
 		t.Fatal("expected invalid grant request version id error")
 	}
 }
 
 func TestRunSecretVersionsRejectsInvalidLimit(t *testing.T) {
-	err := runSecretVersions(&cliConfig{}, []string{"--secret-id", "550e8400-e29b-41d4-a716-446655440000", "--limit", "501"})
+	err := runSecretVersions(&cliConfig{}, []string{"--key", "user:sys", "--limit", "501"})
 	if err == nil {
 		t.Fatal("expected invalid limit error")
 	}
 }
 
 func TestRunAccessListRejectsInvalidLimit(t *testing.T) {
-	err := runAccessList(&cliConfig{}, []string{"--secret-id", "550e8400-e29b-41d4-a716-446655440000", "--limit", "0"})
+	err := runAccessList(&cliConfig{}, []string{"--key", "user:sys", "--limit", "0"})
 	if err == nil {
 		t.Fatal("expected invalid limit error")
 	}
@@ -183,7 +183,7 @@ func TestRunAccessRequestsRejectsInvalidFilters(t *testing.T) {
 
 func TestRunAccessGrantRequestRejectsInvalidExpiresAt(t *testing.T) {
 	err := runAccessGrantRequest(&cliConfig{}, []string{
-		"--secret-id", "550e8400-e29b-41d4-a716-446655440000",
+		"--key", "user:sys",
 		"--client-id", "client_bob",
 		"--permissions", "read",
 		"--expires-at", "tomorrow",

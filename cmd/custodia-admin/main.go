@@ -1384,52 +1384,40 @@ func runAuditVerify(cfg *cliConfig, args []string) error {
 
 func runSecretVersions(cfg *cliConfig, args []string) error {
 	cmd := flag.NewFlagSet("secret versions", flag.ExitOnError)
-	secretID := cmd.String("secret-id", "", "secret id")
+	namespace := cmd.String("namespace", model.DefaultSecretNamespace, "secret namespace")
+	key := cmd.String("key", "", "secret key")
 	limit := cmd.Int("limit", 0, "optional maximum versions to return, up to 500")
 	_ = cmd.Parse(args)
-	if *secretID == "" {
-		return fmt.Errorf("--secret-id is required")
+	query, err := secretKeyspaceQuery(*namespace, *key)
+	if err != nil {
+		return err
 	}
-	if !model.ValidUUIDID(*secretID) {
-		return fmt.Errorf("--secret-id is invalid")
-	}
-	query := url.Values{}
 	if *limit != 0 {
 		if *limit < 0 || *limit > 500 {
 			return fmt.Errorf("--limit must be between 1 and 500 when set")
 		}
 		query.Set("limit", strconv.Itoa(*limit))
 	}
-	path := "/v1/secrets/" + pathEscape(*secretID) + "/versions"
-	if encoded := query.Encode(); encoded != "" {
-		path += "?" + encoded
-	}
-	return requestJSON(cfg, http.MethodGet, path, nil, os.Stdout)
+	return requestJSON(cfg, http.MethodGet, "/v1/secrets/by-key/versions?"+query.Encode(), nil, os.Stdout)
 }
 
 func runAccessList(cfg *cliConfig, args []string) error {
 	cmd := flag.NewFlagSet("access list", flag.ExitOnError)
-	secretID := cmd.String("secret-id", "", "secret id")
+	namespace := cmd.String("namespace", model.DefaultSecretNamespace, "secret namespace")
+	key := cmd.String("key", "", "secret key")
 	limit := cmd.Int("limit", 0, "optional maximum access rows to return, up to 500")
 	_ = cmd.Parse(args)
-	if *secretID == "" {
-		return fmt.Errorf("--secret-id is required")
+	query, err := secretKeyspaceQuery(*namespace, *key)
+	if err != nil {
+		return err
 	}
-	if !model.ValidUUIDID(*secretID) {
-		return fmt.Errorf("--secret-id is invalid")
-	}
-	query := url.Values{}
 	if *limit != 0 {
 		if *limit < 0 || *limit > 500 {
 			return fmt.Errorf("--limit must be between 1 and 500 when set")
 		}
 		query.Set("limit", strconv.Itoa(*limit))
 	}
-	path := "/v1/secrets/" + pathEscape(*secretID) + "/access"
-	if encoded := query.Encode(); encoded != "" {
-		path += "?" + encoded
-	}
-	return requestJSON(cfg, http.MethodGet, path, nil, os.Stdout)
+	return requestJSON(cfg, http.MethodGet, "/v1/secrets/by-key/access?"+query.Encode(), nil, os.Stdout)
 }
 
 func runAccessRequests(cfg *cliConfig, args []string) error {
@@ -1466,17 +1454,19 @@ func runAccessRequests(cfg *cliConfig, args []string) error {
 
 func runAccessGrantRequest(cfg *cliConfig, args []string) error {
 	cmd := flag.NewFlagSet("access grant-request", flag.ExitOnError)
-	secretID := cmd.String("secret-id", "", "secret id")
+	namespace := cmd.String("namespace", model.DefaultSecretNamespace, "secret namespace")
+	key := cmd.String("key", "", "secret key")
 	clientID := cmd.String("client-id", "", "client id")
 	versionID := cmd.String("version-id", "", "secret version id; defaults to latest active version")
 	permissions := cmd.String("permissions", "", "permission bits or names: read, write, share, all")
 	expiresAt := cmd.String("expires-at", "", "optional RFC3339 access expiration timestamp")
 	_ = cmd.Parse(args)
-	if *secretID == "" || *clientID == "" || *permissions == "" {
-		return fmt.Errorf("--secret-id, --client-id and --permissions are required")
+	query, err := secretKeyspaceQuery(*namespace, *key)
+	if err != nil {
+		return err
 	}
-	if !model.ValidUUIDID(*secretID) {
-		return fmt.Errorf("--secret-id is invalid")
+	if *clientID == "" || *permissions == "" {
+		return fmt.Errorf("--key, --client-id and --permissions are required")
 	}
 	if !model.ValidClientID(*clientID) {
 		return fmt.Errorf("--client-id is invalid")
@@ -1493,20 +1483,22 @@ func runAccessGrantRequest(cfg *cliConfig, args []string) error {
 		return err
 	}
 	req := model.AccessGrantRequest{VersionID: *versionID, TargetClientID: *clientID, Permissions: bits, ExpiresAt: parsedExpiresAt}
-	return requestJSON(cfg, http.MethodPost, "/v1/secrets/"+pathEscape(*secretID)+"/access-requests", req, os.Stdout)
+	return requestJSON(cfg, http.MethodPost, "/v1/secrets/by-key/access-requests?"+query.Encode(), req, os.Stdout)
 }
 
 func runAccessActivate(cfg *cliConfig, args []string) error {
 	cmd := flag.NewFlagSet("access activate", flag.ExitOnError)
-	secretID := cmd.String("secret-id", "", "secret id")
+	namespace := cmd.String("namespace", model.DefaultSecretNamespace, "secret namespace")
+	key := cmd.String("key", "", "secret key")
 	clientID := cmd.String("client-id", "", "client id")
 	envelopeFile := cmd.String("envelope-file", "", "file containing the base64 opaque envelope generated client-side")
 	_ = cmd.Parse(args)
-	if *secretID == "" || *clientID == "" || *envelopeFile == "" {
-		return fmt.Errorf("--secret-id, --client-id and --envelope-file are required")
+	query, err := secretKeyspaceQuery(*namespace, *key)
+	if err != nil {
+		return err
 	}
-	if !model.ValidUUIDID(*secretID) {
-		return fmt.Errorf("--secret-id is invalid")
+	if *clientID == "" || *envelopeFile == "" {
+		return fmt.Errorf("--key, --client-id and --envelope-file are required")
 	}
 	if !model.ValidClientID(*clientID) {
 		return fmt.Errorf("--client-id is invalid")
@@ -1516,26 +1508,43 @@ func runAccessActivate(cfg *cliConfig, args []string) error {
 		return err
 	}
 	req := model.ActivateAccessRequest{Envelope: strings.TrimSpace(string(envelope))}
-	path := "/v1/secrets/" + pathEscape(*secretID) + "/access/" + pathEscape(*clientID) + "/activate"
+	path := "/v1/secrets/by-key/access/" + pathEscape(*clientID) + "/activate?" + query.Encode()
 	return requestJSON(cfg, http.MethodPost, path, req, os.Stdout)
 }
 
 func runAccessRevoke(cfg *cliConfig, args []string) error {
 	cmd := flag.NewFlagSet("access revoke", flag.ExitOnError)
-	secretID := cmd.String("secret-id", "", "secret id")
+	namespace := cmd.String("namespace", model.DefaultSecretNamespace, "secret namespace")
+	key := cmd.String("key", "", "secret key")
 	clientID := cmd.String("client-id", "", "client id")
 	_ = cmd.Parse(args)
-	if *secretID == "" || *clientID == "" {
-		return fmt.Errorf("--secret-id and --client-id are required")
+	query, err := secretKeyspaceQuery(*namespace, *key)
+	if err != nil {
+		return err
 	}
-	if !model.ValidUUIDID(*secretID) {
-		return fmt.Errorf("--secret-id is invalid")
+	if *clientID == "" {
+		return fmt.Errorf("--key and --client-id are required")
 	}
 	if !model.ValidClientID(*clientID) {
 		return fmt.Errorf("--client-id is invalid")
 	}
-	path := "/v1/secrets/" + pathEscape(*secretID) + "/access/" + pathEscape(*clientID)
+	path := "/v1/secrets/by-key/access/" + pathEscape(*clientID) + "?" + query.Encode()
 	return requestJSON(cfg, http.MethodDelete, path, nil, os.Stdout)
+}
+
+func secretKeyspaceQuery(namespace, key string) (url.Values, error) {
+	namespace = model.NormalizeSecretNamespace(namespace)
+	key = model.NormalizeSecretKey(key)
+	if !model.ValidSecretNamespace(namespace) {
+		return nil, fmt.Errorf("--namespace is invalid")
+	}
+	if !model.ValidSecretKey(key) {
+		return nil, fmt.Errorf("--key is required")
+	}
+	query := url.Values{}
+	query.Set("namespace", namespace)
+	query.Set("key", key)
+	return query, nil
 }
 
 func addQueryFilter(query url.Values, key string, value string) {
@@ -1721,12 +1730,12 @@ func usage() {
   custodia-admin [global flags] audit list [--limit N] [--outcome STATUS] [--action ACTION]
   custodia-admin [global flags] audit export [--limit N] [--out-file FILE] [--sha256-out FILE] [--events-out FILE]
   custodia-admin [global flags] audit verify [--limit N]
-  custodia-admin [global flags] secret versions --secret-id ID
-  custodia-admin [global flags] access list --secret-id ID
+  custodia-admin [global flags] secret versions --key KEY [--namespace NS]
+  custodia-admin [global flags] access list --key KEY [--namespace NS]
   custodia-admin [global flags] access requests [--limit N] [--secret-id ID] [--status STATUS]
-  custodia-admin [global flags] access grant-request --secret-id ID --client-id ID --permissions read[,write,share]
-  custodia-admin [global flags] access activate --secret-id ID --client-id ID --envelope-file FILE
-  custodia-admin [global flags] access revoke --secret-id ID --client-id ID
+  custodia-admin [global flags] access grant-request --key KEY [--namespace NS] --client-id ID --permissions read[,write,share]
+  custodia-admin [global flags] access activate --key KEY [--namespace NS] --client-id ID --envelope-file FILE
+  custodia-admin [global flags] access revoke --key KEY [--namespace NS] --client-id ID
   custodia-admin [global flags] lite upgrade-check --lite-env-file FILE --full-env-file FILE
   custodia-admin migration plan --source-config FILE --target-config FILE
   custodia-admin ca bootstrap-local [--out-dir DIR] [--admin-client-id ID] [--server-name NAME] [--generate-ca-passphrase]
