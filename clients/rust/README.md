@@ -39,7 +39,8 @@ let crypto = client.with_crypto(CryptoOptions::new(
     Arc::new(StaticPrivateKeyProvider::new(private_key)),
 ));
 
-crypto.create_encrypted_secret(
+crypto.create_encrypted_secret_by_key(
+    "default",
     "db/password",
     b"local plaintext",
     &["client_bob".to_string()],
@@ -47,7 +48,8 @@ crypto.create_encrypted_secret(
     None,
 )?;
 
-let payload = client.get_secret_payload_by_key("default", "db/password")?;
+let decrypted = crypto.read_decrypted_secret_by_key("default", "db/password")?;
+crypto.share_encrypted_secret_by_key("default", "db/password", "client_charlie", custodia_client::PERMISSION_READ, None)?;
 ```
 
 ## Test

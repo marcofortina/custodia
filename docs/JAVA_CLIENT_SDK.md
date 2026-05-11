@@ -71,9 +71,11 @@ var crypto = client.withCrypto(new CustodiaCrypto.CryptoOptions(
     null
 ));
 
-crypto.createEncryptedSecret("db", plaintextBytes, List.of("client_bob"), CustodiaClient.PERMISSION_ALL);
-var decrypted = crypto.readDecryptedSecret(secretId); // Legacy secret_id crypto compatibility.
-crypto.shareEncryptedSecret(secretId, "client_charlie", CustodiaClient.PERMISSION_READ);
+crypto.createEncryptedSecretByKey("default", "db", plaintextBytes, List.of("client_bob"), CustodiaClient.PERMISSION_ALL);
+var decrypted = crypto.readDecryptedSecretByKey("default", "db");
+crypto.shareEncryptedSecretByKey("default", "db", "client_charlie", CustodiaClient.PERMISSION_READ);
+
+// Legacy secret_id crypto compatibility remains available for migrations and tooling.
 ```
 
 The application must provide recipient public keys through `PublicKeyResolver`; Custodia is not a key directory.

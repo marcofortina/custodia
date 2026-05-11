@@ -50,14 +50,18 @@ var options = new CustodiaCrypto.CryptoOptions(
 );
 var crypto = client.withCrypto(options);
 
-crypto.createEncryptedSecret(
+crypto.createEncryptedSecretByKey(
+    "default",
     "db",
     "already local plaintext".getBytes(StandardCharsets.UTF_8),
     List.of("client_bob"),
     CustodiaClient.PERMISSION_ALL
 );
 
-var decrypted = crypto.readDecryptedSecret(secretId); // Legacy secret_id compatibility remains available.
+var decrypted = crypto.readDecryptedSecretByKey("default", "db");
+crypto.shareEncryptedSecretByKey("default", "db", "client_charlie", CustodiaClient.PERMISSION_READ);
+
+// Legacy secret_id compatibility remains available for migrations and tooling.
 ```
 
 Recipient public keys are still resolved by the application, not by Custodia.

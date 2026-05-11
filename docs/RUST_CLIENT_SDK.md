@@ -58,15 +58,18 @@ let crypto = client.with_crypto(CryptoOptions::new(
     Arc::new(StaticPrivateKeyProvider::new(private_key)),
 ));
 
-crypto.create_encrypted_secret(
+crypto.create_encrypted_secret_by_key(
+    "default",
     "db/password",
     plaintext_bytes,
     &["client_bob".to_string()],
     custodia_client::PERMISSION_ALL,
     None,
 )?;
-let decrypted = crypto.read_decrypted_secret(secret_id)?; // Legacy secret_id crypto compatibility.
-crypto.share_encrypted_secret(secret_id, "client_charlie", custodia_client::PERMISSION_READ, None)?;
+let decrypted = crypto.read_decrypted_secret_by_key("default", "db/password")?;
+crypto.share_encrypted_secret_by_key("default", "db/password", "client_charlie", custodia_client::PERMISSION_READ, None)?;
+
+// Legacy secret_id crypto compatibility remains available for migrations and tooling.
 ```
 
 The application must provide recipient public keys through `PublicKeyResolver`; Custodia is not a key directory.
