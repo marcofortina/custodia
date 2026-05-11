@@ -544,6 +544,24 @@ func (s *Server) handleListSecretVersions(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
+	s.listSecretVersions(w, r, secretID)
+}
+
+func (s *Server) handleListSecretVersionsByKey(w http.ResponseWriter, r *http.Request) {
+	namespace, key, ok := s.requireSecretKeyspaceQuery(w, r, "secret.version_list")
+	if !ok {
+		return
+	}
+	secretID, err := s.store.ResolveSecretIDByKey(r.Context(), clientIDFromContext(r), namespace, key, model.PermissionRead)
+	if err != nil {
+		s.auditStoreFailure(r, "secret.version_list", "secret_key", secretKeyspaceResource(namespace, key), err)
+		writeMappedError(w, err)
+		return
+	}
+	s.listSecretVersions(w, r, secretID)
+}
+
+func (s *Server) listSecretVersions(w http.ResponseWriter, r *http.Request, secretID string) {
 	limit, ok := s.optionalLimit(w, r, "secret.version_list", "secret", secretID)
 	if !ok {
 		return
@@ -566,6 +584,24 @@ func (s *Server) handleListSecretAccess(w http.ResponseWriter, r *http.Request) 
 	if !ok {
 		return
 	}
+	s.listSecretAccess(w, r, secretID)
+}
+
+func (s *Server) handleListSecretAccessByKey(w http.ResponseWriter, r *http.Request) {
+	namespace, key, ok := s.requireSecretKeyspaceQuery(w, r, "secret.access_list")
+	if !ok {
+		return
+	}
+	secretID, err := s.store.ResolveSecretIDByKey(r.Context(), clientIDFromContext(r), namespace, key, model.PermissionShare)
+	if err != nil {
+		s.auditStoreFailure(r, "secret.access_list", "secret_key", secretKeyspaceResource(namespace, key), err)
+		writeMappedError(w, err)
+		return
+	}
+	s.listSecretAccess(w, r, secretID)
+}
+
+func (s *Server) listSecretAccess(w http.ResponseWriter, r *http.Request, secretID string) {
 	limit, ok := s.optionalLimit(w, r, "secret.access_list", "secret", secretID)
 	if !ok {
 		return

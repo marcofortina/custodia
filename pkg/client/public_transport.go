@@ -112,6 +112,18 @@ func (c *Client) ListSecretVersionMetadata(secretID string, limit int) ([]Secret
 	return response.Versions, err
 }
 
+func (c *Client) ListSecretVersionMetadataByKey(namespace, key string, limit int) ([]SecretVersionMetadata, error) {
+	path, err := secretByKeyPathWithLimit("/v1/secrets/by-key/versions", namespace, key, false, limit)
+	if err != nil {
+		return nil, err
+	}
+	var response struct {
+		Versions []SecretVersionMetadata `json:"versions"`
+	}
+	err = c.doJSON(http.MethodGet, path, nil, &response)
+	return response.Versions, err
+}
+
 func (c *Client) ListSecretAccessMetadata(secretID string, limit int) ([]SecretAccessMetadata, error) {
 	if err := validateOptionalLimit(limit); err != nil {
 		return nil, err
@@ -126,6 +138,18 @@ func (c *Client) ListSecretAccessMetadata(secretID string, limit int) ([]SecretA
 		Access []SecretAccessMetadata `json:"access"`
 	}
 	err := c.doJSON(http.MethodGet, path, nil, &response)
+	return response.Access, err
+}
+
+func (c *Client) ListSecretAccessMetadataByKey(namespace, key string, limit int) ([]SecretAccessMetadata, error) {
+	path, err := secretByKeyPathWithLimit("/v1/secrets/by-key/access", namespace, key, false, limit)
+	if err != nil {
+		return nil, err
+	}
+	var response struct {
+		Access []SecretAccessMetadata `json:"access"`
+	}
+	err = c.doJSON(http.MethodGet, path, nil, &response)
 	return response.Access, err
 }
 
@@ -174,6 +198,13 @@ func (c *Client) CreateSecretVersionPayloadByKey(namespace, key string, req Crea
 }
 
 func secretByKeyPath(basePath, namespace, key string, cascade bool) (string, error) {
+	return secretByKeyPathWithLimit(basePath, namespace, key, cascade, 0)
+}
+
+func secretByKeyPathWithLimit(basePath, namespace, key string, cascade bool, limit int) (string, error) {
+	if err := validateOptionalLimit(limit); err != nil {
+		return "", err
+	}
 	namespace = strings.TrimSpace(namespace)
 	if namespace == "" {
 		namespace = "default"
@@ -187,6 +218,9 @@ func secretByKeyPath(basePath, namespace, key string, cascade bool) (string, err
 	query.Set("key", key)
 	if cascade {
 		query.Set("cascade", "true")
+	}
+	if limit > 0 {
+		query.Set("limit", fmt.Sprintf("%d", limit))
 	}
 	return basePath + "?" + query.Encode(), nil
 }

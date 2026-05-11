@@ -666,6 +666,38 @@ func TestAPIReadsSharesAndVersionsSecretByKeyspace(t *testing.T) {
 		t.Fatalf("expected version by key 201, got %d: %s", res.Code, res.Body.String())
 	}
 
+	req = mtlsRequest(http.MethodGet, "/v1/secrets/by-key/versions?namespace=db01&key=user:sys&limit=1", "", "client_alice")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected version list by key 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var versionList struct {
+		Versions []model.SecretVersionMetadata `json:"versions"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&versionList); err != nil {
+		t.Fatalf("decode version list: %v", err)
+	}
+	if len(versionList.Versions) != 1 {
+		t.Fatalf("expected limited version list, got %+v", versionList.Versions)
+	}
+
+	req = mtlsRequest(http.MethodGet, "/v1/secrets/by-key/access?namespace=db01&key=user:sys&limit=10", "", "client_alice")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected access list by key 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var accessList struct {
+		Access []model.SecretAccessMetadata `json:"access"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&accessList); err != nil {
+		t.Fatalf("decode access list: %v", err)
+	}
+	if len(accessList.Access) == 0 {
+		t.Fatalf("expected access list rows")
+	}
+
 	req = mtlsRequest(http.MethodDelete, "/v1/secrets/by-key/access/client_bob?namespace=db01&key=user:sys", "", "client_alice")
 	res = httptest.NewRecorder()
 	handler.ServeHTTP(res, req)

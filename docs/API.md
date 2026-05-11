@@ -69,6 +69,18 @@ Resolves the caller-visible secret by namespace/key and requires `write`. Used f
 
 `POST /v1/secrets/{secret_id}/versions` is an internal-id endpoint for operator tooling and low-level SDK code.
 
+## Secret version metadata
+
+`GET /v1/secrets/by-key/versions?namespace=db01&key=user:sys&limit=50`
+
+Resolves the caller-visible secret by namespace/key and returns version metadata without decrypting payloads. The internal-id route `GET /v1/secrets/{secret_id}/versions` remains available for operator tooling.
+
+## Secret access metadata
+
+`GET /v1/secrets/by-key/access?namespace=db01&key=user:sys&limit=50`
+
+Resolves the owner-visible secret by namespace/key and returns active access grant metadata. Listing access requires `share` permission. The internal-id route `GET /v1/secrets/{secret_id}/access` remains available for operator tooling.
+
 ## Secret delete
 
 `DELETE /v1/secrets/by-key?namespace=db01&key=user:sys`

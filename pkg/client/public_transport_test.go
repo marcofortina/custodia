@@ -51,6 +51,28 @@ func TestPublicGoTransportMethodsAvoidInternalTypes(t *testing.T) {
 				t.Fatalf("key = %q", got)
 			}
 			_ = json.NewEncoder(w).Encode(SecretVersionRef{SecretID: "secret-id", VersionID: "version-id-2"})
+		case "GET /v1/secrets/by-key/versions":
+			if got := r.URL.Query().Get("namespace"); got != "db01" {
+				t.Fatalf("namespace = %q", got)
+			}
+			if got := r.URL.Query().Get("key"); got != "user:sys" {
+				t.Fatalf("key = %q", got)
+			}
+			if got := r.URL.Query().Get("limit"); got != "5" {
+				t.Fatalf("limit = %q", got)
+			}
+			_ = json.NewEncoder(w).Encode(map[string][]SecretVersionMetadata{"versions": []SecretVersionMetadata{{SecretID: "secret-id", VersionID: "version-id"}}})
+		case "GET /v1/secrets/by-key/access":
+			if got := r.URL.Query().Get("namespace"); got != "db01" {
+				t.Fatalf("namespace = %q", got)
+			}
+			if got := r.URL.Query().Get("key"); got != "user:sys" {
+				t.Fatalf("key = %q", got)
+			}
+			if got := r.URL.Query().Get("limit"); got != "7" {
+				t.Fatalf("limit = %q", got)
+			}
+			_ = json.NewEncoder(w).Encode(map[string][]SecretAccessMetadata{"access": []SecretAccessMetadata{{SecretID: "secret-id", VersionID: "version-id", ClientID: "client_bob"}}})
 		case "DELETE /v1/secrets/by-key":
 			if got := r.URL.Query().Get("namespace"); got != "db01" {
 				t.Fatalf("namespace = %q", got)
@@ -99,6 +121,14 @@ func TestPublicGoTransportMethodsAvoidInternalTypes(t *testing.T) {
 	versionByKey, err := custodiaClient.CreateSecretVersionPayloadByKey("db01", "user:sys", CreateSecretVersionPayload{Ciphertext: "Y2lwaGVy", Envelopes: []RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52"}}, Permissions: PermissionRead})
 	if err != nil || versionByKey.VersionID != "version-id-2" {
 		t.Fatalf("CreateSecretVersionPayloadByKey() = %+v err=%v", versionByKey, err)
+	}
+	versionsByKey, err := custodiaClient.ListSecretVersionMetadataByKey("db01", "user:sys", 5)
+	if err != nil || len(versionsByKey) != 1 || versionsByKey[0].VersionID != "version-id" {
+		t.Fatalf("ListSecretVersionMetadataByKey() = %+v err=%v", versionsByKey, err)
+	}
+	accessByKey, err := custodiaClient.ListSecretAccessMetadataByKey("db01", "user:sys", 7)
+	if err != nil || len(accessByKey) != 1 || accessByKey[0].ClientID != "client_bob" {
+		t.Fatalf("ListSecretAccessMetadataByKey() = %+v err=%v", accessByKey, err)
 	}
 	if err := custodiaClient.DeleteSecretByKey("db01", "user:sys", true); err != nil {
 		t.Fatalf("DeleteSecretByKey() error = %v", err)

@@ -831,12 +831,7 @@ func (a *app) runSecretVersionsList(args []string) int {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
-	secret, err := client.GetSecretPayloadByKey(*namespace, *key)
-	if err != nil {
-		fmt.Fprintf(a.stderr, "resolve secret key: %v\n", err)
-		return 1
-	}
-	versions, err := client.ListSecretVersionsWithLimit(secret.SecretID, *limit)
+	versions, err := client.ListSecretVersionMetadataByKey(*namespace, *key, *limit)
 	if err != nil {
 		fmt.Fprintf(a.stderr, "list secret versions: %v\n", err)
 		return 1
@@ -881,12 +876,7 @@ func (a *app) runSecretAccessList(args []string) int {
 		fmt.Fprintf(a.stderr, "%v\n", err)
 		return 1
 	}
-	secret, err := client.GetSecretPayloadByKey(*namespace, *key)
-	if err != nil {
-		fmt.Fprintf(a.stderr, "resolve secret key: %v\n", err)
-		return 1
-	}
-	access, err := client.ListSecretAccessWithLimit(secret.SecretID, *limit)
+	access, err := client.ListSecretAccessMetadataByKey(*namespace, *key, *limit)
 	if err != nil {
 		fmt.Fprintf(a.stderr, "list secret access: %v\n", err)
 		return 1
