@@ -151,3 +151,31 @@ func TestPublicSDKSurfaceAvoidsSecretIDTransportHelpersAcrossLanguages(t *testin
 		}
 	}
 }
+
+func TestSDKCapabilityMatrixDocumentsKeyspaceParity(t *testing.T) {
+	repoRoot := filepath.Join("..", "..")
+	payload, err := os.ReadFile(filepath.Join(repoRoot, "docs", "CLIENT_LIBRARIES.md"))
+	if err != nil {
+		t.Fatalf("ReadFile(docs/CLIENT_LIBRARIES.md) error = %v", err)
+	}
+	content := string(payload)
+	for _, token := range []string{
+		"## Keyspace parity matrix",
+		"| Feature | Go | Python | Node.js / TypeScript | C++ | Java | Rust |",
+		"| Create secret by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |",
+		"| Read secret by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |",
+		"| Create new version by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |",
+		"| Share by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |",
+		"| Revoke access by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |",
+		"| Delete by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |",
+		"| List versions by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |",
+		"| List access by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |",
+		"| Request access by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |",
+		"| Activate access by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |",
+		"| High-level crypto AAD binds `namespace/key/secret_version` | Yes | Yes | Yes | Yes | Yes | Yes |",
+	} {
+		if !strings.Contains(content, token) {
+			t.Fatalf("SDK capability matrix is missing %q", token)
+		}
+	}
+}

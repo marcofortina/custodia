@@ -115,6 +115,26 @@ High-level clients expose equivalent operations across languages:
 
 Transport clients expose raw equivalents that accept already prepared opaque payloads. Normal read/share/version/revoke/delete/access-request flows address secrets by `namespace` and `key`; generated server identifiers are internal storage/FK/audit correlation details and are not part of the public SDK workflow surface.
 
+## Keyspace parity matrix
+
+The public SDK workflow surface is considered complete only when every repository SDK exposes the same keyspace operations. This matrix is intentionally redundant with the SDK-specific docs so reviewers can spot drift quickly.
+
+| Feature | Go | Python | Node.js / TypeScript | C++ | Java | Rust |
+| --- | --- | --- | --- | --- | --- | --- |
+| Create secret by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |
+| Read secret by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |
+| Create new version by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |
+| Share by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |
+| Revoke access by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |
+| Delete by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |
+| List versions by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |
+| List access by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |
+| Request access by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |
+| Activate access by `namespace/key` | Yes | Yes | Yes | Yes | Yes | Yes |
+| High-level crypto AAD binds `namespace/key/secret_version` | Yes | Yes | Yes | Yes | Yes | Yes |
+
+Any new SDK must add its implementation and test coverage before this table can mark the feature as complete.
+
 ## Key resolution
 
 Recipient public keys are resolved outside Custodia. Valid resolvers include:
