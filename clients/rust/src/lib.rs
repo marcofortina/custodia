@@ -300,26 +300,38 @@ impl CustodiaClient {
         )
     }
 
-    pub fn create_access_grant(&self, secret_id: &str, payload: &Value) -> Result<Value> {
+    pub fn create_access_grant_by_key(&self, namespace: &str, key: &str, payload: &Value) -> Result<Value> {
         self.request_json(
             "POST",
-            &format!("/v1/secrets/{}/access-requests", path_escape(secret_id)),
+            &with_query(
+                "/v1/secrets/by-key/access-requests",
+                &[
+                    ("namespace".to_string(), namespace.to_string()),
+                    ("key".to_string(), key.to_string()),
+                ],
+            ),
             Some(payload),
         )
     }
 
-    pub fn activate_access_grant_payload(
+    pub fn activate_access_grant_payload_by_key(
         &self,
-        secret_id: &str,
+        namespace: &str,
+        key: &str,
         target_client_id: &str,
         payload: &Value,
     ) -> Result<Value> {
         self.request_json(
             "POST",
-            &format!(
-                "/v1/secrets/{}/access-requests/{}/activate",
-                path_escape(secret_id),
-                path_escape(target_client_id)
+            &with_query(
+                &format!(
+                    "/v1/secrets/by-key/access/{}/activate",
+                    path_escape(target_client_id)
+                ),
+                &[
+                    ("namespace".to_string(), namespace.to_string()),
+                    ("key".to_string(), key.to_string()),
+                ],
             ),
             Some(payload),
         )

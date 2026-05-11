@@ -180,12 +180,12 @@ class Client final {
   std::string share_secret_payload(const std::string& secret_id, const std::string& payload_json);
   std::string share_secret_payload_by_key(const std::string& namespace_name, const std::string& key, const std::string& payload_json);
   std::string revoke_access_by_key(const std::string& namespace_name, const std::string& key, const std::string& client_id);
-  std::string create_access_grant(const std::string& secret_id, const std::string& payload_json);
-  std::string activate_access_grant_payload(
-      const std::string& secret_id,
+  std::string create_access_grant_by_key(const std::string& namespace_name, const std::string& key, const std::string& payload_json);
+  std::string activate_access_grant_payload_by_key(
+      const std::string& namespace_name,
+      const std::string& key,
       const std::string& target_client_id,
       const std::string& payload_json);
-  std::string revoke_access(const std::string& secret_id, const std::string& client_id);
   std::string create_secret_version_payload(const std::string& secret_id, const std::string& payload_json);
   std::string create_secret_version_payload_by_key(const std::string& namespace_name, const std::string& key, const std::string& payload_json);
   std::string delete_secret_by_key(const std::string& namespace_name, const std::string& key, bool cascade = false);

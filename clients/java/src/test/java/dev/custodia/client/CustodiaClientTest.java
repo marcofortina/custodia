@@ -40,9 +40,16 @@ public final class CustodiaClientTest {
         assertEquals("{\"ciphertext\":\"opaque\"}", new String(transport.lastRequest.body(), StandardCharsets.UTF_8), "body");
         assertEquals("{\"secret_id\":\"s1\"}", response, "response");
 
-        client.activateAccessGrantPayload("secret/one", "client one", "{\"envelope\":\"opaque\"}");
+        client.createAccessGrantByKey("db01", "user:sys", "{\"target_client_id\":\"client one\"}");
         assertEquals(
-            "https://vault.test/v1/secrets/secret%2Fone/access-requests/client%20one/activate",
+            "https://vault.test/v1/secrets/by-key/access-requests?namespace=db01&key=user%3Asys",
+            transport.lastRequest.uri().toString(),
+            "encoded access request path"
+        );
+
+        client.activateAccessGrantPayloadByKey("db01", "user:sys", "client one", "{\"envelope\":\"opaque\"}");
+        assertEquals(
+            "https://vault.test/v1/secrets/by-key/access/client%20one/activate?namespace=db01&key=user%3Asys",
             transport.lastRequest.uri().toString(),
             "encoded activate path"
         );

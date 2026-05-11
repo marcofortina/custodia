@@ -287,22 +287,19 @@ std::string Client::revoke_access_by_key(const std::string& namespace_name, cons
   return request_json("DELETE", with_query("/v1/secrets/by-key/access/" + path_escape(client_id), {{"namespace", namespace_name}, {"key", key}}));
 }
 
-std::string Client::create_access_grant(const std::string& secret_id, const std::string& payload_json) {
-  return request_json("POST", "/v1/secrets/" + path_escape(secret_id) + "/access-requests", payload_json);
+std::string Client::create_access_grant_by_key(const std::string& namespace_name, const std::string& key, const std::string& payload_json) {
+  return request_json("POST", with_query("/v1/secrets/by-key/access-requests", {{"namespace", namespace_name}, {"key", key}}), payload_json);
 }
 
-std::string Client::activate_access_grant_payload(
-    const std::string& secret_id,
+std::string Client::activate_access_grant_payload_by_key(
+    const std::string& namespace_name,
+    const std::string& key,
     const std::string& target_client_id,
     const std::string& payload_json) {
   return request_json(
       "POST",
-      "/v1/secrets/" + path_escape(secret_id) + "/access-requests/" + path_escape(target_client_id) + "/activate",
+      with_query("/v1/secrets/by-key/access/" + path_escape(target_client_id) + "/activate", {{"namespace", namespace_name}, {"key", key}}),
       payload_json);
-}
-
-std::string Client::revoke_access(const std::string& secret_id, const std::string& client_id) {
-  return request_json("DELETE", "/v1/secrets/" + path_escape(secret_id) + "/access/" + path_escape(client_id));
 }
 
 std::string Client::create_secret_version_payload(const std::string& secret_id, const std::string& payload_json) {

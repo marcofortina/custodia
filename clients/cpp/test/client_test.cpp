@@ -99,9 +99,15 @@ void routes_opaque_secret_payloads() {
   expect_eq(R"({"ciphertext":"opaque"})", *transport->last_request.body, "body");
   expect_eq(R"({"secret_id":"s1"})", response, "response");
 
-  client.activate_access_grant_payload("secret/one", "client one", R"({"envelope":"opaque"})");
+  client.create_access_grant_by_key("db01", "user:sys", R"({"target_client_id":"client one"})");
   expect_eq(
-      "https://vault.test/v1/secrets/secret%2Fone/access-requests/client%20one/activate",
+      "https://vault.test/v1/secrets/by-key/access-requests?namespace=db01&key=user%3Asys",
+      transport->last_request.url,
+      "encoded access request path");
+
+  client.activate_access_grant_payload_by_key("db01", "user:sys", "client one", R"({"envelope":"opaque"})");
+  expect_eq(
+      "https://vault.test/v1/secrets/by-key/access/client%20one/activate?namespace=db01&key=user%3Asys",
       transport->last_request.url,
       "encoded activate path");
 

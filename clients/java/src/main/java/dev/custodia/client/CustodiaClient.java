@@ -149,21 +149,17 @@ public final class CustodiaClient {
         return requestJson("POST", withQuery("/v1/secrets/by-key/share", keyspaceFilters(namespace, key)), payloadJson);
     }
 
-    public String createAccessGrant(String secretId, String payloadJson) throws IOException, InterruptedException, CustodiaHttpError {
-        return requestJson("POST", "/v1/secrets/" + pathEscape(secretId) + "/access-requests", payloadJson);
+    public String createAccessGrantByKey(String namespace, String key, String payloadJson) throws IOException, InterruptedException, CustodiaHttpError {
+        return requestJson("POST", withQuery("/v1/secrets/by-key/access-requests", keyspaceFilters(namespace, key)), payloadJson);
     }
 
-    public String activateAccessGrantPayload(String secretId, String targetClientId, String payloadJson)
+    public String activateAccessGrantPayloadByKey(String namespace, String key, String targetClientId, String payloadJson)
         throws IOException, InterruptedException, CustodiaHttpError {
         return requestJson(
             "POST",
-            "/v1/secrets/" + pathEscape(secretId) + "/access-requests/" + pathEscape(targetClientId) + "/activate",
+            withQuery("/v1/secrets/by-key/access/" + pathEscape(targetClientId) + "/activate", keyspaceFilters(namespace, key)),
             payloadJson
         );
-    }
-
-    public String revokeAccess(String secretId, String clientId) throws IOException, InterruptedException, CustodiaHttpError {
-        return requestJson("DELETE", "/v1/secrets/" + pathEscape(secretId) + "/access/" + pathEscape(clientId), null);
     }
 
     public String revokeAccessByKey(String namespace, String key, String clientId) throws IOException, InterruptedException, CustodiaHttpError {

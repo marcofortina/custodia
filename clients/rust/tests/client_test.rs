@@ -125,6 +125,8 @@ fn builds_metadata_and_operational_paths() {
         json!({"access_requests": []}),
         json!({"secret_id": "s1"}),
         json!({"status": "shared"}),
+        json!({"status": "requested"}),
+        json!({"status": "activated"}),
         json!({"version_id": "v2"}),
         json!({"status": "revoked"}),
         json!({"status": "deleted"}),
@@ -162,6 +164,12 @@ fn builds_metadata_and_operational_paths() {
         .share_secret_payload_by_key("db01", "user:sys", &json!({"target_client_id":"client_bob"}))
         .unwrap();
     client
+        .create_access_grant_by_key("db01", "user:sys", &json!({"target_client_id":"client_bob"}))
+        .unwrap();
+    client
+        .activate_access_grant_payload_by_key("db01", "user:sys", "client_bob", &json!({"envelope":"opaque"}))
+        .unwrap();
+    client
         .create_secret_version_payload_by_key("db01", "user:sys", &json!({"ciphertext":"opaque"}))
         .unwrap();
     client.revoke_access_by_key("db01", "user:sys", "client_bob").unwrap();
@@ -191,6 +199,8 @@ fn builds_metadata_and_operational_paths() {
     assert_url_seen(&urls, "/v1/access-requests?limit=7&status=pending&client_id=client_alice");
     assert_url_seen(&urls, "/v1/secrets/by-key?namespace=db01&key=user%3Asys");
     assert_url_seen(&urls, "/v1/secrets/by-key/share?namespace=db01&key=user%3Asys");
+    assert_url_seen(&urls, "/v1/secrets/by-key/access-requests?namespace=db01&key=user%3Asys");
+    assert_url_seen(&urls, "/v1/secrets/by-key/access/client_bob/activate?namespace=db01&key=user%3Asys");
     assert_url_seen(&urls, "/v1/secrets/by-key/versions?namespace=db01&key=user%3Asys");
     assert_url_seen(&urls, "/v1/secrets/by-key/access/client_bob?namespace=db01&key=user%3Asys");
     assert_url_seen(&urls, "/v1/secrets/by-key?namespace=db01&key=user%3Asys&cascade=true");
