@@ -228,6 +228,23 @@ store_backend: sqlite
 	}
 }
 
+func TestLoadYAMLAcceptsGeneratedTopLevelWebSecrets(t *testing.T) {
+	path := t.TempDir() + "/custodia.yaml"
+	writeConfigTestFile(t, path, `profile: lite
+server:
+  api_addr: ":18443"
+web_totp_secret: "ABCDEFGHABCDEFGH"
+web_session_secret: "abcdefghijklmnopqrstuvwxyz1234567890"
+`)
+	cfg, err := LoadWithArgs([]string{"--config", path})
+	if err != nil {
+		t.Fatalf("LoadWithArgs() error = %v", err)
+	}
+	if cfg.WebTOTPSecret != "ABCDEFGHABCDEFGH" || cfg.WebSessionSecret != "abcdefghijklmnopqrstuvwxyz1234567890" {
+		t.Fatalf("unexpected web secrets: %+v", cfg)
+	}
+}
+
 func TestLoadStructuredYAMLConfigSections(t *testing.T) {
 	path := t.TempDir() + "/custodia.yaml"
 	writeConfigTestFile(t, path, `profile: lite

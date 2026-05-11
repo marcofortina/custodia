@@ -19,7 +19,7 @@ For first-run setup, generate a valid TOTP secret with:
 sudo custodia-admin web totp configure --account admin
 ```
 
-The command writes `web_totp_secret` and `web_session_secret` to `/etc/custodia/custodia-server.yaml` by default when they are not already present. It always prints the TOTP secret and provisioning URI. If `qrencode` is installed, it also prints an ANSI terminal QR code. Store the provisioning URI or secret only in the operator's authenticator/password manager.
+The command writes `web.totp_secret` and `web.session_secret` to `/etc/custodia/custodia-server.yaml` by default when they are not already present. It always prints the TOTP secret and provisioning URI. If `qrencode` is installed, it also prints an ANSI terminal QR code with an expanded quiet zone. Some authenticator apps are stricter than the phone camera/photo app when scanning terminal-rendered QR codes; if direct scanning fails, enlarge the terminal, increase contrast, use the provisioning URI, or scan a PNG generated from the same URI. Store the provisioning URI or secret only in the operator's authenticator/password manager.
 
 ## Login flow
 

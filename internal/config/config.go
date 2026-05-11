@@ -253,6 +253,12 @@ func loadSimpleYAML(path string) (map[string]string, error) {
 				return nil, err
 			}
 			values[key] = strings.Join(parsed, ",")
+		case "web_totp_secret", "web_session_secret":
+			value, err := yamlScalar(raw, key)
+			if err != nil {
+				return nil, err
+			}
+			values[key] = value
 		default:
 			return nil, fmt.Errorf("unsupported top-level config key %q; use structured YAML sections", key)
 		}

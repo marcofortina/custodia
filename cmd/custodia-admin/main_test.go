@@ -878,9 +878,14 @@ func TestRunWebTOTPConfigureWritesConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"web_totp_secret:", "web_session_secret:"} {
+	for _, want := range []string{"web:", "  totp_secret:", "  session_secret:"} {
 		if !strings.Contains(string(body), want) {
 			t.Fatalf("config does not contain %s: %s", want, string(body))
+		}
+	}
+	for _, unexpected := range []string{"web_totp_secret:", "web_session_secret:"} {
+		if strings.Contains(string(body), unexpected) {
+			t.Fatalf("config contains flat web key %s: %s", unexpected, string(body))
 		}
 	}
 	if !strings.Contains(out.String(), "TOTP secret:") || !strings.Contains(out.String(), "Provisioning URI:") {
@@ -888,6 +893,31 @@ func TestRunWebTOTPConfigureWritesConfig(t *testing.T) {
 	}
 	if err := runWebTOTPConfigure([]string{"--config", configPath}, io.Discard); err == nil {
 		t.Fatal("expected duplicate web secret error")
+	}
+}
+
+func TestRunWebTOTPConfigureUpdatesExistingWebSection(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "custodia-server.yaml")
+	if err := os.WriteFile(configPath, []byte(`profile: lite
+web:
+  mfa_required: true
+server:
+  api_addr: ":8443"
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := runWebTOTPConfigure([]string{"--config", configPath}, io.Discard); err != nil {
+		t.Fatalf("runWebTOTPConfigure() error = %v", err)
+	}
+	body, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(body)
+	for _, want := range []string{"web:\n  totp_secret:", "  session_secret:", "  mfa_required: true"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("config does not contain %s: %s", want, text)
+		}
 	}
 }
 

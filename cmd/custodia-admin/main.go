@@ -197,10 +197,10 @@ func runWebTOTPGenerate(args []string, out io.Writer) error {
 
 	switch strings.ToLower(strings.TrimSpace(*format)) {
 	case "text":
-		_, err = fmt.Fprintf(out, "TOTP secret: %s\nProvisioning URI: %s\n\nAdd this to /etc/custodia/custodia-server.yaml:\nweb_totp_secret: \"%s\"\n", secret, uri, secret)
+		_, err = fmt.Fprintf(out, "TOTP secret: %s\nProvisioning URI: %s\n\nAdd this to /etc/custodia/custodia-server.yaml:\nweb:\n  totp_secret: \"%s\"\n", secret, uri, secret)
 		return err
 	case "yaml":
-		_, err = fmt.Fprintf(out, "web_totp_secret: \"%s\"\n", secret)
+		_, err = fmt.Fprintf(out, "web:\n  totp_secret: \"%s\"\n", secret)
 		return err
 	case "json":
 		payload := map[string]string{
@@ -236,7 +236,7 @@ func runWebTOTPConfigure(args []string, out io.Writer) error {
 		return fmt.Errorf("read config: %w", err)
 	}
 	if serverConfigHasWebSecrets(string(body)) {
-		return fmt.Errorf("web_totp_secret or web_session_secret already exists; edit %s instead of appending duplicates", *configPath)
+		return fmt.Errorf("web totp_secret or session_secret already exists; edit %s instead of appending duplicates", *configPath)
 	}
 	secret, err := webauth.GenerateTOTPSecret()
 	if err != nil {
@@ -250,14 +250,14 @@ func runWebTOTPConfigure(args []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	appendix := fmt.Sprintf("\nweb_totp_secret: %q\nweb_session_secret: %q\n", secret, sessionSecret)
-	file, err := os.OpenFile(*configPath, os.O_WRONLY|os.O_APPEND, 0)
+	appendix := structuredWebSecretConfigAppendix(string(body), secret, sessionSecret)
+	file, err := os.OpenFile(*configPath, os.O_WRONLY|os.O_TRUNC, 0)
 	if err != nil {
 		return fmt.Errorf("open config for append: %w", err)
 	}
 	if _, err := file.WriteString(appendix); err != nil {
 		_ = file.Close()
-		return fmt.Errorf("append web secrets: %w", err)
+		return fmt.Errorf("write web secrets: %w", err)
 	}
 	if err := file.Close(); err != nil {
 		return err
@@ -275,11 +275,45 @@ func runWebTOTPConfigure(args []string, out io.Writer) error {
 	return nil
 }
 
+func structuredWebSecretConfigAppendix(config string, totpSecret string, sessionSecret string) string {
+	lines := strings.Split(config, "\n")
+	for index, line := range lines {
+		if strings.TrimSpace(line) == "web:" && len(line)-len(strings.TrimLeft(line, " ")) == 0 {
+			insert := []string{
+				fmt.Sprintf("  totp_secret: %q", totpSecret),
+				fmt.Sprintf("  session_secret: %q", sessionSecret),
+			}
+			updated := append([]string{}, lines[:index+1]...)
+			updated = append(updated, insert...)
+			updated = append(updated, lines[index+1:]...)
+			return strings.Join(updated, "\n")
+		}
+	}
+	config = strings.TrimRight(config, "\n")
+	if config != "" {
+		config += "\n"
+	}
+	return config + fmt.Sprintf("web:\n  totp_secret: %q\n  session_secret: %q\n", totpSecret, sessionSecret)
+}
+
 func serverConfigHasWebSecrets(config string) bool {
 	scanner := bufio.NewScanner(strings.NewReader(config))
+	inWebSection := false
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if strings.HasPrefix(line, "web_totp_secret:") || strings.HasPrefix(line, "web_session_secret:") {
+		rawLine := scanner.Text()
+		trimmed := strings.TrimSpace(rawLine)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		indent := len(rawLine) - len(strings.TrimLeft(rawLine, " "))
+		if indent == 0 {
+			inWebSection = trimmed == "web:"
+			if strings.HasPrefix(trimmed, "web_totp_secret:") || strings.HasPrefix(trimmed, "web_session_secret:") {
+				return true
+			}
+			continue
+		}
+		if inWebSection && (strings.HasPrefix(trimmed, "totp_secret:") || strings.HasPrefix(trimmed, "session_secret:")) {
 			return true
 		}
 	}
@@ -299,7 +333,7 @@ func renderTOTPQRCode(uri string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	cmd := exec.Command(path, "-t", "ANSIUTF8", uri)
+	cmd := exec.Command(path, "-t", "ANSIUTF8", "-m", "4", uri)
 	output, err := cmd.Output()
 	if err != nil {
 		return "", err
