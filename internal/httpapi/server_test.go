@@ -2094,6 +2094,13 @@ func TestWebConsoleRendersMetadataOnlyPages(t *testing.T) {
 		if strings.Contains(body, "c2VjcmV0LWNpcGhlcnRleHQ=") || strings.Contains(body, "c2VjcmV0LWVudmVsb3Bl") {
 			t.Fatalf("%s leaked opaque crypto payload: %s", path, body)
 		}
+		if path == "/web/access-requests" {
+			for _, expected := range []string{`class="console-keyspace"`, `class="console-keyspace__namespace">default</span>`, `<code>db password</code>`, `Filter grants by the public keyspace tuple used by clients. Internal secret identifiers are intentionally not part of this workflow.`} {
+				if !strings.Contains(body, expected) {
+					t.Fatalf("access requests page expected keyspace token %q, got: %s", expected, body)
+				}
+			}
+		}
 	}
 }
 
@@ -2400,9 +2407,11 @@ func TestWebConsoleFilterFormsPreserveSubmittedValues(t *testing.T) {
 			},
 		},
 		{
-			path: "/web/access-requests?limit=25&status=pending&client_id=client_bob&requested_by_client_id=admin",
+			path: "/web/access-requests?limit=25&namespace=db01&key=user:sys&status=pending&client_id=client_bob&requested_by_client_id=admin",
 			expected: []string{
 				`name="limit" inputmode="numeric" placeholder="100" value="25"`,
+				`name="namespace" placeholder="default" value="db01"`,
+				`name="key" placeholder="user:sys" value="user:sys"`,
 				`<option value="pending" selected>Pending</option>`,
 				`name="client_id" placeholder="client_bob" value="client_bob"`,
 				`name="requested_by_client_id" placeholder="admin" value="admin"`,

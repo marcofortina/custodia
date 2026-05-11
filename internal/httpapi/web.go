@@ -317,6 +317,14 @@ func webBadge(value string) string {
 	return `<span class="console-badge console-badge--` + html.EscapeString(normalized) + `">` + html.EscapeString(value) + `</span>`
 }
 
+func webKeyspace(namespace, key string) string {
+	namespace = strings.TrimSpace(namespace)
+	if namespace == "" {
+		namespace = model.DefaultSecretNamespace
+	}
+	return `<span class="console-keyspace"><span class="console-keyspace__namespace">` + html.EscapeString(namespace) + `</span><code>` + html.EscapeString(key) + `</code></span>`
+}
+
 func webTable(columns []string, rows string, emptyColspan int, emptyMessage string) string {
 	return webTableWithAttributes(columns, rows, emptyColspan, emptyMessage, "")
 }
@@ -808,18 +816,19 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 	}
 	rows := ""
 	for _, request := range requests {
-		rows += "<tr><td>" + html.EscapeString(request.Namespace) + "</td><td>" + html.EscapeString(request.Key) + "</td><td>" + html.EscapeString(request.ClientID) + "</td><td>" + html.EscapeString(request.RequestedByClientID) + "</td><td>" + webBadge(request.Status) + "</td></tr>"
+		rows += "<tr><td>" + webKeyspace(request.Namespace, request.Key) + "</td><td>" + html.EscapeString(request.ClientID) + "</td><td>" + html.EscapeString(request.RequestedByClientID) + "</td><td>" + webBadge(request.Status) + "</td></tr>"
 	}
-	body := webHero("Access Requests", "Metadata-only pending grant workflow. Envelopes are never rendered here.") +
+	body := webHero("Access Requests", "Metadata-only pending grant workflow filtered by namespace/key. Envelopes are never rendered here.") +
+		`<p class="console-muted console-filter-note">Filter grants by the public keyspace tuple used by clients. Internal secret identifiers are intentionally not part of this workflow.</p>` +
 		`<form class="console-toolbar" method="get" action="/web/access-requests" hx-get="/web/access-requests" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">` +
 		`<label>Limit<input name="limit" inputmode="numeric" placeholder="100"` + webInputValueAttr(r, "limit") + `></label>` +
 		`<label>Namespace<input name="namespace" placeholder="default"` + webInputValueAttr(r, "namespace") + `></label>` +
-		`<label>Key<input name="key" placeholder="db01/user:sys"` + webInputValueAttr(r, "key") + `></label>` +
+		`<label>Key<input name="key" placeholder="user:sys"` + webInputValueAttr(r, "key") + `></label>` +
 		`<label>Status<select name="status">` + webSelectOption("", "Any", statusFilter) + webSelectOption("pending", "Pending", statusFilter) + webSelectOption("activated", "Activated", statusFilter) + webSelectOption("revoked", "Revoked", statusFilter) + webSelectOption("expired", "Expired", statusFilter) + `</select></label>` +
 		`<label>Target<input name="client_id" placeholder="client_bob"` + webInputValueAttr(r, "client_id") + `></label>` +
 		`<label>Requester<input name="requested_by_client_id" placeholder="admin"` + webInputValueAttr(r, "requested_by_client_id") + `></label>` +
 		`<button type="submit">Apply filter</button><a class="console-button console-button--ghost" href="/web/access-requests" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">Reset</a></form>` +
-		webPaginatedTable([]string{"Namespace", "Key", "Target client", "Requested by", "Status"}, rows, 5, "No access requests found.", 10, "Access Requests pagination")
+		webPaginatedTable([]string{"Keyspace", "Target client", "Requested by", "Status"}, rows, 4, "No access requests found for this keyspace filter.", 10, "Access Requests pagination")
 	s.audit(r, "web.access_request_list", "secret", "", "success", nil)
 	writeWebPage(w, "Access Requests", body)
 }

@@ -208,6 +208,10 @@ p { margin: 0 0 16px; color: var(--muted); max-width: 82ch; }
 .console-stat { display: grid; gap: 4px; margin: 0; }
 .console-stat dt { color: var(--muted); font-size: .78rem; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
 .console-stat dd { margin: 0; font-size: clamp(1.4rem, 3vw, 2.2rem); font-weight: 950; letter-spacing: -0.05em; overflow-wrap: anywhere; }
+.console-filter-note { margin: -8px 0 0; }
+.console-keyspace { display: grid; gap: 4px; min-width: 180px; }
+.console-keyspace__namespace { color: var(--muted-strong); font-size: .76rem; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+.console-keyspace code { width: fit-content; max-width: 100%; padding: 4px 7px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel-soft); color: var(--text); font-size: .86rem; overflow-wrap: anywhere; }
 .console-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin: 20px 0 16px; padding: 14px; }
 .console-toolbar label { display: grid; gap: 6px; min-width: 160px; color: var(--muted-strong); font-size: .78rem; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
 input, select {

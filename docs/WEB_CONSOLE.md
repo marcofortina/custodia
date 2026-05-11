@@ -39,7 +39,7 @@ Client-side pagination is enabled for bounded data tables on Clients, Access Req
 
 ## Query filters
 
-The metadata console supports bounded query filters for operational views:
+The metadata console supports bounded query filters for operational views. Access-request workflows use public `namespace/key` filters and intentionally do not expose internal secret-id filters:
 
 - `/web/audit?limit=100&outcome=failure&action=secret.read&actor_client_id=client_alice&resource_type=secret&resource_id=<id>`
 - `/web/audit/verify?limit=500`

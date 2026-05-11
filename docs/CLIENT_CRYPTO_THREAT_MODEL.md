@@ -63,7 +63,7 @@ Client-side AEAD uses deterministic AAD bound to the public keyspace:
 
 This binding prevents ciphertext/envelope metadata from being silently swapped across namespaces, keys, crypto versions, envelope schemes or versions. Clients must fail closed when AAD cannot be reconstructed or authentication fails.
 
-`secret_id` is intentionally not part of client crypto AAD. It is an internal storage/FK/audit correlation identifier, not the public workflow identity.
+secret_id is intentionally not part of client crypto AAD. It is an internal storage/FK/audit correlation identifier, not the public workflow identity.
 
 ## Nonce requirements
 
