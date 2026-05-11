@@ -62,27 +62,14 @@ class _Transport:
         self.created_payload = payload
         return {"secret_id": "created-secret", "version_id": "created-version"}
 
-    def create_secret_version(self, secret_id: str, payload: dict[str, object]) -> dict[str, str]:
-        self.version_payload = {"secret_id": secret_id, **payload}
-        return {"secret_id": secret_id, "version_id": "created-version"}
-
     def create_secret_version_by_key(self, namespace: str, key: str, payload: dict[str, object]) -> dict[str, str]:
         self.version_payload = {"namespace": namespace, "key": key, **payload}
         return {"secret_id": "created-secret", "version_id": "created-version"}
-
-    def get_secret(self, secret_id: str) -> dict[str, object]:
-        if secret_id != self.secret_response.get("secret_id"):
-            raise AssertionError("unexpected secret id")
-        return self.secret_response
 
     def get_secret_by_key(self, namespace: str, key: str) -> dict[str, object]:
         if namespace != self.secret_response.get("namespace") or key != self.secret_response.get("key"):
             raise AssertionError("unexpected secret keyspace")
         return self.secret_response
-
-    def share_secret(self, secret_id: str, payload: dict[str, object]) -> dict[str, bool]:
-        self.shared_payload = {"secret_id": secret_id, **payload}
-        return {"ok": True}
 
     def share_secret_by_key(self, namespace: str, key: str, payload: dict[str, object]) -> dict[str, bool]:
         self.shared_payload = {"namespace": namespace, "key": key, **payload}
