@@ -198,6 +198,8 @@ func New(options Options) http.Handler {
 	mux.Handle("DELETE /v1/secrets/by-key", server.auth(http.HandlerFunc(server.handleDeleteSecretByKey)))
 	mux.Handle("POST /v1/secrets/by-key/share", server.auth(http.HandlerFunc(server.handleShareSecretByKey)))
 	mux.Handle("DELETE /v1/secrets/by-key/access/{client_id}", server.auth(http.HandlerFunc(server.handleRevokeAccessByKey)))
+	mux.Handle("POST /v1/secrets/by-key/access-requests", server.auth(server.adminOnly(http.HandlerFunc(server.handleRequestAccessGrantByKey))))
+	mux.Handle("POST /v1/secrets/by-key/access/{client_id}/activate", server.auth(http.HandlerFunc(server.handleActivateAccessGrantByKey)))
 	mux.Handle("GET /v1/secrets/by-key/access", server.auth(http.HandlerFunc(server.handleListSecretAccessByKey)))
 	mux.Handle("POST /v1/secrets/by-key/versions", server.auth(http.HandlerFunc(server.handleCreateSecretVersionByKey)))
 	mux.Handle("GET /v1/secrets/by-key/versions", server.auth(http.HandlerFunc(server.handleListSecretVersionsByKey)))

@@ -43,6 +43,22 @@ func TestPublicGoTransportMethodsAvoidInternalTypes(t *testing.T) {
 				t.Fatalf("key = %q", got)
 			}
 			_ = json.NewEncoder(w).Encode(map[string]string{"status": "shared"})
+		case "POST /v1/secrets/by-key/access-requests":
+			if got := r.URL.Query().Get("namespace"); got != "db01" {
+				t.Fatalf("namespace = %q", got)
+			}
+			if got := r.URL.Query().Get("key"); got != "user:sys" {
+				t.Fatalf("key = %q", got)
+			}
+			_ = json.NewEncoder(w).Encode(AccessGrantRef{SecretID: "secret-id", VersionID: "version-id", ClientID: "client_bob", Status: "pending"})
+		case "POST /v1/secrets/by-key/access/client_bob/activate":
+			if got := r.URL.Query().Get("namespace"); got != "db01" {
+				t.Fatalf("namespace = %q", got)
+			}
+			if got := r.URL.Query().Get("key"); got != "user:sys" {
+				t.Fatalf("key = %q", got)
+			}
+			_ = json.NewEncoder(w).Encode(map[string]string{"status": "activated"})
 		case "POST /v1/secrets/by-key/versions":
 			if got := r.URL.Query().Get("namespace"); got != "db01" {
 				t.Fatalf("namespace = %q", got)
@@ -117,6 +133,13 @@ func TestPublicGoTransportMethodsAvoidInternalTypes(t *testing.T) {
 	}
 	if err := custodiaClient.ShareSecretPayloadByKey("db01", "user:sys", ShareSecretPayload{VersionID: "version-id", TargetClientID: "client_bob", Envelope: "ZW52", Permissions: PermissionRead}); err != nil {
 		t.Fatalf("ShareSecretPayloadByKey() error = %v", err)
+	}
+	grantByKey, err := custodiaClient.CreateAccessGrantByKey("db01", "user:sys", AccessGrantPayload{TargetClientID: "client_bob", Permissions: PermissionRead})
+	if err != nil || grantByKey.ClientID != "client_bob" || grantByKey.Status != "pending" {
+		t.Fatalf("CreateAccessGrantByKey() = %+v err=%v", grantByKey, err)
+	}
+	if err := custodiaClient.ActivateAccessGrantPayloadByKey("db01", "user:sys", "client_bob", ActivateAccessPayload{Envelope: "ZW52"}); err != nil {
+		t.Fatalf("ActivateAccessGrantPayloadByKey() error = %v", err)
 	}
 	versionByKey, err := custodiaClient.CreateSecretVersionPayloadByKey("db01", "user:sys", CreateSecretVersionPayload{Ciphertext: "Y2lwaGVy", Envelopes: []RecipientEnvelope{{ClientID: "client_alice", Envelope: "ZW52"}}, Permissions: PermissionRead})
 	if err != nil || versionByKey.VersionID != "version-id-2" {

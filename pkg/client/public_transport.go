@@ -174,13 +174,21 @@ func (c *Client) RevokeAccessByKey(namespace, key, targetClientID string) error 
 	return c.doJSON(http.MethodDelete, path, nil, nil)
 }
 
-func (c *Client) CreateAccessGrant(secretID string, req AccessGrantPayload) (AccessGrantRef, error) {
+func (c *Client) CreateAccessGrantByKey(namespace, key string, req AccessGrantPayload) (AccessGrantRef, error) {
+	path, err := secretByKeyPath("/v1/secrets/by-key/access-requests", namespace, key, false)
+	if err != nil {
+		return AccessGrantRef{}, err
+	}
 	var ref AccessGrantRef
-	return ref, c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/access-requests", req, &ref)
+	return ref, c.doJSON(http.MethodPost, path, req, &ref)
 }
 
-func (c *Client) ActivateAccessGrantPayload(secretID, targetClientID string, req ActivateAccessPayload) error {
-	return c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/access-requests/"+pathEscape(targetClientID)+"/activate", req, nil)
+func (c *Client) ActivateAccessGrantPayloadByKey(namespace, key, targetClientID string, req ActivateAccessPayload) error {
+	path, err := secretByKeyPath("/v1/secrets/by-key/access/"+pathEscape(targetClientID)+"/activate", namespace, key, false)
+	if err != nil {
+		return err
+	}
+	return c.doJSON(http.MethodPost, path, req, nil)
 }
 
 func (c *Client) CreateSecretVersionPayload(secretID string, req CreateSecretVersionPayload) (SecretVersionRef, error) {
