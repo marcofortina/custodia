@@ -370,8 +370,7 @@ class CryptoCustodiaClient:
         permissions: int = 7,
         expires_at: str | None = None,
     ) -> dict[str, Any]:
-        if not name.strip():
-            raise ValueError("secret name is required")
+        name = _require_key(name)
         dek = self._random(AES_256_GCM_KEY_BYTES)
         nonce = self._random(AES_GCM_NONCE_BYTES)
         aad_inputs = CanonicalAADInputs(namespace="default", key=name, secret_version=1)
@@ -379,7 +378,8 @@ class CryptoCustodiaClient:
         aad = build_canonical_aad(metadata, aad_inputs)
         ciphertext = seal_content_aes_256_gcm(dek, nonce, plaintext, aad)
         payload: dict[str, Any] = {
-            "name": name,
+            "namespace": "default",
+            "key": name,
             "ciphertext": _b64encode(ciphertext),
             "crypto_metadata": metadata.to_dict(),
             "envelopes": self._seal_recipient_envelopes(self._normalized_recipients(recipients), dek, aad),
@@ -409,7 +409,6 @@ class CryptoCustodiaClient:
         payload: dict[str, Any] = {
             "namespace": namespace,
             "key": key,
-            "name": key,
             "ciphertext": _b64encode(ciphertext),
             "crypto_metadata": metadata.to_dict(),
             "envelopes": self._seal_recipient_envelopes(self._normalized_recipients(recipients), dek, aad),

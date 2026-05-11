@@ -171,16 +171,17 @@ export class CiphertextAuthenticationFailed extends CryptoError {}
 export class WrongRecipient extends CryptoError {}
 
 export interface CanonicalAADInputOptions {
-  secretID?: string;
-  secretName?: string;
-  versionID?: string;
+  namespace?: string;
+  key?: string;
+  secretVersion?: number;
+  secret_version?: number;
 }
 
 export class CanonicalAADInputs {
   constructor(options?: CanonicalAADInputOptions);
-  secretID: string;
-  secretName: string;
-  versionID: string;
+  namespace: string;
+  key: string;
+  secretVersion: number;
   static fromMapping(value?: JsonObject | null): CanonicalAADInputs;
   toMetadataObject(): JsonObject;
 }

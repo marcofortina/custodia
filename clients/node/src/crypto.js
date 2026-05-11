@@ -376,17 +376,16 @@ export class CryptoCustodiaClient {
   }
 
   async createEncryptedSecret({ name, plaintext, recipients = [], permissions = 7, expiresAt } = {}) {
-    if (!String(name ?? "").trim()) {
-      throw new TypeError("secret name is required");
-    }
+    const key = requireSecretKey(name);
     const dek = this.random(AES256GCMKeyBytes);
     const nonce = this.random(AESGCMNonceBytes);
-    const aadInputs = new CanonicalAADInputs({ namespace: "default", key: name, secretVersion: 1 });
+    const aadInputs = new CanonicalAADInputs({ namespace: "default", key, secretVersion: 1 });
     const metadata = metadataV1(aadInputs, nonce);
     const aad = buildCanonicalAAD(metadata, aadInputs);
     const ciphertext = sealContentAES256GCM(dek, nonce, Buffer.from(plaintext), aad);
     const payload = {
-      name,
+      namespace: "default",
+      key,
       ciphertext: encodeBase64(ciphertext),
       crypto_metadata: metadata.toJSON(),
       envelopes: this.sealRecipientEnvelopes(this.normalizedRecipients(recipients), dek, aad),
@@ -410,7 +409,6 @@ export class CryptoCustodiaClient {
     const payload = {
       namespace,
       key,
-      name: key,
       ciphertext: encodeBase64(ciphertext),
       crypto_metadata: metadata.toJSON(),
       envelopes: this.sealRecipientEnvelopes(this.normalizedRecipients(recipients), dek, aad),

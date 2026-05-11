@@ -41,7 +41,7 @@ class _Response:
 class PythonTransportTypesTest(unittest.TestCase):
     def test_create_secret_payload_to_dict(self) -> None:
         payload = CreateSecretPayload(
-            name="database-password",
+            key="database-password",
             ciphertext="Y2lwaGVy",
             envelopes=[RecipientEnvelope(client_id="client_alice", envelope="ZW52")],
             permissions=PermissionRead,
@@ -50,7 +50,7 @@ class PythonTransportTypesTest(unittest.TestCase):
         self.assertEqual(
             payload.to_dict(),
             {
-                "name": "database-password",
+                "key": "database-password",
                 "ciphertext": "Y2lwaGVy",
                 "envelopes": [{"client_id": "client_alice", "envelope": "ZW52"}],
                 "permissions": PermissionRead,
@@ -60,9 +60,8 @@ class PythonTransportTypesTest(unittest.TestCase):
 
     def test_create_secret_payload_to_dict_with_keyspace(self) -> None:
         payload = CreateSecretPayload(
-            name="user:sys",
-            namespace="db01",
             key="user:sys",
+            namespace="db01",
             ciphertext="Y2lwaGVy",
             envelopes=[RecipientEnvelope(client_id="client_alice", envelope="ZW52")],
         )
@@ -80,7 +79,7 @@ class PythonTransportTypesTest(unittest.TestCase):
             self.assertEqual(
                 client.create_secret_payload(
                     CreateSecretPayload(
-                        name="secret",
+                        key="secret",
                         ciphertext="Y2lwaGVy",
                         envelopes=[RecipientEnvelope("client_alice", "ZW52")],
                     )

@@ -49,25 +49,22 @@ class RevokeClientPayload:
 
 @dataclass(frozen=True)
 class CreateSecretPayload:
-    name: str
+    key: str
     ciphertext: str
     envelopes: Sequence[RecipientEnvelope]
     permissions: int = PermissionAll
     crypto_metadata: Mapping[str, Any] | None = None
     expires_at: str | None = None
     namespace: str = "default"
-    key: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
-            "name": self.name,
+            "key": self.key,
             "ciphertext": self.ciphertext,
             "envelopes": [envelope.to_dict() for envelope in self.envelopes],
             "permissions": self.permissions,
         }
-        if self.key:
-            payload["key"] = self.key
-        if self.key or self.namespace != "default":
+        if self.namespace != "default":
             payload["namespace"] = self.namespace
         if self.crypto_metadata is not None:
             payload["crypto_metadata"] = dict(self.crypto_metadata)

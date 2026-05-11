@@ -40,7 +40,7 @@ test("sends opaque create secret payloads without interpreting crypto fields", a
   }));
 
   const result = await client.createSecretPayload({
-    name: "db_password",
+    key: "db_password",
     ciphertext: "base64-ciphertext",
     envelopes: [{ client_id: "client_alice", envelope: "base64-envelope" }],
     permissions: PermissionAll,
@@ -51,7 +51,7 @@ test("sends opaque create secret payloads without interpreting crypto fields", a
   assert.equal(calls[0].method, "POST");
   assert.equal(new URL(calls[0].url).pathname, "/v1/secrets");
   assert.deepEqual(JSON.parse(calls[0].body), {
-    name: "db_password",
+    key: "db_password",
     ciphertext: "base64-ciphertext",
     envelopes: [{ client_id: "client_alice", envelope: "base64-envelope" }],
     permissions: PermissionAll,
@@ -194,7 +194,7 @@ test("raises typed HTTP errors without exposing request payloads in the message"
 
   await assert.rejects(
     () => client.createSecretPayload({
-      name: "secret",
+      key: "secret",
       ciphertext: "sensitive-ciphertext",
       envelopes: [{ client_id: "client_alice", envelope: "sensitive-envelope" }],
     }),
