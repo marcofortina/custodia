@@ -216,23 +216,6 @@ void creates_encrypted_secret_with_deterministic_vector_payload() {
       "create envelope");
 }
 
-void reads_decrypted_secret_with_persisted_aad_metadata() {
-  auto transport = std::make_shared<FakeTransport>();
-  transport->response = custodia::Response{
-      .status = 200,
-      .body = R"({"secret_id":"550e8400-e29b-41d4-a716-446655440000","namespace":"db01","key":"user:sys","version_id":"660e8400-e29b-41d4-a716-446655440000","ciphertext":"d+Ub720HWc3YmYcZyQPyyd3EK2QHKMi+yxJHvySpW7HrhWHy6Nqu","crypto_metadata":{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","content_nonce_b64":"Y2NjY2NjY2NjY2Nj","aad":{"namespace":"db01","key":"user:sys","secret_version":1}},"envelope":"ze/YeDqRtEZkDi4flVmds15ISgBxvSGCs7YNCBLBDHDZczDrK3IdDIfEWJA8JD3ERLLFg1eklPtBfJ2tbctFNb19vQo6Wuc3ZWZQFNAidO0=","permissions":7})",
-      .headers = {}};
-  auto client = test_client(transport);
-  auto crypto = client.with_crypto(crypto_options());
-
-  auto secret = crypto.read_decrypted_secret("550e8400-e29b-41d4-a716-446655440000");
-
-  expect_eq("existing secret payload", std::string(secret.plaintext.begin(), secret.plaintext.end()), "decrypted plaintext");
-  expect_eq("550e8400-e29b-41d4-a716-446655440000", secret.secret_id, "secret id");
-  expect_eq(7, secret.permissions, "permissions");
-}
-
-
 void creates_encrypted_secret_by_key_payload() {
   auto transport = std::make_shared<FakeTransport>();
   transport->response = custodia::Response{.status = 200, .body = R"({"secret_id":"s1"})", .headers = {}};
@@ -306,7 +289,6 @@ int main() {
   validates_config();
   validates_shared_crypto_vectors();
   creates_encrypted_secret_with_deterministic_vector_payload();
-  reads_decrypted_secret_with_persisted_aad_metadata();
   creates_encrypted_secret_by_key_payload();
   reads_decrypted_secret_by_key();
   creates_encrypted_secret_version_by_key_payload();

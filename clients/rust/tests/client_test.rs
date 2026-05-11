@@ -372,8 +372,8 @@ fn high_level_crypto_client_creates_and_reads_local_plaintext() {
         .clone();
     fake.push_response(json_response(json!({
         "secret_id": "550e8400-e29b-41d4-a716-446655440000",
-        "namespace": "db01",
-        "key": "user:sys",
+        "namespace": "default",
+        "key": "db/password",
         "version_id": "11111111-1111-4111-8111-111111111111",
         "ciphertext": create_body["ciphertext"],
         "crypto_metadata": create_body["crypto_metadata"],
@@ -381,7 +381,7 @@ fn high_level_crypto_client_creates_and_reads_local_plaintext() {
         "permissions": PERMISSION_ALL
     })));
 
-    let decrypted = crypto.read_decrypted_secret("550e8400-e29b-41d4-a716-446655440000").unwrap();
+    let decrypted = crypto.read_decrypted_secret_by_key("default", "db/password").unwrap();
     assert_eq!(decrypted.plaintext, b"local plaintext");
 }
 
@@ -420,8 +420,9 @@ fn high_level_crypto_client_shares_existing_dek_without_plaintext_server_side() 
     fake.push_response(json_response(json!({"status": "shared"})));
 
     crypto
-        .share_encrypted_secret(
-            "550e8400-e29b-41d4-a716-446655440000",
+        .share_encrypted_secret_by_key(
+            "db01",
+            "user:sys",
             "client_bob",
             custodia_client::PERMISSION_READ,
             None,

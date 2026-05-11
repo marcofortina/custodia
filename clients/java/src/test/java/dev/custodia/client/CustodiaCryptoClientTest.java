@@ -29,7 +29,6 @@ public final class CustodiaCryptoClientTest {
     public static void main(String[] args) throws Exception {
         validatesSharedCryptoVectors();
         createsEncryptedSecretWithDeterministicVectorPayload();
-        readsDecryptedSecretWithPersistedAADMetadata();
     }
 
     private static void validatesSharedCryptoVectors() {
@@ -88,21 +87,6 @@ public final class CustodiaCryptoClientTest {
         assertContains(body, "\"content_nonce_b64\":\"YWFhYWFhYWFhYWFh\"", "create nonce");
         assertContains(body, "\"ciphertext\":\"94P22VzLbeb3J+osVz4T/Pr3Qx0LBv8TbYL/BKfId08ZJV6XCPThpSrEt2h4N+ywCz9Jb/eBlP+Xx5iQuZ/d\"", "create ciphertext");
         assertContains(body, "\"envelope\":\"ehpOcJvwhaxJSroEabmx7aCrH3ixaqu3n/7akGI+hSIIS8IcAryGTNuiRs8bUbEeIim/t9y6DjZ/88RjRh0q2f2CJAjK13CAjuAd46txQ0M=\"", "create envelope");
-    }
-
-    private static void readsDecryptedSecretWithPersistedAADMetadata() throws Exception {
-        QueueTransport transport = new QueueTransport();
-        transport.enqueue(200, """
-            {"secret_id":"550e8400-e29b-41d4-a716-446655440000","namespace":"db01","key":"user:sys","version_id":"660e8400-e29b-41d4-a716-446655440000","ciphertext":"d+Ub720HWc3YmYcZyQPyyd3EK2QHKMi+yxJHvySpW7HrhWHy6Nqu","crypto_metadata":{"version":"custodia.client-crypto.v1","content_cipher":"aes-256-gcm","envelope_scheme":"hpke-v1","content_nonce_b64":"Y2NjY2NjY2NjY2Nj","aad":{"namespace":"db01","key":"user:sys","secret_version":1}},"envelope":"ze/YeDqRtEZkDi4flVmds15ISgBxvSGCs7YNCBLBDHDZczDrK3IdDIfEWJA8JD3ERLLFg1eklPtBfJ2tbctFNb19vQo6Wuc3ZWZQFNAidO0=","permissions":7}
-            """.trim());
-        CustodiaClient client = CustodiaClient.withTransport(testConfig(), transport);
-        CryptoCustodiaClient crypto = client.withCrypto(testOptions());
-
-        CryptoCustodiaClient.DecryptedSecret secret = crypto.readDecryptedSecret("550e8400-e29b-41d4-a716-446655440000");
-
-        assertEquals("existing secret payload", secret.plaintextUtf8(), "decrypted plaintext");
-        assertEquals("550e8400-e29b-41d4-a716-446655440000", secret.secretId(), "secret id");
-        assertEquals(7, secret.permissions(), "permissions");
     }
 
     private static CustodiaCrypto.CryptoOptions testOptions(byte[]... randomValues) {
