@@ -104,8 +104,6 @@ The transport surface mirrors the Go/Python public transport helpers:
 - `listSecretMetadata(limit)`;
 - `listSecretVersionMetadataByKey(namespace, key, limit)`;
 - `listSecretAccessMetadataByKey(namespace, key, limit)`;
-- `listSecretVersionMetadata(secretID, limit)` for operator metadata by internal id;
-- `listSecretAccessMetadata(secretID, limit)` for operator metadata by internal id;
 - `shareSecretPayloadByKey(namespace, key, payload)`;
 - `revokeAccessByKey(namespace, key, clientID)`;
 - `createSecretVersionPayloadByKey(namespace, key, payload)`;

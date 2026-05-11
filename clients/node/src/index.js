@@ -91,9 +91,6 @@ export class CustodiaClient {
     return this.requestJSON("POST", "/v1/secrets", payload);
   }
 
-  getSecretPayload(secretID) {
-    return this.requestJSON("GET", `/v1/secrets/${pathEscape(secretID)}`);
-  }
 
   getSecretPayloadByKey(namespace, key) {
     const query = queryParams({ namespace: namespace || "default", key });
@@ -106,11 +103,6 @@ export class CustodiaClient {
     return this.requestJSON("GET", withQuery("/v1/secrets", query));
   }
 
-  listSecretVersionMetadata(secretID, limit) {
-    validateOptionalLimit(limit);
-    const query = queryParams({ limit: limit == null ? undefined : String(limit) });
-    return this.requestJSON("GET", withQuery(`/v1/secrets/${pathEscape(secretID)}/versions`, query));
-  }
 
   listSecretVersionMetadataByKey(namespace, key, limit) {
     validateOptionalLimit(limit);
@@ -118,11 +110,6 @@ export class CustodiaClient {
     return this.requestJSON("GET", `/v1/secrets/by-key/versions?${query}`);
   }
 
-  listSecretAccessMetadata(secretID, limit) {
-    validateOptionalLimit(limit);
-    const query = queryParams({ limit: limit == null ? undefined : String(limit) });
-    return this.requestJSON("GET", withQuery(`/v1/secrets/${pathEscape(secretID)}/access`, query));
-  }
 
   listSecretAccessMetadataByKey(namespace, key, limit) {
     validateOptionalLimit(limit);
@@ -130,9 +117,6 @@ export class CustodiaClient {
     return this.requestJSON("GET", `/v1/secrets/by-key/access?${query}`);
   }
 
-  shareSecretPayload(secretID, payload) {
-    return this.requestJSON("POST", `/v1/secrets/${pathEscape(secretID)}/share`, payload);
-  }
 
   shareSecretPayloadByKey(namespace, key, payload) {
     const query = queryParams({ namespace: namespace || "default", key });
@@ -151,28 +135,18 @@ export class CustodiaClient {
     );
   }
 
-  revokeAccess(secretID, clientID) {
-    return this.requestJSON("DELETE", `/v1/secrets/${pathEscape(secretID)}/access/${pathEscape(clientID)}`);
-  }
 
   revokeAccessByKey(namespace, key, clientID) {
     const query = queryParams({ namespace: namespace || "default", key });
     return this.requestJSON("DELETE", `/v1/secrets/by-key/access/${pathEscape(clientID)}?${query}`);
   }
 
-  createSecretVersionPayload(secretID, payload) {
-    return this.requestJSON("POST", `/v1/secrets/${pathEscape(secretID)}/versions`, payload);
-  }
 
   createSecretVersionPayloadByKey(namespace, key, payload) {
     const query = queryParams({ namespace: namespace || "default", key });
     return this.requestJSON("POST", `/v1/secrets/by-key/versions?${query}`, payload);
   }
 
-  deleteSecretPayload(secretID, { cascade = false } = {}) {
-    const query = queryParams({ cascade: cascade ? "true" : undefined });
-    return this.requestJSON("DELETE", withQuery(`/v1/secrets/${pathEscape(secretID)}`, query));
-  }
 
   deleteSecretPayloadByKey(namespace, key, { cascade = false } = {}) {
     const query = queryParams({ namespace: namespace || "default", key, cascade: cascade ? "true" : undefined });

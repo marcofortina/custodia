@@ -212,33 +212,17 @@ class CustodiaClient:
             path += f"?{query}"
         return self._request("GET", path)
 
-    def get_secret(self, secret_id: str) -> dict[str, Any]:
-        return self._request("GET", f"/v1/secrets/{_path_escape(secret_id)}")
 
     def get_secret_by_key(self, namespace: str, key: str) -> dict[str, Any]:
         query = _query_params(namespace=namespace or "default", key=key)
         return self._request("GET", f"/v1/secrets/by-key?{query}")
 
-    def list_secret_versions(self, secret_id: str, limit: int | None = None) -> dict[str, Any]:
-        _validate_optional_limit(limit)
-        query = _query_params(limit=str(limit) if limit is not None else None)
-        path = f"/v1/secrets/{_path_escape(secret_id)}/versions"
-        if query:
-            path += f"?{query}"
-        return self._request("GET", path)
 
     def list_secret_versions_by_key(self, namespace: str, key: str, limit: int | None = None) -> dict[str, Any]:
         _validate_optional_limit(limit)
         query = _query_params(namespace=namespace or "default", key=key, limit=str(limit) if limit is not None else None)
         return self._request("GET", f"/v1/secrets/by-key/versions?{query}")
 
-    def list_secret_access(self, secret_id: str, limit: int | None = None) -> dict[str, Any]:
-        _validate_optional_limit(limit)
-        query = _query_params(limit=str(limit) if limit is not None else None)
-        path = f"/v1/secrets/{_path_escape(secret_id)}/access"
-        if query:
-            path += f"?{query}"
-        return self._request("GET", path)
 
     def list_secret_access_by_key(self, namespace: str, key: str, limit: int | None = None) -> dict[str, Any]:
         _validate_optional_limit(limit)
@@ -263,12 +247,6 @@ class CustodiaClient:
         query = _query_params(serial_hex=serial_hex.strip())
         return self._request("GET", f"/v1/revocation/serial?{query}")
 
-    def share_secret(self, secret_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._request("POST", f"/v1/secrets/{_path_escape(secret_id)}/share", json=payload)
-
-
-    def share_secret_payload(self, secret_id: str, payload: ShareSecretPayload) -> dict[str, Any]:
-        return self.share_secret(secret_id, payload.to_dict())
 
     def share_secret_by_key(self, namespace: str, key: str, payload: dict[str, Any]) -> dict[str, Any]:
         query = _query_params(namespace=namespace or "default", key=key)
@@ -295,19 +273,11 @@ class CustodiaClient:
     def activate_access_grant_payload(self, secret_id: str, client_id: str, payload: ActivateAccessPayload) -> dict[str, Any]:
         return self.activate_access_grant(secret_id, client_id, payload.to_dict())
 
-    def revoke_access(self, secret_id: str, client_id: str) -> dict[str, Any]:
-        return self._request("DELETE", f"/v1/secrets/{_path_escape(secret_id)}/access/{_path_escape(client_id)}")
 
     def revoke_access_by_key(self, namespace: str, key: str, client_id: str) -> dict[str, Any]:
         query = _query_params(namespace=namespace or "default", key=key)
         return self._request("DELETE", f"/v1/secrets/by-key/access/{_path_escape(client_id)}?{query}")
 
-    def create_secret_version(self, secret_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._request("POST", f"/v1/secrets/{_path_escape(secret_id)}/versions", json=payload)
-
-
-    def create_secret_version_payload(self, secret_id: str, payload: CreateSecretVersionPayload) -> dict[str, Any]:
-        return self.create_secret_version(secret_id, payload.to_dict())
 
     def create_secret_version_by_key(self, namespace: str, key: str, payload: dict[str, Any]) -> dict[str, Any]:
         query = _query_params(namespace=namespace or "default", key=key)
@@ -316,10 +286,6 @@ class CustodiaClient:
     def create_secret_version_payload_by_key(self, namespace: str, key: str, payload: CreateSecretVersionPayload) -> dict[str, Any]:
         return self.create_secret_version_by_key(namespace, key, payload.to_dict())
 
-    def delete_secret(self, secret_id: str, cascade: bool = False) -> dict[str, Any]:
-        query = _query_params(cascade="true" if cascade else None)
-        suffix = f"?{query}" if query else ""
-        return self._request("DELETE", f"/v1/secrets/{_path_escape(secret_id)}{suffix}")
 
     def delete_secret_by_key(self, namespace: str, key: str, cascade: bool = False) -> dict[str, Any]:
         query = _query_params(namespace=namespace or "default", key=key, cascade="true" if cascade else None)

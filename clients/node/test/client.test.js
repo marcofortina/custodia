@@ -63,7 +63,7 @@ test("builds metadata list filters and escaped paths", async () => {
   const { client, calls } = clientWithTransport(async () => ({ status: 200, headers: {}, body: "{}" }));
 
   await client.listClientInfos({ limit: 25, active: true });
-  await client.getSecretPayload("secret/with space");
+  await client.getSecretPayloadByKey("db01", "user:sys");
   await client.listAuditEventMetadata({
     limit: 10,
     outcome: "success",
@@ -75,7 +75,8 @@ test("builds metadata list filters and escaped paths", async () => {
 
   assert.equal(new URL(calls[0].url).pathname, "/v1/clients");
   assert.equal(new URL(calls[0].url).search, "?limit=25&active=true");
-  assert.equal(new URL(calls[1].url).pathname, "/v1/secrets/secret%2Fwith%20space");
+  assert.equal(new URL(calls[1].url).pathname, "/v1/secrets/by-key");
+  assert.equal(new URL(calls[1].url).search, "?namespace=db01&key=user%3Asys");
   assert.equal(new URL(calls[2].url).pathname, "/v1/audit-events");
   assert.equal(
     new URL(calls[2].url).search,
@@ -123,7 +124,7 @@ test("covers operational endpoints and export metadata", async () => {
 test("covers share, grant activation, revoke and new-version transport paths", async () => {
   const { client, calls } = clientWithTransport(async () => ({ status: 200, headers: {}, body: "{}" }));
 
-  await client.shareSecretPayload("secret-1", {
+  await client.shareSecretPayloadByKey("db01", "user:sys", {
     version_id: "version-1",
     target_client_id: "client_bob",
     envelope: "base64-envelope",
@@ -131,8 +132,8 @@ test("covers share, grant activation, revoke and new-version transport paths", a
   });
   await client.createAccessGrant("secret-1", { target_client_id: "client_bob", permissions: PermissionRead });
   await client.activateAccessGrantPayload("secret-1", "client_bob", { envelope: "base64-envelope" });
-  await client.revokeAccess("secret-1", "client_bob");
-  await client.createSecretVersionPayload("secret-1", {
+  await client.revokeAccessByKey("db01", "user:sys", "client_bob");
+  await client.createSecretVersionPayloadByKey("db01", "user:sys", {
     ciphertext: "base64-ciphertext-v2",
     envelopes: [{ client_id: "client_alice", envelope: "base64-envelope-v2" }],
   });
@@ -140,11 +141,11 @@ test("covers share, grant activation, revoke and new-version transport paths", a
   assert.deepEqual(
     calls.map((call) => `${call.method} ${new URL(call.url).pathname}`),
     [
-      "POST /v1/secrets/secret-1/share",
+      "POST /v1/secrets/by-key/share",
       "POST /v1/secrets/secret-1/access-requests",
       "POST /v1/secrets/secret-1/access-requests/client_bob/activate",
-      "DELETE /v1/secrets/secret-1/access/client_bob",
-      "POST /v1/secrets/secret-1/versions",
+      "DELETE /v1/secrets/by-key/access/client_bob",
+      "POST /v1/secrets/by-key/versions",
     ],
   );
 });

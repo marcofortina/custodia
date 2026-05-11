@@ -15,20 +15,13 @@ Implemented helpers:
 - `get_secret_by_key(namespace, key)` user-facing lookup
 - `list_secret_versions_by_key(namespace, key)` metadata-only, no ciphertext or crypto metadata
 - `list_secret_access_by_key(namespace, key)` metadata-only, no envelopes
-- `get_secret(secret_id)` internal-id lookup for operator tooling
-- `list_secret_versions(secret_id)` internal-id metadata lookup for operator tooling
-- `list_secret_access(secret_id)` internal-id metadata lookup for operator tooling
 - `status()` admin metadata-only operational status
 - `share_secret_by_key(namespace, key, payload)` user-facing lookup
 - `revoke_access_by_key(namespace, key, client_id)` user-facing revoke
-- `share_secret(secret_id, payload)` internal-id lookup for operator tooling
 - `request_access_grant(secret_id, payload)`
 - `activate_access_grant(secret_id, client_id, payload)`
-- `revoke_access(secret_id, client_id)`
 - `create_secret_version_by_key(namespace, key, payload)` user-facing lookup
 - `delete_secret_by_key(namespace, key, cascade=False)` user-facing lookup
-- `create_secret_version(secret_id, payload)` internal-id lookup for operator tooling
-- `delete_secret(secret_id, cascade=False)` internal-id lookup for operator tooling
 
 Dynamic path segments are URL-escaped. Raw transport payloads remain caller-defined JSON with base64 ciphertext/envelope strings. The high-level crypto wrapper requires an application-provided public-key resolver and local private-key provider; Custodia never acts as a public-key directory.
 

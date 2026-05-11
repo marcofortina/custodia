@@ -87,28 +87,11 @@ class PythonTransportTypesTest(unittest.TestCase):
                 {"ok": True},
             )
             self.assertEqual(
-                client.share_secret_payload(
-                    "secret-id",
-                    ShareSecretPayload(version_id="version-id", target_client_id="client_bob", envelope="ZW52"),
-                ),
-                {"ok": True},
-            )
-            self.assertEqual(
                 client.request_access_grant_payload("secret-id", AccessGrantPayload(target_client_id="client_bob")),
                 {"ok": True},
             )
             self.assertEqual(
                 client.activate_access_grant_payload("secret-id", "client_bob", ActivateAccessPayload(envelope="ZW52")),
-                {"ok": True},
-            )
-            self.assertEqual(
-                client.create_secret_version_payload(
-                    "secret-id",
-                    CreateSecretVersionPayload(
-                        ciphertext="Y2lwaGVy",
-                        envelopes=[RecipientEnvelope("client_alice", "ZW52")],
-                    ),
-                ),
                 {"ok": True},
             )
             self.assertEqual(client.get_secret_by_key("db01", "user:sys"), {"ok": True})
