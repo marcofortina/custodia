@@ -279,6 +279,39 @@ fn crypto_options(random_chunks: Vec<Vec<u8>>) -> custodia_client::CryptoOptions
 }
 
 #[test]
+fn high_level_crypto_client_creates_keyspace_payload() {
+    let fake = Arc::new(FakeTransport::default());
+    fake.push_response(json_response(json!({
+        "secret_id": "550e8400-e29b-41d4-a716-446655440000",
+        "version_id": "11111111-1111-4111-8111-111111111111"
+    })));
+    let client = CustodiaClient::with_transport(config(), fake.clone()).unwrap();
+    let crypto = client.with_crypto(crypto_options(vec![
+        random_test_bytes(custodia_client::AES_256_GCM_KEY_BYTES),
+        random_test_bytes(custodia_client::AES_GCM_NONCE_BYTES),
+        random_test_bytes(custodia_client::X25519_KEY_BYTES),
+        random_test_bytes(custodia_client::X25519_KEY_BYTES),
+    ]));
+
+    crypto
+        .create_encrypted_secret_by_key(
+            "db01",
+            "user:sys",
+            b"local plaintext",
+            &["client_bob".to_string()],
+            PERMISSION_ALL,
+            None,
+        )
+        .unwrap();
+
+    let create_body: serde_json::Value = serde_json::from_str(fake.requests()[0].body.as_ref().unwrap()).unwrap();
+    assert_eq!(create_body["namespace"], "db01");
+    assert_eq!(create_body["key"], "user:sys");
+    assert_eq!(create_body["crypto_metadata"]["aad"]["secret_name"], "db01/user:sys");
+    assert_eq!(create_body["envelopes"].as_array().unwrap().len(), 2);
+}
+
+#[test]
 fn high_level_crypto_client_creates_and_reads_local_plaintext() {
     let fake = Arc::new(FakeTransport::default());
     fake.push_response(json_response(json!({

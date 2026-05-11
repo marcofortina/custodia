@@ -517,6 +517,18 @@ fn validate_config(config: &CustodiaClientConfig) -> Result<()> {
     Ok(())
 }
 
+fn aad_secret_name_for_keyspace(namespace: &str, key: &str) -> String {
+    format!("{namespace}/{key}")
+}
+
+fn require_text<'a>(value: &'a str, label: &str) -> Result<&'a str> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(CustodiaError::InvalidConfig(format!("{label} is required")));
+    }
+    Ok(trimmed)
+}
+
 fn access_grant_query(filters: &AccessGrantFilters) -> Vec<(String, String)> {
     let mut query = Vec::new();
     push_optional(&mut query, "limit", filters.limit.map(|value| value.to_string()));
@@ -625,6 +637,40 @@ impl CryptoCustodiaClient {
         self.transport.create_secret_payload(&payload)
     }
 
+    pub fn create_encrypted_secret_by_key(
+        &self,
+        namespace: &str,
+        key: &str,
+        plaintext: &[u8],
+        recipients: &[String],
+        permissions: u8,
+        expires_at: Option<&str>,
+    ) -> Result<Value> {
+        let normalized_namespace = require_text(namespace, "namespace")?;
+        let normalized_key = require_text(key, "secret key")?;
+        let dek = self.random(AES_256_GCM_KEY_BYTES)?;
+        let nonce = self.random(AES_GCM_NONCE_BYTES)?;
+        let aad_inputs = CanonicalAADInputs {
+            secret_name: aad_secret_name_for_keyspace(normalized_namespace, normalized_key),
+            ..Default::default()
+        };
+        let metadata = metadata_v1(aad_inputs.clone(), &nonce);
+        let aad = build_canonical_aad(&metadata, &aad_inputs)?;
+        let ciphertext = seal_content_aes_256_gcm(&dek, &nonce, plaintext, &aad)?;
+        let mut payload = json!({
+            "namespace": normalized_namespace,
+            "key": normalized_key,
+            "ciphertext": encode_base64(&ciphertext),
+            "crypto_metadata": metadata.to_value(),
+            "envelopes": self.seal_recipient_envelopes(&self.normalized_recipients(recipients)?, &dek, &aad)?,
+            "permissions": permissions,
+        });
+        if let Some(expires_at) = expires_at {
+            payload["expires_at"] = Value::String(expires_at.to_string());
+        }
+        self.transport.create_secret_payload(&payload)
+    }
+
     pub fn create_encrypted_secret_version(
         &self,
         secret_id: &str,
@@ -657,8 +703,69 @@ impl CryptoCustodiaClient {
         self.transport.create_secret_version_payload(secret_id, &payload)
     }
 
+    pub fn create_encrypted_secret_version_by_key(
+        &self,
+        namespace: &str,
+        key: &str,
+        plaintext: &[u8],
+        recipients: &[String],
+        permissions: u8,
+        expires_at: Option<&str>,
+    ) -> Result<Value> {
+        let normalized_namespace = require_text(namespace, "namespace")?;
+        let normalized_key = require_text(key, "secret key")?;
+        let dek = self.random(AES_256_GCM_KEY_BYTES)?;
+        let nonce = self.random(AES_GCM_NONCE_BYTES)?;
+        let aad_inputs = CanonicalAADInputs {
+            secret_name: aad_secret_name_for_keyspace(normalized_namespace, normalized_key),
+            ..Default::default()
+        };
+        let metadata = metadata_v1(aad_inputs.clone(), &nonce);
+        let aad = build_canonical_aad(&metadata, &aad_inputs)?;
+        let ciphertext = seal_content_aes_256_gcm(&dek, &nonce, plaintext, &aad)?;
+        let mut payload = json!({
+            "ciphertext": encode_base64(&ciphertext),
+            "crypto_metadata": metadata.to_value(),
+            "envelopes": self.seal_recipient_envelopes(&self.normalized_recipients(recipients)?, &dek, &aad)?,
+            "permissions": permissions,
+        });
+        if let Some(expires_at) = expires_at {
+            payload["expires_at"] = Value::String(expires_at.to_string());
+        }
+        self.transport.create_secret_version_payload_by_key(normalized_namespace, normalized_key, &payload)
+    }
+
     pub fn read_decrypted_secret(&self, secret_id: &str) -> Result<DecryptedSecret> {
         let secret = self.transport.get_secret_payload(secret_id)?;
+        let empty_metadata = Value::Object(Default::default());
+        let metadata = parse_metadata(secret.get("crypto_metadata").unwrap_or(&empty_metadata))?;
+        let fallback = CanonicalAADInputs {
+            secret_id: value_string(secret.get("secret_id")),
+            version_id: value_string(secret.get("version_id")),
+            ..Default::default()
+        };
+        let aad_inputs = metadata.canonical_aad_inputs(fallback);
+        let aad = build_canonical_aad(&metadata, &aad_inputs)?;
+        if metadata.content_nonce_b64.is_empty() {
+            return Err(CryptoError::MalformedCryptoMetadata("missing content nonce".to_string()).into());
+        }
+        let nonce = decode_base64(&metadata.content_nonce_b64)?;
+        let dek = self.open_secret_envelope(&value_string(secret.get("envelope")), &aad)?;
+        let ciphertext = decode_base64(&value_string(secret.get("ciphertext")))?;
+        let plaintext = open_content_aes_256_gcm(&dek, &nonce, &ciphertext, &aad)?;
+        Ok(DecryptedSecret {
+            secret_id: value_string(secret.get("secret_id")),
+            version_id: value_string(secret.get("version_id")),
+            plaintext,
+            crypto_metadata: metadata.to_value(),
+            permissions: value_u8(secret.get("permissions")),
+            granted_at: value_string(secret.get("granted_at")),
+            access_expires_at: value_optional_string(secret.get("access_expires_at")),
+        })
+    }
+
+    pub fn read_decrypted_secret_by_key(&self, namespace: &str, key: &str) -> Result<DecryptedSecret> {
+        let secret = self.transport.get_secret_payload_by_key(namespace, key)?;
         let empty_metadata = Value::Object(Default::default());
         let metadata = parse_metadata(secret.get("crypto_metadata").unwrap_or(&empty_metadata))?;
         let fallback = CanonicalAADInputs {
@@ -721,6 +828,44 @@ impl CryptoCustodiaClient {
             payload["expires_at"] = Value::String(expires_at.to_string());
         }
         self.transport.share_secret_payload(secret_id, &payload)
+    }
+
+    pub fn share_encrypted_secret_by_key(
+        &self,
+        namespace: &str,
+        key: &str,
+        target_client_id: &str,
+        permissions: u8,
+        expires_at: Option<&str>,
+    ) -> Result<Value> {
+        let normalized_namespace = require_text(namespace, "namespace")?;
+        let normalized_key = require_text(key, "secret key")?;
+        let target = require_text(target_client_id, "target client id")?;
+        let secret = self.transport.get_secret_payload_by_key(normalized_namespace, normalized_key)?;
+        let empty_metadata = Value::Object(Default::default());
+        let metadata = parse_metadata(secret.get("crypto_metadata").unwrap_or(&empty_metadata))?;
+        let fallback = CanonicalAADInputs {
+            secret_id: value_string(secret.get("secret_id")),
+            version_id: value_string(secret.get("version_id")),
+            ..Default::default()
+        };
+        let aad_inputs = metadata.canonical_aad_inputs(fallback);
+        let aad = build_canonical_aad(&metadata, &aad_inputs)?;
+        let dek = self.open_secret_envelope(&value_string(secret.get("envelope")), &aad)?;
+        let envelope = self.seal_recipient_envelopes(&[target.to_string()], &dek, &aad)?
+            .into_iter()
+            .next()
+            .ok_or_else(|| CustodiaError::InvalidConfig("missing recipient envelope".to_string()))?;
+        let mut payload = json!({
+            "version_id": value_string(secret.get("version_id")),
+            "target_client_id": target,
+            "envelope": envelope["envelope"].clone(),
+            "permissions": permissions,
+        });
+        if let Some(expires_at) = expires_at {
+            payload["expires_at"] = Value::String(expires_at.to_string());
+        }
+        self.transport.share_secret_payload_by_key(normalized_namespace, normalized_key, &payload)
     }
 
     fn normalized_recipients(&self, recipients: &[String]) -> Result<Vec<String>> {
