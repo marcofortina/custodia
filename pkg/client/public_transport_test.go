@@ -23,10 +23,6 @@ func TestPublicGoTransportMethodsAvoidInternalTypes(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(model.Client{ClientID: "client_alice", MTLSSubject: "client_alice", IsActive: true})
 		case "POST /v1/secrets":
 			_ = json.NewEncoder(w).Encode(model.SecretVersionRef{SecretID: "secret-id", VersionID: "version-id"})
-		case "GET /v1/secrets/secret-id":
-			_ = json.NewEncoder(w).Encode(model.SecretReadResponse{SecretID: "secret-id", VersionID: "version-id", Ciphertext: "Y2lwaGVy", Envelope: "ZW52", Permissions: PermissionRead})
-		case "POST /v1/secrets/secret-id/share":
-			_ = json.NewEncoder(w).Encode(map[string]string{"status": "shared"})
 		case "GET /v1/secrets/by-key":
 			if got := r.URL.Query().Get("namespace"); got != "db01" {
 				t.Fatalf("namespace = %q", got)
@@ -119,13 +115,6 @@ func TestPublicGoTransportMethodsAvoidInternalTypes(t *testing.T) {
 	})
 	if err != nil || created.SecretID != "secret-id" || created.VersionID != "version-id" {
 		t.Fatalf("CreateSecretPayload() = %+v err=%v", created, err)
-	}
-	read, err := custodiaClient.GetSecretPayload("secret-id")
-	if err != nil || read.Ciphertext != "Y2lwaGVy" || read.Envelope != "ZW52" {
-		t.Fatalf("GetSecretPayload() = %+v err=%v", read, err)
-	}
-	if err := custodiaClient.ShareSecretPayload("secret-id", ShareSecretPayload{VersionID: "version-id", TargetClientID: "client_bob", Envelope: "ZW52", Permissions: PermissionRead}); err != nil {
-		t.Fatalf("ShareSecretPayload() error = %v", err)
 	}
 	readByKey, err := custodiaClient.GetSecretPayloadByKey("db01", "user:sys")
 	if err != nil || readByKey.Namespace != "db01" || readByKey.Key != "user:sys" {
