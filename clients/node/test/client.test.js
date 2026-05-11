@@ -130,8 +130,8 @@ test("covers share, grant activation, revoke and new-version transport paths", a
     envelope: "base64-envelope",
     permissions: PermissionRead,
   });
-  await client.createAccessGrant("secret-1", { target_client_id: "client_bob", permissions: PermissionRead });
-  await client.activateAccessGrantPayload("secret-1", "client_bob", { envelope: "base64-envelope" });
+  await client.createAccessGrantByKey("db01", "user:sys", { target_client_id: "client_bob", permissions: PermissionRead });
+  await client.activateAccessGrantPayloadByKey("db01", "user:sys", "client_bob", { envelope: "base64-envelope" });
   await client.revokeAccessByKey("db01", "user:sys", "client_bob");
   await client.createSecretVersionPayloadByKey("db01", "user:sys", {
     ciphertext: "base64-ciphertext-v2",
@@ -142,8 +142,8 @@ test("covers share, grant activation, revoke and new-version transport paths", a
     calls.map((call) => `${call.method} ${new URL(call.url).pathname}`),
     [
       "POST /v1/secrets/by-key/share",
-      "POST /v1/secrets/secret-1/access-requests",
-      "POST /v1/secrets/secret-1/access-requests/client_bob/activate",
+      "POST /v1/secrets/by-key/access-requests",
+      "POST /v1/secrets/by-key/access/client_bob/activate",
       "DELETE /v1/secrets/by-key/access/client_bob",
       "POST /v1/secrets/by-key/versions",
     ],

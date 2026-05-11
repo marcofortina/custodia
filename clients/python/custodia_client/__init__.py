@@ -255,23 +255,23 @@ class CustodiaClient:
     def share_secret_payload_by_key(self, namespace: str, key: str, payload: ShareSecretPayload) -> dict[str, Any]:
         return self.share_secret_by_key(namespace, key, payload.to_dict())
 
-    def request_access_grant(self, secret_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._request("POST", f"/v1/secrets/{_path_escape(secret_id)}/access-requests", json=payload)
+    def request_access_grant_by_key(self, namespace: str, key: str, payload: dict[str, Any]) -> dict[str, Any]:
+        query = _query_params(namespace=namespace or "default", key=key)
+        return self._request("POST", f"/v1/secrets/by-key/access-requests?{query}", json=payload)
 
+    def request_access_grant_payload_by_key(self, namespace: str, key: str, payload: AccessGrantPayload) -> dict[str, Any]:
+        return self.request_access_grant_by_key(namespace, key, payload.to_dict())
 
-    def request_access_grant_payload(self, secret_id: str, payload: AccessGrantPayload) -> dict[str, Any]:
-        return self.request_access_grant(secret_id, payload.to_dict())
-
-    def activate_access_grant(self, secret_id: str, client_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def activate_access_grant_by_key(self, namespace: str, key: str, client_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        query = _query_params(namespace=namespace or "default", key=key)
         return self._request(
             "POST",
-            f"/v1/secrets/{_path_escape(secret_id)}/access/{_path_escape(client_id)}/activate",
+            f"/v1/secrets/by-key/access/{_path_escape(client_id)}/activate?{query}",
             json=payload,
         )
 
-
-    def activate_access_grant_payload(self, secret_id: str, client_id: str, payload: ActivateAccessPayload) -> dict[str, Any]:
-        return self.activate_access_grant(secret_id, client_id, payload.to_dict())
+    def activate_access_grant_payload_by_key(self, namespace: str, key: str, client_id: str, payload: ActivateAccessPayload) -> dict[str, Any]:
+        return self.activate_access_grant_by_key(namespace, key, client_id, payload.to_dict())
 
 
     def revoke_access_by_key(self, namespace: str, key: str, client_id: str) -> dict[str, Any]:

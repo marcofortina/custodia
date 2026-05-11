@@ -18,8 +18,8 @@ Implemented helpers:
 - `status()` admin metadata-only operational status
 - `share_secret_by_key(namespace, key, payload)` user-facing lookup
 - `revoke_access_by_key(namespace, key, client_id)` user-facing revoke
-- `request_access_grant(secret_id, payload)`
-- `activate_access_grant(secret_id, client_id, payload)`
+- `request_access_grant_by_key(namespace, key, payload)`
+- `activate_access_grant_by_key(namespace, key, client_id, payload)`
 - `create_secret_version_by_key(namespace, key, payload)` user-facing lookup
 - `delete_secret_by_key(namespace, key, cascade=False)` user-facing lookup
 

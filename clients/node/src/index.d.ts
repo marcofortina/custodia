@@ -131,8 +131,8 @@ export class CustodiaClient {
   getSecretPayloadByKey(namespace: string, key: string): Promise<JsonObject>;
   listSecretMetadata(limit?: number): Promise<JsonObject>;
   shareSecretPayloadByKey(namespace: string, key: string, payload: ShareSecretPayload): Promise<JsonObject>;
-  createAccessGrant(secretID: string, payload: AccessGrantPayload): Promise<JsonObject>;
-  activateAccessGrantPayload(secretID: string, targetClientID: string, payload: ActivateAccessPayload): Promise<JsonObject>;
+  createAccessGrantByKey(namespace: string, key: string, payload: AccessGrantPayload): Promise<JsonObject>;
+  activateAccessGrantPayloadByKey(namespace: string, key: string, targetClientID: string, payload: ActivateAccessPayload): Promise<JsonObject>;
   createSecretVersionPayloadByKey(namespace: string, key: string, payload: CreateSecretVersionPayload): Promise<JsonObject>;
   deleteSecretPayloadByKey(namespace: string, key: string, options?: { cascade?: boolean }): Promise<JsonObject>;
   listAccessGrantMetadata(filters?: AccessGrantRequestFilters): Promise<JsonObject>;

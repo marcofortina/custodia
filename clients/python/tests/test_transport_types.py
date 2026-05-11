@@ -87,11 +87,11 @@ class PythonTransportTypesTest(unittest.TestCase):
                 {"ok": True},
             )
             self.assertEqual(
-                client.request_access_grant_payload("secret-id", AccessGrantPayload(target_client_id="client_bob")),
+                client.request_access_grant_payload_by_key("db01", "user:sys", AccessGrantPayload(target_client_id="client_bob")),
                 {"ok": True},
             )
             self.assertEqual(
-                client.activate_access_grant_payload("secret-id", "client_bob", ActivateAccessPayload(envelope="ZW52")),
+                client.activate_access_grant_payload_by_key("db01", "user:sys", "client_bob", ActivateAccessPayload(envelope="ZW52")),
                 {"ok": True},
             )
             self.assertEqual(client.get_secret_by_key("db01", "user:sys"), {"ok": True})
@@ -123,6 +123,8 @@ class PythonTransportTypesTest(unittest.TestCase):
         paths = [call.args[1] for call in request.call_args_list]
         self.assertTrue(any(path.endswith("/v1/secrets/by-key/versions?namespace=db01&key=user%3Asys&limit=10") for path in paths))
         self.assertTrue(any(path.endswith("/v1/secrets/by-key/access?namespace=db01&key=user%3Asys&limit=10") for path in paths))
+        self.assertTrue(any(path.endswith("/v1/secrets/by-key/access-requests?namespace=db01&key=user%3Asys") for path in paths))
+        self.assertTrue(any(path.endswith("/v1/secrets/by-key/access/client_bob/activate?namespace=db01&key=user%3Asys") for path in paths))
         self.assertTrue(any(path.endswith("/v1/secrets/by-key/access/client_bob?namespace=db01&key=user%3Asys") for path in paths))
         self.assertEqual(request.call_args_list[-1].args[0], "DELETE")
         self.assertIn("/v1/secrets/by-key?namespace=db01&key=user%3Asys&cascade=true", request.call_args_list[-1].args[1])

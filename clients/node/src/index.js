@@ -123,14 +123,16 @@ export class CustodiaClient {
     return this.requestJSON("POST", `/v1/secrets/by-key/share?${query}`, payload);
   }
 
-  createAccessGrant(secretID, payload) {
-    return this.requestJSON("POST", `/v1/secrets/${pathEscape(secretID)}/access-requests`, payload);
+  createAccessGrantByKey(namespace, key, payload) {
+    const query = queryParams({ namespace: namespace || "default", key });
+    return this.requestJSON("POST", `/v1/secrets/by-key/access-requests?${query}`, payload);
   }
 
-  activateAccessGrantPayload(secretID, targetClientID, payload) {
+  activateAccessGrantPayloadByKey(namespace, key, targetClientID, payload) {
+    const query = queryParams({ namespace: namespace || "default", key });
     return this.requestJSON(
       "POST",
-      `/v1/secrets/${pathEscape(secretID)}/access-requests/${pathEscape(targetClientID)}/activate`,
+      `/v1/secrets/by-key/access/${pathEscape(targetClientID)}/activate?${query}`,
       payload,
     );
   }
