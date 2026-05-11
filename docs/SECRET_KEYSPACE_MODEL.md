@@ -4,6 +4,19 @@ This document defines the Custodia namespace/key secret-addressing model.
 User workflows address secrets by `namespace/key`; generated server identifiers are
 internal storage, FK and audit details.
 
+
+## Implementation status
+
+The pre-release implementation now treats `namespace/key` as the normal user-facing
+addressing model across the client CLI, admin CLI, REST by-key routes, high-level
+crypto SDKs and public transport SDK helpers. Generated `secret_id` values remain
+internal storage, foreign-key and audit identifiers; normal client and operator
+workflows should not require users to copy or pass them.
+
+The metadata-only web console intentionally omits secret-id filtering from the access
+request page. Operators can still filter by status, target client and requester without
+exposing an internal identifier as a primary workflow concept.
+
 ## User-facing identity
 
 Custodia user workflows address secrets by:
