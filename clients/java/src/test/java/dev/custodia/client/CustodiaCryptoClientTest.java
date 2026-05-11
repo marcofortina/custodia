@@ -49,13 +49,19 @@ public final class CustodiaCryptoClientTest {
         assertBytes(ALICE_PUBLIC, CustodiaCrypto.deriveX25519PublicKey(ALICE_PRIVATE), "alice public key");
 
         byte[] plaintext = b64("ZGF0YWJhc2UgcGFzc3dvcmQ6IGNvcnJlY3QgaG9yc2UgYmF0dGVyeSBzdGFwbGU=");
-        byte[] ciphertext = CustodiaCrypto.sealContentAES256GCM(DEK_SINGLE, NONCE_SINGLE, plaintext, aad);
+        CustodiaCrypto.ContentCiphertext sealed = CustodiaCrypto.sealContentAES256GCM(
+            DEK_SINGLE,
+            plaintext,
+            aad,
+            new QueueRandomSource(NONCE_SINGLE)
+        );
+        assertBytes(NONCE_SINGLE, sealed.nonce(), "content nonce");
         assertEquals(
             "94P22VzLbeb3J+osVz4T/Pr3Qx0LBv8TbYL/BKfId08ZJV6XCPThpSrEt2h4N+ywCz9Jb/eBlP+Xx5iQuZ/d",
-            CustodiaCrypto.encodeBase64(ciphertext),
+            CustodiaCrypto.encodeBase64(sealed.ciphertext()),
             "ciphertext"
         );
-        assertBytes(plaintext, CustodiaCrypto.openContentAES256GCM(DEK_SINGLE, NONCE_SINGLE, ciphertext, aad), "plaintext roundtrip");
+        assertBytes(plaintext, CustodiaCrypto.openContentAES256GCM(DEK_SINGLE, NONCE_SINGLE, sealed.ciphertext(), aad), "plaintext roundtrip");
 
         byte[] envelope = CustodiaCrypto.sealHPKEV1Envelope(ALICE_PUBLIC, EPHEMERAL_SINGLE, DEK_SINGLE, aad);
         assertEquals(

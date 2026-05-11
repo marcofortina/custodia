@@ -111,7 +111,15 @@ public final class CustodiaCrypto {
         }
     }
 
-    public static byte[] sealContentAES256GCM(byte[] key, byte[] nonce, byte[] plaintext, byte[] aad) {
+    public static ContentCiphertext sealContentAES256GCM(byte[] key, byte[] plaintext, byte[] aad, RandomSource randomSource) {
+        Objects.requireNonNull(randomSource, "randomSource");
+        byte[] nonce = randomSource.randomBytes(AES_GCM_NONCE_BYTES);
+        return new ContentCiphertext(nonce, sealAES256GCMWithNonce(key, nonce, plaintext, aad, "content encryption failed"));
+    }
+
+    // HPKE derives a fresh AEAD nonce from the per-recipient key schedule; content encryption must use sealContentAES256GCM.
+    @SuppressWarnings("java/static-initialization-vector")
+    private static byte[] sealAES256GCMWithNonce(byte[] key, byte[] nonce, byte[] plaintext, byte[] aad, String errorMessage) {
         assertLength(key, AES256_GCM_KEY_BYTES, "invalid content key");
         assertLength(nonce, AES_GCM_NONCE_BYTES, "invalid content nonce");
         try {
@@ -120,7 +128,7 @@ public final class CustodiaCrypto {
             cipher.updateAAD(aad);
             return cipher.doFinal(plaintext);
         } catch (GeneralSecurityException err) {
-            throw new CryptoException("content encryption failed", err);
+            throw new CryptoException(errorMessage, err);
         }
     }
 
@@ -248,7 +256,7 @@ public final class CustodiaCrypto {
 
     private static byte[] hpkeSeal(byte[] sharedSecret, byte[] info, byte[] plaintext, byte[] aad) {
         HPKEKeySchedule schedule = hpkeKeySchedule(sharedSecret, info);
-        return sealContentAES256GCM(schedule.key(), schedule.nonce(), plaintext, aad);
+        return sealAES256GCMWithNonce(schedule.key(), schedule.nonce(), plaintext, aad, "HPKE envelope encryption failed");
     }
 
     private static byte[] hpkeOpen(byte[] sharedSecret, byte[] info, byte[] ciphertext, byte[] aad) {
@@ -373,6 +381,19 @@ public final class CustodiaCrypto {
             namespace = namespace == null ? "" : namespace;
             key = key == null ? "" : key;
         }
+    }
+
+    public record ContentCiphertext(byte[] nonce, byte[] ciphertext) {
+        public ContentCiphertext {
+            nonce = Arrays.copyOf(Objects.requireNonNull(nonce, "nonce"), nonce.length);
+            ciphertext = Arrays.copyOf(Objects.requireNonNull(ciphertext, "ciphertext"), ciphertext.length);
+        }
+
+        @Override
+        public byte[] nonce() { return Arrays.copyOf(nonce, nonce.length); }
+
+        @Override
+        public byte[] ciphertext() { return Arrays.copyOf(ciphertext, ciphertext.length); }
     }
 
     public record CryptoMetadata(String version, String contentCipher, String envelopeScheme, String contentNonceB64, AADInputs aad) {

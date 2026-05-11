@@ -42,11 +42,12 @@ public final class CryptoCustodiaClient {
         String normalizedNamespace = requireText(namespace, "namespace");
         String normalizedKey = requireText(key, "secret key");
         byte[] dek = random(CustodiaCrypto.AES256_GCM_KEY_BYTES);
-        byte[] nonce = random(CustodiaCrypto.AES_GCM_NONCE_BYTES);
         CustodiaCrypto.AADInputs aadInputs = new CustodiaCrypto.AADInputs(normalizedNamespace, normalizedKey, 1);
-        CustodiaCrypto.CryptoMetadata metadata = CustodiaCrypto.metadataV1(aadInputs, nonce);
-        byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, aadInputs);
-        byte[] ciphertext = CustodiaCrypto.sealContentAES256GCM(dek, nonce, plaintext, aad);
+        CustodiaCrypto.CryptoMetadata preliminaryMetadata = CustodiaCrypto.metadataV1(aadInputs, new byte[CustodiaCrypto.AES_GCM_NONCE_BYTES]);
+        byte[] aad = CustodiaCrypto.buildCanonicalAAD(preliminaryMetadata, aadInputs);
+        CustodiaCrypto.ContentCiphertext sealed = CustodiaCrypto.sealContentAES256GCM(dek, plaintext, aad, options.randomSource());
+        CustodiaCrypto.CryptoMetadata metadata = CustodiaCrypto.metadataV1(aadInputs, sealed.nonce());
+        byte[] ciphertext = sealed.ciphertext();
 
         StringBuilder payload = new StringBuilder();
         payload.append('{');
@@ -92,10 +93,11 @@ public final class CryptoCustodiaClient {
             currentAADInputs.namespace(), currentAADInputs.key(), currentAADInputs.secretVersion() + 1
         );
         byte[] dek = random(CustodiaCrypto.AES256_GCM_KEY_BYTES);
-        byte[] nonce = random(CustodiaCrypto.AES_GCM_NONCE_BYTES);
-        CustodiaCrypto.CryptoMetadata metadata = CustodiaCrypto.metadataV1(aadInputs, nonce);
-        byte[] aad = CustodiaCrypto.buildCanonicalAAD(metadata, aadInputs);
-        byte[] ciphertext = CustodiaCrypto.sealContentAES256GCM(dek, nonce, plaintext, aad);
+        CustodiaCrypto.CryptoMetadata preliminaryMetadata = CustodiaCrypto.metadataV1(aadInputs, new byte[CustodiaCrypto.AES_GCM_NONCE_BYTES]);
+        byte[] aad = CustodiaCrypto.buildCanonicalAAD(preliminaryMetadata, aadInputs);
+        CustodiaCrypto.ContentCiphertext sealed = CustodiaCrypto.sealContentAES256GCM(dek, plaintext, aad, options.randomSource());
+        CustodiaCrypto.CryptoMetadata metadata = CustodiaCrypto.metadataV1(aadInputs, sealed.nonce());
+        byte[] ciphertext = sealed.ciphertext();
 
         StringBuilder payload = new StringBuilder();
         payload.append('{');
