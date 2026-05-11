@@ -40,7 +40,7 @@ The transport client exposes methods for:
 
 - client metadata;
 - secret create/read/list/version/share/delete flows;
-- pending access grants;
+- pending access grants by `namespace/key`;
 - operational status/version/diagnostics;
 - revocation status;
 - audit event metadata and export artifacts.

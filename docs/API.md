@@ -95,9 +95,11 @@ DELETE /v1/secrets/by-key?namespace=db01&key=user:sys&cascade=true
 
 ## Access grant request
 
-`POST /v1/secrets/{secret_id}/access-requests`
+`POST /v1/secrets/by-key/access-requests?namespace=db01&key=user:sys`
 
-Requires an admin mTLS client. Creates a pending access request for the latest active version, or for `version_id` when supplied. This does not activate access and does not accept an envelope.
+Requires an admin mTLS client with visibility/share rights on the selected `namespace/key`. Creates a pending access request for the latest active version, or for `version_id` when supplied. This does not activate access and does not accept an envelope.
+
+`POST /v1/secrets/{secret_id}/access-requests` is an internal-id endpoint for operator tooling.
 
 ```json
 {
@@ -108,9 +110,11 @@ Requires an admin mTLS client. Creates a pending access request for the latest a
 
 ## Access grant activation
 
-`POST /v1/secrets/{secret_id}/access/{client_id}/activate`
+`POST /v1/secrets/by-key/access/{client_id}/activate?namespace=db01&key=user:sys`
 
-Requires the caller to have `share` on the pending request version. The request uploads only the base64 opaque envelope generated client-side for the target client.
+Requires the caller to have `share` on the pending request version resolved by `namespace/key`. The request uploads only the base64 opaque envelope generated client-side for the target client.
+
+`POST /v1/secrets/{secret_id}/access/{client_id}/activate` is an internal-id endpoint for operator tooling.
 
 ```json
 {
