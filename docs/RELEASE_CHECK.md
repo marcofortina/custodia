@@ -4,6 +4,7 @@
 
 It runs:
 
+- keyspace public workflow guardrails;
 - Go unit tests for all packages;
 - server, admin CLI and signer builds;
 - Python client syntax compilation and tests;
@@ -23,6 +24,12 @@ If TLC is not installed, the script skips formal verification with a warning. Pr
 ## Scope
 
 This gate validates repository artifacts only. It does not prove that production has a real HSM, WORM bucket, HA database or revocation distribution topology; those are validated by the production readiness gate and external infrastructure evidence.
+
+## Keyspace public workflow guardrail
+
+`make release-check` runs `scripts/release-keyspace-check.sh` before the full test suite. The guardrail fails if public CLI, SDK or Web Console documentation reintroduces `--secret-id` or public SDK helpers that address normal user workflows by internal secret identifiers.
+
+The check intentionally allows `secret_id` in storage, audit, response correlation and documented operator/internal-id paths.
 
 ## Linux packages
 

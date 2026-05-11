@@ -18,6 +18,7 @@ rm -rf "$root_dir/dist/package-work"
 : "${GO:=go}"
 
 ./scripts/check-license-headers.sh
+./scripts/release-keyspace-check.sh
 $GO test -p=1 -timeout 60s ./...
 $GO build ./cmd/custodia-server ./cmd/custodia-signer
 $GO build -o /tmp/custodia-admin-check ./cmd/custodia-admin
