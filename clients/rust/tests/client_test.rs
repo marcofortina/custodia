@@ -95,7 +95,8 @@ fn sends_opaque_secret_payload_without_interpreting_crypto_fields() {
     let client = CustodiaClient::with_transport(config(), fake.clone()).unwrap();
 
     let payload = json!({
-        "name": "db/password",
+        "namespace": "default",
+        "key": "db/password",
         "ciphertext": "opaque-ciphertext",
         "crypto_metadata": { "format": "client-defined" },
         "envelopes": [{ "client_id": "client_alice", "envelope": "opaque-envelope" }],
@@ -120,8 +121,6 @@ fn builds_metadata_and_operational_paths() {
         json!({"secrets": []}),
         json!({"versions": []}),
         json!({"access": []}),
-        json!({"versions": []}),
-        json!({"access": []}),
         json!({"access_requests": []}),
         json!({"secret_id": "s1"}),
         json!({"status": "shared"}),
@@ -143,12 +142,6 @@ fn builds_metadata_and_operational_paths() {
 
     client.list_client_infos(Some(10), Some(true)).unwrap();
     client.list_secret_metadata(Some(5)).unwrap();
-    client
-        .list_secret_version_metadata("550e8400-e29b-41d4-a716-446655440000", Some(2))
-        .unwrap();
-    client
-        .list_secret_access_metadata("550e8400-e29b-41d4-a716-446655440000", Some(3))
-        .unwrap();
     client.list_secret_version_metadata_by_key("db01", "user:sys", Some(10)).unwrap();
     client.list_secret_access_metadata_by_key("db01", "user:sys", Some(10)).unwrap();
     client
@@ -191,8 +184,6 @@ fn builds_metadata_and_operational_paths() {
     let urls = fake.requests().into_iter().map(|request| request.url).collect::<Vec<_>>();
     assert_eq!(urls[0], "https://vault.example.test:8443/v1/clients?limit=10&active=true");
     assert_eq!(urls[1], "https://vault.example.test:8443/v1/secrets?limit=5");
-    assert!(urls[2].contains("/v1/secrets/550e8400-e29b-41d4-a716-446655440000/versions?limit=2"));
-    assert!(urls[3].contains("/v1/secrets/550e8400-e29b-41d4-a716-446655440000/access?limit=3"));
 
     assert_url_seen(&urls, "/v1/secrets/by-key/versions?namespace=db01&key=user%3Asys&limit=10");
     assert_url_seen(&urls, "/v1/secrets/by-key/access?namespace=db01&key=user%3Asys&limit=10");
@@ -243,7 +234,7 @@ fn maps_http_errors_without_leaking_request_payload() {
     });
     let client = CustodiaClient::with_transport(config(), fake).unwrap();
 
-    let err = client.get_secret_payload("secret-a").unwrap_err();
+    let err = client.get_secret_payload_by_key("default", "secret-a").unwrap_err();
     match err {
         CustodiaError::Http { status, body, .. } => {
             assert_eq!(status, 403);

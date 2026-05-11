@@ -170,14 +170,10 @@ class Client final {
   std::string revoke_client_info(const std::string& payload_json);
 
   std::string create_secret_payload(const std::string& payload_json);
-  std::string get_secret_payload(const std::string& secret_id);
   std::string get_secret_payload_by_key(const std::string& namespace_name, const std::string& key);
   std::string list_secret_metadata(int limit = 0);
-  std::string list_secret_version_metadata(const std::string& secret_id, int limit = 0);
   std::string list_secret_version_metadata_by_key(const std::string& namespace_name, const std::string& key, int limit = 0);
-  std::string list_secret_access_metadata(const std::string& secret_id, int limit = 0);
   std::string list_secret_access_metadata_by_key(const std::string& namespace_name, const std::string& key, int limit = 0);
-  std::string share_secret_payload(const std::string& secret_id, const std::string& payload_json);
   std::string share_secret_payload_by_key(const std::string& namespace_name, const std::string& key, const std::string& payload_json);
   std::string revoke_access_by_key(const std::string& namespace_name, const std::string& key, const std::string& client_id);
   std::string create_access_grant_by_key(const std::string& namespace_name, const std::string& key, const std::string& payload_json);
@@ -186,7 +182,6 @@ class Client final {
       const std::string& key,
       const std::string& target_client_id,
       const std::string& payload_json);
-  std::string create_secret_version_payload(const std::string& secret_id, const std::string& payload_json);
   std::string create_secret_version_payload_by_key(const std::string& namespace_name, const std::string& key, const std::string& payload_json);
   std::string delete_secret_by_key(const std::string& namespace_name, const std::string& key, bool cascade = false);
   std::string list_access_grant_metadata(const Filters& filters = {});

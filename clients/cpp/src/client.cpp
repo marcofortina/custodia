@@ -222,10 +222,6 @@ std::string Client::create_secret_payload(const std::string& payload_json) {
   return request_json("POST", "/v1/secrets", payload_json);
 }
 
-std::string Client::get_secret_payload(const std::string& secret_id) {
-  return request_json("GET", "/v1/secrets/" + path_escape(secret_id));
-}
-
 std::string Client::get_secret_payload_by_key(const std::string& namespace_name, const std::string& key) {
   return request_json("GET", with_query("/v1/secrets/by-key", {{"namespace", namespace_name}, {"key", key}}));
 }
@@ -239,15 +235,6 @@ std::string Client::list_secret_metadata(int limit) {
   return request_json("GET", with_query("/v1/secrets", filters));
 }
 
-std::string Client::list_secret_version_metadata(const std::string& secret_id, int limit) {
-  validate_optional_limit(limit);
-  Filters filters;
-  if (limit > 0) {
-    filters.emplace_back("limit", std::to_string(limit));
-  }
-  return request_json("GET", with_query("/v1/secrets/" + path_escape(secret_id) + "/versions", filters));
-}
-
 std::string Client::list_secret_version_metadata_by_key(const std::string& namespace_name, const std::string& key, int limit) {
   validate_optional_limit(limit);
   Filters filters{{"namespace", namespace_name}, {"key", key}};
@@ -257,15 +244,6 @@ std::string Client::list_secret_version_metadata_by_key(const std::string& names
   return request_json("GET", with_query("/v1/secrets/by-key/versions", filters));
 }
 
-std::string Client::list_secret_access_metadata(const std::string& secret_id, int limit) {
-  validate_optional_limit(limit);
-  Filters filters;
-  if (limit > 0) {
-    filters.emplace_back("limit", std::to_string(limit));
-  }
-  return request_json("GET", with_query("/v1/secrets/" + path_escape(secret_id) + "/access", filters));
-}
-
 std::string Client::list_secret_access_metadata_by_key(const std::string& namespace_name, const std::string& key, int limit) {
   validate_optional_limit(limit);
   Filters filters{{"namespace", namespace_name}, {"key", key}};
@@ -273,10 +251,6 @@ std::string Client::list_secret_access_metadata_by_key(const std::string& namesp
     filters.emplace_back("limit", std::to_string(limit));
   }
   return request_json("GET", with_query("/v1/secrets/by-key/access", filters));
-}
-
-std::string Client::share_secret_payload(const std::string& secret_id, const std::string& payload_json) {
-  return request_json("POST", "/v1/secrets/" + path_escape(secret_id) + "/share", payload_json);
 }
 
 std::string Client::share_secret_payload_by_key(const std::string& namespace_name, const std::string& key, const std::string& payload_json) {
@@ -300,10 +274,6 @@ std::string Client::activate_access_grant_payload_by_key(
       "POST",
       with_query("/v1/secrets/by-key/access/" + path_escape(target_client_id) + "/activate", {{"namespace", namespace_name}, {"key", key}}),
       payload_json);
-}
-
-std::string Client::create_secret_version_payload(const std::string& secret_id, const std::string& payload_json) {
-  return request_json("POST", "/v1/secrets/" + path_escape(secret_id) + "/versions", payload_json);
 }
 
 std::string Client::create_secret_version_payload_by_key(const std::string& namespace_name, const std::string& key, const std::string& payload_json) {

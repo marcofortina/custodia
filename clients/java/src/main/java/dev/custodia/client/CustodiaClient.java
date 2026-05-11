@@ -88,10 +88,6 @@ public final class CustodiaClient {
         return requestJson("POST", "/v1/secrets", payloadJson);
     }
 
-    public String getSecretPayload(String secretId) throws IOException, InterruptedException, CustodiaHttpError {
-        return requestJson("GET", "/v1/secrets/" + pathEscape(secretId), null);
-    }
-
     public String getSecretPayloadByKey(String namespace, String key) throws IOException, InterruptedException, CustodiaHttpError {
         return requestJson("GET", withQuery("/v1/secrets/by-key", keyspaceFilters(namespace, key)), null);
     }
@@ -105,15 +101,6 @@ public final class CustodiaClient {
         return requestJson("GET", withQuery("/v1/secrets", filters), null);
     }
 
-    public String listSecretVersionMetadata(String secretId, int limit) throws IOException, InterruptedException, CustodiaHttpError {
-        validateOptionalLimit(limit);
-        Map<String, String> filters = new LinkedHashMap<>();
-        if (limit > 0) {
-            filters.put("limit", Integer.toString(limit));
-        }
-        return requestJson("GET", withQuery("/v1/secrets/" + pathEscape(secretId) + "/versions", filters), null);
-    }
-
     public String listSecretVersionMetadataByKey(String namespace, String key, int limit) throws IOException, InterruptedException, CustodiaHttpError {
         validateOptionalLimit(limit);
         Map<String, String> filters = keyspaceFilters(namespace, key);
@@ -123,15 +110,6 @@ public final class CustodiaClient {
         return requestJson("GET", withQuery("/v1/secrets/by-key/versions", filters), null);
     }
 
-    public String listSecretAccessMetadata(String secretId, int limit) throws IOException, InterruptedException, CustodiaHttpError {
-        validateOptionalLimit(limit);
-        Map<String, String> filters = new LinkedHashMap<>();
-        if (limit > 0) {
-            filters.put("limit", Integer.toString(limit));
-        }
-        return requestJson("GET", withQuery("/v1/secrets/" + pathEscape(secretId) + "/access", filters), null);
-    }
-
     public String listSecretAccessMetadataByKey(String namespace, String key, int limit) throws IOException, InterruptedException, CustodiaHttpError {
         validateOptionalLimit(limit);
         Map<String, String> filters = keyspaceFilters(namespace, key);
@@ -139,10 +117,6 @@ public final class CustodiaClient {
             filters.put("limit", Integer.toString(limit));
         }
         return requestJson("GET", withQuery("/v1/secrets/by-key/access", filters), null);
-    }
-
-    public String shareSecretPayload(String secretId, String payloadJson) throws IOException, InterruptedException, CustodiaHttpError {
-        return requestJson("POST", "/v1/secrets/" + pathEscape(secretId) + "/share", payloadJson);
     }
 
     public String shareSecretPayloadByKey(String namespace, String key, String payloadJson) throws IOException, InterruptedException, CustodiaHttpError {
@@ -164,10 +138,6 @@ public final class CustodiaClient {
 
     public String revokeAccessByKey(String namespace, String key, String clientId) throws IOException, InterruptedException, CustodiaHttpError {
         return requestJson("DELETE", withQuery("/v1/secrets/by-key/access/" + pathEscape(clientId), keyspaceFilters(namespace, key)), null);
-    }
-
-    public String createSecretVersionPayload(String secretId, String payloadJson) throws IOException, InterruptedException, CustodiaHttpError {
-        return requestJson("POST", "/v1/secrets/" + pathEscape(secretId) + "/versions", payloadJson);
     }
 
     public String createSecretVersionPayloadByKey(String namespace, String key, String payloadJson) throws IOException, InterruptedException, CustodiaHttpError {
