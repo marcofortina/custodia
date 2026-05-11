@@ -16,7 +16,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from custodia_client import (  # noqa: E402
-    CanonicalAADInputs,
     CryptoCustodiaClient,
     CryptoOptions,
     StaticPrivateKeyProvider,
@@ -24,7 +23,6 @@ from custodia_client import (  # noqa: E402
     X25519PrivateKeyHandle,
     derive_x25519_recipient_public_key,
 )
-from custodia_client.crypto import metadata_v1  # noqa: E402
 
 
 VECTOR_DIR = Path(__file__).resolve().parents[3] / "testdata" / "client-crypto" / "v1"
