@@ -187,6 +187,49 @@ func TestAPIRejectsRequestsWithoutClientCertificate(t *testing.T) {
 	}
 }
 
+func TestAPIEnrollmentClaimIsOnlyPublicBootstrapEndpoint(t *testing.T) {
+	memoryStore := store.NewMemoryStore()
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	claimReq := httptest.NewRequest(http.MethodPost, "/v1/client-enrollments/claim", strings.NewReader(`{}`))
+	claimReq.Header.Set("Content-Type", "application/json")
+	claimRes := httptest.NewRecorder()
+	handler.ServeHTTP(claimRes, claimReq)
+	assertHTTPError(t, claimRes, http.StatusBadRequest, "invalid_input")
+
+	for _, tt := range []struct {
+		method string
+		path   string
+	}{
+		{method: http.MethodGet, path: "/v1/me"},
+		{method: http.MethodGet, path: "/v1/status"},
+		{method: http.MethodGet, path: "/v1/secrets"},
+	} {
+		t.Run(tt.path, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, tt.path, nil)
+			res := httptest.NewRecorder()
+
+			handler.ServeHTTP(res, req)
+
+			assertHTTPError(t, res, http.StatusUnauthorized, "missing_client_certificate")
+		})
+	}
+}
+
+func assertHTTPError(t *testing.T, res *httptest.ResponseRecorder, status int, code string) {
+	t.Helper()
+	if res.Code != status {
+		t.Fatalf("expected %d, got %d: %s", status, res.Code, res.Body.String())
+	}
+	var payload errorResponse
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode error response: %v", err)
+	}
+	if payload.Error != code {
+		t.Fatalf("expected error %q, got %q", code, payload.Error)
+	}
+}
+
 func TestAPIClientRevokeAuditsReason(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()

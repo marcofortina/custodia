@@ -14,8 +14,10 @@ import (
 	"os"
 )
 
-// ServerTLSConfig creates the default API TLS policy: TLS 1.3 plus mandatory
-// client certificate validation against the configured Custodia client CA.
+// ServerTLSConfig creates the default API TLS policy: TLS 1.3 plus optional
+// client certificate verification at the TLS layer. API handlers still enforce
+// mTLS through the auth middleware; the unauthenticated enrollment claim route
+// must be reachable before a client certificate exists.
 func ServerTLSConfig(certFile, keyFile, clientCAFile string) (*tls.Config, error) {
 	return ServerTLSConfigWithClientCRL(certFile, keyFile, clientCAFile, "")
 }
@@ -38,7 +40,7 @@ func ServerTLSConfigWithClientCRL(certFile, keyFile, clientCAFile, clientCRLFile
 	tlsConfig := &tls.Config{
 		MinVersion:   tls.VersionTLS13,
 		Certificates: []tls.Certificate{cert},
-		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientAuth:   tls.VerifyClientCertIfGiven,
 		ClientCAs:    clientCAs,
 	}
 	if clientCRLFile != "" {
