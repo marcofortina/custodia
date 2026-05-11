@@ -139,6 +139,8 @@ type SecretAccessMetadata struct {
 // AccessGrantMetadata exposes pending grant metadata only. It deliberately omits envelopes.
 type AccessGrantMetadata struct {
 	SecretID            string     `json:"secret_id"`
+	Namespace           string     `json:"namespace,omitempty"`
+	Key                 string     `json:"key,omitempty"`
 	VersionID           string     `json:"version_id"`
 	ClientID            string     `json:"client_id"`
 	RequestedByClientID string     `json:"requested_by_client_id"`

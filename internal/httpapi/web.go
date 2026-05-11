@@ -783,7 +783,7 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 	}
 	rows := ""
 	for _, request := range requests {
-		rows += "<tr><td>" + html.EscapeString(request.SecretID) + "</td><td>" + html.EscapeString(request.VersionID) + "</td><td>" + html.EscapeString(request.ClientID) + "</td><td>" + html.EscapeString(request.RequestedByClientID) + "</td><td>" + webBadge(request.Status) + "</td></tr>"
+		rows += "<tr><td>" + html.EscapeString(request.Namespace) + "</td><td>" + html.EscapeString(request.Key) + "</td><td>" + html.EscapeString(request.ClientID) + "</td><td>" + html.EscapeString(request.RequestedByClientID) + "</td><td>" + webBadge(request.Status) + "</td></tr>"
 	}
 	body := webHero("Access Requests", "Metadata-only pending grant workflow. Envelopes are never rendered here.") +
 		`<form class="console-toolbar" method="get" action="/web/access-requests" hx-get="/web/access-requests" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">` +
@@ -792,7 +792,7 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 		`<label>Target<input name="client_id" placeholder="client_bob"` + webInputValueAttr(r, "client_id") + `></label>` +
 		`<label>Requester<input name="requested_by_client_id" placeholder="admin"` + webInputValueAttr(r, "requested_by_client_id") + `></label>` +
 		`<button type="submit">Apply filter</button><a class="console-button console-button--ghost" href="/web/access-requests" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">Reset</a></form>` +
-		webPaginatedTable([]string{"Secret", "Version", "Target client", "Requested by", "Status"}, rows, 5, "No access requests found.", 10, "Access Requests pagination")
+		webPaginatedTable([]string{"Namespace", "Key", "Target client", "Requested by", "Status"}, rows, 5, "No access requests found.", 10, "Access Requests pagination")
 	s.audit(r, "web.access_request_list", "secret", "", "success", nil)
 	writeWebPage(w, "Access Requests", body)
 }

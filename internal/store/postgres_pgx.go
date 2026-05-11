@@ -571,20 +571,21 @@ func (s *PostgresStore) RequestAccessGrant(ctx context.Context, actorClientID, s
 
 func (s *PostgresStore) ListAccessGrantRequests(ctx context.Context, secretID string) ([]model.AccessGrantMetadata, error) {
 	query := `
-		SELECT secret_id::text, version_id::text, client_id, requested_by_client_id, permissions, requested_at, expires_at,
+		SELECT sar.secret_id::text, s.namespace, s.key, sar.version_id::text, sar.client_id, sar.requested_by_client_id, sar.permissions, sar.requested_at, sar.expires_at,
 		       CASE
-		           WHEN activated_at IS NOT NULL THEN 'activated'
-		           WHEN revoked_at IS NOT NULL THEN 'revoked'
-		           WHEN expires_at IS NOT NULL AND expires_at <= NOW() THEN 'expired'
+		           WHEN sar.activated_at IS NOT NULL THEN 'activated'
+		           WHEN sar.revoked_at IS NOT NULL THEN 'revoked'
+		           WHEN sar.expires_at IS NOT NULL AND sar.expires_at <= NOW() THEN 'expired'
 		           ELSE 'pending'
 		       END AS status
-		FROM secret_access_requests`
+		FROM secret_access_requests sar
+		JOIN secrets s ON s.secret_id = sar.secret_id`
 	args := []any{}
 	if secretID != "" {
-		query += ` WHERE secret_id = $1::uuid`
+		query += ` WHERE sar.secret_id = $1::uuid`
 		args = append(args, secretID)
 	}
-	query += ` ORDER BY requested_at DESC`
+	query += ` ORDER BY sar.requested_at DESC`
 	rows, err := s.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, mapPostgresError(err)
@@ -593,7 +594,7 @@ func (s *PostgresStore) ListAccessGrantRequests(ctx context.Context, secretID st
 	requests := make([]model.AccessGrantMetadata, 0)
 	for rows.Next() {
 		var request model.AccessGrantMetadata
-		if err := rows.Scan(&request.SecretID, &request.VersionID, &request.ClientID, &request.RequestedByClientID, &request.Permissions, &request.RequestedAt, &request.ExpiresAt, &request.Status); err != nil {
+		if err := rows.Scan(&request.SecretID, &request.Namespace, &request.Key, &request.VersionID, &request.ClientID, &request.RequestedByClientID, &request.Permissions, &request.RequestedAt, &request.ExpiresAt, &request.Status); err != nil {
 			return nil, mapPostgresError(err)
 		}
 		requests = append(requests, request)

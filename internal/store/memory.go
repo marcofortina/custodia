@@ -512,7 +512,8 @@ func (s *MemoryStore) ListAccessGrantRequests(_ context.Context, secretID string
 		} else if pending.ExpiresAt != nil && !pending.ExpiresAt.After(time.Now().UTC()) {
 			status = "expired"
 		}
-		requests = append(requests, model.AccessGrantMetadata{
+		secret := s.secrets[pending.SecretID]
+		metadata := model.AccessGrantMetadata{
 			SecretID:            pending.SecretID,
 			VersionID:           pending.VersionID,
 			ClientID:            pending.ClientID,
@@ -521,7 +522,12 @@ func (s *MemoryStore) ListAccessGrantRequests(_ context.Context, secretID string
 			RequestedAt:         pending.RequestedAt,
 			ExpiresAt:           cloneTimePtr(pending.ExpiresAt),
 			Status:              status,
-		})
+		}
+		if secret != nil {
+			metadata.Namespace = secret.Namespace
+			metadata.Key = secret.Key
+		}
+		requests = append(requests, metadata)
 	}
 	sort.Slice(requests, func(i, j int) bool {
 		if requests[i].RequestedAt.Equal(requests[j].RequestedAt) {
