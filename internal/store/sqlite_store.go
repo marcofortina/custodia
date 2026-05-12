@@ -38,13 +38,14 @@ type SQLiteStore struct {
 }
 
 type sqliteSnapshot struct {
-	Clients         map[string]model.Client         `json:"clients"`
-	SubjectToClient map[string]string               `json:"subject_to_client"`
-	Secrets         map[string]*memorySecret        `json:"secrets"`
-	VisibleKeyspace map[string]string               `json:"visible_keyspace"`
-	PendingAccess   map[string]*memoryPendingAccess `json:"pending_access"`
-	AuditEvents     []model.AuditEvent              `json:"audit_events"`
-	LastAuditHash   []byte                          `json:"last_audit_hash"`
+	Clients          map[string]model.Client          `json:"clients"`
+	SubjectToClient  map[string]string                `json:"subject_to_client"`
+	ClientPublicKeys map[string]model.ClientPublicKey `json:"client_public_keys"`
+	Secrets          map[string]*memorySecret         `json:"secrets"`
+	VisibleKeyspace  map[string]string                `json:"visible_keyspace"`
+	PendingAccess    map[string]*memoryPendingAccess  `json:"pending_access"`
+	AuditEvents      []model.AuditEvent               `json:"audit_events"`
+	LastAuditHash    []byte                           `json:"last_audit_hash"`
 }
 
 func NewSQLiteStore(ctx context.Context, databaseURL string) (*SQLiteStore, error) {
@@ -126,6 +127,7 @@ func (s *SQLiteStore) load(ctx context.Context) error {
 	defer s.memory.mu.Unlock()
 	s.memory.clients = ensureClientMap(snapshot.Clients)
 	s.memory.subjectToClient = ensureStringMap(snapshot.SubjectToClient)
+	s.memory.clientPublicKeys = ensureClientPublicKeyMap(snapshot.ClientPublicKeys)
 	s.memory.secrets = ensureSecretMap(snapshot.Secrets)
 	s.memory.visibleKeyspace = ensureStringMap(snapshot.VisibleKeyspace)
 	s.memory.rebuildVisibleKeyspaceLocked()
@@ -147,6 +149,12 @@ func ensureStringMap(values map[string]string) map[string]string {
 	}
 	return values
 }
+func ensureClientPublicKeyMap(values map[string]model.ClientPublicKey) map[string]model.ClientPublicKey {
+	if values == nil {
+		return map[string]model.ClientPublicKey{}
+	}
+	return values
+}
 func ensureSecretMap(values map[string]*memorySecret) map[string]*memorySecret {
 	if values == nil {
 		return map[string]*memorySecret{}
@@ -163,13 +171,14 @@ func ensurePendingMap(values map[string]*memoryPendingAccess) map[string]*memory
 func (s *SQLiteStore) save(ctx context.Context) error {
 	s.memory.mu.RLock()
 	snapshot := sqliteSnapshot{
-		Clients:         s.memory.clients,
-		SubjectToClient: s.memory.subjectToClient,
-		Secrets:         s.memory.secrets,
-		VisibleKeyspace: s.memory.visibleKeyspace,
-		PendingAccess:   s.memory.pendingAccess,
-		AuditEvents:     s.memory.auditEvents,
-		LastAuditHash:   s.memory.lastAuditHash,
+		Clients:          s.memory.clients,
+		SubjectToClient:  s.memory.subjectToClient,
+		Secrets:          s.memory.secrets,
+		ClientPublicKeys: s.memory.clientPublicKeys,
+		VisibleKeyspace:  s.memory.visibleKeyspace,
+		PendingAccess:    s.memory.pendingAccess,
+		AuditEvents:      s.memory.auditEvents,
+		LastAuditHash:    s.memory.lastAuditHash,
 	}
 	payload, err := json.Marshal(snapshot)
 	s.memory.mu.RUnlock()
@@ -212,6 +221,19 @@ func (s *SQLiteStore) ListClients(ctx context.Context) ([]model.Client, error) {
 }
 func (s *SQLiteStore) GetClient(ctx context.Context, clientID string) (model.Client, error) {
 	return s.memory.GetClient(ctx, clientID)
+}
+
+func (s *SQLiteStore) UpsertClientPublicKey(ctx context.Context, actorClientID string, req model.PublishClientPublicKeyRequest) (model.ClientPublicKey, error) {
+	var publicKey model.ClientPublicKey
+	err := s.mutate(ctx, func() error {
+		var err error
+		publicKey, err = s.memory.UpsertClientPublicKey(ctx, actorClientID, req)
+		return err
+	})
+	return publicKey, err
+}
+func (s *SQLiteStore) GetClientPublicKey(ctx context.Context, clientID string) (model.ClientPublicKey, error) {
+	return s.memory.GetClientPublicKey(ctx, clientID)
 }
 func (s *SQLiteStore) RevokeClient(ctx context.Context, clientID string) error {
 	return s.mutate(ctx, func() error { return s.memory.RevokeClient(ctx, clientID) })

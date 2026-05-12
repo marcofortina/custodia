@@ -28,6 +28,20 @@ type ClientInfo struct {
 	RevokedAt   *time.Time `json:"revoked_at,omitempty"`
 }
 
+type ClientPublicKey struct {
+	ClientID     string    `json:"client_id"`
+	Scheme       string    `json:"scheme"`
+	PublicKeyB64 string    `json:"public_key_b64"`
+	Fingerprint  string    `json:"fingerprint"`
+	PublishedAt  time.Time `json:"published_at"`
+}
+
+type PublishClientPublicKeyPayload struct {
+	Scheme       string `json:"scheme"`
+	PublicKeyB64 string `json:"public_key_b64"`
+	Fingerprint  string `json:"fingerprint,omitempty"`
+}
+
 type RecipientEnvelope struct {
 	ClientID string `json:"client_id"`
 	Envelope string `json:"envelope"`

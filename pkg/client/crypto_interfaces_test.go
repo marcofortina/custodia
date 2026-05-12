@@ -10,6 +10,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"testing"
 	"time"
@@ -37,6 +38,22 @@ type testPrivateKeyProvider struct{}
 
 func (testPrivateKeyProvider) CurrentPrivateKey(context.Context) (PrivateKeyHandle, error) {
 	return testPrivateKeyHandle{}, nil
+}
+
+func TestPublishedClientPublicKeyAsRecipient(t *testing.T) {
+	published := ClientPublicKey{
+		ClientID:     "client_bob",
+		Scheme:       CryptoEnvelopeHPKEV1,
+		PublicKeyB64: base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{0x24}, 32)),
+		Fingerprint:  "fingerprint",
+	}
+	recipient, err := PublishedClientPublicKeyAsRecipient(published)
+	if err != nil {
+		t.Fatalf("PublishedClientPublicKeyAsRecipient() error = %v", err)
+	}
+	if recipient.ClientID != "client_bob" || recipient.Scheme != CryptoEnvelopeHPKEV1 || len(recipient.PublicKey) != 32 || recipient.Fingerprint != "fingerprint" {
+		t.Fatalf("unexpected recipient public key: %+v", recipient)
+	}
 }
 
 func TestCryptoOptionsValidate(t *testing.T) {

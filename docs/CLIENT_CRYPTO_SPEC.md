@@ -2,7 +2,7 @@
 
 This document defines the shared client-side crypto contract for Custodia high-level crypto clients. It is implemented by the repository Go, Python, Node.js/TypeScript, Java, C++ and Rust SDKs and remains the contract for future clients.
 
-The server remains metadata/ciphertext/envelope-only. It must never receive plaintext, DEK material, private keys or public-key directory state.
+The server remains metadata/ciphertext/envelope-only. It may store authenticated application public keys and fingerprints for discovery, but it must never receive plaintext, DEK material, private keys or public-key trust decisions.
 
 Threat assumptions, non-goals and operational boundaries are documented in [`CLIENT_CRYPTO_THREAT_MODEL.md`](CLIENT_CRYPTO_THREAT_MODEL.md).
 
@@ -48,7 +48,7 @@ Recommended v1 envelope scheme:
 envelope_scheme = hpke-v1
 ```
 
-Each recipient envelope wraps the DEK for exactly one recipient identity. The recipient public key must be resolved by the application/client through a local or external resolver. Custodia server must not become a public-key directory.
+Each recipient envelope wraps the DEK for exactly one recipient identity. The recipient public key must be resolved by the application/client through an explicit resolver. Custodia may store authenticated clients' application public keys and fingerprints as metadata for recipient discovery, but key trust, pinning and substitution policy remain client/application responsibilities.
 
 Legacy envelope schemes, if introduced later, must be named by schema/version, not by implementation language.
 

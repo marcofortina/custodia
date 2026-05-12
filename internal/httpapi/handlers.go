@@ -243,6 +243,39 @@ func (s *Server) handleCreateClient(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]string{"status": "created", "client_id": req.ClientID})
 }
 
+func (s *Server) handlePublishClientPublicKey(w http.ResponseWriter, r *http.Request) {
+	actorClientID := clientIDFromContext(r)
+	var req model.PublishClientPublicKeyRequest
+	if !decodeJSON(w, r, &req) {
+		s.auditFailure(r, "client.public_key.publish", "client", actorClientID, map[string]string{"reason": "invalid_json"})
+		return
+	}
+	publicKey, err := s.store.UpsertClientPublicKey(r.Context(), actorClientID, req)
+	if err != nil {
+		s.auditStoreFailure(r, "client.public_key.publish", "client", actorClientID, err)
+		writeMappedError(w, err)
+		return
+	}
+	metadata, _ := json.Marshal(map[string]string{"fingerprint": publicKey.Fingerprint, "scheme": publicKey.Scheme})
+	s.audit(r, "client.public_key.publish", "client", actorClientID, "success", metadata)
+	writeJSON(w, http.StatusOK, publicKey)
+}
+
+func (s *Server) handleGetClientPublicKey(w http.ResponseWriter, r *http.Request) {
+	clientID, ok := s.requireClientID(w, r, "client.public_key.read")
+	if !ok {
+		return
+	}
+	publicKey, err := s.store.GetClientPublicKey(r.Context(), clientID)
+	if err != nil {
+		s.auditStoreFailure(r, "client.public_key.read", "client", clientID, err)
+		writeMappedError(w, err)
+		return
+	}
+	s.audit(r, "client.public_key.read", "client", clientID, "success", nil)
+	writeJSON(w, http.StatusOK, publicKey)
+}
+
 func (s *Server) handleRevokeClient(w http.ResponseWriter, r *http.Request) {
 	var req model.RevokeClientRequest
 	if !decodeJSON(w, r, &req) {

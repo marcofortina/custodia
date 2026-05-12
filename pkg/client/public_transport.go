@@ -54,6 +54,16 @@ func (c *Client) RevokeClientInfo(req RevokeClientPayload) error {
 	return c.doJSON(http.MethodPost, "/v1/clients/revoke", req, nil)
 }
 
+func (c *Client) PublishClientPublicKeyPayload(req PublishClientPublicKeyPayload) (ClientPublicKey, error) {
+	var response ClientPublicKey
+	return response, c.doJSON(http.MethodPut, "/v1/me/public-key", req, &response)
+}
+
+func (c *Client) GetClientPublicKeyPayload(clientID string) (ClientPublicKey, error) {
+	var response ClientPublicKey
+	return response, c.doJSON(http.MethodGet, "/v1/clients/"+pathEscape(clientID)+"/public-key", nil, &response)
+}
+
 // CreateSecretPayload is transport-only: callers must provide ciphertext, metadata and envelopes already produced client-side.
 func (c *Client) CreateSecretPayload(req CreateSecretPayload) (SecretVersionRef, error) {
 	var ref SecretVersionRef

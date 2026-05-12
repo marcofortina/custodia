@@ -10,7 +10,7 @@ Custodia client crypto is designed so that the server remains a metadata-only co
 - clients generate and keep DEKs outside the server;
 - clients create recipient envelopes outside the server;
 - clients decrypt only after authorization and local envelope opening;
-- the server stores ciphertext, metadata and opaque envelopes, but never plaintext, DEKs, private keys or public-key directory state.
+- the server stores ciphertext, metadata, opaque envelopes and optional application public-key metadata, but never plaintext, DEKs or private keys.
 
 The primary confidentiality goal is that compromise of the Custodia server database alone does not reveal plaintext secret values.
 
@@ -19,12 +19,12 @@ The primary confidentiality goal is that compromise of the Custodia server datab
 | Component | Trusted for | Must not receive |
 | --- | --- | --- |
 | Application/client | plaintext, DEK generation, local private keys, recipient key resolution | n/a |
-| Custodia server | authentication, authorization, storage, audit, metadata routing | plaintext, DEKs, private keys |
+| Custodia server | authentication, authorization, storage, audit, metadata routing, application public-key metadata | plaintext, DEKs, private keys |
 | Signer service | mTLS certificate issuance and lifecycle | secret plaintext or DEKs |
-| External key source/resolver | recipient public-key authenticity | Custodia server private keys or plaintext |
+| Key trust policy / external resolver | recipient public-key authenticity and pinning decisions | Custodia server private keys or plaintext |
 | Audit/export pipeline | immutable operational evidence | plaintext, envelopes interpreted as secrets |
 
-The server is not a public-key directory. Recipient public keys must be resolved through application configuration, pinned keys, an enterprise KMS/directory, provisioning, or another out-of-band trust channel.
+The server-published public-key endpoint is discovery metadata, not a trust oracle. Clients may resolve recipient public keys from Custodia metadata, pinned files, enterprise KMS/directory systems, provisioning or another out-of-band trust channel; high-assurance workflows should compare fingerprints or pin keys.
 
 ## Protected assets
 

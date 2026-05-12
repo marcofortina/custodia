@@ -43,6 +43,12 @@ func (s *PostgresStore) ListSecretVersions(context.Context, string, string) ([]m
 func (s *PostgresStore) ListSecretAccess(context.Context, string, string) ([]model.SecretAccessMetadata, error) {
 	return nil, ErrPostgresStoreNotWired
 }
+func (s *PostgresStore) UpsertClientPublicKey(context.Context, string, model.PublishClientPublicKeyRequest) (model.ClientPublicKey, error) {
+	return model.ClientPublicKey{}, ErrPostgresStoreNotWired
+}
+func (s *PostgresStore) GetClientPublicKey(context.Context, string) (model.ClientPublicKey, error) {
+	return model.ClientPublicKey{}, ErrPostgresStoreNotWired
+}
 func (s *PostgresStore) RevokeClient(context.Context, string) error { return ErrPostgresStoreNotWired }
 func (s *PostgresStore) CreateSecret(context.Context, string, model.CreateSecretRequest) (model.SecretVersionRef, error) {
 	return model.SecretVersionRef{}, ErrPostgresStoreNotWired

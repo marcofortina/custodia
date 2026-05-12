@@ -353,14 +353,17 @@ custodia-client mtls enroll \
 
 This generates Alice's mTLS private key and CSR locally, sends only the CSR plus token to Custodia, receives Alice's signed certificate plus `ca.crt`, and installs the public material into Alice's standard client profile. The mTLS private key never leaves Alice's workstation.
 
-Configure Alice's local application encryption key and reusable client profile:
+Configure Alice's local application encryption key, reusable client profile and server-published public-key metadata:
 
 ```bash
 custodia-client key generate --client-id "$ALICE_ID"
 custodia-client config write --client-id "$ALICE_ID"
+custodia-client key publish --client-id "$ALICE_ID"
 custodia-client config check --client-id "$ALICE_ID"
 custodia-client doctor --client-id "$ALICE_ID" --online
 ```
+
+`key publish` uploads only Alice's application public key and fingerprint. Alice's application private key remains local.
 
 Create and read back an encrypted secret as Alice. Keep demo plaintext/output files outside the client profile:
 
@@ -404,25 +407,25 @@ custodia-client mtls enroll \
   --insecure
 ```
 
-Configure Bob's local application encryption key and reusable client profile:
+Configure Bob's local application encryption key, reusable client profile and server-published public-key metadata:
 
 ```bash
 custodia-client key generate --client-id "$BOB_ID"
 custodia-client config write --client-id "$BOB_ID"
+custodia-client key publish --client-id "$BOB_ID"
 custodia-client config check --client-id "$BOB_ID"
 custodia-client doctor --client-id "$BOB_ID" --online
 ```
 
-Bob must transfer his application public key to Alice through a trusted channel. The default source path on Bob is `$HOME/.config/custodia/client_bob/client_bob.x25519.pub.json`, or `$XDG_CONFIG_HOME/custodia/client_bob/client_bob.x25519.pub.json` when `XDG_CONFIG_HOME` is set. Alice can then share the secret with Bob:
+`key publish` uploads only Bob's application public key and fingerprint. Bob's application private key remains local. Alice can then share the secret with Bob by client id; the CLI resolves Bob's published public key from Custodia metadata:
 
 ```bash
 ALICE_ID=client_alice
 SMOKE_NAMESPACE=default
 SMOKE_KEY=smoke-demo
 BOB_ID=client_bob
-BOB_PUBLIC_KEY="$HOME/$BOB_ID.x25519.pub.json"
 
-custodia-client secret share --client-id "$ALICE_ID" --namespace "$SMOKE_NAMESPACE" --key "$SMOKE_KEY" --target-client-id "$BOB_ID" --recipient "$BOB_ID=$BOB_PUBLIC_KEY" --permissions read
+custodia-client secret share --client-id "$ALICE_ID" --namespace "$SMOKE_NAMESPACE" --key "$SMOKE_KEY" --target-client-id "$BOB_ID" --permissions read
 ```
 
 Transfer the namespace/key values to Bob when Bob is remote. Bob can now read and decrypt the shared secret locally without knowing any owner or internal server id:
@@ -480,6 +483,7 @@ Before considering the node ready for real data:
 - `custodia-admin status read` succeeds using the admin transport defaults from `/etc/custodia/custodia-server.yaml`;
 - the Web Console opens through the configured host name/IP and requires TOTP;
 - `custodia-client config check` succeeds for Alice and Bob;
+- `custodia-client key publish` succeeds for Alice and Bob;
 - `custodia-client doctor --online` succeeds for Alice and Bob;
 - encrypted `secret put`, `secret share`, `secret get` and `secret delete` work by namespace/key;
 - `/etc/custodia` is mode `0750` or stricter;

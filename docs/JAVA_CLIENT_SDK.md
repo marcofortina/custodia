@@ -54,7 +54,7 @@ The client exposes transport methods for:
 
 The Java SDK must not log plaintext, ciphertext, envelopes, DEKs, private keys, keystore passwords or passphrases.
 
-It does not contact Custodia for recipient public keys and does not treat the server as a key directory.
+It does not fetch Custodia server-published recipient public keys automatically yet; applications provide a resolver and may choose Custodia metadata, pinned files or another trust source.
 
 ## Verification
 
@@ -79,4 +79,4 @@ crypto.shareEncryptedSecretByKey("default", "db", "client_charlie", CustodiaClie
 
 ```
 
-The application must provide recipient public keys through `PublicKeyResolver`; Custodia is not a key directory.
+The application must provide recipient public keys through `PublicKeyResolver`; Custodia public-key metadata can be one discovery source, but the application remains responsible for trust and pinning.

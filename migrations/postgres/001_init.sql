@@ -16,6 +16,15 @@ CREATE TABLE IF NOT EXISTS clients (
     revoked_at     TIMESTAMPTZ
 );
 
+
+CREATE TABLE IF NOT EXISTS client_public_keys (
+    client_id    TEXT PRIMARY KEY REFERENCES clients(client_id) ON DELETE CASCADE,
+    scheme       TEXT NOT NULL CHECK (scheme = 'hpke-v1'),
+    public_key   BYTEA NOT NULL CHECK (octet_length(public_key) = 32),
+    fingerprint  TEXT NOT NULL CHECK (fingerprint ~ '^[0-9a-f]{64}$'),
+    published_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS secrets (
     secret_id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     namespace            TEXT NOT NULL DEFAULT 'default' CHECK (length(btrim(namespace)) > 0 AND length(namespace) <= 255),
@@ -116,6 +125,7 @@ CREATE TABLE IF NOT EXISTS audit_events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_clients_active_subject ON clients (mtls_subject) WHERE is_active = TRUE AND revoked_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_client_public_keys_published_at ON client_public_keys (published_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_secrets_owner_key_active ON secrets (created_by_client_id, namespace, key) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_secret_visibility_secret ON secret_visibility (secret_id);
 CREATE INDEX IF NOT EXISTS idx_secret_versions_latest ON secret_versions (secret_id, created_at DESC) WHERE revoked_at IS NULL;

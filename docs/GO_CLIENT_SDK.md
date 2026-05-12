@@ -9,7 +9,7 @@ The Go client has two layers:
 - transport methods that use mTLS and speak the documented `/v1/*` REST API;
 - high-level crypto helpers that encrypt plaintext, create recipient envelopes, decrypt authorized payloads and share existing DEKs locally before calling the transport layer.
 
-The server still receives only opaque ciphertext, crypto metadata and recipient envelopes. Recipient public keys come from the caller-provided resolver, not from Custodia server. Private keys remain behind the caller-provided private-key provider or the local X25519 helper.
+The server still receives only opaque ciphertext, crypto metadata, recipient envelopes and optional application public-key metadata. Recipient public keys come from the caller-provided resolver; that resolver may use Custodia's published public-key metadata, pinned files or another trust source. Private keys remain behind the caller-provided private-key provider or the local X25519 helper.
 
 ## Public transport methods
 
@@ -84,7 +84,7 @@ Crypto metadata persists the content nonce and canonical AAD binding used by the
 
 ## Public crypto interface contracts
 
-Future high-level Go crypto helpers must depend on explicit caller-provided crypto dependencies instead of resolving trust through Custodia server:
+Future high-level Go crypto helpers must depend on explicit caller-provided crypto dependencies instead of treating Custodia server metadata as a trust decision:
 
 ```go
 opts := client.CryptoOptions{
@@ -98,7 +98,7 @@ if err := opts.Validate(); err != nil {
 }
 ```
 
-`PublicKeyResolver` resolves recipient encryption keys outside Custodia. `PrivateKeyProvider` returns a local decrypter handle. `RandomSource` is caller-provided CSPRNG input and `Clock` exists for deterministic metadata/tests. These contracts keep the server out of public-key discovery and private-key handling.
+`PublicKeyResolver` resolves recipient encryption keys from the caller-selected source: Custodia public-key metadata, pinned files, KMS/directory systems or another policy. `PrivateKeyProvider` returns a local decrypter handle. `RandomSource` is caller-provided CSPRNG input and `Clock` exists for deterministic metadata/tests. These contracts keep the server out of private-key handling and public-key trust decisions.
 
 ## Internal-model helpers
 

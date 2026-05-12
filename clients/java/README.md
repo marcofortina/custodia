@@ -36,7 +36,7 @@ String payload = client.getSecretPayloadByKey("default", "db");
 
 ## Boundary
 
-Transport methods are opaque and do not inspect ciphertext, envelopes or `crypto_metadata`. High-level crypto methods encrypt/decrypt locally, use application-provided recipient public keys and never contact Custodia for key material.
+Transport methods are opaque and do not inspect ciphertext, envelopes or `crypto_metadata`. High-level crypto methods encrypt/decrypt locally, use application-resolved recipient public keys and never contact Custodia for private key material.
 
 
 ## High-level crypto example

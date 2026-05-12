@@ -108,19 +108,50 @@ func TestRecipientSpecSupportsExplicitAndEmbeddedClientIDs(t *testing.T) {
 	if err := writePublicKey("client_bob", privateKey, publicPath); err != nil {
 		t.Fatal(err)
 	}
-	clientID, publicKey, err := readRecipientSpec("client_bob=" + publicPath)
+	clientID, publicKey, pinned, err := readRecipientSpec("client_bob=" + publicPath)
 	if err != nil {
 		t.Fatalf("read explicit recipient: %v", err)
 	}
-	if clientID != "client_bob" || publicKey.ClientID != "client_bob" {
-		t.Fatalf("unexpected explicit recipient: %q %+v", clientID, publicKey)
+	if !pinned || clientID != "client_bob" || publicKey.ClientID != "client_bob" {
+		t.Fatalf("unexpected explicit recipient: pinned=%v id=%q key=%+v", pinned, clientID, publicKey)
 	}
-	clientID, publicKey, err = readRecipientSpec(publicPath)
+	clientID, publicKey, pinned, err = readRecipientSpec(publicPath)
 	if err != nil {
 		t.Fatalf("read embedded recipient: %v", err)
 	}
-	if clientID != "client_bob" || publicKey.ClientID != "client_bob" {
-		t.Fatalf("unexpected embedded recipient: %q %+v", clientID, publicKey)
+	if !pinned || clientID != "client_bob" || publicKey.ClientID != "client_bob" {
+		t.Fatalf("unexpected embedded recipient: pinned=%v id=%q key=%+v", pinned, clientID, publicKey)
+	}
+}
+
+func TestRecipientSpecSupportsServerResolvedClientID(t *testing.T) {
+	clientID, publicKey, pinned, err := readRecipientSpec("client_bob")
+	if err != nil {
+		t.Fatalf("read server resolved recipient: %v", err)
+	}
+	if pinned || clientID != "client_bob" || publicKey.ClientID != "" || len(publicKey.PublicKey) != 0 {
+		t.Fatalf("unexpected server resolved recipient: pinned=%v id=%q key=%+v", pinned, clientID, publicKey)
+	}
+}
+
+func TestPublishPublicKeyPayloadDerivesDocumentedShape(t *testing.T) {
+	dir := t.TempDir()
+	privatePath := filepath.Join(dir, "client_alice.x25519.json")
+	publicPath := filepath.Join(dir, "client_alice.x25519.pub.json")
+	privateKey := bytes.Repeat([]byte{0x42}, 32)
+	if err := writeKeyPair("client_alice", privateKey, privatePath, publicPath); err != nil {
+		t.Fatalf("write key pair: %v", err)
+	}
+	payload, err := publishPublicKeyPayload(cryptoFlags{clientID: "client_alice", cryptoKey: privatePath})
+	if err != nil {
+		t.Fatalf("publishPublicKeyPayload() error = %v", err)
+	}
+	decoded, err := base64.StdEncoding.DecodeString(payload.PublicKeyB64)
+	if err != nil {
+		t.Fatalf("decode public key: %v", err)
+	}
+	if payload.Scheme != sdk.CryptoEnvelopeHPKEV1 || len(decoded) != 32 || payload.Fingerprint == "" {
+		t.Fatalf("unexpected publish payload: %+v", payload)
 	}
 }
 

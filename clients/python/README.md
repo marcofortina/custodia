@@ -1,6 +1,6 @@
 # Python client
 
-This client provides both the raw transport helpers and the Phase 5 high-level crypto wrapper. The crypto wrapper encrypts/decrypts locally and still does not fetch public keys from Custodia or ask the server to decrypt anything.
+This client provides both the raw transport helpers and the Phase 5 high-level crypto wrapper. The crypto wrapper encrypts/decrypts locally and never asks the server to decrypt anything; applications may resolve public keys from Custodia metadata, pinned files or another trust source.
 
 Implemented helpers:
 
@@ -23,7 +23,7 @@ Implemented helpers:
 - `create_secret_version_by_key(namespace, key, payload)` user-facing lookup
 - `delete_secret_by_key(namespace, key, cascade=False)` user-facing lookup
 
-Dynamic path segments are URL-escaped. Raw transport payloads remain caller-defined JSON with base64 ciphertext/envelope strings. The high-level crypto wrapper requires an application-provided public-key resolver and local private-key provider; Custodia never acts as a public-key directory.
+Dynamic path segments are URL-escaped. Raw transport payloads remain caller-defined JSON with base64 ciphertext/envelope strings. The high-level crypto wrapper requires an application-provided public-key resolver and local private-key provider. Custodia public-key metadata can be a discovery source, but applications remain responsible for trust and pinning.
 
 ## High-level crypto wrapper
 
@@ -73,8 +73,8 @@ secret = crypto.read_decrypted_secret_by_key("db01", "user:sys")
 ```
 
 The static resolver above is only a minimal example. Production applications
-should resolve recipient public keys from local pinned files, KMS, enterprise
-directory, provisioning or another trusted channel outside Custodia.
+should resolve recipient public keys from Custodia public-key metadata, local pinned files, KMS, enterprise
+directory, provisioning or another trusted channel, according to application trust policy.
 
 ## Audit export
 

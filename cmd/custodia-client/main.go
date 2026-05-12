@@ -137,14 +137,15 @@ func (a *app) usage() {
   custodia-client mtls install-cert --client-id ID --cert-file FILE --ca-file FILE
   custodia-client key generate --client-id ID [--private-key-out FILE --public-key-out FILE]
   custodia-client key public --client-id ID --private-key FILE --public-key-out FILE
+  custodia-client key publish --client-id ID|--config FILE [--crypto-key FILE]
   custodia-client key inspect --key FILE
   custodia-client config write --client-id ID [--server-url URL --out FILE --cert FILE --key FILE --ca FILE --crypto-key FILE]
   custodia-client config check --client-id ID|--config FILE
   custodia-client doctor --client-id ID|--config FILE [--online]
-  custodia-client secret put --client-id ID --key KEY [--namespace NS] --value-file FILE [--recipient ID=PUBLIC.json] [--permissions read[,write,share]|all|BITS]
+  custodia-client secret put --client-id ID --key KEY [--namespace NS] --value-file FILE [--recipient ID|ID=PUBLIC.json] [--permissions read[,write,share]|all|BITS]
   custodia-client secret get --client-id ID --key KEY [--namespace NS] [--out FILE]
-  custodia-client secret update --client-id ID --key KEY [--namespace NS] --value-file FILE [--recipient ID=PUBLIC.json] [--permissions read[,write,share]|all|BITS]
-  custodia-client secret share --client-id ID --key KEY [--namespace NS] --target-client-id ID --recipient ID=PUBLIC.json [--permissions read[,write,share]|all|BITS]
+  custodia-client secret update --client-id ID --key KEY [--namespace NS] --value-file FILE [--recipient ID|ID=PUBLIC.json] [--permissions read[,write,share]|all|BITS]
+  custodia-client secret share --client-id ID --key KEY [--namespace NS] --target-client-id ID [--recipient ID=PUBLIC.json] [--permissions read[,write,share]|all|BITS]
   custodia-client secret versions --client-id ID --key KEY [--namespace NS] [--limit N]
   custodia-client secret access list --client-id ID --key KEY [--namespace NS] [--limit N]
   custodia-client secret access revoke --client-id ID --key KEY [--namespace NS] --target-client-id ID --yes
@@ -522,6 +523,8 @@ func (a *app) runKey(args []string) int {
 		return a.runKeyGenerate(args[1:])
 	case "public":
 		return a.runKeyPublic(args[1:])
+	case "publish":
+		return a.runKeyPublish(args[1:])
 	case "inspect":
 		return a.runKeyInspect(args[1:])
 	default:
@@ -602,6 +605,41 @@ func (a *app) runKeyPublic(args []string) int {
 	}
 	fmt.Fprintf(a.stdout, "wrote %s\n", *publicOut)
 	return 0
+}
+
+func (a *app) runKeyPublish(args []string) int {
+	fs := newFlagSet("custodia-client key publish", a.stderr)
+	var transport transportFlags
+	registerTransportFlags(fs, &transport)
+	var crypto cryptoFlags
+	registerCryptoFlagsNoRecipients(fs, &crypto)
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	if err := defaultTransportConfigFromClientID(&transport, crypto.clientID); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 2
+	}
+	if err := applyClientConfig(&transport, &crypto); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	payload, err := publishPublicKeyPayload(crypto)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	client, err := buildTransportClient(transport)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	published, err := client.PublishClientPublicKeyPayload(payload)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "publish public key: %v\n", err)
+		return 1
+	}
+	return writeJSON(a.stdout, map[string]any{"client_id": published.ClientID, "scheme": published.Scheme, "fingerprint": published.Fingerprint, "status": "published"})
 }
 
 func (a *app) runKeyInspect(args []string) int {
@@ -1065,7 +1103,7 @@ func registerTransportFlagsWithKeyName(fs *flag.FlagSet, flags *transportFlags, 
 
 func registerCryptoFlags(fs *flag.FlagSet, flags *cryptoFlags) {
 	registerCryptoFlagsNoRecipients(fs, flags)
-	fs.Var(&flags.recipients, "recipient", "recipient public key file, either ID=FILE or FILE")
+	fs.Var(&flags.recipients, "recipient", "recipient client id resolved from the server, or pinned public key override as ID=FILE or FILE")
 }
 
 func registerCryptoFlagsNoRecipients(fs *flag.FlagSet, flags *cryptoFlags) {
@@ -1130,18 +1168,20 @@ func buildCryptoClient(transport transportFlags, crypto cryptoFlags) (*sdk.Crypt
 	publicKeys[clientID] = selfPublic
 	recipientIDs := make([]string, 0, len(crypto.recipients))
 	for _, spec := range crypto.recipients {
-		recipientID, publicKey, err := readRecipientSpec(spec)
+		recipientID, publicKey, pinned, err := readRecipientSpec(spec)
 		if err != nil {
 			return nil, nil, err
 		}
-		publicKeys[recipientID] = publicKey
+		if pinned {
+			publicKeys[recipientID] = publicKey
+		}
 		recipientIDs = append(recipientIDs, recipientID)
 	}
 	transportClient, err := buildTransportClient(transport)
 	if err != nil {
 		return nil, nil, err
 	}
-	cryptoClient, err := transportClient.WithCrypto(sdk.CryptoOptions{PublicKeyResolver: staticResolver(publicKeys), PrivateKeyProvider: staticPrivateKeyProvider{handle: handle}, RandomSource: rand.Reader, Clock: sdk.SystemClock{}})
+	cryptoClient, err := transportClient.WithCrypto(sdk.CryptoOptions{PublicKeyResolver: serverBackedResolver{local: staticResolver(publicKeys), transport: transportClient}, PrivateKeyProvider: staticPrivateKeyProvider{handle: handle}, RandomSource: rand.Reader, Clock: sdk.SystemClock{}})
 	if err != nil {
 		return nil, nil, fmt.Errorf("create crypto client: %w", err)
 	}
@@ -1225,6 +1265,35 @@ func validateCACertificateFile(path string) error {
 	return nil
 }
 
+func publishPublicKeyPayload(crypto cryptoFlags) (sdk.PublishClientPublicKeyPayload, error) {
+	if strings.TrimSpace(crypto.cryptoKey) == "" && strings.TrimSpace(crypto.clientID) != "" {
+		paths, err := defaultClientProfilePaths(crypto.clientID)
+		if err != nil {
+			return sdk.PublishClientPublicKeyPayload{}, err
+		}
+		crypto.cryptoKey = paths.CryptoPrivate
+	}
+	if strings.TrimSpace(crypto.cryptoKey) == "" {
+		return sdk.PublishClientPublicKeyPayload{}, fmt.Errorf("--crypto-key is required; pass --client-id for a standard profile, pass --config, or pass --crypto-key explicitly")
+	}
+	keyFile, privateKey, err := readPrivateKeyFile(crypto.cryptoKey)
+	if err != nil {
+		return sdk.PublishClientPublicKeyPayload{}, err
+	}
+	clientID := strings.TrimSpace(crypto.clientID)
+	if clientID == "" {
+		clientID = keyFile.ClientID
+	}
+	if clientID == "" {
+		return sdk.PublishClientPublicKeyPayload{}, fmt.Errorf("client id is required in --client-id, --config or crypto key file")
+	}
+	publicKey, err := sdk.DeriveX25519RecipientPublicKey(clientID, privateKey)
+	if err != nil {
+		return sdk.PublishClientPublicKeyPayload{}, fmt.Errorf("derive public key: %w", err)
+	}
+	return sdk.PublishClientPublicKeyPayload{Scheme: publicKey.Scheme, PublicKeyB64: base64.StdEncoding.EncodeToString(publicKey.PublicKey), Fingerprint: fingerprint(publicKey.PublicKey)}, nil
+}
+
 type staticResolver map[string]sdk.RecipientPublicKey
 
 func (r staticResolver) ResolveRecipientPublicKey(_ context.Context, clientID string) (sdk.RecipientPublicKey, error) {
@@ -1233,6 +1302,27 @@ func (r staticResolver) ResolveRecipientPublicKey(_ context.Context, clientID st
 		return sdk.RecipientPublicKey{}, fmt.Errorf("missing recipient public key for %q", clientID)
 	}
 	return key, nil
+}
+
+type serverBackedResolver struct {
+	local     staticResolver
+	transport *sdk.Client
+}
+
+func (r serverBackedResolver) ResolveRecipientPublicKey(ctx context.Context, clientID string) (sdk.RecipientPublicKey, error) {
+	if r.local != nil {
+		if key, ok := r.local[clientID]; ok {
+			return key, nil
+		}
+	}
+	if r.transport == nil {
+		return sdk.RecipientPublicKey{}, fmt.Errorf("missing recipient public key for %q", clientID)
+	}
+	published, err := r.transport.GetClientPublicKeyPayload(clientID)
+	if err != nil {
+		return sdk.RecipientPublicKey{}, fmt.Errorf("resolve recipient public key for %q: %w", clientID, err)
+	}
+	return sdk.PublishedClientPublicKeyAsRecipient(published)
 }
 
 type staticPrivateKeyProvider struct{ handle sdk.X25519PrivateKeyHandle }
@@ -1280,31 +1370,54 @@ func readPrivateKeyFile(path string) (privateKeyFile, []byte, error) {
 	return payload, privateKey, nil
 }
 
-func readRecipientSpec(spec string) (string, sdk.RecipientPublicKey, error) {
+func readRecipientSpec(spec string) (string, sdk.RecipientPublicKey, bool, error) {
+	spec = strings.TrimSpace(spec)
+	if spec == "" {
+		return "", sdk.RecipientPublicKey{}, false, fmt.Errorf("recipient is required")
+	}
 	clientID := ""
 	path := spec
 	if left, right, ok := strings.Cut(spec, "="); ok {
 		clientID = strings.TrimSpace(left)
 		path = strings.TrimSpace(right)
+		if clientID == "" {
+			return "", sdk.RecipientPublicKey{}, false, fmt.Errorf("recipient client id is required")
+		}
+		if path == "" {
+			return "", sdk.RecipientPublicKey{}, false, fmt.Errorf("recipient public key path is required")
+		}
+		publicKey, err := readPublicKeyFile(path)
+		if err != nil {
+			return "", sdk.RecipientPublicKey{}, false, err
+		}
+		return pinnedRecipientPublicKey(clientID, path, publicKey)
 	}
-	if path == "" {
-		return "", sdk.RecipientPublicKey{}, fmt.Errorf("recipient public key path is required")
+	if model.ValidClientID(spec) && !looksLikePublicKeyPath(spec) {
+		return spec, sdk.RecipientPublicKey{}, false, nil
 	}
 	publicKey, err := readPublicKeyFile(path)
 	if err != nil {
-		return "", sdk.RecipientPublicKey{}, err
+		return "", sdk.RecipientPublicKey{}, false, err
 	}
+	return pinnedRecipientPublicKey(clientID, path, publicKey)
+}
+
+func looksLikePublicKeyPath(value string) bool {
+	return strings.ContainsAny(value, `/\`) || strings.HasPrefix(value, ".") || strings.HasSuffix(value, ".json")
+}
+
+func pinnedRecipientPublicKey(clientID, path string, publicKey sdk.RecipientPublicKey) (string, sdk.RecipientPublicKey, bool, error) {
 	if clientID == "" {
 		clientID = publicKey.ClientID
 	}
 	if clientID == "" {
-		return "", sdk.RecipientPublicKey{}, fmt.Errorf("recipient client id is required for %s", path)
+		return "", sdk.RecipientPublicKey{}, false, fmt.Errorf("recipient client id is required for %s", path)
 	}
 	if publicKey.ClientID != "" && publicKey.ClientID != clientID {
-		return "", sdk.RecipientPublicKey{}, fmt.Errorf("recipient id %q does not match public key client id %q", clientID, publicKey.ClientID)
+		return "", sdk.RecipientPublicKey{}, false, fmt.Errorf("recipient id %q does not match public key client id %q", clientID, publicKey.ClientID)
 	}
 	publicKey.ClientID = clientID
-	return clientID, publicKey, nil
+	return clientID, publicKey, true, nil
 }
 
 func readPublicKeyFile(path string) (sdk.RecipientPublicKey, error) {

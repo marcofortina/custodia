@@ -2,7 +2,7 @@
 
 `custodia-client` is the end-user encrypted secrets CLI. It is separate from `custodia-admin`: the admin CLI manages server metadata, certificates and audit workflows, while `custodia-client` creates, reads, shares and rotates secrets with client-side encryption.
 
-The CLI never sends plaintext, DEKs, mTLS private keys, application private keys or recipient public keys to the server. It sends only ciphertext, versioned `crypto_metadata` and opaque recipient envelopes.
+The CLI never sends plaintext, DEKs, mTLS private keys or application private keys to the server. It may publish an application public key and fingerprint with `key publish`; secret writes still send only ciphertext, versioned `crypto_metadata` and opaque recipient envelopes.
 
 ## Namespace/key addressing
 
@@ -73,9 +73,14 @@ Generate a local X25519 application key pair for the same client identity:
 custodia-client key generate --client-id "$CLIENT_ID"
 ```
 
-The private key file is local secret material and is written with mode `0600`. The public key file may be distributed through an application-controlled trust channel, for example configuration management, a pinned repository, an internal directory or offline provisioning.
+The private key file is local secret material and is written with mode `0600`. The public key file is not secret material, but clients still need a trust policy for it. Publish the application public key and its fingerprint to Custodia after writing the reusable profile:
 
-The server is not a public-key directory. Recipient public keys are loaded from local files with `--recipient`. Inspect a private key without exposing it with:
+```bash
+custodia-client config write --client-id "$CLIENT_ID"
+custodia-client key publish --client-id "$CLIENT_ID"
+```
+
+`key publish` uploads only the X25519 public key and fingerprint for the authenticated mTLS client. It never uploads the X25519 private key, plaintext, DEKs or envelopes. Other clients can use that server-published metadata for normal `--recipient CLIENT_ID` resolution, while pinned/offline workflows can still pass `--recipient CLIENT_ID=/path/to/public.json`. Inspect a private key without exposing it with:
 
 ```bash
 custodia-client key inspect --key "$HOME/.config/custodia/$CLIENT_ID/$CLIENT_ID.x25519.json"
@@ -85,7 +90,7 @@ The command prints the client id, crypto scheme and derived public-key fingerpri
 
 ## Reusable client config
 
-Write a local JSON config file after enrollment and application key generation:
+Write a local JSON config file after enrollment and application key generation if you have not already done so before `key publish`:
 
 ```bash
 custodia-client config write --client-id "$CLIENT_ID"
@@ -159,18 +164,17 @@ Plaintext output files are written with mode `0600`. Use `--out -` to write plai
 
 ## Share a secret with another client
 
-Bob must have a registered mTLS client certificate and a local application public key file. Alice needs Bob's public key file from a trusted channel:
+Bob must have a registered mTLS client certificate and must have published his application public key with `custodia-client key publish`. Alice can then share by target client id:
 
 ```bash
 custodia-client secret share \
   --client-id client_alice \
   --key smoke-demo \
   --target-client-id client_bob \
-  --recipient client_bob=/path/to/client_bob.x25519.pub.json \
   --permissions read
 ```
 
-The CLI opens Alice's current envelope locally, rewraps the existing DEK for Bob, and sends only Bob's opaque envelope to the server.
+The CLI opens Alice's current envelope locally, resolves Bob's public key from server-published metadata unless a pinned `--recipient client_bob=/path/to/client_bob.x25519.pub.json` override is supplied, rewraps the existing DEK for Bob, and sends only Bob's opaque envelope to the server.
 
 `--permissions` accepts readable names (`read`, `write`, `share`, `all`) or comma-separated combinations such as `read,write`. Numeric bitmasks remain accepted for advanced/debug workflows.
 
@@ -186,11 +190,11 @@ custodia-client secret update \
   --client-id client_alice \
   --key smoke-demo \
   --value-file "$HOME/custodia-smoke-secret.v2.txt" \
-  --recipient client_bob=/path/to/client_bob.x25519.pub.json \
+  --recipient client_bob \
   --permissions all
 ```
 
-The creator is automatically included as a recipient. Other authorized clients must be provided explicitly with `--recipient` so they can read the new version.
+The creator is automatically included as a recipient. Other authorized clients must be provided explicitly with `--recipient CLIENT_ID` so the CLI can resolve their server-published public keys. Use `--recipient CLIENT_ID=/path/to/public.json` for pinned/offline overrides.
 
 ## List authorized secrets
 
@@ -255,7 +259,7 @@ custodia-client secret delete \
 
 - mTLS private keys identify the client to Custodia and stay in the per-user profile.
 - X25519 key files are application encryption keys and must stay local to the client/operator.
-- Recipient public keys must be pinned or resolved outside Custodia.
+- Recipient public keys can be resolved from Custodia's authenticated public-key metadata or pinned explicitly with `--recipient CLIENT_ID=/path/to/public.json`; Custodia is not a trust oracle for key substitution.
 - The CLI does not use the Web Console and does not send plaintext to the server.
 - `custodia-admin certificate bundle` packages mTLS transport material only; it does not include application crypto keys.
 

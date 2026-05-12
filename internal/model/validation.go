@@ -8,6 +8,9 @@
 package model
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"regexp"
 	"strings"
 	"unicode"
@@ -25,6 +28,7 @@ const (
 	MaxAuditResourceTypeLength = 64
 	MaxAuditResourceIDLength   = 256
 	MaxRevocationReasonLength  = 512
+	X25519PublicKeyBytes       = 32
 )
 
 var (
@@ -158,4 +162,45 @@ func ValidAccessRequestStatus(value string) bool {
 	default:
 		return false
 	}
+}
+
+func ValidClientPublicKeyScheme(value string) bool {
+	return strings.TrimSpace(value) == ClientPublicKeySchemeHPKEV1
+}
+
+func DecodeClientPublicKey(value string) ([]byte, bool) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil, false
+	}
+	decoded, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		decoded, err = base64.RawStdEncoding.DecodeString(value)
+	}
+	if err != nil || len(decoded) != X25519PublicKeyBytes {
+		return nil, false
+	}
+	return decoded, true
+}
+
+func ClientPublicKeyFingerprint(publicKey []byte) string {
+	digest := sha256.Sum256(publicKey)
+	return hex.EncodeToString(digest[:])
+}
+
+func ValidClientPublicKeyFingerprint(value string, publicKey []byte) bool {
+	value = strings.ToLower(strings.TrimSpace(value))
+	return value != "" && value == ClientPublicKeyFingerprint(publicKey)
+}
+
+func ValidPublishClientPublicKeyRequest(req PublishClientPublicKeyRequest) bool {
+	if !ValidClientPublicKeyScheme(req.Scheme) {
+		return false
+	}
+	publicKey, ok := DecodeClientPublicKey(req.PublicKeyB64)
+	if !ok {
+		return false
+	}
+	fingerprint := strings.TrimSpace(req.Fingerprint)
+	return fingerprint == "" || ValidClientPublicKeyFingerprint(fingerprint, publicKey)
 }

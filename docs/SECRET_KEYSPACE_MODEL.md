@@ -258,7 +258,19 @@ secret_recipient_envelopes
   recipient_client_id references clients(client_id)
   envelope not null
   primary key(version_id, recipient_client_id)
+
+client_public_keys
+  client_id references clients(client_id) primary key
+  scheme not null                 -- hpke-v1
+  public_key not null              -- X25519 public key bytes
+  fingerprint not null             -- SHA-256 over public_key
+  published_at not null
 ```
+
+`client_public_keys` stores authenticated client application public-key metadata only.
+It does not store private keys, DEKs, plaintext or recipient envelopes, and it is not a
+server-side trust oracle. Clients that require pinning should compare fingerprints or
+provide an explicit pinned public-key override.
 
 `secret_recipient_envelopes` stores only the per-recipient encrypted DEK envelope for a
 specific version. The server never sees the DEK in plaintext. When Bob reads a shared

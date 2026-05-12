@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-func TestServerDoesNotExposeKeyDirectoryOrWrappedDEKRoutes(t *testing.T) {
+func TestServerDoesNotExposeWrappedDEKOrPrivateKeyRoutes(t *testing.T) {
 	t.Parallel()
 
 	paths := []string{
@@ -28,9 +28,9 @@ func TestServerDoesNotExposeKeyDirectoryOrWrappedDEKRoutes(t *testing.T) {
 			t.Fatalf("read %s: %v", path, err)
 		}
 		content := strings.ToLower(string(contentBytes))
-		for _, forbidden := range []string{"public_key", "wrapped_dek", "wrapped dek"} {
+		for _, forbidden := range []string{"wrapped_dek", "wrapped dek", "private_key_b64"} {
 			if strings.Contains(content, forbidden) {
-				t.Fatalf("%s must not contain server-side crypto trust token %q", path, forbidden)
+				t.Fatalf("%s must not contain server-side decryptable key material token %q", path, forbidden)
 			}
 		}
 	}

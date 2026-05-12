@@ -149,10 +149,10 @@ pub struct RecipientPublicKey {
     pub fingerprint: String,
 }
 
-/// Resolves encryption public keys outside Custodia server trust.
+/// Resolves encryption public keys according to application trust policy.
 ///
 /// Applications can back this with pinned files, a KMS, an enterprise directory
-/// or another authenticated channel. The vault itself is not a key directory.
+/// or another authenticated channel. Server-published public-key metadata may be used as a discovery source, but applications remain responsible for trust and pinning.
 pub trait PublicKeyResolver: Send + Sync {
     fn resolve_recipient_public_key(&self, client_id: &str) -> CryptoResult<RecipientPublicKey>;
 }

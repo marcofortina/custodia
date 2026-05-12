@@ -32,7 +32,7 @@ std::string payload = client.get_secret_payload_by_key("default", "db");
 
 ## Boundary
 
-Transport methods are opaque and do not inspect ciphertext, envelopes or `crypto_metadata`. High-level crypto methods encrypt/decrypt locally, use application-provided recipient public keys and never contact Custodia for key material.
+Transport methods are opaque and do not inspect ciphertext, envelopes or `crypto_metadata`. High-level crypto methods encrypt/decrypt locally, use application-resolved recipient public keys and never contact Custodia for private key material.
 
 
 ## High-level crypto example
@@ -51,4 +51,4 @@ auto decrypted = crypto.read_decrypted_secret_by_key("default", "db");
 crypto.share_encrypted_secret_by_key("default", "db", "client_charlie", custodia::permission_read);
 ```
 
-Recipient public keys are still resolved by the application, not by Custodia.
+Recipient public keys are still resolved by the application trust policy; Custodia public-key metadata can be one discovery source.

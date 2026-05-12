@@ -76,11 +76,11 @@ High-level crypto clients use the shared client crypto specification and common 
 - HPKE-v1 recipient envelopes;
 - canonical AAD generation;
 - versioned crypto metadata;
-- public-key resolution outside the server;
+- public-key resolution through caller-selected metadata, pinned or external trust sources;
 - local private-key handling outside the server;
 - clear errors for tampered ciphertext, AAD mismatch, wrong recipient, and unsupported crypto versions.
 
-The server is never a public-key directory and never participates in application-level encryption or decryption.
+The server may store public-key metadata for discovery, but it never participates in application-level encryption/decryption and never decides whether a recipient key should be trusted.
 
 ## Shared crypto metadata
 
@@ -137,8 +137,9 @@ Any new SDK must add its implementation and test coverage before this table can 
 
 ## Key resolution
 
-Recipient public keys are resolved outside Custodia. Valid resolvers include:
+Recipient public keys are resolved by client/application policy. Valid resolvers include:
 
+- Custodia server-published public-key metadata;
 - local files;
 - application configuration;
 - enterprise KMS or directory service;
@@ -146,7 +147,7 @@ Recipient public keys are resolved outside Custodia. Valid resolvers include:
 - provisioning systems;
 - out-of-band trust channels.
 
-Custodia stores only the target `client_id` and opaque envelope payload.
+Custodia stores only public-key metadata, target `client_id` values and opaque envelope payloads; it does not decide whether a public key should be trusted.
 
 ## Bash helper and external crypto providers
 

@@ -25,9 +25,12 @@ custodia-client mtls enroll \
 
 custodia-client key generate --client-id "$ALICE_ID"
 custodia-client config write --client-id "$ALICE_ID"
+custodia-client key publish --client-id "$ALICE_ID"
 custodia-client config check --client-id "$ALICE_ID"
 custodia-client doctor --client-id "$ALICE_ID" --online
 ```
+
+`key publish` uploads only Alice's application public key and fingerprint. Alice's application private key remains local.
 
 ## 2. Alice creates and reads a secret
 
@@ -84,9 +87,12 @@ custodia-client mtls enroll \
 
 custodia-client key generate --client-id "$BOB_ID"
 custodia-client config write --client-id "$BOB_ID"
+custodia-client key publish --client-id "$BOB_ID"
 custodia-client config check --client-id "$BOB_ID"
 custodia-client doctor --client-id "$BOB_ID" --online
 ```
+
+`key publish` uploads only Bob's application public key and fingerprint. Bob's application private key remains local.
 
 Before Alice shares the secret, Bob should not be able to decrypt it:
 
@@ -102,27 +108,23 @@ fi
 
 ## 4. Alice shares with Bob
 
-Bob must transfer his application public key to Alice through a trusted channel. On Alice's client host, set Bob's client id and the path to Bob's received public key:
+Bob has already published his application public key to Custodia metadata. On Alice's client host, set Bob's client id and share the secret:
 
 ```bash
 ALICE_ID=client_alice
 ALICE_NAMESPACE=default
 ALICE_KEY=alice-bob-demo
 BOB_ID=client_bob
-BOB_PUBLIC_KEY="$HOME/$BOB_ID.x25519.pub.json"
-```
 
-Then share the secret:
-
-```bash
 custodia-client secret share \
   --client-id "$ALICE_ID" \
   --namespace "$ALICE_NAMESPACE" \
   --key "$ALICE_KEY" \
   --target-client-id "$BOB_ID" \
-  --recipient "$BOB_ID=$BOB_PUBLIC_KEY" \
   --permissions read
 ```
+
+The CLI resolves Bob's server-published public key and uploads only Bob's opaque envelope. If you need an offline or pinned-key workflow, Bob must transfer his application public key to Alice through a trusted channel and Alice can pass `--recipient "$BOB_ID=/path/to/client_bob.x25519.pub.json"`.
 
 Transfer the namespace/key values to Bob. On Bob's client host:
 
@@ -160,7 +162,7 @@ custodia-client secret update \
   --namespace "$ALICE_NAMESPACE" \
   --key "$ALICE_KEY" \
   --value-file "$ALICE_SECRET_V2" \
-  --recipient "$BOB_ID=$BOB_PUBLIC_KEY" \
+  --recipient "$BOB_ID" \
   --permissions all
 ```
 
@@ -219,4 +221,4 @@ custodia-client secret delete \
   --yes
 ```
 
-Client mTLS private keys and application private keys stayed on each client host. The server only handled CSRs, signed certificates, ciphertext, crypto metadata and opaque envelopes.
+Client mTLS private keys and application private keys stayed on each client host. The server only handled CSRs, signed certificates, application public-key metadata, ciphertext, crypto metadata and opaque envelopes.

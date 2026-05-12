@@ -11,7 +11,7 @@ The Node client follows the same boundary as Go and Python:
 - the transport client only sends and receives opaque REST payloads over mTLS;
 - the crypto client encrypts/decrypts locally;
 - plaintext, DEKs, private keys and passphrases are never sent to the Custodia server;
-- recipient public keys are resolved by the application through `PublicKeyResolver`, not through the vault;
+- recipient public keys are resolved by the application through `PublicKeyResolver`; Custodia public-key metadata can be used as a discovery source but not as a trust decision;
 - private keys are supplied by a local `PrivateKeyProvider`.
 
 ## Install from the monorepo

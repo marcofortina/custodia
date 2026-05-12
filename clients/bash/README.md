@@ -44,4 +44,4 @@ Functions:
 - Do not run shell scripts with `set -x` around secret operations.
 - Do not put plaintext, DEKs, private keys or passphrases in shell history.
 - Protect client profiles and local crypto keys under `$XDG_CONFIG_HOME/custodia` or `$HOME/.config/custodia`.
-- Use trusted out-of-band exchange for recipient public-key files.
+- Use `custodia-client key publish` for normal recipient discovery, or trusted out-of-band exchange for pinned recipient public-key files.

@@ -22,6 +22,34 @@ Requires an admin mTLS client. Registers a client id and the certificate SAN/CN 
 }
 ```
 
+## Client application public key metadata
+
+`PUT /v1/me/public-key`
+
+Publishes the authenticated client's application encryption public key. The `client_id` is taken from the mTLS identity; clients cannot publish keys for another client id. The endpoint stores only public metadata and recomputes or verifies the SHA-256 fingerprint. It never receives application private keys, plaintext, DEKs or envelopes.
+
+```json
+{
+  "scheme": "hpke-v1",
+  "public_key_b64": "base64-x25519-public-key",
+  "fingerprint": "optional-lowercase-sha256-hex"
+}
+```
+
+`GET /v1/clients/{client_id}/public-key`
+
+Returns the active target client's published application public key and fingerprint so another authenticated client can build a recipient envelope. This is a metadata directory, not a trust oracle: clients that require key pinning or out-of-band approval should compare fingerprints or provide a pinned public-key override.
+
+```json
+{
+  "client_id": "client_bob",
+  "scheme": "hpke-v1",
+  "public_key_b64": "base64-x25519-public-key",
+  "fingerprint": "lowercase-sha256-hex",
+  "published_at": "2026-05-12T00:00:00Z"
+}
+```
+
 ## Secret create
 
 `POST /v1/secrets`

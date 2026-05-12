@@ -11,7 +11,8 @@
 //!
 //! Transport methods keep payloads opaque. High-level crypto methods encrypt,
 //! decrypt and create HPKE-v1 recipient envelopes locally using application
-//! provided key resolvers; Custodia never becomes a public-key directory.
+//! provided key resolvers; Custodia public-key metadata is discovery data, not
+//! a trust decision.
 
 pub mod crypto;
 pub use crypto::*;

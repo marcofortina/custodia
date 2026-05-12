@@ -112,6 +112,51 @@ func (s *PostgresStore) GetClient(ctx context.Context, clientID string) (model.C
 	return client, mapPostgresError(err)
 }
 
+func (s *PostgresStore) UpsertClientPublicKey(ctx context.Context, actorClientID string, req model.PublishClientPublicKeyRequest) (model.ClientPublicKey, error) {
+	actorClientID = strings.TrimSpace(actorClientID)
+	if !model.ValidClientID(actorClientID) || !model.ValidPublishClientPublicKeyRequest(req) {
+		return model.ClientPublicKey{}, ErrInvalidInput
+	}
+	publicKeyBytes, _ := model.DecodeClientPublicKey(req.PublicKeyB64)
+	fingerprint := strings.ToLower(strings.TrimSpace(req.Fingerprint))
+	if fingerprint == "" {
+		fingerprint = model.ClientPublicKeyFingerprint(publicKeyBytes)
+	}
+	if active, err := activeClientExists(ctx, s.pool, actorClientID); err != nil {
+		return model.ClientPublicKey{}, err
+	} else if !active {
+		return model.ClientPublicKey{}, ErrForbidden
+	}
+	var published model.ClientPublicKey
+	err := s.pool.QueryRow(ctx, `
+		INSERT INTO client_public_keys (client_id, scheme, public_key, fingerprint, published_at)
+		VALUES ($1, $2, $3, $4, NOW())
+		ON CONFLICT (client_id) DO UPDATE
+		SET scheme = EXCLUDED.scheme, public_key = EXCLUDED.public_key, fingerprint = EXCLUDED.fingerprint, published_at = NOW()
+		RETURNING client_id, scheme, encode(public_key, 'base64'), fingerprint, published_at`,
+		actorClientID, strings.TrimSpace(req.Scheme), publicKeyBytes, fingerprint).
+		Scan(&published.ClientID, &published.Scheme, &published.PublicKeyB64, &published.Fingerprint, &published.PublishedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return model.ClientPublicKey{}, ErrNotFound
+	}
+	return published, mapPostgresError(err)
+}
+
+func (s *PostgresStore) GetClientPublicKey(ctx context.Context, clientID string) (model.ClientPublicKey, error) {
+	clientID = strings.TrimSpace(clientID)
+	if !model.ValidClientID(clientID) {
+		return model.ClientPublicKey{}, ErrInvalidInput
+	}
+	var publicKey model.ClientPublicKey
+	err := s.pool.QueryRow(ctx, `
+		SELECT k.client_id, k.scheme, encode(k.public_key, 'base64'), k.fingerprint, k.published_at
+		FROM client_public_keys k
+		JOIN clients c ON c.client_id = k.client_id
+		WHERE k.client_id = $1 AND c.is_active = TRUE AND c.revoked_at IS NULL`, clientID).
+		Scan(&publicKey.ClientID, &publicKey.Scheme, &publicKey.PublicKeyB64, &publicKey.Fingerprint, &publicKey.PublishedAt)
+	return publicKey, mapPostgresError(err)
+}
+
 func (s *PostgresStore) RevokeClient(ctx context.Context, clientID string) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {

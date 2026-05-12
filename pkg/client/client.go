@@ -134,6 +134,18 @@ func (c *Client) CreateClient(req model.CreateClientRequest) error {
 	return c.doJSON(http.MethodPost, "/v1/clients", req, nil)
 }
 
+// PublishClientPublicKey publishes the current client's application encryption public key to the metadata directory.
+func (c *Client) PublishClientPublicKey(req model.PublishClientPublicKeyRequest) (model.ClientPublicKey, error) {
+	var response model.ClientPublicKey
+	return response, c.doJSON(http.MethodPut, "/v1/me/public-key", req, &response)
+}
+
+// GetClientPublicKey returns a published application encryption public key for an active client.
+func (c *Client) GetClientPublicKey(clientID string) (model.ClientPublicKey, error) {
+	var response model.ClientPublicKey
+	return response, c.doJSON(http.MethodGet, "/v1/clients/"+pathEscape(clientID)+"/public-key", nil, &response)
+}
+
 // RevokeClient is a monorepo internal-model helper that accepts internal model types. External consumers should use RevokeClientInfo.
 func (c *Client) RevokeClient(req model.RevokeClientRequest) error {
 	return c.doJSON(http.MethodPost, "/v1/clients/revoke", req, nil)

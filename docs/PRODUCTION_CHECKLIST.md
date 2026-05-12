@@ -21,7 +21,7 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 
 ## Must remain false
 
-- Do not add a server-side credential-key directory.
+- Do not add a server-side private credential-key directory or any DEK unwrap path. Public-key metadata is discovery-only and must not become a trust decision.
 - Do not add DEK, wrapped DEK or key unwrap logic to the server.
 - Do not render ciphertext/envelopes in web pages.
 - Do not use the memory store for production.

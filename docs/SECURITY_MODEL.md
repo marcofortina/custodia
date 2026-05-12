@@ -2,13 +2,14 @@
 
 ## Cryptographic boundary
 
-The server never receives plaintext, DEKs, private keys, public encryption keys or interpretable cryptographic material. It stores and returns only opaque transport fields:
+The server never receives plaintext, DEKs, private keys or interpretable cryptographic material. It stores and returns opaque transport fields plus optional application public-key metadata:
 
 - `ciphertext`
 - `crypto_metadata`
 - `envelope`
+- application public key metadata (`scheme`, public key bytes, fingerprint)
 
-The server does not expose a public-key directory and does not mediate trust between clients. It validates base64 transport syntax for opaque blobs only; this is not cryptographic interpretation.
+The server exposes application public-key metadata only for discovery. It does not mediate trust between clients; clients that require stronger assurance must compare fingerprints or pin keys. It validates base64 transport syntax and public-key shape only; this is not cryptographic interpretation of secret payloads.
 
 ## Authentication and authorization
 
@@ -42,7 +43,7 @@ When `CUSTODIA_CLIENT_CRL_FILE` is configured, the mTLS verifier fails closed on
 
 ## Web user metadata boundary
 
-The HTTP `/web/` shell is protected by admin mTLS authorization and can require a TOTP-backed signed web session. Passkey/WebAuthn challenge, credential metadata and external assertion-verifier delegation are available for deployments that enable passkeys. The PostgreSQL schema includes `web_users` and `web_user_mappings` for the metadata-only admin console described by the design document. These tables store authentication and role metadata only. They do not store plaintext secrets, client encryption keys, public-key directories or decryptable envelopes. Web operators can only be mapped to existing `client_id` subjects; access activation still requires an opaque envelope produced outside the vault by a subject with `share` permission.
+The HTTP `/web/` shell is protected by admin mTLS authorization and can require a TOTP-backed signed web session. Passkey/WebAuthn challenge, credential metadata and external assertion-verifier delegation are available for deployments that enable passkeys. The PostgreSQL schema includes `web_users` and `web_user_mappings` for the metadata-only admin console described by the design document. These tables store authentication and role metadata only. They do not store plaintext secrets, client private encryption keys or decryptable envelopes. Application public-key metadata is stored separately as discovery metadata, not as a trust decision. Web operators can only be mapped to existing `client_id` subjects; access activation still requires an opaque envelope produced outside the vault by a subject with `share` permission.
 
 
 ## Explicit remaining security gaps
@@ -55,7 +56,7 @@ The implemented server keeps the application cryptographic boundary intact, but 
 - External WORM/SIEM retention evidence.
 - Formal verification execution evidence from CI or a dedicated verification pipeline.
 
-These gaps must not be closed by moving client-side encryption keys, public-key trust directories or plaintext handling into the vault server.
+These gaps must not be closed by moving client-side private encryption keys, public-key trust decisions or plaintext handling into the vault server.
 
 
 ## Web authentication boundary
@@ -72,4 +73,4 @@ The repository includes a production readiness gate and operational artifacts fo
 - Database HA metadata and runbooks describe the topology; quorum, failover and multi-region behavior must be proven by the selected database platform.
 - Formal artifacts model server authorization invariants; they do not prove client-side encryption algorithms or external CA hardware.
 
-These boundaries prevent the server from drifting into plaintext handling, key-directory behavior or fake HSM claims.
+These boundaries prevent the server from drifting into plaintext handling, private-key custody, public-key trust decisions or fake HSM claims.

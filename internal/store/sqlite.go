@@ -37,6 +37,12 @@ func (s *SQLiteStore) ListClients(context.Context) ([]model.Client, error) {
 func (s *SQLiteStore) GetClient(context.Context, string) (model.Client, error) {
 	return model.Client{}, ErrSQLiteStoreNotWired
 }
+func (s *SQLiteStore) UpsertClientPublicKey(context.Context, string, model.PublishClientPublicKeyRequest) (model.ClientPublicKey, error) {
+	return model.ClientPublicKey{}, ErrSQLiteStoreNotWired
+}
+func (s *SQLiteStore) GetClientPublicKey(context.Context, string) (model.ClientPublicKey, error) {
+	return model.ClientPublicKey{}, ErrSQLiteStoreNotWired
+}
 func (s *SQLiteStore) RevokeClient(context.Context, string) error { return ErrSQLiteStoreNotWired }
 func (s *SQLiteStore) CreateSecret(context.Context, string, model.CreateSecretRequest) (model.SecretVersionRef, error) {
 	return model.SecretVersionRef{}, ErrSQLiteStoreNotWired

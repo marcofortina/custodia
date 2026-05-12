@@ -92,8 +92,9 @@ secret = crypto.read_decrypted_secret_by_key("db01", "user:sys")
 ```
 
 `StaticPublicKeyResolver` is a small helper for pinned/local maps and tests.
-Production code should plug in a resolver backed by trusted local provisioning,
-KMS or an enterprise directory outside Custodia.
+Production code should plug in a resolver backed by Custodia public-key metadata,
+trusted local provisioning, pinned keys, KMS or an enterprise directory according
+to application trust policy.
 
 ## Raw dictionary example
 

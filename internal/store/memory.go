@@ -23,14 +23,15 @@ import (
 // MemoryStore is the reference implementation of Custodia authorization semantics used by tests and lightweight runs.
 // Persistence stores must preserve these versioning, pending grant and audit-chain rules.
 type MemoryStore struct {
-	mu              sync.RWMutex
-	clients         map[string]model.Client
-	subjectToClient map[string]string
-	secrets         map[string]*memorySecret
-	visibleKeyspace map[string]string
-	pendingAccess   map[string]*memoryPendingAccess
-	auditEvents     []model.AuditEvent
-	lastAuditHash   []byte
+	mu               sync.RWMutex
+	clients          map[string]model.Client
+	subjectToClient  map[string]string
+	clientPublicKeys map[string]model.ClientPublicKey
+	secrets          map[string]*memorySecret
+	visibleKeyspace  map[string]string
+	pendingAccess    map[string]*memoryPendingAccess
+	auditEvents      []model.AuditEvent
+	lastAuditHash    []byte
 }
 
 type memorySecret struct {
@@ -76,11 +77,12 @@ type memoryPendingAccess struct {
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		clients:         make(map[string]model.Client),
-		subjectToClient: make(map[string]string),
-		secrets:         make(map[string]*memorySecret),
-		visibleKeyspace: make(map[string]string),
-		pendingAccess:   make(map[string]*memoryPendingAccess),
+		clients:          make(map[string]model.Client),
+		subjectToClient:  make(map[string]string),
+		clientPublicKeys: make(map[string]model.ClientPublicKey),
+		secrets:          make(map[string]*memorySecret),
+		visibleKeyspace:  make(map[string]string),
+		pendingAccess:    make(map[string]*memoryPendingAccess),
 	}
 }
 
@@ -140,6 +142,53 @@ func (s *MemoryStore) GetClient(_ context.Context, clientID string) (model.Clien
 		return model.Client{}, ErrNotFound
 	}
 	return client, nil
+}
+
+func (s *MemoryStore) UpsertClientPublicKey(_ context.Context, actorClientID string, req model.PublishClientPublicKeyRequest) (model.ClientPublicKey, error) {
+	actorClientID = strings.TrimSpace(actorClientID)
+	if !model.ValidClientID(actorClientID) || !model.ValidPublishClientPublicKeyRequest(req) {
+		return model.ClientPublicKey{}, ErrInvalidInput
+	}
+	publicKey, _ := model.DecodeClientPublicKey(req.PublicKeyB64)
+	fingerprint := strings.ToLower(strings.TrimSpace(req.Fingerprint))
+	if fingerprint == "" {
+		fingerprint = model.ClientPublicKeyFingerprint(publicKey)
+	}
+	published := model.ClientPublicKey{
+		ClientID:     actorClientID,
+		Scheme:       strings.TrimSpace(req.Scheme),
+		PublicKeyB64: strings.TrimSpace(req.PublicKeyB64),
+		Fingerprint:  fingerprint,
+		PublishedAt:  time.Now().UTC(),
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.clientActiveLocked(actorClientID) {
+		return model.ClientPublicKey{}, ErrForbidden
+	}
+	s.clientPublicKeys[actorClientID] = published
+	return published, nil
+}
+
+func (s *MemoryStore) GetClientPublicKey(_ context.Context, clientID string) (model.ClientPublicKey, error) {
+	clientID = strings.TrimSpace(clientID)
+	if !model.ValidClientID(clientID) {
+		return model.ClientPublicKey{}, ErrInvalidInput
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	client, ok := s.clients[clientID]
+	if !ok {
+		return model.ClientPublicKey{}, ErrNotFound
+	}
+	if !client.IsActive || client.RevokedAt != nil {
+		return model.ClientPublicKey{}, ErrForbidden
+	}
+	publicKey, ok := s.clientPublicKeys[clientID]
+	if !ok {
+		return model.ClientPublicKey{}, ErrNotFound
+	}
+	return publicKey, nil
 }
 
 // RevokeClient disables future server access and pending grants; already downloaded ciphertext still requires client-side rotation.

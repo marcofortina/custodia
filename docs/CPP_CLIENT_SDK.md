@@ -48,7 +48,7 @@ The client exposes transport methods for:
 
 The C++ SDK must not log plaintext, ciphertext, envelopes, DEKs, private keys or passphrases.
 
-It does not contact Custodia for recipient public keys and does not treat the server as a key directory.
+It does not fetch Custodia server-published recipient public keys automatically yet; applications provide a resolver and may choose Custodia metadata, pinned files or another trust source.
 
 ## Verification
 
@@ -73,4 +73,4 @@ crypto.share_encrypted_secret_by_key("default", "db", "client_charlie", custodia
 crypto.create_encrypted_secret_version_by_key("default", "db", rotated_plaintext_bytes, {"client_bob"});
 ```
 
-The application must provide recipient public keys through `public_key_resolver`; Custodia is not a key directory.
+The application must provide recipient public keys through `public_key_resolver`; Custodia public-key metadata can be one discovery source, but the application remains responsible for trust and pinning.

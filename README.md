@@ -5,7 +5,7 @@
 [![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue.svg)](LICENSE)
 [![Wiki](https://img.shields.io/badge/wiki-project%20portal-forestgreen.svg)](https://github.com/marcofortina/custodia/wiki)
 
-Custodia is a REST vault for encrypted secrets. The server authenticates clients with mTLS, authorizes access, stores opaque encrypted blobs and returns only the caller's opaque envelope. Encryption, decryption, key discovery, key rotation and key trust stay outside the server.
+Custodia is a REST vault for encrypted secrets. The server authenticates clients with mTLS, authorizes access, stores opaque encrypted blobs and returns only the caller's opaque envelope. Encryption, decryption, private-key handling, key rotation and key trust stay outside the server. Custodia may store authenticated client application public keys and fingerprints as metadata to simplify recipient discovery, but it is not a decryption service or a key-trust oracle.
 
 ## Start here
 
@@ -19,7 +19,7 @@ If you are not sure what to choose, use the package install path. It covers Debi
 
 - Go vault server with TLS 1.3 / mTLS support and optional client CRL rejection.
 - Client identity extraction from certificate SAN/CN.
-- REST API for encrypted secret create/read/delete/share/new-version plus metadata-only secret listing, with namespace/key lookup for normal user-facing workflows.
+- REST API for encrypted secret create/read/delete/share/new-version plus metadata-only secret listing and authenticated client public-key metadata, with namespace/key lookup for normal user-facing workflows.
 - Admin API/CLI for client metadata create/list/revoke.
 - Pending grant request/activation workflow: admins can request access, but a client with `share` must upload the target envelope.
 - Per-version access grants with `read`, `write`, `share` bitmask and optional future `expires_at`.
@@ -32,7 +32,7 @@ If you are not sure what to choose, use the package install path. It covers Debi
 - Minimal admin CLI for metadata operations exposed by the API.
 - Go, Python and Node.js / TypeScript client libraries with raw transport helpers; all three include high-level client-side crypto wrappers that keep plaintext, DEKs and private keys outside the server.
 - Java, C++ and Rust client libraries with raw transport helpers plus high-level client-side crypto wrappers that use the shared AES-256-GCM/HPKE-v1 vectors.
-- Go `custodia-client` CLI for encrypted namespace/key put/get/share/update, access revoke/delete workflows, reusable JSON client profiles and one-shot enrollment for client-side mTLS CSR signing.
+- Go `custodia-client` CLI for encrypted namespace/key put/get/share/update, access revoke/delete workflows, server-published application public-key metadata, reusable JSON client profiles and one-shot enrollment for client-side mTLS CSR signing.
 - Docker, Compose, Helm and Lite single-node deployment examples.
 - Dedicated `custodia-signer` service for enrollment-backed client CSR signing.
 - Custodia Lite profile with YAML config, SQLite build-tag artifact, local CA bootstrap, backup helper and Lite-to-Full readiness checks.
@@ -41,9 +41,9 @@ If you are not sure what to choose, use the package install path. It covers Debi
 
 - No plaintext handling.
 - No DEK/wrapped-DEK handling.
-- No public-key directory.
-- No server-side cryptographic key resolution.
-- No server-side application decryption.
+- No private application-key custody.
+- No server-side DEK unwrap, recipient-envelope generation or application decryption.
+- No server-side public-key trust decision; published public-key metadata is discovery data, not proof that a key should be trusted.
 
 ## Community and security
 

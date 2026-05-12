@@ -72,8 +72,8 @@ The issued certificate is client-auth only and carries the requested `client_id`
 
 ## Non-goals
 
-- No client-side encryption key registry.
-- No publication of recipient encryption public keys.
+- No client-side private encryption key registry.
+- No private application-key publication; server-side public-key metadata publication is handled by the vault API, not by the signer.
 - No decrypt/unwrap operation for secret payloads.
 - No CA private key in the Custodia API process.
 - No plaintext secret handling.

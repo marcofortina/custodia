@@ -36,8 +36,8 @@ var (
 	ErrRandomSourceFailed        = errors.New("random source failed")
 )
 
-// RecipientPublicKey is resolved outside Custodia by application trust logic.
-// The server must never be treated as a public-key directory for encryption.
+// RecipientPublicKey is resolved by application trust logic.
+// Server-published public-key metadata is discovery data, not a trust decision.
 type RecipientPublicKey struct {
 	ClientID    string
 	Scheme      string

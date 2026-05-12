@@ -539,6 +539,63 @@ func TestAPIMeReturnsAuthenticatedClientMetadata(t *testing.T) {
 	assertLastAudit(t, memoryStore, "client.me", "success", "")
 }
 
+func TestAPIClientPublishesAndReadsPublicKey(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, clientID := range []string{"client_alice", "client_bob"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %s: %v", clientID, err)
+		}
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	publicKeyB64 := base64.StdEncoding.EncodeToString([]byte(strings.Repeat("b", model.X25519PublicKeyBytes)))
+	req := mtlsRequest(http.MethodPut, "/v1/me/public-key", `{"scheme":"hpke-v1","public_key_b64":"`+publicKeyB64+`"}`, "client_bob")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected publish 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var published model.ClientPublicKey
+	if err := json.NewDecoder(res.Body).Decode(&published); err != nil {
+		t.Fatalf("decode published key: %v", err)
+	}
+	if published.ClientID != "client_bob" || published.Scheme != "hpke-v1" || published.Fingerprint == "" {
+		t.Fatalf("unexpected published key: %+v", published)
+	}
+
+	req = mtlsRequest(http.MethodGet, "/v1/clients/client_bob/public-key", "", "client_alice")
+	res = httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected read 200, got %d: %s", res.Code, res.Body.String())
+	}
+	var fetched model.ClientPublicKey
+	if err := json.NewDecoder(res.Body).Decode(&fetched); err != nil {
+		t.Fatalf("decode fetched key: %v", err)
+	}
+	if fetched.ClientID != "client_bob" || fetched.PublicKeyB64 != publicKeyB64 || fetched.Fingerprint != published.Fingerprint {
+		t.Fatalf("unexpected fetched key: %+v", fetched)
+	}
+	assertLastAudit(t, memoryStore, "client.public_key.read", "success", "")
+}
+
+func TestAPIRejectsMalformedClientPublicKey(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "client_alice", MTLSSubject: "client_alice"}); err != nil {
+		t.Fatalf("create client: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodPut, "/v1/me/public-key", `{"scheme":"hpke-v1","public_key_b64":"too-short"}`, "client_alice")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", res.Code, res.Body.String())
+	}
+}
+
 func TestAPIAdminListsClientsWithActiveFilter(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()

@@ -9,6 +9,7 @@ package client
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 
 	"custodia/internal/clientcrypto"
@@ -35,6 +36,20 @@ func DeriveX25519RecipientPublicKey(clientID string, privateKey []byte) (Recipie
 		return RecipientPublicKey{}, mapClientCryptoError(err)
 	}
 	return RecipientPublicKey{ClientID: clientID, Scheme: CryptoEnvelopeHPKEV1, PublicKey: publicKey}, nil
+}
+
+func PublishedClientPublicKeyAsRecipient(publicKey ClientPublicKey) (RecipientPublicKey, error) {
+	decoded, err := base64.StdEncoding.DecodeString(publicKey.PublicKeyB64)
+	if err != nil {
+		decoded, err = base64.RawStdEncoding.DecodeString(publicKey.PublicKeyB64)
+	}
+	if err != nil || len(decoded) != 32 {
+		return RecipientPublicKey{}, ErrUnsupportedEnvelopeScheme
+	}
+	if publicKey.Scheme != CryptoEnvelopeHPKEV1 {
+		return RecipientPublicKey{}, ErrUnsupportedEnvelopeScheme
+	}
+	return RecipientPublicKey{ClientID: publicKey.ClientID, Scheme: publicKey.Scheme, PublicKey: decoded, Fingerprint: publicKey.Fingerprint}, nil
 }
 
 func (handle X25519PrivateKeyHandle) ClientID() string { return handle.clientID }
