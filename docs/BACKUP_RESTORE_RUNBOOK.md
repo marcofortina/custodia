@@ -9,6 +9,21 @@ Backups protect only server-side metadata, ciphertext blobs and recipient envelo
 - mTLS CA public material and CRL snapshots.
 - Audit JSONL exports with SHA-256 headers.
 
+
+## Release-candidate Lite smoke
+
+For Lite releases, run the disposable backup/restore smoke before promoting a
+release candidate:
+
+```bash
+make lite-backup-restore-smoke
+./scripts/lite-backup-restore-smoke.sh smoke
+```
+
+This validates the committed SQLite schema, backup helper and restore integrity
+procedure without touching live services. It complements, but does not replace,
+off-host backup retention and live restore drills.
+
 ## Restore checks
 
 1. Restore into an isolated environment first.

@@ -6,6 +6,7 @@ It runs:
 
 - keyspace public workflow guardrails;
 - Helm chart render guardrails when `helm` is installed;
+- Lite backup/restore smoke wiring;
 - Go unit tests for all packages;
 - server, admin CLI and signer builds;
 - Python client syntax compilation and tests;
@@ -20,13 +21,14 @@ It runs:
 make release-check
 make helm-check
 make package-install-smoke
+make lite-backup-restore-smoke
 make operator-e2e-smoke
 make kubernetes-runtime-smoke
 ```
 
 If Helm is not installed, the script skips chart render checks with a warning; release pipelines that publish Kubernetes artifacts should install Helm and run `make helm-check` as a required job. `make helm-check` renders the committed Full and Lite example values and verifies that unsafe combinations such as Lite without PVC and Full with SQLite fail closed.
 
-`make package-install-smoke` is a safe artifact-discovery check for the clean-install package smoke; the real install path in [`PACKAGE_INSTALL_SMOKE.md`](PACKAGE_INSTALL_SMOKE.md) must be run manually on disposable Debian/Ubuntu and Fedora/RHEL-compatible release-candidate machines. `make operator-e2e-smoke` is a safe wiring check for the opt-in end-to-end smoke harness; the destructive roles in [`END_TO_END_OPERATOR_SMOKE.md`](END_TO_END_OPERATOR_SMOKE.md) must be run manually on disposable release-candidate hosts. `make kubernetes-runtime-smoke` is a safe wiring check for the Kubernetes runtime smoke helper; the real cluster check in [`KUBERNETES_RUNTIME_SMOKE.md`](KUBERNETES_RUNTIME_SMOKE.md) must be run manually against a release-candidate cluster.
+`make lite-backup-restore-smoke` is a safe wiring check for the disposable Lite backup/restore smoke in [`LITE_BACKUP_RESTORE_SMOKE.md`](LITE_BACKUP_RESTORE_SMOKE.md). `make package-install-smoke` is a safe artifact-discovery check for the clean-install package smoke; the real install path in [`PACKAGE_INSTALL_SMOKE.md`](PACKAGE_INSTALL_SMOKE.md) must be run manually on disposable Debian/Ubuntu and Fedora/RHEL-compatible release-candidate machines. `make operator-e2e-smoke` is a safe wiring check for the opt-in end-to-end smoke harness; the destructive roles in [`END_TO_END_OPERATOR_SMOKE.md`](END_TO_END_OPERATOR_SMOKE.md) must be run manually on disposable release-candidate hosts. `make kubernetes-runtime-smoke` is a safe wiring check for the Kubernetes runtime smoke helper; the real cluster check in [`KUBERNETES_RUNTIME_SMOKE.md`](KUBERNETES_RUNTIME_SMOKE.md) must be run manually against a release-candidate cluster.
 
 If TLC is not installed, the script skips formal verification with a warning. Production release pipelines should install TLC and run `make formal-check` as a required job.
 

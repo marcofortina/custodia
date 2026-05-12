@@ -19,6 +19,8 @@ New to Custodia? Start with the step-by-step quickstart:
 
 **[`docs/KUBERNETES_RUNTIME_SMOKE.md` — read-only Kubernetes runtime smoke](docs/KUBERNETES_RUNTIME_SMOKE.md)**
 
+**[`docs/LITE_BACKUP_RESTORE_SMOKE.md` — disposable Lite backup/restore smoke](docs/LITE_BACKUP_RESTORE_SMOKE.md)**
+
 **[`docs/END_TO_END_OPERATOR_SMOKE.md` — release-candidate end-to-end operator smoke](docs/END_TO_END_OPERATOR_SMOKE.md)**
 
 If you are not sure what to choose, use the package install path. It covers Debian/Ubuntu `.deb`, Fedora `.rpm`, the server/client/SDK package split, Lite bootstrap, admin certificate setup, Web TOTP, the first API check and the first encrypted client smoke test.
@@ -100,6 +102,7 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 - Encrypted client CLI: [`docs/CUSTODIA_CLIENT_CLI.md`](docs/CUSTODIA_CLIENT_CLI.md)
 - Alice/Bob first encrypted secret smoke test: [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](docs/CUSTODIA_ALICE_BOB_SMOKE.md)
 - Kubernetes runtime smoke: [`docs/KUBERNETES_RUNTIME_SMOKE.md`](docs/KUBERNETES_RUNTIME_SMOKE.md)
+- Lite backup/restore smoke: [`docs/LITE_BACKUP_RESTORE_SMOKE.md`](docs/LITE_BACKUP_RESTORE_SMOKE.md)
 - End-to-end operator release-candidate smoke: [`docs/END_TO_END_OPERATOR_SMOKE.md`](docs/END_TO_END_OPERATOR_SMOKE.md)
 - Bash SDK helper: [`docs/BASH_SDK.md`](docs/BASH_SDK.md)
 - Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
@@ -137,6 +140,7 @@ Validate package installation on a disposable clean VM/container before publishi
 
 ```bash
 make package-install-smoke
+make lite-backup-restore-smoke
 # On the clean test machine, after copying artifacts:
 export CUSTODIA_PACKAGE_INSTALL_CONFIRM=YES
 sudo -E ./scripts/package-install-smoke.sh install-verify
@@ -336,6 +340,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 - [Lite SQLite store](docs/LITE_SQLITE_STORE.md)
 - [Lite local CA bootstrap](docs/LITE_CA_BOOTSTRAP.md)
 - [Lite backup and restore](docs/LITE_BACKUP_RESTORE.md)
+- [Lite backup/restore smoke](docs/LITE_BACKUP_RESTORE_SMOKE.md)
 - [Kubernetes Lite backup and restore](docs/KUBERNETES_LITE_BACKUP_RESTORE.md)
 - [Lite migration readiness](docs/LITE_MIGRATION_READINESS.md)
 - [Lite to Full upgrade path](docs/LITE_TO_FULL_UPGRADE.md)

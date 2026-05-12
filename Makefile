@@ -308,6 +308,10 @@ package-smoke:
 package-install-smoke:
 	./scripts/package-install-smoke.sh check-only
 
+.PHONY: lite-backup-restore-smoke
+lite-backup-restore-smoke:
+	./scripts/lite-backup-restore-smoke.sh check-only
+
 .PHONY: sbom
 sbom:
 	./scripts/generate-sbom.sh

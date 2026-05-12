@@ -22,6 +22,20 @@ sudo -u custodia env \
 
 This produces a timestamped `.db` copy using `sqlite3 .backup`.
 
+
+## Backup/restore smoke
+
+Before relying on Lite backups for a release candidate, run the disposable smoke:
+
+```bash
+make lite-backup-restore-smoke
+./scripts/lite-backup-restore-smoke.sh smoke
+```
+
+The smoke uses a temporary SQLite database and the same backup helper logic. It
+does not touch `/var/lib/custodia` or live services. See
+[`LITE_BACKUP_RESTORE_SMOKE.md`](LITE_BACKUP_RESTORE_SMOKE.md).
+
 ## Restore
 
 1. Stop Custodia.
