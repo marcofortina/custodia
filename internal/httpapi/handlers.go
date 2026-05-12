@@ -349,23 +349,35 @@ func (s *Server) handleExportAuditEvents(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	events = filtered
+	body, digest, count, err := encodeAuditEventsExport(events)
+	if err != nil {
+		s.auditFailure(r, "audit.export", "audit_event", "", map[string]string{"reason": "encode_failed"})
+		writeError(w, http.StatusInternalServerError, "export_failed")
+		return
+	}
+	writeAuditExportResponse(w, "custodia-audit.jsonl", body, digest, count)
+	s.audit(r, "audit.export", "audit_event", "", "success", nil)
+}
+
+func encodeAuditEventsExport(events []model.AuditEvent) ([]byte, string, int, error) {
 	var body bytes.Buffer
 	encoder := json.NewEncoder(&body)
 	for _, event := range events {
 		if err := encoder.Encode(event); err != nil {
-			s.auditFailure(r, "audit.export", "audit_event", "", map[string]string{"reason": "encode_failed"})
-			writeError(w, http.StatusInternalServerError, "export_failed")
-			return
+			return nil, "", 0, err
 		}
 	}
 	digest := sha256.Sum256(body.Bytes())
+	return body.Bytes(), hex.EncodeToString(digest[:]), len(events), nil
+}
+
+func writeAuditExportResponse(w http.ResponseWriter, filename string, body []byte, digest string, count int) {
 	w.Header().Set("Content-Type", "application/x-ndjson; charset=utf-8")
-	w.Header().Set("Content-Disposition", `attachment; filename="custodia-audit.jsonl"`)
-	w.Header().Set("X-Custodia-Audit-Export-SHA256", hex.EncodeToString(digest[:]))
-	w.Header().Set("X-Custodia-Audit-Export-Events", strconv.Itoa(len(events)))
+	w.Header().Set("Content-Disposition", `attachment; filename="`+filename+`"`)
+	w.Header().Set("X-Custodia-Audit-Export-SHA256", digest)
+	w.Header().Set("X-Custodia-Audit-Export-Events", strconv.Itoa(count))
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(body.Bytes())
-	s.audit(r, "audit.export", "audit_event", "", "success", nil)
+	_, _ = w.Write(body)
 }
 
 func (s *Server) handleVerifyAuditEvents(w http.ResponseWriter, r *http.Request) {

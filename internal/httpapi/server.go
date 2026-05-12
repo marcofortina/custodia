@@ -180,6 +180,7 @@ func New(options Options) http.Handler {
 	mux.Handle("GET /web/clients/{client_id}", server.webAdmin(http.HandlerFunc(server.handleWebClientDetail)))
 	mux.Handle("POST /web/clients/{client_id}/revoke", server.webAdmin(http.HandlerFunc(server.handleWebClientRevoke)))
 	mux.Handle("GET /web/audit", server.webAdmin(http.HandlerFunc(server.handleWebAudit)))
+	mux.Handle("GET /web/audit/export", server.webAdmin(http.HandlerFunc(server.handleWebAuditExport)))
 	mux.Handle("GET /web/audit/verify", server.webAdmin(http.HandlerFunc(server.handleWebAuditVerify)))
 	mux.Handle("GET /web/access-requests", server.webAdmin(http.HandlerFunc(server.handleWebAccessRequests)))
 	mux.Handle("POST /v1/client-enrollments/claim", http.HandlerFunc(server.handleClientEnrollmentClaim))

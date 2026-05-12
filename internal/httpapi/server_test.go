@@ -1702,6 +1702,45 @@ func TestAdminCanExportAuditEventsAsJSONL(t *testing.T) {
 	assertLastAudit(t, memoryStore, "audit.export", "success", "")
 }
 
+func TestWebAuditExportDownloadsFilteredJSONL(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	if err := memoryStore.AppendAudit(ctx, model.AuditEvent{EventID: "event-1", ActorClientID: "admin", Action: "secret.read", ResourceType: "secret", ResourceID: "secret-one", Outcome: "success", OccurredAt: time.Now().UTC()}); err != nil {
+		t.Fatalf("append audit: %v", err)
+	}
+	if err := memoryStore.AppendAudit(ctx, model.AuditEvent{EventID: "event-2", ActorClientID: "admin", Action: "secret.read", ResourceType: "secret", ResourceID: "secret-two", Outcome: "failure", OccurredAt: time.Now().UTC()}); err != nil {
+		t.Fatalf("append audit: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/web/audit/export?limit=10&outcome=failure&action=secret.read&resource_type=secret&resource_id=secret-two", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected web audit export 200, got %d: %s", res.Code, res.Body.String())
+	}
+	if got := res.Header().Get("Content-Type"); !strings.Contains(got, "application/x-ndjson") {
+		t.Fatalf("expected JSONL content type, got %q", got)
+	}
+	if got := res.Header().Get("Content-Disposition"); !strings.Contains(got, "custodia-web-audit.jsonl") {
+		t.Fatalf("expected web audit export filename, got %q", got)
+	}
+	if got := res.Header().Get("X-Custodia-Audit-Export-SHA256"); len(got) != 64 {
+		t.Fatalf("expected SHA-256 export header, got %q", got)
+	}
+	if got := res.Header().Get("X-Custodia-Audit-Export-Events"); got != "1" {
+		t.Fatalf("expected one exported event, got %q", got)
+	}
+	body := res.Body.String()
+	if !strings.Contains(body, `"event_id":"event-2"`) || strings.Contains(body, `"event_id":"event-1"`) {
+		t.Fatalf("expected filtered JSONL body, got %q", body)
+	}
+	assertLastAudit(t, memoryStore, "web.audit_export", "success", "")
+}
+
 func TestAdminCanReadVersion(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()
@@ -2307,7 +2346,7 @@ func TestWebConsoleRendersMetadataOnlyPages(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	for _, path := range []string{"/web/", "/web/status", "/web/clients", "/web/client-enrollments", "/web/access-requests", "/web/audit", "/web/audit/verify"} {
+	for _, path := range []string{"/web/", "/web/status", "/web/clients", "/web/client-enrollments", "/web/revocation", "/web/access-requests", "/web/audit", "/web/audit/verify"} {
 		req := mtlsRequest(http.MethodGet, path, "", "admin")
 		res := httptest.NewRecorder()
 		handler.ServeHTTP(res, req)
@@ -2692,12 +2731,15 @@ func TestWebConsoleFilterFormsPreserveSubmittedValues(t *testing.T) {
 			},
 		},
 		{
-			path: "/web/audit?limit=25&outcome=failure&action=secret.read&actor_client_id=client_alice",
+			path: "/web/audit?limit=25&outcome=failure&action=secret.read&actor_client_id=client_alice&resource_type=secret&resource_id=secret-one",
 			expected: []string{
 				`name="limit" inputmode="numeric" placeholder="100" value="25"`,
 				`<option value="failure" selected>Failure</option>`,
 				`name="action" placeholder="secret.read" value="secret.read"`,
 				`name="actor_client_id" placeholder="client_alice" value="client_alice"`,
+				`name="resource_type" placeholder="secret" value="secret"`,
+				`name="resource_id" placeholder="client_alice" value="secret-one"`,
+				`href="/web/audit/export?action=secret.read&amp;actor_client_id=client_alice&amp;limit=25&amp;outcome=failure&amp;resource_id=secret-one&amp;resource_type=secret"`,
 			},
 		},
 		{

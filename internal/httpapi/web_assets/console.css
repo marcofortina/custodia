@@ -245,6 +245,8 @@ button:hover, .console-button:hover { background: var(--accent-strong); }
 button:disabled { cursor: not-allowed; opacity: 0.55; }
 .console-button--ghost { border: 1px solid var(--border); background: #fff; color: var(--muted-strong); }
 .console-button--ghost:hover { background: var(--panel-soft); color: var(--text); }
+.console-button--secondary { background: var(--text); color: #fff; }
+.console-button--secondary:hover { background: var(--muted-strong); }
 .console-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 20px; background: #fff; box-shadow: var(--shadow-soft); }
 table { width: 100%; min-width: 720px; border-collapse: collapse; }
 .console-pagination { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; margin-top: 14px; }

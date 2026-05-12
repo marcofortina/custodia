@@ -988,16 +988,53 @@ func (s *Server) handleWebAudit(w http.ResponseWriter, r *http.Request) {
 		rows += "<tr><td>" + html.EscapeString(event.OccurredAt.Format(time.RFC3339)) + "</td><td>" + html.EscapeString(event.Action) + "</td><td>" + html.EscapeString(event.ActorClientID) + "</td><td>" + webBadge(event.Outcome) + "</td></tr>"
 	}
 	auditOutcomeFilter := strings.TrimSpace(r.URL.Query().Get("outcome"))
-	body := webHero("Audit Events", "Latest bounded audit metadata. JSONL export remains available from the API.") +
+	exportHref := webAuditExportHref(r)
+	body := webHero("Audit Events", "Latest bounded audit metadata with a browser-downloadable JSONL export. Exports include SHA-256 and event-count headers for downstream evidence capture.") +
 		`<form class="console-toolbar" method="get" action="/web/audit" hx-get="/web/audit" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">` +
 		`<label>Limit<input name="limit" inputmode="numeric" placeholder="100"` + webInputValueAttr(r, "limit") + `></label>` +
 		`<label>Action<input name="action" placeholder="secret.read"` + webInputValueAttr(r, "action") + `></label>` +
 		`<label>Actor<input name="actor_client_id" placeholder="client_alice"` + webInputValueAttr(r, "actor_client_id") + `></label>` +
-		`<label>Outcome<select name="outcome">` + webSelectOption("", "Any", auditOutcomeFilter) + webSelectOption("success", "Success", auditOutcomeFilter) + webSelectOption("failure", "Failure", auditOutcomeFilter) + `</select></label>` +
-		`<button type="submit">Apply filter</button><a class="console-button console-button--ghost" href="/web/audit" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">Reset</a></form>` +
+		`<label>Resource type<input name="resource_type" placeholder="secret"` + webInputValueAttr(r, "resource_type") + `></label>` +
+		`<label>Resource ID<input name="resource_id" placeholder="client_alice"` + webInputValueAttr(r, "resource_id") + `></label>` +
+		`<label>Outcome<select name="outcome">` + webSelectOption("", "Any", auditOutcomeFilter) + webSelectOption("success", "Success", auditOutcomeFilter) + webSelectOption("failure", "Failure", auditOutcomeFilter) + webSelectOption("degraded", "Degraded", auditOutcomeFilter) + `</select></label>` +
+		`<button type="submit">Apply filter</button><a class="console-button console-button--ghost" href="/web/audit" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">Reset</a><a class="console-button console-button--secondary" href="` + exportHref + `">Download JSONL</a></form>` +
 		webPaginatedTable([]string{"Time", "Action", "Actor", "Outcome"}, rows, 4, "No audit events found.", 10, "Audit Events pagination")
 	s.audit(r, "web.audit_list", "audit_event", "", "success", nil)
 	writeWebPage(w, "Audit Events", body)
+}
+
+func webAuditExportHref(r *http.Request) string {
+	query := r.URL.Query()
+	encoded := query.Encode()
+	if encoded == "" {
+		return "/web/audit/export"
+	}
+	return "/web/audit/export?" + html.EscapeString(encoded)
+}
+
+func (s *Server) handleWebAuditExport(w http.ResponseWriter, r *http.Request) {
+	limit, ok := s.webOptionalLimit(w, r, "web.audit_export", "audit_event", "", 500)
+	if !ok {
+		return
+	}
+	events, err := s.store.ListAuditEvents(r.Context(), limit)
+	if err != nil {
+		s.auditStoreFailure(r, "web.audit_export", "audit_event", "", err)
+		writeWebMappedError(w, err)
+		return
+	}
+	filtered, ok := s.filterAuditEventsForRequest(w, r, "web.audit_export", events)
+	if !ok {
+		return
+	}
+	body, digest, count, err := encodeAuditEventsExport(filtered)
+	if err != nil {
+		s.auditFailure(r, "web.audit_export", "audit_event", "", map[string]string{"reason": "encode_failed"})
+		writeWebStatusError(w, http.StatusInternalServerError, "export_failed")
+		return
+	}
+	writeAuditExportResponse(w, "custodia-web-audit.jsonl", body, digest, count)
+	s.audit(r, "web.audit_export", "audit_event", "", "success", nil)
 }
 
 func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request) {

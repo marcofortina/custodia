@@ -21,7 +21,8 @@ The Custodia web console is an admin-only, metadata-only surface.
 - `/web/revocation` — client CRL health and certificate revocation metadata.
 - `POST /web/clients/{client_id}/revoke` — future client revocation from the client detail page.
 - `/web/access-requests` — pending grant metadata.
-- `/web/audit` — latest audit metadata.
+- `/web/audit` — latest audit metadata with a JSONL download action.
+- `/web/audit/export` — browser-downloadable JSONL audit export with SHA-256 and event-count headers.
 - `/web/audit/verify` — audit hash-chain verification summary.
 - `POST /web/logout` — clears the web MFA session cookie and redirects back to login.
 
@@ -32,6 +33,8 @@ The API remains the source of truth for automation. The web console is a respons
 Client enrollment token creation mirrors `custodia-admin client enrollment create`: it returns the configured server URL, a one-shot enrollment token and the expiry time. The token is shown once, must be transferred through a trusted channel, and does not expose client private keys because clients still generate their mTLS key and CSR locally. In disposable lab flows using an untrusted bootstrap CA, the client may add `--insecure`; real remote clients should trust the Custodia CA and avoid `--insecure`.
 
 Client detail pages are scoped by client because `namespace/key` is not globally unique. The admin drilldown shows the keyspace visible to that client, whether each entry is owned by the client or shared with the client, and share metadata for secrets owned by that client. Active client detail pages include a future-revocation form so Kubernetes operators do not need shell access to run `custodia-admin client revoke`. Client revocation does not claw back already downloaded material; strong revocation still requires a new encrypted version excluding the revoked client. The page still never renders plaintext, ciphertext, recipient envelopes, DEKs or client-side key material.
+
+Audit Events includes a `Download JSONL` action that uses the same bounded filters as the page and returns `X-Custodia-Audit-Export-SHA256` plus `X-Custodia-Audit-Export-Events` headers. This is the Web Console equivalent of capturing audit export evidence without entering a Kubernetes pod. The export body remains metadata-only and never includes plaintext, ciphertext, recipient envelopes, DEKs or private keys.
 
 ## Local assets and refresh behavior
 
@@ -50,6 +53,7 @@ Client-side pagination is enabled for bounded data tables on Clients, Client Det
 The metadata console supports bounded query filters for operational views. Client detail drilldown is intentionally path-based and always scoped to one client id, because namespace/key pairs are not globally unique. Access-request workflows use public `namespace/key` filters and intentionally do not expose internal secret-id filters:
 
 - `/web/audit?limit=100&outcome=failure&action=secret.read&actor_client_id=client_alice&resource_type=secret&resource_id=<id>`
+- `/web/audit/export?limit=500&outcome=failure&action=secret.read`
 - `/web/audit/verify?limit=500`
 - `/web/clients?active=true`
 - `/web/client-enrollments` plus `POST /web/client-enrollments` with form field `ttl=15m`
