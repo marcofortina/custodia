@@ -2,6 +2,10 @@
   "$schema": "https://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
+    "profile": {
+      "type": "string",
+      "enum": ["lite", "full", "custom"]
+    },
     "replicaCount": {
       "type": "integer",
       "minimum": 1
@@ -23,6 +27,18 @@
         }
       }
     },
+    "web": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "exposeOnService": { "type": "boolean" }
+      }
+    },
     "health": {
       "type": "object",
       "properties": {
@@ -39,6 +55,10 @@
     "config": {
       "type": "object",
       "properties": {
+        "serverURL": { "type": "string" },
+        "webAddr": { "type": "string" },
+        "databaseURL": { "type": "string" },
+        "signerURL": { "type": "string" },
         "maxEnvelopesPerSecret": {
           "type": "integer",
           "minimum": 1
@@ -66,6 +86,37 @@
         "auditShipmentSink": {
           "type": "string"
         }
+      }
+    },
+    "signer": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "replicaCount": { "type": "integer", "minimum": 1 },
+        "addr": { "type": "string", "minLength": 1 },
+        "keyProvider": { "type": "string", "enum": ["file", "pkcs11"] },
+        "defaultTTLHours": { "type": "integer", "minimum": 1 },
+        "shutdownTimeoutSeconds": { "type": "integer", "minimum": 1 },
+        "service": {
+          "type": "object",
+          "properties": {
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+          }
+        }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "existingClaim": { "type": "string" },
+        "storageClassName": { "type": "string" },
+        "accessModes": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "size": { "type": "string" },
+        "mountPath": { "type": "string" }
       }
     },
     "autoscaling": {

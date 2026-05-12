@@ -3,6 +3,8 @@
 This guide makes the database HA boundary testable in a local or lab k3s cluster.
 It is intended for repository verification and operator rehearsal, not as a
 replacement for a managed CockroachDB or PostgreSQL/Patroni production platform.
+For the generic Kubernetes install path, including the `custodia-server` and
+`custodia-signer` chart resources, read [`KUBERNETES_INSTALL.md`](KUBERNETES_INSTALL.md).
 
 ## Apply CockroachDB
 

@@ -13,10 +13,12 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ include "custodia.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: server
 spec:
   minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "custodia.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: server
 {{- end }}

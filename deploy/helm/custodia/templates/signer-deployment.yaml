@@ -1,0 +1,117 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
+{{- if .Values.signer.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "custodia.signerFullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "custodia.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: signer
+spec:
+  replicas: {{ .Values.signer.replicaCount }}
+  revisionHistoryLimit: {{ .Values.signer.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "custodia.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: signer
+  template:
+    metadata:
+      annotations:
+        custodia.io/mtls-secret: {{ .Values.mtls.secretName | quote }}
+        custodia.io/signer-ca-secret: {{ .Values.signer.secretName | quote }}
+      labels:
+        app.kubernetes.io/name: {{ include "custodia.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: signer
+    spec:
+{{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml . | indent 8 }}
+{{- end }}
+      serviceAccountName: {{ include "custodia.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+{{ toYaml .Values.podSecurityContext | indent 8 }}
+      containers:
+        - name: custodia-signer
+          securityContext:
+{{ toYaml .Values.containerSecurityContext | indent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/usr/local/bin/custodia-signer"]
+          ports:
+            - name: signer
+              containerPort: {{ .Values.signer.service.port }}
+          env:
+            - name: CUSTODIA_SIGNER_ADDR
+              value: {{ .Values.signer.addr | quote }}
+            - name: CUSTODIA_SIGNER_TLS_CERT_FILE
+              value: /etc/custodia/tls/{{ .Values.mtls.certKey }}
+            - name: CUSTODIA_SIGNER_TLS_KEY_FILE
+              value: /etc/custodia/tls/{{ .Values.mtls.keyKey }}
+            - name: CUSTODIA_SIGNER_CLIENT_CA_FILE
+              value: /etc/custodia/tls/{{ .Values.mtls.clientCAKey }}
+            - name: CUSTODIA_SIGNER_CA_CERT_FILE
+              value: /etc/custodia/signer/{{ .Values.signer.caCertKey }}
+            - name: CUSTODIA_SIGNER_CA_KEY_FILE
+              value: /etc/custodia/signer/{{ .Values.signer.caKeyKey }}
+            - name: CUSTODIA_SIGNER_CA_KEY_PASSPHRASE_FILE
+              value: /etc/custodia/signer/{{ .Values.signer.caPassphraseKey }}
+            - name: CUSTODIA_SIGNER_CRL_FILE
+              value: /etc/custodia/signer/{{ .Values.signer.crlKey }}
+            - name: CUSTODIA_SIGNER_KEY_PROVIDER
+              value: {{ .Values.signer.keyProvider | quote }}
+            - name: CUSTODIA_SIGNER_ADMIN_SUBJECTS
+              value: {{ .Values.signer.adminSubjects | quote }}
+            - name: CUSTODIA_SIGNER_DEFAULT_TTL_HOURS
+              value: {{ .Values.signer.defaultTTLHours | quote }}
+            - name: CUSTODIA_SIGNER_SHUTDOWN_TIMEOUT_SECONDS
+              value: {{ .Values.signer.shutdownTimeoutSeconds | quote }}
+{{- if .Values.signer.pkcs11SignCommand }}
+            - name: CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND
+              value: {{ .Values.signer.pkcs11SignCommand | quote }}
+{{- end }}
+{{- if .Values.signer.auditLogFile }}
+            - name: CUSTODIA_SIGNER_AUDIT_LOG_FILE
+              value: {{ .Values.signer.auditLogFile | quote }}
+{{- end }}
+          readinessProbe:
+            tcpSocket:
+              port: signer
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          livenessProbe:
+            tcpSocket:
+              port: signer
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          volumeMounts:
+            - name: mtls
+              mountPath: /etc/custodia/tls
+              readOnly: true
+            - name: signer-ca
+              mountPath: /etc/custodia/signer
+              readOnly: true
+          resources:
+{{ toYaml .Values.signer.resources | indent 12 }}
+      volumes:
+        - name: mtls
+          secret:
+            secretName: {{ .Values.mtls.secretName }}
+        - name: signer-ca
+          secret:
+            secretName: {{ .Values.signer.secretName }}
+{{- end }}

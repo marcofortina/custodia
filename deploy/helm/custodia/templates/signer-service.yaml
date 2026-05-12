@@ -5,35 +5,27 @@
 # Custodia is distributed under the GNU Affero General Public License v3.0.
 # See the accompanying LICENSE file for details.
 
+{{- if .Values.signer.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "custodia.fullname" . }}
+  name: {{ include "custodia.signerFullname" . }}
   labels:
     app.kubernetes.io/name: {{ include "custodia.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/component: server
-{{- with .Values.service.annotations }}
+    app.kubernetes.io/component: signer
+{{- with .Values.signer.service.annotations }}
   annotations:
 {{ toYaml . | indent 4 }}
 {{- end }}
 spec:
-  type: {{ .Values.service.type }}
+  type: ClusterIP
   ports:
-    - name: https
-      port: {{ .Values.service.port }}
-      targetPort: https
-{{- if .Values.web.exposeOnService }}
-    - name: web
-      port: {{ .Values.web.port }}
-      targetPort: web
-{{- end }}
-{{- if .Values.health.exposeOnService }}
-    - name: health
-      port: {{ .Values.health.port }}
-      targetPort: health
-{{- end }}
+    - name: signer
+      port: {{ .Values.signer.service.port }}
+      targetPort: signer
   selector:
     app.kubernetes.io/name: {{ include "custodia.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/component: server
+    app.kubernetes.io/component: signer
+{{- end }}

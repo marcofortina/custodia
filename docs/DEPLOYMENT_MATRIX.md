@@ -33,12 +33,12 @@ Profiles are selected by YAML/environment configuration, not by installing diffe
 | --- | --- |
 | Bare metal + Lite | First-run quickstart, local lab, small honest deployment. |
 | Bare metal + Full | Production-oriented host install with external database, rate limiter, signer/HSM and audit shipment. |
-| Kubernetes + Lite | Cluster lab path only when SQLite persistence and local signer material are explicitly accepted. Requires a PVC and clear backup handling. |
+| Kubernetes + Lite | Cluster lab path only when SQLite persistence and local signer material are explicitly accepted. Requires one server replica, a mandatory PVC and clear backup handling; the Helm chart fails closed without those settings. |
 | Kubernetes + Full | Target production cluster path. Requires external database/HA, real secrets management, PKCS#11/HSM or audited signer integration, WORM/SIEM evidence and network policy. |
 
 ## Kubernetes dependency substitutes
 
-Kubernetes can run the same Lite/Full profile vocabulary, but infrastructure substitutes must stay explicit:
+Kubernetes can run the same Lite/Full profile vocabulary, but unsafe Lite combinations must fail before deployment and infrastructure substitutes must stay explicit:
 
 - SoftHSM can replace a real HSM only for development, CI or lab rehearsal. It must not be described as production HSM coverage.
 - MinIO with Object Lock can exercise S3/WORM shipment flows when a production object-lock service is unavailable. It must be treated as dev/smoke unless the deployment has production-grade durability, retention governance and operational controls.
@@ -48,4 +48,4 @@ Kubernetes can run the same Lite/Full profile vocabulary, but infrastructure sub
 
 Bare-metal operators may run `custodia-admin` locally on the server/admin host. Kubernetes operators should not need `kubectl exec` into application pods for normal online administration. Metadata-only, API-backed admin operations belong in the Web Console/API over admin mTLS and Web MFA. Bootstrap, file ownership, CA material placement, Helm values, Kubernetes Secret creation and backup plumbing remain deployment/runbook tasks outside the Web Console.
 
-The first online admin operation that must be available from both CLI and Web Console is one-shot client enrollment token creation, because client onboarding should not require shell access to a Kubernetes pod.
+The first online admin operation that must be available from both CLI and Web Console is one-shot client enrollment token creation, because client onboarding should not require shell access to a Kubernetes pod. The Helm chart runs `custodia-server` and `custodia-signer` as separate Deployments from the same Git-built image.

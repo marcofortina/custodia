@@ -5,14 +5,24 @@
 # Custodia is distributed under the GNU Affero General Public License v3.0.
 # See the accompanying LICENSE file for details.
 
+profile: full
 replicaCount: 3
 
 config:
+  serverURL: "https://custodia.example.internal:8443"
   storeBackend: postgres
   databaseURLSecretName: custodia-database
   databaseURLSecretKey: database-url
+  rateLimitBackend: valkey
+  valkeyURLSecretName: custodia-valkey
+  valkeyURLSecretKey: valkey-url
   deploymentMode: k3s-ha-dev
   databaseHATarget: cockroachdb-k3s-3node
+
+signer:
+  enabled: true
+  keyProvider: file
+  adminSubjects: admin
 
 podDisruptionBudget:
   enabled: true

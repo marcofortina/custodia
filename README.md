@@ -302,6 +302,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 - [Deployment matrix](docs/DEPLOYMENT_MATRIX.md)
 - [Custodia bare-metal install quickstart](docs/QUICKSTART.md)
 - [Linux packages](docs/LINUX_PACKAGES.md)
+- [Kubernetes install](docs/KUBERNETES_INSTALL.md)
 - [k3s CockroachDB HA profile](docs/K3S_COCKROACHDB_HA.md)
 
 **Lite deployment and upgrade path**

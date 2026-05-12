@@ -13,9 +13,15 @@ metadata:
     app.kubernetes.io/name: {{ include "custodia.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
 data:
+  CUSTODIA_PROFILE: {{ .Values.profile | quote }}
+  CUSTODIA_SERVER_URL: {{ .Values.config.serverURL | quote }}
   CUSTODIA_API_ADDR: {{ .Values.config.apiAddr | quote }}
+  CUSTODIA_WEB_ADDR: {{ .Values.config.webAddr | quote }}
   CUSTODIA_HEALTH_ADDR: {{ .Values.config.healthAddr | quote }}
   CUSTODIA_STORE_BACKEND: {{ .Values.config.storeBackend | quote }}
+{{- if .Values.config.databaseURL }}
+  CUSTODIA_DATABASE_URL: {{ .Values.config.databaseURL | quote }}
+{{- end }}
   CUSTODIA_RATE_LIMIT_BACKEND: {{ .Values.config.rateLimitBackend | quote }}
   CUSTODIA_ADMIN_CLIENT_IDS: {{ .Values.config.adminClientIDs | quote }}
   CUSTODIA_MAX_ENVELOPES_PER_SECRET: {{ .Values.config.maxEnvelopesPerSecret | quote }}
@@ -29,3 +35,9 @@ data:
   CUSTODIA_DEPLOYMENT_MODE: {{ .Values.config.deploymentMode | quote }}
   CUSTODIA_DATABASE_HA_TARGET: {{ .Values.config.databaseHATarget | quote }}
   CUSTODIA_AUDIT_SHIPMENT_SINK: {{ .Values.config.auditShipmentSink | quote }}
+{{- if .Values.signer.enabled }}
+  CUSTODIA_SIGNER_URL: {{ default (printf "https://%s:%v" (include "custodia.signerFullname" .) .Values.signer.service.port) .Values.config.signerURL | quote }}
+  CUSTODIA_SIGNER_CLIENT_CERT_FILE: {{ printf "/etc/custodia/signer-client/%s" .Values.signer.clientCertKey | quote }}
+  CUSTODIA_SIGNER_CLIENT_KEY_FILE: {{ printf "/etc/custodia/signer-client/%s" .Values.signer.clientKeyKey | quote }}
+  CUSTODIA_SIGNER_CLIENT_CA_FILE: {{ printf "/etc/custodia/signer-client/%s" .Values.signer.clientCAKey | quote }}
+{{- end }}

@@ -27,3 +27,16 @@ See the accompanying LICENSE file for details.
 {{- default "default" .Values.serviceAccount.name -}}
 {{- end -}}
 {{- end -}}
+
+
+{{- define "custodia.signerFullname" -}}
+{{- printf "%s-signer" (include "custodia.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "custodia.persistenceClaimName" -}}
+{{- if .Values.persistence.existingClaim -}}
+{{- .Values.persistence.existingClaim -}}
+{{- else -}}
+{{- printf "%s-data" (include "custodia.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}

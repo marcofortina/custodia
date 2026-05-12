@@ -12,6 +12,7 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ include "custodia.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: server
 spec:
   replicas: {{ .Values.replicaCount }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
@@ -21,17 +22,22 @@ spec:
     matchLabels:
       app.kubernetes.io/name: {{ include "custodia.name" . }}
       app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: server
   template:
     metadata:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         custodia.io/mtls-secret: {{ .Values.mtls.secretName | quote }}
+{{- if .Values.signer.enabled }}
+        custodia.io/signer-client-secret: {{ .Values.signer.clientSecretName | quote }}
+{{- end }}
 {{- with .Values.podAnnotations }}
 {{ toYaml . | indent 8 }}
 {{- end }}
       labels:
         app.kubernetes.io/name: {{ include "custodia.name" . }}
         app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: server
     spec:
 {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -51,6 +57,7 @@ spec:
             matchLabels:
               app.kubernetes.io/name: {{ include "custodia.name" . }}
               app.kubernetes.io/instance: {{ .Release.Name }}
+              app.kubernetes.io/component: server
 {{- end }}
 {{- with .Values.nodeSelector }}
       nodeSelector:
@@ -73,6 +80,10 @@ spec:
           ports:
             - name: https
               containerPort: {{ .Values.service.port }}
+{{- if .Values.web.enabled }}
+            - name: web
+              containerPort: {{ .Values.web.port }}
+{{- end }}
             - name: health
               containerPort: {{ .Values.health.port }}
           envFrom:
@@ -125,9 +136,28 @@ spec:
             - name: mtls
               mountPath: /etc/custodia/tls
               readOnly: true
+{{- if .Values.signer.enabled }}
+            - name: signer-client
+              mountPath: /etc/custodia/signer-client
+              readOnly: true
+{{- end }}
+{{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: {{ .Values.persistence.mountPath }}
+{{- end }}
           resources:
 {{ toYaml .Values.resources | indent 12 }}
       volumes:
         - name: mtls
           secret:
             secretName: {{ .Values.mtls.secretName }}
+{{- if .Values.signer.enabled }}
+        - name: signer-client
+          secret:
+            secretName: {{ .Values.signer.clientSecretName }}
+{{- end }}
+{{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "custodia.persistenceClaimName" . }}
+{{- end }}

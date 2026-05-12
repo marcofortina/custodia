@@ -16,7 +16,7 @@ The guided runtime path below uses the single-node Lite profile because it is th
 | Package install | Operators and first-time users | `/usr/bin`, `/etc/custodia`, `/var/lib/custodia` |
 | Source install / Git clone | Maintainers, developers, packagers and local testing | `/usr/local/bin`, `/usr/local/share/custodia`, `/etc/custodia`, `/var/lib/custodia` |
 
-Pick one bare-metal install path, then continue with the common runtime setup. Kubernetes is a separate deployment target and is intentionally not driven by `systemctl`; use the Kubernetes install guide instead.
+Pick one bare-metal install path, then continue with the common runtime setup. Kubernetes is a separate deployment target and is intentionally not driven by `systemctl`; use [`KUBERNETES_INSTALL.md`](KUBERNETES_INSTALL.md) instead.
 
 ## 2. Install from DEB/RPM packages
 
@@ -516,6 +516,7 @@ custodia-client doctor --client-id "$ALICE_ID" --online
 ## 12. What to read next
 
 - Deployment matrix: [`docs/DEPLOYMENT_MATRIX.md`](DEPLOYMENT_MATRIX.md)
+- Kubernetes install: [`docs/KUBERNETES_INSTALL.md`](KUBERNETES_INSTALL.md)
 - Lite profile: [`docs/LITE_PROFILE.md`](LITE_PROFILE.md)
 - Lite configuration: [`docs/LITE_CONFIG.md`](LITE_CONFIG.md)
 - Configuration reference: [`docs/CONFIG_REFERENCE.md`](CONFIG_REFERENCE.md)

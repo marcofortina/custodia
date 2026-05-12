@@ -9,16 +9,35 @@ See the accompanying LICENSE file for details.
 
 Custodia has been installed.
 
+Deployment profile:
+  {{ .Values.profile }}
+
 API service:
   {{ include "custodia.fullname" . }}:{{ .Values.service.port }}
+
+Web console service:
+  {{ include "custodia.fullname" . }}:{{ .Values.web.port }}
 
 Health listener:
   {{ include "custodia.fullname" . }}:{{ .Values.health.port }}
 
-The API listener is expected to run behind mTLS. The health listener only exposes
-/live and /ready style operational probes and must stay private to the cluster.
+{{- if .Values.signer.enabled }}
+Signer service:
+  {{ include "custodia.signerFullname" . }}:{{ .Values.signer.service.port }}
+{{- end }}
+
+The API and Web Console listeners are expected to run behind mTLS. The health
+listener only exposes operational probes and must stay private to the cluster.
 
 Required Kubernetes secrets:
   - mTLS material: {{ .Values.mtls.secretName }}
+{{- if .Values.signer.enabled }}
+  - signer CA material / CRL: {{ .Values.signer.secretName }}
+  - server-to-signer mTLS client material: {{ .Values.signer.clientSecretName }}
+{{- end }}
+{{- if .Values.config.databaseURLSecretName }}
   - database URL: {{ .Values.config.databaseURLSecretName }} / {{ .Values.config.databaseURLSecretKey }}
+{{- end }}
+{{- if .Values.config.valkeyURLSecretName }}
   - Valkey URL: {{ .Values.config.valkeyURLSecretName }} / {{ .Values.config.valkeyURLSecretKey }}
+{{- end }}

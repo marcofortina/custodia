@@ -1,0 +1,35 @@
+{{/*
+Copyright (c) 2026 Marco Fortina
+SPDX-License-Identifier: AGPL-3.0-only
+
+This file is part of Custodia.
+Custodia is distributed under the GNU Affero General Public License v3.0.
+See the accompanying LICENSE file for details.
+*/}}
+
+{{- $profile := lower (default "full" .Values.profile) -}}
+{{- if eq $profile "lite" -}}
+{{- if ne (int .Values.replicaCount) 1 -}}
+{{- fail "profile=lite requires replicaCount=1 because SQLite Lite is a single-writer profile; use profile=full with PostgreSQL/CockroachDB for HA" -}}
+{{- end -}}
+{{- if not .Values.persistence.enabled -}}
+{{- fail "profile=lite requires persistence.enabled=true; SQLite data must live on a PersistentVolumeClaim, not on the pod filesystem" -}}
+{{- end -}}
+{{- if ne (lower .Values.config.storeBackend) "sqlite" -}}
+{{- fail "profile=lite requires config.storeBackend=sqlite" -}}
+{{- end -}}
+{{- if not (hasPrefix "file:" .Values.config.databaseURL) -}}
+{{- fail "profile=lite requires config.databaseURL to be a file: SQLite URL under the persistent mount path" -}}
+{{- end -}}
+{{- if ne (lower .Values.config.rateLimitBackend) "memory" -}}
+{{- fail "profile=lite requires config.rateLimitBackend=memory; use profile=full for Valkey-backed rate limiting" -}}
+{{- end -}}
+{{- end -}}
+{{- if eq $profile "full" -}}
+{{- if eq (lower .Values.config.storeBackend) "sqlite" -}}
+{{- fail "profile=full must not use config.storeBackend=sqlite; use PostgreSQL/CockroachDB through the postgres backend or switch to profile=lite" -}}
+{{- end -}}
+{{- if eq (lower .Values.config.rateLimitBackend) "memory" -}}
+{{- fail "profile=full must not use config.rateLimitBackend=memory; configure Valkey or use profile=lite/custom" -}}
+{{- end -}}
+{{- end -}}

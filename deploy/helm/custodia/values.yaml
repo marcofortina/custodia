@@ -5,6 +5,10 @@
 # Custodia is distributed under the GNU Affero General Public License v3.0.
 # See the accompanying LICENSE file for details.
 
+# Deployment profile. Use full for PostgreSQL/CockroachDB + Valkey, lite for
+# single-replica SQLite with a mandatory PersistentVolumeClaim, or custom for
+# explicitly reviewed non-standard combinations.
+profile: full
 replicaCount: 3
 revisionHistoryLimit: 3
 
@@ -26,6 +30,11 @@ service:
   port: 8443
   annotations: {}
 
+web:
+  enabled: true
+  port: 9443
+  exposeOnService: true
+
 podAnnotations: {}
 
 serviceAccount:
@@ -38,9 +47,12 @@ health:
   exposeOnService: false
 
 config:
+  serverURL: "https://custodia.example.internal:8443"
   apiAddr: ":8443"
+  webAddr: ":9443"
   healthAddr: ":8080"
   storeBackend: postgres
+  databaseURL: ""
   databaseURLSecretName: custodia-database
   databaseURLSecretKey: database-url
   rateLimitBackend: valkey
@@ -55,9 +67,10 @@ config:
   httpWriteTimeoutSeconds: 15
   httpIdleTimeoutSeconds: 60
   shutdownTimeoutSeconds: 10
-  deploymentMode: single-region
+  deploymentMode: kubernetes-full
   databaseHATarget: external
   auditShipmentSink: ""
+  signerURL: ""
 
 mtls:
   enabled: true
@@ -66,6 +79,49 @@ mtls:
   keyKey: tls.key
   clientCAKey: ca.crt
   clientCRLKey: ""
+
+signer:
+  enabled: true
+  replicaCount: 1
+  revisionHistoryLimit: 3
+  service:
+    port: 9444
+    annotations: {}
+  addr: ":9444"
+  adminSubjects: admin
+  defaultTTLHours: 12
+  shutdownTimeoutSeconds: 10
+  keyProvider: file
+  pkcs11SignCommand: ""
+  auditLogFile: ""
+  secretName: custodia-signer-ca
+  caCertKey: ca.crt
+  caKeyKey: ca.key
+  caPassphraseKey: ca.pass
+  crlKey: client.crl.pem
+  clientSecretName: custodia-signer-client
+  clientCertKey: tls.crt
+  clientKeyKey: tls.key
+  clientCAKey: ca.crt
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+# Local data persistence is mandatory for profile=lite because SQLite must not
+# live on the pod filesystem. It is normally unnecessary for profile=full, where
+# durable state belongs to PostgreSQL/CockroachDB and external infrastructure.
+persistence:
+  enabled: false
+  existingClaim: ""
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+  mountPath: /var/lib/custodia
 
 
 topologySpreadConstraints:
