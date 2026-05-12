@@ -152,7 +152,7 @@ For a clean machine first run, start with **[`docs/QUICKSTART.md`](docs/QUICKSTA
 
 The package split is:
 
-- `custodia-server`: server, admin CLI, signer, systemd units, server docs, YAML examples and SQLite backup helper;
+- `custodia-server`: server, admin CLI, signer, hardened systemd units, server docs, YAML examples and SQLite backup helper;
 - `custodia-client`: encrypted `custodia-client` CLI.
 - `custodia-sdk`: SDK source snapshots, shared vectors and SDK docs.
 
@@ -261,7 +261,7 @@ Production signer mode requires mTLS and a dedicated CA material backend. See `d
 
 ## Web metadata console
 
-The admin web console is intentionally metadata-only. It requires an admin mTLS identity and never renders ciphertext, envelopes, plaintext, or key material. Client drilldown pages show only metadata such as visible keyspace, owner/relationship and share permissions, and Kubernetes-safe operations such as one-shot client enrollment, future client revocation, client-CRL status, client CRL PEM download, CRL serial checks and browser-downloadable audit JSONL evidence. See `docs/WEB_CONSOLE.md` for the current page map and security boundary.
+The admin web console is intentionally metadata-only. It requires an admin mTLS identity, uses a TOTP/passkey-capable web session, applies SameSite cookies plus same-origin browser mutation guards, and never renders ciphertext, envelopes, plaintext, or key material. Client drilldown pages show only metadata such as visible keyspace, owner/relationship and share permissions, and Kubernetes-safe operations such as one-shot client enrollment, future client revocation, client-CRL status, client CRL PEM download, CRL serial checks and browser-downloadable audit JSONL evidence. See `docs/WEB_CONSOLE.md` for the current page map and security boundary.
 
 ## HTTP timeout guardrails
 

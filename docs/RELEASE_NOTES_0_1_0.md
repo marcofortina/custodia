@@ -96,4 +96,4 @@ make test-java-client
 
 ## Known scope limits
 
-0.1.0 is repository-level release readiness. Production deployments still require operator evidence for HSM/PKCS#11, WORM/SIEM shipment, HA database topology, backup/restore drills, penetration testing, end-to-end operator smoke evidence on disposable release-candidate hosts and external revocation distribution where required by the deployment profile.
+0.1.0 is repository-level release readiness. Production deployments still require operator evidence for HSM/PKCS#11, WORM/SIEM shipment, HA database topology, backup/restore drills, penetration testing, end-to-end operator smoke evidence on disposable release-candidate hosts and external revocation distribution where required by the deployment profile. The release also adds same-origin Web Console mutation guardrails and stricter packaged systemd unit hardening, but these do not replace deployment-specific penetration testing.

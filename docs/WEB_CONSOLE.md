@@ -10,6 +10,12 @@ The Custodia web console is an admin-only, metadata-only surface.
 - The console never renders recipient envelopes.
 - The console never exposes client-side encryption keys or key discovery endpoints.
 
+## Browser mutation guardrails
+
+The Web Console uses admin mTLS plus the configured web MFA/session layer for authenticated pages. Mutating browser requests under `/web/` also enforce same-origin `Origin`/`Referer` guardrails when those headers are present. Cross-origin form posts and JavaScript mutations are rejected before the handler runs. CLI/API callers are unaffected because the guard applies only to Web Console paths and mutating HTTP methods.
+
+This guard complements, rather than replaces, the existing `SameSite=Strict`, `HttpOnly` web session cookie, Content Security Policy and metadata-only page boundary.
+
 ## Pages
 
 - `/web/` — metadata console landing page.

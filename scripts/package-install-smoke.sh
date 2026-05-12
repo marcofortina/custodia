@@ -357,7 +357,13 @@ verify_server() {
   require_path /usr/lib/systemd/system/custodia-server.service
   require_path /usr/lib/systemd/system/custodia-signer.service
   require_contains /usr/lib/systemd/system/custodia-server.service 'NoNewPrivileges=true'
+  require_contains /usr/lib/systemd/system/custodia-server.service 'PrivateDevices=true'
+  require_contains /usr/lib/systemd/system/custodia-server.service 'ProtectKernelTunables=true'
+  require_contains /usr/lib/systemd/system/custodia-server.service 'RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6'
   require_contains /usr/lib/systemd/system/custodia-signer.service 'NoNewPrivileges=true'
+  require_contains /usr/lib/systemd/system/custodia-signer.service 'PrivateDevices=true'
+  require_contains /usr/lib/systemd/system/custodia-signer.service 'ProtectKernelTunables=true'
+  require_contains /usr/lib/systemd/system/custodia-signer.service 'RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6'
   require_path /usr/share/man/man1/custodia-admin.1.gz
   require_path /usr/share/man/man1/custodia-server.1.gz
   require_path /usr/share/man/man1/custodia-signer.1.gz

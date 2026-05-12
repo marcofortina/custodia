@@ -141,6 +141,54 @@ func TestAPISetsSecurityHeaders(t *testing.T) {
 	}
 }
 
+func TestWebMutationsRejectCrossOriginBrowserRequests(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100, EnrollmentServerURL: "https://custodia.example.internal:8443"})
+
+	req := mtlsRequest(http.MethodPost, "/web/client-enrollments", "ttl=15m", "admin")
+	req.Host = "custodia.example.internal"
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "https://evil.example")
+	res := httptest.NewRecorder()
+
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusForbidden {
+		t.Fatalf("expected cross-origin web mutation to be rejected, got %d: %s", res.Code, res.Body.String())
+	}
+	if !strings.Contains(res.Body.String(), "Cross-origin request blocked") {
+		t.Fatalf("expected cross-origin error page, got: %s", res.Body.String())
+	}
+}
+
+func TestWebMutationsAllowSameOriginBrowserRequests(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100, EnrollmentServerURL: "https://custodia.example.internal:8443"})
+
+	req := mtlsRequest(http.MethodPost, "/web/client-enrollments", "ttl=15m", "admin")
+	req.Host = "custodia.example.internal"
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "https://custodia.example.internal")
+	res := httptest.NewRecorder()
+
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected same-origin web mutation to be allowed, got %d: %s", res.Code, res.Body.String())
+	}
+	if !strings.Contains(res.Body.String(), "Enrollment token") {
+		t.Fatalf("expected enrollment token response, got: %s", res.Body.String())
+	}
+}
+
 func TestAPILiveEndpointIsDependencyFree(t *testing.T) {
 	memoryStore := store.NewMemoryStore()
 	handler := New(Options{Store: memoryStore, Limiter: failingHealthLimiter{}, AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})

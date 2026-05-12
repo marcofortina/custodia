@@ -10,6 +10,7 @@ package httpapi
 import (
 	"bytes"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -224,7 +225,7 @@ func New(options Options) http.Handler {
 	mux.Handle("POST /v1/secrets/{secret_id}/access/{client_id}/activate", server.auth(http.HandlerFunc(server.handleActivateAccessGrant)))
 	mux.Handle("DELETE /v1/secrets/{secret_id}/access/{client_id}", server.auth(http.HandlerFunc(server.handleRevokeAccess)))
 	mux.Handle("POST /v1/secrets/{secret_id}/versions", server.auth(http.HandlerFunc(server.handleCreateSecretVersion)))
-	return requestIDs(securityHeaders(webConsoleMethodErrorPages(mux)))
+	return requestIDs(securityHeaders(server.webMutationOriginGuard(webConsoleMethodErrorPages(mux))))
 }
 
 type bufferedResponseWriter struct {
@@ -276,6 +277,59 @@ func webConsoleMethodErrorPages(next http.Handler) http.Handler {
 		}
 		_, _ = w.Write(captured.body.Bytes())
 	})
+}
+
+func (s *Server) webMutationOriginGuard(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !isWebPath(r.URL.Path) || !isMutatingMethod(r.Method) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if origin := strings.TrimSpace(r.Header.Get("Origin")); origin != "" && !sameOriginWebHeader(origin, r.Host) {
+			s.auditFailure(r, "web.origin_guard", "system", "", map[string]string{"reason": "origin_mismatch"})
+			writeWebErrorPage(w, http.StatusForbidden, "Cross-origin request blocked", "The Custodia Console rejected this browser request because its Origin header does not match this host.")
+			return
+		}
+		if r.Header.Get("Origin") == "" {
+			if referrer := strings.TrimSpace(r.Header.Get("Referer")); referrer != "" && !sameOriginWebHeader(referrer, r.Host) {
+				s.auditFailure(r, "web.origin_guard", "system", "", map[string]string{"reason": "referer_mismatch"})
+				writeWebErrorPage(w, http.StatusForbidden, "Cross-origin request blocked", "The Custodia Console rejected this browser request because its Referer header does not match this host.")
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func isMutatingMethod(method string) bool {
+	switch method {
+	case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
+		return true
+	default:
+		return false
+	}
+}
+
+func sameOriginWebHeader(value string, requestHost string) bool {
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.Host == "" {
+		return false
+	}
+	return sameWebHost(parsed.Host, requestHost)
+}
+
+func sameWebHost(candidate string, requestHost string) bool {
+	candidate = normalizeWebHost(candidate)
+	requestHost = normalizeWebHost(requestHost)
+	return candidate != "" && requestHost != "" && candidate == requestHost
+}
+
+func normalizeWebHost(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	value = strings.TrimSuffix(value, ".")
+	value = strings.TrimSuffix(value, ":443")
+	value = strings.TrimSuffix(value, ":80")
+	return value
 }
 
 // APIOnly keeps the API listener from exposing the web console when a dedicated

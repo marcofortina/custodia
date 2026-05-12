@@ -11,6 +11,7 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - `CUSTODIA_CLIENT_CRL_FILE` is mounted when local CRL enforcement is used.
 - `custodia-admin revocation status` is monitored and alerts before CRL expiry.
 - Web Console CRL download and serial-check drills are exercised for Kubernetes operations where pod shell access is not part of the normal workflow.
+- The same-origin Web Console mutation guard is covered by tests and operators access the console through the canonical HTTPS host, not ad-hoc alternate origins.
 - `/ready` runs on a dedicated health listener that is not exposed outside the cluster.
 - Admin client IDs are explicitly configured; no wildcard admin mode exists.
 - Web console remains metadata-only and requires admin mTLS; enable TOTP MFA before production. Kubernetes operators can inspect secret version/access metadata and revoke future access grants without entering application pods.
@@ -24,6 +25,7 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - Kubernetes Lite, when used outside disposable labs, has `persistence.enabled=true`, one server replica and a documented PVC snapshot/off-cluster backup plan. See [`KUBERNETES_LITE_BACKUP_RESTORE.md`](KUBERNETES_LITE_BACKUP_RESTORE.md).
 - Kubernetes Full uses external PostgreSQL/CockroachDB, Valkey, HSM/PKCS#11 or equivalent signer controls and WORM/SIEM/object-lock evidence; SoftHSM and MinIO remain development/smoke substitutes unless independently production-governed.
 - The end-to-end operator smoke in [`END_TO_END_OPERATOR_SMOKE.md`](END_TO_END_OPERATOR_SMOKE.md) is rehearsed on disposable release-candidate hosts before promotion, including source install, Web Console checkpoints, Alice/Bob enrollment/share/revoke/delete and Lite backup.
+- `make systemd-hardening-check` passes and packaged units retain the same hardening directives as `deploy/examples/*.service`.
 
 ## Must remain false
 
