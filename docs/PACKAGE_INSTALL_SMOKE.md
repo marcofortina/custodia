@@ -3,7 +3,7 @@
 This smoke validates the Linux package install path on a disposable clean release-candidate machine. It is intentionally separate from `make package-smoke`:
 
 - `make package-smoke` extracts `.deb` and `.rpm` artifacts into a temporary directory and checks their payloads without touching the host package database.
-- `scripts/package-install-smoke.sh install-verify` installs the built packages through the host package manager, then verifies the installed layout, package database, runtime directories, systemd units, manpages and side-effect-free CLI entrypoints.
+- `scripts/package-install-smoke.sh install-verify` first extracts the selected artifacts and validates the expected package manifest, then installs them through the host package manager and verifies the installed layout, package database, runtime directories, systemd units, manpages and side-effect-free CLI entrypoints.
 
 Use this smoke after building release-candidate packages and before publishing artifacts. Run it on clean Debian/Ubuntu and Fedora/RHEL-compatible machines, not on a developer workstation with existing Custodia packages or real data.
 
@@ -21,7 +21,7 @@ Copy the relevant artifacts to the clean test machine. The smoke reads packages 
 
 ## Safe wiring check
 
-This target does not install anything. It validates script wiring and artifact discovery:
+This target does not install anything. It validates script wiring, artifact discovery and package payload manifests so stale or incomplete artifacts fail before a clean VM is modified:
 
 ```bash
 make package-install-smoke
@@ -48,7 +48,9 @@ export CUSTODIA_PACKAGE_INSTALL_CONFIRM=YES
 sudo -E ./scripts/package-install-smoke.sh install-verify
 ```
 
-The smoke installs `custodia-server`, `custodia-client` and `custodia-sdk` with `dpkg -i` and verifies:
+Before installation, the smoke extracts each selected `.deb` and verifies it against the repository package manifest. That catches stale or incomplete artifacts, including missing compressed manpages, before the VM package database is modified.
+
+The smoke then installs `custodia-server`, `custodia-client` and `custodia-sdk` with `dpkg -i` and verifies:
 
 - all three packages are registered as installed;
 - `custodia-server`, `custodia-admin`, `custodia-signer` and `custodia-client` exist under `/usr/bin`;
@@ -75,7 +77,7 @@ export CUSTODIA_PACKAGE_INSTALL_CONFIRM=YES
 sudo -E ./scripts/package-install-smoke.sh install-verify
 ```
 
-The same installed-layout checks run through the RPM package database.
+Before installation, the smoke extracts each selected `.rpm` through `rpm2cpio`/`cpio` and verifies it against the repository package manifest. The same installed-layout checks then run through the RPM package database.
 
 ## Partial package scopes
 

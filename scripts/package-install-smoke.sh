@@ -116,6 +116,90 @@ require_clean_install_target() {
   done < <(package_names)
 }
 
+
+manifest_for_package() {
+  case "$1" in
+    custodia-server) printf '%s\n' scripts/package-manifest-custodia-server.expected ;;
+    custodia-client) printf '%s\n' scripts/package-manifest-custodia-client.expected ;;
+    custodia-sdk) printf '%s\n' scripts/package-manifest-custodia-sdk.expected ;;
+    *) fail "unknown package name for manifest: $1" ;;
+  esac
+}
+
+package_name_from_artifact() {
+  local artifact="$1"
+  case "$(basename "$artifact")" in
+    custodia-server_*.deb|custodia-server-*.rpm) printf '%s\n' custodia-server ;;
+    custodia-client_*.deb|custodia-client-*.rpm) printf '%s\n' custodia-client ;;
+    custodia-sdk_*.deb|custodia-sdk-*.rpm) printf '%s\n' custodia-sdk ;;
+    *) fail "cannot infer Custodia package name from artifact: $artifact" ;;
+  esac
+}
+
+require_artifact_payload_path() {
+  local artifact="$1"
+  local root="$2"
+  local path="$3"
+  [ -e "$root/$path" ] || fail "artifact $(basename "$artifact") is missing payload path: $path; rebuild packages from the current tree and run make package-smoke before install-verify"
+}
+
+verify_artifact_manifest() {
+  local artifact="$1"
+  local root="$2"
+  local package_name manifest path
+  package_name="$(package_name_from_artifact "$artifact")"
+  manifest="$(manifest_for_package "$package_name")"
+  require_path "$manifest"
+  while IFS= read -r path || [ -n "$path" ]; do
+    case "$path" in
+      ''|'#'*) continue ;;
+    esac
+    require_artifact_payload_path "$artifact" "$root" "$path"
+  done < "$manifest"
+}
+
+preflight_deb_artifact() {
+  local artifact="$1"
+  require_command dpkg-deb
+  local tmp
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "$tmp"' RETURN
+  dpkg-deb --info "$artifact" >/dev/null
+  dpkg-deb -x "$artifact" "$tmp/root"
+  verify_artifact_manifest "$artifact" "$tmp/root"
+  rm -rf "$tmp"
+  trap - RETURN
+}
+
+preflight_rpm_artifact() {
+  local artifact="$1"
+  require_command rpm
+  require_command rpm2cpio
+  require_command cpio
+  local tmp
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "$tmp"' RETURN
+  rpm -qpi "$artifact" >/dev/null
+  (cd "$tmp" && rpm2cpio "$artifact" | cpio -id --quiet)
+  verify_artifact_manifest "$artifact" "$tmp"
+  rm -rf "$tmp"
+  trap - RETURN
+}
+
+preflight_artifacts() {
+  local format="$1"
+  shift
+  local artifact
+  for artifact in "$@"; do
+    log "preflighting $(basename "$artifact") payload"
+    case "$format" in
+      deb) preflight_deb_artifact "$artifact" ;;
+      rpm) preflight_rpm_artifact "$artifact" ;;
+      *) fail "unsupported package format for preflight: $format" ;;
+    esac
+  done
+}
+
 artifact_for_package() {
   local format="$1"
   local name="$2"
@@ -283,7 +367,8 @@ run_check_only() {
       require_command rpm
       ;;
   esac
-  collect_artifacts "$format" >/dev/null
+  mapfile -t artifacts < <(collect_artifacts "$format")
+  preflight_artifacts "$format" "${artifacts[@]}"
   log "check-only OK: format=$format scope=$CUSTODIA_PACKAGE_INSTALL_SCOPE package_dir=$PACKAGE_DIR"
 }
 
@@ -299,6 +384,7 @@ run_install_verify() {
   esac
   require_clean_install_target "$format"
   mapfile -t artifacts < <(collect_artifacts "$format")
+  preflight_artifacts "$format" "${artifacts[@]}"
   log "installing ${#artifacts[@]} $format artifact(s) from $PACKAGE_DIR"
   install_artifacts "$format" "${artifacts[@]}"
   verify_packages_installed "$format"

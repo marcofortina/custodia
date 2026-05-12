@@ -204,7 +204,7 @@ export CUSTODIA_PACKAGE_INSTALL_CONFIRM=YES
 sudo -E ./scripts/package-install-smoke.sh install-verify
 ```
 
-The clean-install smoke uses `dpkg -i` or `rpm -Uvh --replacepkgs`, then checks the installed package database, binaries, manpages, docs, SDK snapshots, systemd units, server runtime user/directories and service enablement state. It does not enable or start services. See [`PACKAGE_INSTALL_SMOKE.md`](PACKAGE_INSTALL_SMOKE.md).
+The clean-install smoke first extracts the selected artifacts and validates their package manifests, then uses `dpkg -i` or `rpm -Uvh --replacepkgs` and checks the installed package database, binaries, manpages, docs, SDK snapshots, systemd units, server runtime user/directories and service enablement state. Stale or incomplete artifacts fail before the clean VM is modified. It does not enable or start services. See [`PACKAGE_INSTALL_SMOKE.md`](PACKAGE_INSTALL_SMOKE.md).
 
 ## GitHub release workflow
 
