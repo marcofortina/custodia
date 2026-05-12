@@ -454,7 +454,7 @@ custodia-client secret delete --client-id "$ALICE_ID" --namespace "$SMOKE_NAMESP
 
 The vault received only ciphertext, crypto metadata and opaque envelopes. Plaintext, mTLS private keys and application private keys stayed local to each client. Deletion prevents future server-side reads; material already downloaded by authorized clients remains outside server control.
 
-For a complete two-client version/revoke workflow, follow [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](CUSTODIA_ALICE_BOB_SMOKE.md).
+For a complete two-client version/revoke workflow, follow [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](CUSTODIA_ALICE_BOB_SMOKE.md). For a release-candidate end-to-end rehearsal that follows this Quickstart across server, Alice, Bob, Web Console checkpoints and Lite backup, use [`docs/END_TO_END_OPERATOR_SMOKE.md`](END_TO_END_OPERATOR_SMOKE.md).
 
 ## 9. Basic backup check for Lite
 
