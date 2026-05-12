@@ -1,6 +1,6 @@
 # Custodia release check
 
-`make release-check` is the local pre-release gate for the repository baseline. For the 0.1.0 release scope, see [`RELEASE_NOTES_0_1_0.md`](RELEASE_NOTES_0_1_0.md).
+`make release-check` is the local pre-release gate for the repository baseline. For the 0.1.0 release scope, see [`RELEASE_NOTES_0_1_0.md`](RELEASE_NOTES_0_1_0.md). For final release-candidate sign-off, use [`RELEASE_READINESS_MATRIX.md`](RELEASE_READINESS_MATRIX.md).
 
 It runs:
 
@@ -32,6 +32,10 @@ If Helm is not installed, the script skips chart render checks with a warning; r
 `make lite-backup-restore-smoke` is a safe wiring check for the disposable Lite backup/restore smoke in [`LITE_BACKUP_RESTORE_SMOKE.md`](LITE_BACKUP_RESTORE_SMOKE.md). `make package-install-smoke` is a safe artifact-discovery check for the clean-install package smoke; the real install path in [`PACKAGE_INSTALL_SMOKE.md`](PACKAGE_INSTALL_SMOKE.md) must be run manually on disposable Debian/Ubuntu and Fedora/RHEL-compatible release-candidate machines. `make operator-e2e-smoke` is a safe wiring check for the opt-in end-to-end smoke harness; the destructive roles in [`END_TO_END_OPERATOR_SMOKE.md`](END_TO_END_OPERATOR_SMOKE.md) must be run manually on disposable release-candidate hosts. `make kubernetes-runtime-smoke` is a safe wiring check for the Kubernetes runtime smoke helper; the real cluster check in [`KUBERNETES_RUNTIME_SMOKE.md`](KUBERNETES_RUNTIME_SMOKE.md) must be run manually against a release-candidate cluster. `make operational-readiness-smoke` is a safe wiring check for the read-only endpoint smoke in [`OPERATIONAL_READINESS_SMOKE.md`](OPERATIONAL_READINESS_SMOKE.md); the real endpoint check must be run manually against a bootstrapped server or exposed Kubernetes release.
 
 If TLC is not installed, the script skips formal verification with a warning. Production release pipelines should install TLC and run `make formal-check` as a required job.
+
+## Release-candidate sign-off
+
+`make release-check` is only the repository baseline. Before publishing a release candidate, also follow [`RELEASE_READINESS_MATRIX.md`](RELEASE_READINESS_MATRIX.md) for package clean-install checks, Lite backup/restore smoke, source operator smoke, Kubernetes runtime smoke, operational endpoint smoke and production evidence gates.
 
 ## Scope
 

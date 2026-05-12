@@ -4,6 +4,8 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 
 ## Required before production
 
+- The release-candidate sign-off in [`RELEASE_READINESS_MATRIX.md`](RELEASE_READINESS_MATRIX.md) is complete for the exact commit, packages, images and Helm chart being promoted.
+
 - API listener serves TLS 1.3 with `ClientAuth: RequireAndVerifyClientCert`.
 - `CUSTODIA_STORE_BACKEND=postgres` or a CockroachDB-compatible PostgreSQL endpoint is configured.
 - `CUSTODIA_DEPLOYMENT_MODE` and `CUSTODIA_DATABASE_HA_TARGET` reflect the real DB HA topology.

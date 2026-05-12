@@ -17,6 +17,8 @@ New to Custodia? Start with the step-by-step quickstart:
 
 **[`docs/KUBERNETES_INSTALL.md` — Kubernetes install from a Git-built image](docs/KUBERNETES_INSTALL.md)**
 
+**[`docs/RELEASE_READINESS_MATRIX.md` — final release-candidate sign-off map](docs/RELEASE_READINESS_MATRIX.md)**
+
 **[`docs/KUBERNETES_RUNTIME_SMOKE.md` — read-only Kubernetes runtime smoke](docs/KUBERNETES_RUNTIME_SMOKE.md)**
 
 **[`docs/LITE_BACKUP_RESTORE_SMOKE.md` — disposable Lite backup/restore smoke](docs/LITE_BACKUP_RESTORE_SMOKE.md)**
@@ -43,7 +45,7 @@ If you are not sure what to choose, use the package install path. It covers Debi
 - Go, Python and Node.js / TypeScript client libraries with raw transport helpers; all three include high-level client-side crypto wrappers that keep plaintext, DEKs and private keys outside the server.
 - Java, C++ and Rust client libraries with raw transport helpers plus high-level client-side crypto wrappers that use the shared AES-256-GCM/HPKE-v1 vectors.
 - Go `custodia-client` CLI for encrypted namespace/key put/get/share/update, access revoke/delete workflows, server-published application public-key metadata, reusable JSON client profiles and one-shot enrollment for client-side mTLS CSR signing.
-- Docker, Compose, Helm and Lite/Full deployment examples, with the install/profile split documented in [`docs/DEPLOYMENT_MATRIX.md`](docs/DEPLOYMENT_MATRIX.md), Kubernetes example values and render guardrails via `make helm-check`, plus runtime and operational readiness smoke runbooks.
+- Docker, Compose, Helm and Lite/Full deployment examples, with the install/profile split documented in [`docs/DEPLOYMENT_MATRIX.md`](docs/DEPLOYMENT_MATRIX.md), Kubernetes example values and render guardrails via `make helm-check`, runtime and operational readiness smoke runbooks, and a final sign-off matrix in [`docs/RELEASE_READINESS_MATRIX.md`](docs/RELEASE_READINESS_MATRIX.md).
 - Dedicated `custodia-signer` service for enrollment-backed client CSR signing.
 - Custodia Lite profile with YAML config, SQLite build-tag artifact, local CA bootstrap, backup helper and Lite-to-Full readiness checks.
 
@@ -111,6 +113,7 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 - SDK release policy: [`docs/SDK_RELEASE_POLICY.md`](docs/SDK_RELEASE_POLICY.md)
 - Linux DEB/RPM packaging: [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md)
 - Start here / install quickstart: [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
+- Release readiness matrix: [`docs/RELEASE_READINESS_MATRIX.md`](docs/RELEASE_READINESS_MATRIX.md)
 - Release notes for 0.1.0: [`docs/RELEASE_NOTES_0_1_0.md`](docs/RELEASE_NOTES_0_1_0.md)
 - SBOM artifacts: [`docs/SBOM.md`](docs/SBOM.md)
 
@@ -306,6 +309,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 
 **Release readiness and closure**
 
+- [Release readiness matrix](docs/RELEASE_READINESS_MATRIX.md)
 - [Production checklist](docs/PRODUCTION_CHECKLIST.md)
 - [Production readiness gate](docs/PRODUCTION_READINESS_GATE.md)
 - [Production external evidence gate](docs/PRODUCTION_EVIDENCE.md)
