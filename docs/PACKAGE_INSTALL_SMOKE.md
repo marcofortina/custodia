@@ -50,6 +50,8 @@ sudo -E ./scripts/package-install-smoke.sh install-verify
 
 Before installation, the smoke extracts each selected `.deb` and verifies it against the repository package manifest. That catches stale or incomplete artifacts, including missing compressed manpages, before the VM package database is modified.
 
+The smoke also checks Debian `dpkg` path filters before installing. Minimal container images often ship `/etc/dpkg/dpkg.cfg.d/excludes` entries such as `path-exclude=/usr/share/man/*` or `path-exclude=/usr/share/doc/*`; those hosts intentionally discard manpages/docs during `dpkg -i` even when the artifact payload is correct. Use a full clean VM, or disable those filters for the disposable smoke machine, when validating release packages.
+
 The smoke then installs `custodia-server`, `custodia-client` and `custodia-sdk` with `dpkg -i` and verifies:
 
 - all three packages are registered as installed;

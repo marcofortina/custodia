@@ -105,6 +105,67 @@ package_installed() {
   esac
 }
 
+active_dpkg_path_filters() {
+  local file line option kind pattern
+  for file in /etc/dpkg/dpkg.cfg /etc/dpkg/dpkg.cfg.d/*; do
+    [ -f "$file" ] || continue
+    while IFS= read -r line || [ -n "$line" ]; do
+      line="${line%%#*}"
+      # shellcheck disable=SC2086
+      set -- $line
+      option="${1:-}"
+      case "$option" in
+        path-exclude=*|path-include=*)
+          kind="${option%%=*}"
+          pattern="${option#*=}"
+          [ -n "$pattern" ] && printf '%s|%s\n' "$kind" "$pattern"
+          ;;
+      esac
+    done < "$file"
+  done
+}
+
+dpkg_path_filter_state() {
+  local installed_path="$1"
+  local state=keep
+  local kind pattern
+  while IFS='|' read -r kind pattern; do
+    [ -n "$kind" ] || continue
+    if [[ "$installed_path" == $pattern ]]; then
+      case "$kind" in
+        path-exclude) state=exclude ;;
+        path-include) state=keep ;;
+      esac
+    fi
+  done < <(active_dpkg_path_filters)
+  printf '%s\n' "$state"
+}
+
+require_no_dpkg_payload_excludes() {
+  local manifest path installed_path offender_count=0
+  local -a offenders=()
+  while IFS= read -r package_name; do
+    manifest="$(manifest_for_package "$package_name")"
+    require_path "$manifest"
+    while IFS= read -r path || [ -n "$path" ]; do
+      case "$path" in
+        ''|'#'*) continue ;;
+      esac
+      installed_path="/$path"
+      if [ "$(dpkg_path_filter_state "$installed_path")" = "exclude" ]; then
+        offenders+=("$installed_path")
+        offender_count=$((offender_count + 1))
+      fi
+    done < "$manifest"
+  done < <(package_names)
+
+  if [ "$offender_count" -gt 0 ]; then
+    log "Debian dpkg path filters would drop expected Custodia package payload paths:"
+    printf '  %s\n' "${offenders[@]}" >&2
+    fail "disable dpkg path-exclude filters for the package clean-install smoke, or use a full clean VM instead of a minimized image that excludes /usr/share/man or /usr/share/doc"
+  fi
+}
+
 require_clean_install_target() {
   local format="$1"
   local name
@@ -379,7 +440,10 @@ run_install_verify() {
   local format
   format="$(detect_format)"
   case "$format" in
-    deb) require_command dpkg ;;
+    deb)
+      require_command dpkg
+      require_no_dpkg_payload_excludes
+      ;;
     rpm) require_command rpm ;;
   esac
   require_clean_install_target "$format"
