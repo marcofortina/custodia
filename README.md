@@ -11,7 +11,9 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 
 New to Custodia? Start with the step-by-step quickstart:
 
-**[`docs/QUICKSTART.md` — install Custodia from packages or from source](docs/QUICKSTART.md)**
+**[`docs/DEPLOYMENT_MATRIX.md` — choose bare metal vs Kubernetes and Lite vs Full](docs/DEPLOYMENT_MATRIX.md)**
+
+**[`docs/QUICKSTART.md` — bare-metal install from packages or from source](docs/QUICKSTART.md)**
 
 If you are not sure what to choose, use the package install path. It covers Debian/Ubuntu `.deb`, Fedora `.rpm`, the server/client/SDK package split, Lite bootstrap, admin certificate setup, Web TOTP, the first API check and the first encrypted client smoke test.
 
@@ -33,7 +35,7 @@ If you are not sure what to choose, use the package install path. It covers Debi
 - Go, Python and Node.js / TypeScript client libraries with raw transport helpers; all three include high-level client-side crypto wrappers that keep plaintext, DEKs and private keys outside the server.
 - Java, C++ and Rust client libraries with raw transport helpers plus high-level client-side crypto wrappers that use the shared AES-256-GCM/HPKE-v1 vectors.
 - Go `custodia-client` CLI for encrypted namespace/key put/get/share/update, access revoke/delete workflows, server-published application public-key metadata, reusable JSON client profiles and one-shot enrollment for client-side mTLS CSR signing.
-- Docker, Compose, Helm and Lite single-node deployment examples.
+- Docker, Compose, Helm and Lite/Full deployment examples, with the install/profile split documented in [`docs/DEPLOYMENT_MATRIX.md`](docs/DEPLOYMENT_MATRIX.md).
 - Dedicated `custodia-signer` service for enrollment-backed client CSR signing.
 - Custodia Lite profile with YAML config, SQLite build-tag artifact, local CA bootstrap, backup helper and Lite-to-Full readiness checks.
 
@@ -295,9 +297,16 @@ The operational documentation is grouped by the workflow it supports, rather tha
 - [Custodia Wiki](https://github.com/marcofortina/custodia/wiki)
 - [GitHub Project roadmap](https://github.com/marcofortina/custodia/projects)
 
+**Deployment model and install paths**
+
+- [Deployment matrix](docs/DEPLOYMENT_MATRIX.md)
+- [Custodia bare-metal install quickstart](docs/QUICKSTART.md)
+- [Linux packages](docs/LINUX_PACKAGES.md)
+- [k3s CockroachDB HA profile](docs/K3S_COCKROACHDB_HA.md)
+
 **Lite deployment and upgrade path**
 
-- [Custodia install quickstart](docs/QUICKSTART.md)
+- [Custodia bare-metal install quickstart](docs/QUICKSTART.md)
 - [Custodia Lite profile](docs/LITE_PROFILE.md)
 - [Custodia Lite configuration](docs/LITE_CONFIG.md)
 - [Configuration reference](docs/CONFIG_REFERENCE.md)

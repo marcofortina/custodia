@@ -1,22 +1,22 @@
 # Custodia quickstart
 
-This guide is the first-run path for a clean Linux host. It covers both supported install methods:
+This guide is the bare-metal first-run path for a clean Linux host. It covers both supported bare-metal install methods:
 
 1. install DEB/RPM packages;
 2. clone the repository, build from source, and install locally.
 
-Custodia uses the same binaries for Lite, Full and custom deployments. Lite or Full behavior is selected by YAML/environment configuration, not by installing different server products.
+For the full deployment/profile map, including Kubernetes, read [`DEPLOYMENT_MATRIX.md`](DEPLOYMENT_MATRIX.md). Custodia uses the same binaries for Lite, Full and custom deployments. Lite or Full behavior is selected by YAML/environment configuration, not by installing different server products.
 
 The guided runtime path below uses the single-node Lite profile because it is the smallest honest first run. Lite keeps the Custodia security model: API mTLS, client-side cryptography, opaque ciphertext/envelope storage, Web MFA and audit integrity. Full/custom deployments use the same binaries but require real external infrastructure such as PostgreSQL/CockroachDB, Valkey, HSM/PKCS#11, WORM/SIEM shipment and production evidence gates.
 
 ## 1. Choose an install path
 
-| Path | Best for | Installs to |
+| Bare-metal path | Best for | Installs to |
 | --- | --- | --- |
 | Package install | Operators and first-time users | `/usr/bin`, `/etc/custodia`, `/var/lib/custodia` |
-| Source install | Maintainers, developers, packagers and local testing | `/usr/local/bin`, `/usr/local/share/custodia`, `/etc/custodia`, `/var/lib/custodia` |
+| Source install / Git clone | Maintainers, developers, packagers and local testing | `/usr/local/bin`, `/usr/local/share/custodia`, `/etc/custodia`, `/var/lib/custodia` |
 
-Pick one install path, then continue with the common runtime setup.
+Pick one bare-metal install path, then continue with the common runtime setup. Kubernetes is a separate deployment target and is intentionally not driven by `systemctl`; use the Kubernetes install guide instead.
 
 ## 2. Install from DEB/RPM packages
 
@@ -515,6 +515,7 @@ custodia-client doctor --client-id "$ALICE_ID" --online
 
 ## 12. What to read next
 
+- Deployment matrix: [`docs/DEPLOYMENT_MATRIX.md`](DEPLOYMENT_MATRIX.md)
 - Lite profile: [`docs/LITE_PROFILE.md`](LITE_PROFILE.md)
 - Lite configuration: [`docs/LITE_CONFIG.md`](LITE_CONFIG.md)
 - Configuration reference: [`docs/CONFIG_REFERENCE.md`](CONFIG_REFERENCE.md)
