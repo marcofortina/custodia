@@ -43,7 +43,7 @@ If you are not sure what to choose, use the package install path. It covers Debi
 - Go, Python and Node.js / TypeScript client libraries with raw transport helpers; all three include high-level client-side crypto wrappers that keep plaintext, DEKs and private keys outside the server.
 - Java, C++ and Rust client libraries with raw transport helpers plus high-level client-side crypto wrappers that use the shared AES-256-GCM/HPKE-v1 vectors.
 - Go `custodia-client` CLI for encrypted namespace/key put/get/share/update, access revoke/delete workflows, server-published application public-key metadata, reusable JSON client profiles and one-shot enrollment for client-side mTLS CSR signing.
-- Docker, Compose, Helm and Lite/Full deployment examples, with the install/profile split documented in [`docs/DEPLOYMENT_MATRIX.md`](docs/DEPLOYMENT_MATRIX.md), Kubernetes example values and render guardrails via `make helm-check`.
+- Docker, Compose, Helm and Lite/Full deployment examples, with the install/profile split documented in [`docs/DEPLOYMENT_MATRIX.md`](docs/DEPLOYMENT_MATRIX.md), Kubernetes example values and render guardrails via `make helm-check`, plus runtime and operational readiness smoke runbooks.
 - Dedicated `custodia-signer` service for enrollment-backed client CSR signing.
 - Custodia Lite profile with YAML config, SQLite build-tag artifact, local CA bootstrap, backup helper and Lite-to-Full readiness checks.
 
@@ -101,7 +101,7 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 - Rust transport and crypto: [`docs/RUST_CLIENT_SDK.md`](docs/RUST_CLIENT_SDK.md)
 - Encrypted client CLI: [`docs/CUSTODIA_CLIENT_CLI.md`](docs/CUSTODIA_CLIENT_CLI.md)
 - Alice/Bob first encrypted secret smoke test: [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](docs/CUSTODIA_ALICE_BOB_SMOKE.md)
-- Kubernetes runtime smoke: [`docs/KUBERNETES_RUNTIME_SMOKE.md`](docs/KUBERNETES_RUNTIME_SMOKE.md)
+- Kubernetes runtime smoke: [`docs/KUBERNETES_RUNTIME_SMOKE.md`](docs/KUBERNETES_RUNTIME_SMOKE.md) and [`docs/OPERATIONAL_READINESS_SMOKE.md`](docs/OPERATIONAL_READINESS_SMOKE.md)
 - Lite backup/restore smoke: [`docs/LITE_BACKUP_RESTORE_SMOKE.md`](docs/LITE_BACKUP_RESTORE_SMOKE.md)
 - End-to-end operator release-candidate smoke: [`docs/END_TO_END_OPERATOR_SMOKE.md`](docs/END_TO_END_OPERATOR_SMOKE.md)
 - Bash SDK helper: [`docs/BASH_SDK.md`](docs/BASH_SDK.md)

@@ -158,6 +158,10 @@ operator-e2e-smoke:
 kubernetes-runtime-smoke:
 	./scripts/kubernetes-runtime-smoke.sh check-only
 
+.PHONY: operational-readiness-smoke
+operational-readiness-smoke:
+	./scripts/operational-readiness-smoke.sh check-only
+
 .PHONY: install-server
 install-server: install-server-binaries install-server-man install-server-systemd install-server-backup install-server-docs
 

@@ -116,3 +116,7 @@ Stop at the first mismatch. Typical causes:
 - Full values accidentally pointing at SQLite or memory-only rate limiting.
 
 Fix the underlying chart values, Secrets, certificates, storage or external dependencies. Do not bypass the smoke with `kubectl exec` or ad-hoc pod changes.
+
+## Next operator endpoint check
+
+After the cluster object smoke passes and the API/Web Console are exposed through the intended ingress, load balancer or temporary port-forward, run [`OPERATIONAL_READINESS_SMOKE.md`](OPERATIONAL_READINESS_SMOKE.md) from an operator workstation. That second smoke validates `/live`, `/ready`, admin status/diagnostics, revocation status and Web login reachability without `kubectl exec` or Secret reads.
