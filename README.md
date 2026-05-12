@@ -24,7 +24,7 @@ If you are not sure what to choose, use the package install path. It covers Debi
 - Go vault server with TLS 1.3 / mTLS support and optional client CRL rejection.
 - Client identity extraction from certificate SAN/CN.
 - REST API for encrypted secret create/read/delete/share/new-version plus metadata-only secret listing and authenticated client public-key metadata, with namespace/key lookup for normal user-facing workflows.
-- Admin API/CLI for client metadata create/list/revoke.
+- Admin API/CLI and metadata-only Web Console workflows for client metadata create/list/revoke, enrollment tokens, secret version/access inspection and future access-grant revocation.
 - Pending grant request/activation workflow: admins can request access, but a client with `share` must upload the target envelope.
 - Per-version access grants with `read`, `write`, `share` bitmask and optional future `expires_at`.
 - Configurable recipient-envelope cap for create/new-version requests, defaulting to 100.

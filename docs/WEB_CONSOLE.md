@@ -20,6 +20,8 @@ The Custodia web console is an admin-only, metadata-only surface.
 - `/web/client-enrollments` — create one-shot client enrollment tokens without shell access to a server or Kubernetes pod.
 - `/web/revocation` — client CRL health and certificate revocation metadata.
 - `POST /web/clients/{client_id}/revoke` — future client revocation from the client detail page.
+- `/web/secret-metadata` — namespace/key lookup for secret versions and active access grants.
+- `POST /web/secret-metadata/revoke` — future access-grant revocation from the Secret Metadata page.
 - `/web/access-requests` — pending grant metadata.
 - `/web/audit` — latest audit metadata with a JSONL download action.
 - `/web/audit/export` — browser-downloadable JSONL audit export with SHA-256 and event-count headers.
@@ -34,6 +36,8 @@ Client enrollment token creation mirrors `custodia-admin client enrollment creat
 
 Client detail pages are scoped by client because `namespace/key` is not globally unique. The admin drilldown shows the keyspace visible to that client, whether each entry is owned by the client or shared with the client, and share metadata for secrets owned by that client. Active client detail pages include a future-revocation form so Kubernetes operators do not need shell access to run `custodia-admin client revoke`. Client revocation does not claw back already downloaded material; strong revocation still requires a new encrypted version excluding the revoked client. The page still never renders plaintext, ciphertext, recipient envelopes, DEKs or client-side key material.
 
+Secret Metadata provides the Web Console equivalent of `custodia-admin secret versions`, `custodia-admin access list` and `custodia-admin access revoke` for online Kubernetes operations. Operators search by `namespace/key`, optionally pin the owner client id when required, inspect version/access metadata and revoke a target client's future access from the browser. The page intentionally uses owner client id in the revoke form so an operator cannot revoke an ambiguous keyspace record by accident. It still never renders plaintext, ciphertext, recipient envelopes, DEKs or client-side key material.
+
 Audit Events includes a `Download JSONL` action that uses the same bounded filters as the page and returns `X-Custodia-Audit-Export-SHA256` plus `X-Custodia-Audit-Export-Events` headers. This is the Web Console equivalent of capturing audit export evidence without entering a Kubernetes pod. The export body remains metadata-only and never includes plaintext, ciphertext, recipient envelopes, DEKs or private keys.
 
 ## Local assets and refresh behavior
@@ -46,7 +50,7 @@ The console serves local embedded assets only:
 
 The web CSP allows local scripts/styles only and does not require inline styles. Authenticated console pages include an AJAX refresh control with a default 10-second interval and selectable 5/10/15/30-second intervals. Refreshes swap only `#console-main`, preserve the current URL/query string, pause when the tab is hidden and avoid refreshing while a filter input is focused.
 
-Client-side pagination is enabled for bounded data tables on Clients, Client Detail, Access Requests and Audit Events with 10 rows per page.
+Client-side pagination is enabled for bounded data tables on Clients, Client Detail, Secret Metadata, Access Requests and Audit Events with 10 rows per page.
 
 ## Query filters
 
@@ -59,6 +63,7 @@ The metadata console supports bounded query filters for operational views. Clien
 - `/web/client-enrollments` plus `POST /web/client-enrollments` with form field `ttl=15m`
 - `/web/revocation`
 - `/web/clients?active=true` and `POST /web/clients/{client_id}/revoke` with form fields `reason=...&confirm=yes`
+- `/web/secret-metadata?namespace=db01&key=user:sys&owner_client_id=client_alice` and `POST /web/secret-metadata/revoke` with form fields `namespace=...&key=...&owner_client_id=...&target_client_id=...&confirm=yes`
 - `/web/access-requests?limit=100&namespace=db01&key=user:sys&status=pending&client_id=client_bob&requested_by_client_id=admin`
 
 Invalid filters return `400` and are audited as failures. These filters only affect metadata records already visible to an admin mTLS identity; the web console still never renders ciphertext, envelopes, plaintext or key material. Client detail pages show `namespace/key`, relationship, owner, permissions and active share metadata only.

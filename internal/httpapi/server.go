@@ -177,6 +177,8 @@ func New(options Options) http.Handler {
 	mux.Handle("GET /web/client-enrollments", server.webAdmin(http.HandlerFunc(server.handleWebClientEnrollments)))
 	mux.Handle("POST /web/client-enrollments", server.webAdmin(http.HandlerFunc(server.handleWebClientEnrollments)))
 	mux.Handle("GET /web/revocation", server.webAdmin(http.HandlerFunc(server.handleWebRevocationStatus)))
+	mux.Handle("GET /web/secret-metadata", server.webAdmin(http.HandlerFunc(server.handleWebSecretMetadata)))
+	mux.Handle("POST /web/secret-metadata/revoke", server.webAdmin(http.HandlerFunc(server.handleWebSecretAccessRevoke)))
 	mux.Handle("GET /web/clients/{client_id}", server.webAdmin(http.HandlerFunc(server.handleWebClientDetail)))
 	mux.Handle("POST /web/clients/{client_id}/revoke", server.webAdmin(http.HandlerFunc(server.handleWebClientRevoke)))
 	mux.Handle("GET /web/audit", server.webAdmin(http.HandlerFunc(server.handleWebAudit)))

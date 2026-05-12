@@ -12,7 +12,7 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - `custodia-admin revocation status` is monitored and alerts before CRL expiry.
 - `/ready` runs on a dedicated health listener that is not exposed outside the cluster.
 - Admin client IDs are explicitly configured; no wildcard admin mode exists.
-- Web console remains metadata-only and requires admin mTLS; enable TOTP MFA before production.
+- Web console remains metadata-only and requires admin mTLS; enable TOTP MFA before production. Kubernetes operators can inspect secret version/access metadata and revoke future access grants without entering application pods.
 - Passkey endpoints are available behind admin mTLS and Web MFA. Keep TOTP enabled unless an audited external assertion verifier is configured and evidenced.
 - Audit export integrity headers are validated by downstream archival jobs with `custodia-admin audit verify-export`; Web Console JSONL downloads are acceptable evidence capture only when the SHA-256 and event-count headers are preserved with the body.
 - Audit export artifacts are bundled with `custodia-admin audit archive-export` before WORM/SIEM ingestion.

@@ -246,6 +246,7 @@ func writeWebPageStatusWithOptions(w http.ResponseWriter, statusCode int, title 
 <a href="/web/clients">Clients</a>
 <a href="/web/client-enrollments">Client Enrollments</a>
 <a href="/web/revocation">Revocation</a>
+<a href="/web/secret-metadata">Secret Metadata</a>
 <a href="/web/access-requests">Access Requests</a>
 <a href="/web/audit">Audit</a>
 <a href="/web/audit/verify">Verify Audit</a>
@@ -255,7 +256,7 @@ func writeWebPageStatusWithOptions(w http.ResponseWriter, statusCode int, title 
 <header class="console-mobile-nav" aria-label="Console mobile navigation">
 <a class="console-brand" href="/web/" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true" aria-label="Custodia overview"><span class="console-logo" aria-hidden="true">C</span><span>Custodia</span></a>
 <nav aria-label="Console mobile sections" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">
-<a href="/web/status">Status</a><a href="/web/clients">Clients</a><a href="/web/client-enrollments">Enrollments</a><a href="/web/revocation">Revocation</a><a href="/web/audit">Audit</a>
+<a href="/web/status">Status</a><a href="/web/clients">Clients</a><a href="/web/client-enrollments">Enrollments</a><a href="/web/secret-metadata">Secrets</a><a href="/web/audit">Audit</a>
 </nav>
 </header>`
 		refreshControls = webRefreshControls()
@@ -329,6 +330,20 @@ func webKeyspace(namespace, key string) string {
 	return `<span class="console-keyspace"><span class="console-keyspace__namespace">` + html.EscapeString(namespace) + `</span><code>` + html.EscapeString(key) + `</code></span>`
 }
 
+func webSecretMetadataHref(namespace, key, ownerClientID string) string {
+	query := url.Values{}
+	query.Set("namespace", model.NormalizeSecretNamespace(namespace))
+	query.Set("key", model.NormalizeSecretKey(key))
+	if strings.TrimSpace(ownerClientID) != "" {
+		query.Set("owner_client_id", strings.TrimSpace(ownerClientID))
+	}
+	return "/web/secret-metadata?" + query.Encode()
+}
+
+func webKeyspaceMetadataLink(namespace, key, ownerClientID string) string {
+	return `<a href="` + html.EscapeString(webSecretMetadataHref(namespace, key, ownerClientID)) + `" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">` + webKeyspace(namespace, key) + `</a>`
+}
+
 func webPermissions(bits int) string {
 	labels := make([]string, 0, 3)
 	if model.HasPermission(bits, model.PermissionRead) {
@@ -394,6 +409,192 @@ func webSelectOption(value, label, current string) string {
 		selected = " selected"
 	}
 	return `<option value="` + html.EscapeString(value) + `"` + selected + `>` + html.EscapeString(label) + `</option>`
+}
+
+type webSecretMetadataRecord struct {
+	Secret   model.SecretMetadata
+	Versions []model.SecretVersionMetadata
+	Access   []model.SecretAccessMetadata
+}
+
+func (s *Server) webSecretMetadataRecords(ctx context.Context, namespace, key, ownerClientID string, limit int) ([]webSecretMetadataRecord, error) {
+	clients, err := s.store.ListClients(ctx)
+	if err != nil {
+		return nil, err
+	}
+	seen := map[string]bool{}
+	records := []webSecretMetadataRecord{}
+	for _, client := range clients {
+		if !client.IsActive {
+			continue
+		}
+		if ownerClientID != "" && client.ClientID != ownerClientID {
+			continue
+		}
+		secrets, err := s.store.ListSecrets(ctx, client.ClientID)
+		if err != nil {
+			return nil, err
+		}
+		for _, secret := range secrets {
+			if seen[secret.SecretID] || secret.CreatedByClientID != client.ClientID || secret.Namespace != namespace || secret.Key != key {
+				continue
+			}
+			versions, err := s.store.ListSecretVersions(ctx, client.ClientID, secret.SecretID)
+			if err != nil {
+				return nil, err
+			}
+			access, err := s.store.ListSecretAccess(ctx, client.ClientID, secret.SecretID)
+			if err != nil {
+				return nil, err
+			}
+			if limit > 0 && len(versions) > limit {
+				versions = versions[:limit]
+			}
+			if limit > 0 && len(access) > limit {
+				access = access[:limit]
+			}
+			records = append(records, webSecretMetadataRecord{Secret: secret, Versions: versions, Access: access})
+			seen[secret.SecretID] = true
+		}
+	}
+	return records, nil
+}
+
+func webSecretMetadataForm(r *http.Request) string {
+	return `<form class="console-toolbar" method="get" action="/web/secret-metadata" hx-get="/web/secret-metadata" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">` +
+		`<label>Namespace<input name="namespace" placeholder="default"` + webInputValueAttr(r, "namespace") + `></label>` +
+		`<label>Key<input name="key" placeholder="alice-bob-demo"` + webInputValueAttr(r, "key") + `></label>` +
+		`<label>Owner client<input name="owner_client_id" placeholder="client_alice"` + webInputValueAttr(r, "owner_client_id") + `></label>` +
+		`<label>Limit<input name="limit" inputmode="numeric" placeholder="100"` + webInputValueAttr(r, "limit") + `></label>` +
+		`<button type="submit">Inspect metadata</button><a class="console-button console-button--ghost" href="/web/secret-metadata" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">Reset</a></form>`
+}
+
+func webSecretAccessRevokeForm(namespace, key, ownerClientID, targetClientID string) string {
+	if targetClientID == ownerClientID {
+		return `<span class="console-muted">owner</span>`
+	}
+	return `<form class="console-inline-form" method="post" action="/web/secret-metadata/revoke">` +
+		`<input type="hidden" name="namespace" value="` + html.EscapeString(namespace) + `">` +
+		`<input type="hidden" name="key" value="` + html.EscapeString(key) + `">` +
+		`<input type="hidden" name="owner_client_id" value="` + html.EscapeString(ownerClientID) + `">` +
+		`<input type="hidden" name="target_client_id" value="` + html.EscapeString(targetClientID) + `">` +
+		`<label class="console-checkbox"><input type="checkbox" name="confirm" value="yes"> Confirm</label>` +
+		`<button type="submit">Revoke</button></form>`
+}
+
+func webSecretMetadataResults(records []webSecretMetadataRecord, revokedClientID string) string {
+	if len(records) == 0 {
+		return `<section class="console-panel"><p class="console-panel-label">Lookup result</p><p>No active owned secret metadata matched this namespace/key.</p></section>`
+	}
+	body := ""
+	if revokedClientID != "" {
+		body += `<section class="console-panel" role="status"><p class="console-panel-label">Access revocation</p><p>Access revoked for <code>` + html.EscapeString(revokedClientID) + `</code>. Already obtained material cannot be clawed back; create a new encrypted version excluding the revoked client for strong rotation.</p></section>`
+	}
+	for _, record := range records {
+		secret := record.Secret
+		versionsRows := ""
+		for _, version := range record.Versions {
+			versionsRows += `<tr><td>` + html.EscapeString(version.VersionID) + `</td><td>` + html.EscapeString(version.CreatedByClientID) + `</td><td>` + html.EscapeString(version.CreatedAt.Format(time.RFC3339)) + `</td><td>` + webOptionalTime(version.RevokedAt) + `</td></tr>`
+		}
+		accessRows := ""
+		for _, access := range record.Access {
+			accessRows += `<tr><td>` + html.EscapeString(access.ClientID) + `</td><td>` + html.EscapeString(access.VersionID) + `</td><td>` + html.EscapeString(webPermissions(access.Permissions)) + `</td><td>` + html.EscapeString(access.GrantedAt.Format(time.RFC3339)) + `</td><td>` + webOptionalTime(access.ExpiresAt) + `</td><td>` + webSecretAccessRevokeForm(secret.Namespace, secret.Key, secret.CreatedByClientID, access.ClientID) + `</td></tr>`
+		}
+		body += `<section class="console-panel"><p class="console-panel-label">Secret record</p><dl class="console-detail">` +
+			`<dt>Keyspace</dt><dd>` + webKeyspace(secret.Namespace, secret.Key) + `</dd>` +
+			`<dt>Owner</dt><dd>` + html.EscapeString(secret.CreatedByClientID) + `</dd>` +
+			`<dt>Secret ID</dt><dd><code>` + html.EscapeString(secret.SecretID) + `</code></dd>` +
+			`<dt>Current version</dt><dd><code>` + html.EscapeString(secret.VersionID) + `</code></dd>` +
+			`<dt>Created at</dt><dd>` + html.EscapeString(secret.CreatedAt.Format(time.RFC3339)) + `</dd></dl>` +
+			`<h2>Versions</h2>` + webPaginatedTable([]string{"Version", "Created by", "Created", "Revoked"}, versionsRows, 4, "No versions found.", 10, "Secret versions pagination") +
+			`<h2>Access Grants</h2><p class="console-muted">Future access revocation removes active grants only. Strong revocation requires a new encrypted version without the revoked client.</p>` +
+			webPaginatedTable([]string{"Client", "Version", "Permissions", "Granted", "Expires", "Action"}, accessRows, 6, "No active access grants found.", 10, "Secret access pagination") + `</section>`
+	}
+	return body
+}
+
+func (s *Server) handleWebSecretMetadata(w http.ResponseWriter, r *http.Request) {
+	limit, ok := s.webOptionalLimit(w, r, "web.secret_metadata", "secret", "", 100)
+	if !ok {
+		return
+	}
+	namespace := model.NormalizeSecretNamespace(strings.TrimSpace(r.URL.Query().Get("namespace")))
+	key := model.NormalizeSecretKey(strings.TrimSpace(r.URL.Query().Get("key")))
+	ownerClientID := strings.TrimSpace(r.URL.Query().Get("owner_client_id"))
+	if namespace == "" {
+		namespace = model.DefaultSecretNamespace
+	}
+	if r.URL.Query().Get("namespace") != "" && !model.ValidSecretNamespace(namespace) {
+		s.auditFailure(r, "web.secret_metadata", "secret_key", namespace, map[string]string{"reason": "invalid_namespace_filter"})
+		writeWebStatusError(w, http.StatusBadRequest, "invalid_namespace_filter")
+		return
+	}
+	if key != "" && !model.ValidSecretKey(key) {
+		s.auditFailure(r, "web.secret_metadata", "secret_key", key, map[string]string{"reason": "invalid_key_filter"})
+		writeWebStatusError(w, http.StatusBadRequest, "invalid_key_filter")
+		return
+	}
+	if ownerClientID != "" && !model.ValidClientID(ownerClientID) {
+		s.auditFailure(r, "web.secret_metadata", "client", ownerClientID, map[string]string{"reason": "invalid_owner_filter"})
+		writeWebStatusError(w, http.StatusBadRequest, "invalid_owner_filter")
+		return
+	}
+	body := webHero("Secret Metadata", "Inspect secret versions and active access grants by namespace/key without exposing client cryptographic payloads.") + webSecretMetadataForm(r)
+	if key != "" {
+		records, err := s.webSecretMetadataRecords(r.Context(), namespace, key, ownerClientID, limit)
+		if err != nil {
+			s.auditStoreFailure(r, "web.secret_metadata", "secret_key", secretKeyspaceResource(namespace, key), err)
+			writeWebMappedError(w, err)
+			return
+		}
+		body += webSecretMetadataResults(records, strings.TrimSpace(r.URL.Query().Get("revoked_client_id")))
+	}
+	s.audit(r, "web.secret_metadata", "secret", "", "success", nil)
+	writeWebPage(w, "Secret Metadata", body)
+}
+
+func (s *Server) handleWebSecretAccessRevoke(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		s.auditFailure(r, "web.secret_access_revoke", "secret", "", map[string]string{"reason": "invalid_form"})
+		writeWebStatusError(w, http.StatusBadRequest, "invalid_form")
+		return
+	}
+	namespace := model.NormalizeSecretNamespace(strings.TrimSpace(r.FormValue("namespace")))
+	key := model.NormalizeSecretKey(strings.TrimSpace(r.FormValue("key")))
+	ownerClientID := strings.TrimSpace(r.FormValue("owner_client_id"))
+	targetClientID := strings.TrimSpace(r.FormValue("target_client_id"))
+	if namespace == "" {
+		namespace = model.DefaultSecretNamespace
+	}
+	if !model.ValidSecretNamespace(namespace) || !model.ValidSecretKey(key) || !model.ValidClientID(ownerClientID) || !model.ValidClientID(targetClientID) {
+		s.auditFailure(r, "web.secret_access_revoke", "secret_key", secretKeyspaceResource(namespace, key), map[string]string{"reason": "invalid_form"})
+		writeWebStatusError(w, http.StatusBadRequest, "invalid_form")
+		return
+	}
+	if r.FormValue("confirm") != "yes" {
+		s.auditFailure(r, "web.secret_access_revoke", "secret_key", secretKeyspaceResource(namespace, key), map[string]string{"reason": "confirmation_required"})
+		writeWebStatusError(w, http.StatusBadRequest, "confirmation_required")
+		return
+	}
+	records, err := s.webSecretMetadataRecords(r.Context(), namespace, key, ownerClientID, 1)
+	if err != nil {
+		s.auditStoreFailure(r, "web.secret_access_revoke", "secret_key", secretKeyspaceResource(namespace, key), err)
+		writeWebMappedError(w, err)
+		return
+	}
+	if len(records) != 1 {
+		s.auditFailure(r, "web.secret_access_revoke", "secret_key", secretKeyspaceResource(namespace, key), map[string]string{"reason": "secret_not_found"})
+		writeWebStatusError(w, http.StatusNotFound, "secret_not_found")
+		return
+	}
+	if err := s.store.RevokeAccess(r.Context(), ownerClientID, records[0].Secret.SecretID, targetClientID); err != nil {
+		s.auditStoreFailure(r, "web.secret_access_revoke", "secret", records[0].Secret.SecretID, err)
+		writeWebMappedError(w, err)
+		return
+	}
+	s.audit(r, "web.secret_access_revoke", "secret", records[0].Secret.SecretID, "success", nil)
+	redirect := "/web/secret-metadata?namespace=" + url.QueryEscape(namespace) + "&key=" + url.QueryEscape(key) + "&owner_client_id=" + url.QueryEscape(ownerClientID) + "&revoked_client_id=" + url.QueryEscape(targetClientID)
+	http.Redirect(w, r, redirect, http.StatusSeeOther)
 }
 
 func (s *Server) webOptionalLimit(w http.ResponseWriter, r *http.Request, action, resourceType, resourceID string, fallback int) (int, bool) {
@@ -883,7 +1084,7 @@ func (s *Server) handleWebClientDetail(w http.ResponseWriter, r *http.Request) {
 		if secret.CreatedByClientID == clientID {
 			relationship = "owned by this client"
 		}
-		visibleRows += "<tr><td>" + webKeyspace(secret.Namespace, secret.Key) + "</td><td>" + webBadge(relationship) + "</td><td>" + html.EscapeString(secret.CreatedByClientID) + "</td><td>" + html.EscapeString(webPermissions(secret.Permissions)) + "</td><td>" + html.EscapeString(secret.VersionID) + "</td><td>" + webOptionalTime(secret.AccessExpiresAt) + "</td></tr>"
+		visibleRows += "<tr><td>" + webKeyspaceMetadataLink(secret.Namespace, secret.Key, secret.CreatedByClientID) + "</td><td>" + webBadge(relationship) + "</td><td>" + html.EscapeString(secret.CreatedByClientID) + "</td><td>" + html.EscapeString(webPermissions(secret.Permissions)) + "</td><td>" + html.EscapeString(secret.VersionID) + "</td><td>" + webOptionalTime(secret.AccessExpiresAt) + "</td></tr>"
 		if secret.CreatedByClientID != clientID || !model.HasPermission(secret.Permissions, model.PermissionShare) {
 			continue
 		}
@@ -897,7 +1098,7 @@ func (s *Server) handleWebClientDetail(w http.ResponseWriter, r *http.Request) {
 			if access.ClientID == clientID {
 				continue
 			}
-			shareRows += "<tr><td>" + webKeyspace(secret.Namespace, secret.Key) + "</td><td>" + html.EscapeString(access.ClientID) + "</td><td>" + html.EscapeString(webPermissions(access.Permissions)) + "</td><td>" + webOptionalTime(access.ExpiresAt) + "</td></tr>"
+			shareRows += "<tr><td>" + webKeyspaceMetadataLink(secret.Namespace, secret.Key, secret.CreatedByClientID) + "</td><td>" + html.EscapeString(access.ClientID) + "</td><td>" + html.EscapeString(webPermissions(access.Permissions)) + "</td><td>" + webOptionalTime(access.ExpiresAt) + "</td></tr>"
 		}
 	}
 
@@ -1121,7 +1322,7 @@ func (s *Server) handleWebAccessRequests(w http.ResponseWriter, r *http.Request)
 	}
 	rows := ""
 	for _, request := range requests {
-		rows += "<tr><td>" + webKeyspace(request.Namespace, request.Key) + "</td><td>" + html.EscapeString(request.ClientID) + "</td><td>" + html.EscapeString(request.RequestedByClientID) + "</td><td>" + webBadge(request.Status) + "</td></tr>"
+		rows += "<tr><td>" + webKeyspaceMetadataLink(request.Namespace, request.Key, "") + "</td><td>" + html.EscapeString(request.ClientID) + "</td><td>" + html.EscapeString(request.RequestedByClientID) + "</td><td>" + webBadge(request.Status) + "</td></tr>"
 	}
 	body := webHero("Access Requests", "Metadata-only pending grant workflow filtered by namespace/key. Envelopes are never rendered here.") +
 		`<p class="console-muted console-filter-note">Filter grants by the public keyspace tuple used by clients. Internal secret identifiers are intentionally not part of this workflow.</p>` +

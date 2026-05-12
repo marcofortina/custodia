@@ -216,6 +216,10 @@ p { margin: 0 0 16px; color: var(--muted); max-width: 82ch; }
 .console-toolbar label { display: grid; gap: 6px; min-width: 160px; color: var(--muted-strong); font-size: .78rem; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
 .console-toolbar .console-checkbox { display: inline-flex; align-items: center; gap: 8px; min-height: 42px; }
 .console-toolbar .console-checkbox input { min-width: auto; }
+.console-inline-form { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; }
+.console-inline-form button { min-height: 34px; padding: 6px 12px; }
+.console-inline-form .console-checkbox { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
+.console-inline-form .console-checkbox input { min-width: auto; }
 input, select {
   width: 100%;
   min-height: 40px;

@@ -1527,6 +1527,63 @@ func TestWebClientDetailRevokesClient(t *testing.T) {
 	assertLastAudit(t, memoryStore, "web.client_revoke", "success", "")
 }
 
+func TestWebSecretMetadataWorkflow(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, clientID := range []string{"admin", "client_alice", "client_bob"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %s: %v", clientID, err)
+		}
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	createBody := `{"namespace":"default","key":"alice-bob-demo","ciphertext":"Y2lwaGVydGV4dA==","envelopes":[{"client_id":"client_alice","envelope":"ZW52ZWxvcGUtYWxpY2U="},{"client_id":"client_bob","envelope":"ZW52ZWxvcGUtYm9i"}],"permissions":7}`
+	createReq := mtlsRequest(http.MethodPost, "/v1/secrets", createBody, "client_alice")
+	createRes := httptest.NewRecorder()
+	handler.ServeHTTP(createRes, createReq)
+	if createRes.Code != http.StatusCreated {
+		t.Fatalf("expected create 201, got %d: %s", createRes.Code, createRes.Body.String())
+	}
+
+	getReq := mtlsRequest(http.MethodGet, "/web/secret-metadata?namespace=default&key=alice-bob-demo", "", "admin")
+	getRes := httptest.NewRecorder()
+	handler.ServeHTTP(getRes, getReq)
+	if getRes.Code != http.StatusOK {
+		t.Fatalf("expected secret metadata 200, got %d: %s", getRes.Code, getRes.Body.String())
+	}
+	body := getRes.Body.String()
+	for _, expected := range []string{"Secret Metadata", "alice-bob-demo", "client_alice", "client_bob", "Access Grants", `action="/web/secret-metadata/revoke"`} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("secret metadata page missing %q: %s", expected, body)
+		}
+	}
+	for _, forbidden := range []string{"Y2lwaGVydGV4dA==", "ZW52ZWxvcGUt", "private_key", "wrapped_dek"} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("secret metadata leaked cryptographic material %q: %s", forbidden, body)
+		}
+	}
+
+	revokeReq := httptest.NewRequest(http.MethodPost, "/web/secret-metadata/revoke", strings.NewReader("namespace=default&key=alice-bob-demo&owner_client_id=client_alice&target_client_id=client_bob&confirm=yes"))
+	revokeReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	revokeReq.TLS = &tls.ConnectionState{PeerCertificates: []*x509.Certificate{{DNSNames: []string{"admin"}, Subject: pkix.Name{CommonName: "admin"}}}}
+	revokeRes := httptest.NewRecorder()
+	handler.ServeHTTP(revokeRes, revokeReq)
+	if revokeRes.Code != http.StatusSeeOther {
+		t.Fatalf("expected secret access revoke redirect, got %d: %s", revokeRes.Code, revokeRes.Body.String())
+	}
+	if got := revokeRes.Header().Get("Location"); !strings.Contains(got, "/web/secret-metadata?") || !strings.Contains(got, "revoked_client_id=client_bob") {
+		t.Fatalf("unexpected revoke redirect location %q", got)
+	}
+
+	bobReq := mtlsRequest(http.MethodGet, "/v1/secrets/by-key?namespace=default&key=alice-bob-demo", "", "client_bob")
+	bobRes := httptest.NewRecorder()
+	handler.ServeHTTP(bobRes, bobReq)
+	if bobRes.Code != http.StatusForbidden && bobRes.Code != http.StatusNotFound {
+		t.Fatalf("expected bob read after web access revoke to fail, got %d: %s", bobRes.Code, bobRes.Body.String())
+	}
+	assertLastAudit(t, memoryStore, "secret.read", "failure", "")
+}
+
 func TestWebRevocationStatusPage(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()
