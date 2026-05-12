@@ -66,7 +66,7 @@ The repository includes Go, Python, Node.js, C++, Java and Rust SDKs. The canoni
 
 ## Deployment targets and profiles
 
-0.1.0 documents three install targets: bare-metal from source, bare-metal from DEB/RPM packages and Kubernetes from a Git-built image plus Helm chart. Lite, Full and custom are runtime profiles selected through configuration, not separate server products. Kubernetes Lite requires one server replica, SQLite on a PersistentVolumeClaim and an explicit backup plan; Kubernetes Full expects external PostgreSQL/CockroachDB, Valkey and production signer/evidence integrations.
+0.1.0 documents three install targets: bare-metal from source, bare-metal from DEB/RPM packages and Kubernetes from a Git-built image plus Helm chart. Lite, Full and custom are runtime profiles selected through configuration, not separate server products. Kubernetes Lite requires one server replica, SQLite on a PersistentVolumeClaim and an explicit backup plan; Kubernetes Full expects external PostgreSQL/CockroachDB, Valkey and production signer/evidence integrations. A read-only Kubernetes runtime smoke validates installed server/signer rollouts, Services and Lite PVC presence before promotion.
 
 ## Runtime configuration
 
@@ -80,6 +80,7 @@ Before publishing 0.1.0 artifacts, run:
 make release-check
 make package-smoke
 make operator-e2e-smoke
+make kubernetes-runtime-smoke
 ```
 
 For cross-language confidence, also run the SDK-specific checks when they are available in the build environment:

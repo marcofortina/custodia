@@ -150,3 +150,15 @@ kubectl -n custodia rollout status deploy/custodia-custodia-signer
 ```
 
 Expose the API/Web services through your ingress, gateway or port-forward according to your cluster policy. The API and Web Console require mTLS; the health listener should remain private.
+
+After the release is installed, run the read-only Kubernetes runtime smoke from [`KUBERNETES_RUNTIME_SMOKE.md`](KUBERNETES_RUNTIME_SMOKE.md):
+
+```bash
+export CUSTODIA_K8S_NAMESPACE=custodia
+export CUSTODIA_HELM_RELEASE=custodia
+export CUSTODIA_K8S_PROFILE=full
+export CUSTODIA_K8S_CONFIRM=YES
+./scripts/kubernetes-runtime-smoke.sh cluster-check
+```
+
+For Lite, set `CUSTODIA_K8S_PROFILE=lite`; the smoke also checks that a server PVC is present.

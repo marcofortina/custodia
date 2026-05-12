@@ -17,6 +17,8 @@ New to Custodia? Start with the step-by-step quickstart:
 
 **[`docs/KUBERNETES_INSTALL.md` — Kubernetes install from a Git-built image](docs/KUBERNETES_INSTALL.md)**
 
+**[`docs/KUBERNETES_RUNTIME_SMOKE.md` — read-only Kubernetes runtime smoke](docs/KUBERNETES_RUNTIME_SMOKE.md)**
+
 **[`docs/END_TO_END_OPERATOR_SMOKE.md` — release-candidate end-to-end operator smoke](docs/END_TO_END_OPERATOR_SMOKE.md)**
 
 If you are not sure what to choose, use the package install path. It covers Debian/Ubuntu `.deb`, Fedora `.rpm`, the server/client/SDK package split, Lite bootstrap, admin certificate setup, Web TOTP, the first API check and the first encrypted client smoke test.
@@ -97,6 +99,7 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 - Rust transport and crypto: [`docs/RUST_CLIENT_SDK.md`](docs/RUST_CLIENT_SDK.md)
 - Encrypted client CLI: [`docs/CUSTODIA_CLIENT_CLI.md`](docs/CUSTODIA_CLIENT_CLI.md)
 - Alice/Bob first encrypted secret smoke test: [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](docs/CUSTODIA_ALICE_BOB_SMOKE.md)
+- Kubernetes runtime smoke: [`docs/KUBERNETES_RUNTIME_SMOKE.md`](docs/KUBERNETES_RUNTIME_SMOKE.md)
 - End-to-end operator release-candidate smoke: [`docs/END_TO_END_OPERATOR_SMOKE.md`](docs/END_TO_END_OPERATOR_SMOKE.md)
 - Bash SDK helper: [`docs/BASH_SDK.md`](docs/BASH_SDK.md)
 - Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
@@ -309,6 +312,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 - [Linux packages](docs/LINUX_PACKAGES.md)
 - [Kubernetes install](docs/KUBERNETES_INSTALL.md)
 - [Kubernetes Lite backup and restore](docs/KUBERNETES_LITE_BACKUP_RESTORE.md)
+- [Kubernetes runtime smoke](docs/KUBERNETES_RUNTIME_SMOKE.md)
 - [End-to-end operator release-candidate smoke](docs/END_TO_END_OPERATOR_SMOKE.md)
 - [k3s CockroachDB HA profile](docs/K3S_COCKROACHDB_HA.md)
 

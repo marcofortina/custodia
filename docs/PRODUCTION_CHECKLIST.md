@@ -20,6 +20,7 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - Verified audit archive bundles are shipped with `custodia-admin audit ship-archive` before SIEM/WORM ingestion.
 - `CUSTODIA_SIGNER_KEY_PROVIDER` is explicitly set; production must not rely on file-backed CA keys unless this is an isolated bootstrap environment.
 - Kubernetes values pass `make helm-check`; unsafe chart combinations fail before render.
+- Installed Kubernetes release passes [`KUBERNETES_RUNTIME_SMOKE.md`](KUBERNETES_RUNTIME_SMOKE.md) read-only cluster checks for server/signer rollouts, Services and Lite PVC presence when applicable.
 - Kubernetes Lite, when used outside disposable labs, has `persistence.enabled=true`, one server replica and a documented PVC snapshot/off-cluster backup plan. See [`KUBERNETES_LITE_BACKUP_RESTORE.md`](KUBERNETES_LITE_BACKUP_RESTORE.md).
 - Kubernetes Full uses external PostgreSQL/CockroachDB, Valkey, HSM/PKCS#11 or equivalent signer controls and WORM/SIEM/object-lock evidence; SoftHSM and MinIO remain development/smoke substitutes unless independently production-governed.
 - The end-to-end operator smoke in [`END_TO_END_OPERATOR_SMOKE.md`](END_TO_END_OPERATOR_SMOKE.md) is rehearsed on disposable release-candidate hosts before promotion, including source install, Web Console checkpoints, Alice/Bob enrollment/share/revoke/delete and Lite backup.
