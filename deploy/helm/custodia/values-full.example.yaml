@@ -1,0 +1,47 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
+# Full profile example for Kubernetes.
+# Copy this file, replace every registry/DNS/secret placeholder, then run:
+#   make helm-check
+# before installing or committing changes.
+profile: full
+replicaCount: 3
+
+image:
+  repository: registry.example.internal/custodia/custodia-server
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+config:
+  serverURL: "https://custodia.example.internal:8443"
+  storeBackend: postgres
+  databaseURL: ""
+  databaseURLSecretName: custodia-database
+  databaseURLSecretKey: database-url
+  rateLimitBackend: valkey
+  valkeyURLSecretName: custodia-valkey
+  valkeyURLSecretKey: valkey-url
+  deploymentMode: kubernetes-full
+  databaseHATarget: external
+  auditShipmentSink: "object-lock-or-siem"
+  signerURL: ""
+
+persistence:
+  enabled: false
+
+signer:
+  enabled: true
+  keyProvider: pkcs11
+  pkcs11SignCommand: /usr/local/bin/custodia-pkcs11-sign
+  adminSubjects: admin
+  secretName: custodia-signer-ca
+  clientSecretName: custodia-signer-client
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2

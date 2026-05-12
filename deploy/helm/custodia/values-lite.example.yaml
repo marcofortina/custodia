@@ -1,0 +1,57 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
+# Lite profile example for Kubernetes.
+# Lite is single-replica SQLite. The PVC is mandatory but is not a backup.
+# Read docs/KUBERNETES_LITE_BACKUP_RESTORE.md before using this for data you care about.
+profile: lite
+replicaCount: 1
+
+deploymentStrategy:
+  type: Recreate
+
+image:
+  repository: registry.example.internal/custodia/custodia-server
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+config:
+  serverURL: "https://custodia.example.internal:8443"
+  storeBackend: sqlite
+  databaseURL: "file:/var/lib/custodia/custodia.db"
+  databaseURLSecretName: ""
+  databaseURLSecretKey: database-url
+  rateLimitBackend: memory
+  valkeyURLSecretName: ""
+  valkeyURLSecretKey: valkey-url
+  deploymentMode: kubernetes-lite
+  databaseHATarget: none
+  auditShipmentSink: "local"
+  signerURL: ""
+
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+  mountPath: /var/lib/custodia
+
+signer:
+  enabled: true
+  keyProvider: file
+  adminSubjects: admin
+  secretName: custodia-signer-ca
+  clientSecretName: custodia-signer-client
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+autoscaling:
+  enabled: false

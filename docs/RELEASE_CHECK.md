@@ -5,6 +5,7 @@
 It runs:
 
 - keyspace public workflow guardrails;
+- Helm chart render guardrails when `helm` is installed;
 - Go unit tests for all packages;
 - server, admin CLI and signer builds;
 - Python client syntax compilation and tests;
@@ -19,7 +20,7 @@ It runs:
 make release-check
 ```
 
-If TLC is not installed, the script skips formal verification with a warning. Production release pipelines should install TLC and run `make formal-check` as a required job.
+If Helm is not installed, the script skips chart render checks with a warning; release pipelines that publish Kubernetes artifacts should install Helm and run `make helm-check` as a required job. If TLC is not installed, the script skips formal verification with a warning. Production release pipelines should install TLC and run `make formal-check` as a required job.
 
 ## Scope
 

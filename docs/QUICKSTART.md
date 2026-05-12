@@ -517,6 +517,7 @@ custodia-client doctor --client-id "$ALICE_ID" --online
 
 - Deployment matrix: [`docs/DEPLOYMENT_MATRIX.md`](DEPLOYMENT_MATRIX.md)
 - Kubernetes install: [`docs/KUBERNETES_INSTALL.md`](KUBERNETES_INSTALL.md)
+- Kubernetes Lite backup and restore: [`docs/KUBERNETES_LITE_BACKUP_RESTORE.md`](KUBERNETES_LITE_BACKUP_RESTORE.md)
 - Lite profile: [`docs/LITE_PROFILE.md`](LITE_PROFILE.md)
 - Lite configuration: [`docs/LITE_CONFIG.md`](LITE_CONFIG.md)
 - Configuration reference: [`docs/CONFIG_REFERENCE.md`](CONFIG_REFERENCE.md)

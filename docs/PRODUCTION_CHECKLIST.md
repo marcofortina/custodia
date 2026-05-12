@@ -18,6 +18,7 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - Audit export artifacts are bundled with `custodia-admin audit archive-export` before WORM/SIEM ingestion.
 - Verified audit archive bundles are shipped with `custodia-admin audit ship-archive` before SIEM/WORM ingestion.
 - `CUSTODIA_SIGNER_KEY_PROVIDER` is explicitly set; production must not rely on file-backed CA keys unless this is an isolated bootstrap environment.
+- Kubernetes Lite, when used outside disposable labs, has `persistence.enabled=true`, one server replica and a documented PVC snapshot/off-cluster backup plan. See [`KUBERNETES_LITE_BACKUP_RESTORE.md`](KUBERNETES_LITE_BACKUP_RESTORE.md).
 
 ## Must remain false
 

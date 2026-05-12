@@ -33,7 +33,7 @@ Profiles are selected by YAML/environment configuration, not by installing diffe
 | --- | --- |
 | Bare metal + Lite | First-run quickstart, local lab, small honest deployment. |
 | Bare metal + Full | Production-oriented host install with external database, rate limiter, signer/HSM and audit shipment. |
-| Kubernetes + Lite | Cluster lab path only when SQLite persistence and local signer material are explicitly accepted. Requires one server replica, a mandatory PVC and clear backup handling; the Helm chart fails closed without those settings. |
+| Kubernetes + Lite | Cluster lab path only when SQLite persistence and local signer material are explicitly accepted. Requires one server replica, a mandatory PVC and an external backup plan; the Helm chart fails closed without safe Lite settings. |
 | Kubernetes + Full | Target production cluster path. Requires external database/HA, real secrets management, PKCS#11/HSM or audited signer integration, WORM/SIEM evidence and network policy. |
 
 ## Kubernetes dependency substitutes
@@ -48,4 +48,4 @@ Kubernetes can run the same Lite/Full profile vocabulary, but unsafe Lite combin
 
 Bare-metal operators may run `custodia-admin` locally on the server/admin host. Kubernetes operators should not need `kubectl exec` into application pods for normal online administration. Metadata-only, API-backed admin operations belong in the Web Console/API over admin mTLS and Web MFA. Bootstrap, file ownership, CA material placement, Helm values, Kubernetes Secret creation and backup plumbing remain deployment/runbook tasks outside the Web Console.
 
-One-shot client enrollment token creation is available from both CLI and Web Console, so client onboarding does not require shell access to a Kubernetes pod. The Helm chart runs `custodia-server` and `custodia-signer` as separate Deployments from the same Git-built image.
+One-shot client enrollment token creation is available from both CLI and Web Console, so client onboarding does not require shell access to a Kubernetes pod. The Helm chart runs `custodia-server` and `custodia-signer` as separate Deployments from the same Git-built image. Validate chart values with `make helm-check`; it renders the Full/Lite examples and checks unsafe combinations fail closed.

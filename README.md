@@ -15,6 +15,8 @@ New to Custodia? Start with the step-by-step quickstart:
 
 **[`docs/QUICKSTART.md` — bare-metal install from packages or from source](docs/QUICKSTART.md)**
 
+**[`docs/KUBERNETES_INSTALL.md` — Kubernetes install from a Git-built image](docs/KUBERNETES_INSTALL.md)**
+
 If you are not sure what to choose, use the package install path. It covers Debian/Ubuntu `.deb`, Fedora `.rpm`, the server/client/SDK package split, Lite bootstrap, admin certificate setup, Web TOTP, the first API check and the first encrypted client smoke test.
 
 ## What is implemented
@@ -35,7 +37,7 @@ If you are not sure what to choose, use the package install path. It covers Debi
 - Go, Python and Node.js / TypeScript client libraries with raw transport helpers; all three include high-level client-side crypto wrappers that keep plaintext, DEKs and private keys outside the server.
 - Java, C++ and Rust client libraries with raw transport helpers plus high-level client-side crypto wrappers that use the shared AES-256-GCM/HPKE-v1 vectors.
 - Go `custodia-client` CLI for encrypted namespace/key put/get/share/update, access revoke/delete workflows, server-published application public-key metadata, reusable JSON client profiles and one-shot enrollment for client-side mTLS CSR signing.
-- Docker, Compose, Helm and Lite/Full deployment examples, with the install/profile split documented in [`docs/DEPLOYMENT_MATRIX.md`](docs/DEPLOYMENT_MATRIX.md).
+- Docker, Compose, Helm and Lite/Full deployment examples, with the install/profile split documented in [`docs/DEPLOYMENT_MATRIX.md`](docs/DEPLOYMENT_MATRIX.md), Kubernetes example values and render guardrails via `make helm-check`.
 - Dedicated `custodia-signer` service for enrollment-backed client CSR signing.
 - Custodia Lite profile with YAML config, SQLite build-tag artifact, local CA bootstrap, backup helper and Lite-to-Full readiness checks.
 
@@ -303,6 +305,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 - [Custodia bare-metal install quickstart](docs/QUICKSTART.md)
 - [Linux packages](docs/LINUX_PACKAGES.md)
 - [Kubernetes install](docs/KUBERNETES_INSTALL.md)
+- [Kubernetes Lite backup and restore](docs/KUBERNETES_LITE_BACKUP_RESTORE.md)
 - [k3s CockroachDB HA profile](docs/K3S_COCKROACHDB_HA.md)
 
 **Lite deployment and upgrade path**
@@ -316,6 +319,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 - [Lite SQLite store](docs/LITE_SQLITE_STORE.md)
 - [Lite local CA bootstrap](docs/LITE_CA_BOOTSTRAP.md)
 - [Lite backup and restore](docs/LITE_BACKUP_RESTORE.md)
+- [Kubernetes Lite backup and restore](docs/KUBERNETES_LITE_BACKUP_RESTORE.md)
 - [Lite migration readiness](docs/LITE_MIGRATION_READINESS.md)
 - [Lite to Full upgrade path](docs/LITE_TO_FULL_UPGRADE.md)
 

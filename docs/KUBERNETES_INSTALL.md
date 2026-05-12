@@ -81,33 +81,13 @@ kubectl -n custodia create secret generic custodia-valkey \
 
 ## 3. Install Full profile with Helm
 
-Create a values file, for example `custodia-full-values.yaml`:
+Start from the committed example and edit only environment-specific values:
 
-```yaml
-profile: full
-replicaCount: 3
-
-image:
-  repository: registry.example.internal/custodia/custodia-server
-  tag: "0.1.0"
-
-config:
-  serverURL: "https://custodia.example.internal:8443"
-  storeBackend: postgres
-  databaseURLSecretName: custodia-database
-  databaseURLSecretKey: database-url
-  rateLimitBackend: valkey
-  valkeyURLSecretName: custodia-valkey
-  valkeyURLSecretKey: valkey-url
-  deploymentMode: kubernetes-full
-  databaseHATarget: external
-
-signer:
-  enabled: true
-  keyProvider: pkcs11
-  pkcs11SignCommand: /usr/local/bin/custodia-pkcs11-sign
-  adminSubjects: admin
+```bash
+cp deploy/helm/custodia/values-full.example.yaml custodia-full-values.yaml
 ```
+
+The example keeps durable state outside the pod in PostgreSQL/CockroachDB and Valkey. Review every placeholder before installing.
 
 Install or upgrade:
 
@@ -119,37 +99,13 @@ helm upgrade --install custodia deploy/helm/custodia \
 
 ## 4. Lite profile in Kubernetes
 
-Lite in Kubernetes is intentionally explicit because SQLite must use persistent storage and must run with one server replica. The Helm chart fails closed when `profile: lite` is combined with a missing PVC, multiple replicas, a non-SQLite store, a non-`file:` SQLite URL or Valkey-style rate limiting:
+Lite in Kubernetes is intentionally explicit because SQLite must use persistent storage and must run with one server replica. Start from the committed example and edit only environment-specific values:
 
-```yaml
-profile: lite
-replicaCount: 1
-
-image:
-  repository: registry.example.internal/custodia/custodia-server
-  tag: "0.1.0"
-
-config:
-  serverURL: "https://custodia.example.internal:8443"
-  storeBackend: sqlite
-  databaseURL: "file:/var/lib/custodia/custodia.db"
-  databaseURLSecretName: ""
-  rateLimitBackend: memory
-  valkeyURLSecretName: ""
-  deploymentMode: kubernetes-lite
-  databaseHATarget: none
-
-persistence:
-  enabled: true
-  size: 10Gi
-
-signer:
-  enabled: true
-  keyProvider: file
-  adminSubjects: admin
+```bash
+cp deploy/helm/custodia/values-lite.example.yaml custodia-lite-values.yaml
 ```
 
-Install with the same Helm command and your Lite values file. Do not set `persistence.enabled: false` for Lite. Without a PVC, SQLite state would live on the pod filesystem and can be lost when the pod is recreated, rescheduled or replaced during upgrades.
+Install with the same Helm command and your Lite values file. Do not set `persistence.enabled: false` for Lite. Without a PVC, SQLite state would live on the pod filesystem and can be lost when the pod is recreated, rescheduled or replaced during upgrades. A PVC is not a backup: read [`KUBERNETES_LITE_BACKUP_RESTORE.md`](KUBERNETES_LITE_BACKUP_RESTORE.md) before using Lite for anything you care about.
 
 ## 4.1 Helm fail-closed checks
 
@@ -163,19 +119,29 @@ The chart intentionally rejects unsafe Lite combinations before rendering Kubern
 
 Use `profile: full` for HA deployments backed by PostgreSQL/CockroachDB and Valkey. Use `profile: custom` only when a maintainer has reviewed the non-standard combination.
 
-## 5. SoftHSM and MinIO boundaries
+## 5. Chart validation
+
+Run the chart render guardrail before committing values changes:
+
+```bash
+make helm-check
+```
+
+The check renders the Full and Lite example values and verifies that unsafe combinations fail closed, including Lite without PVC and Full with SQLite.
+
+## 6. SoftHSM and MinIO boundaries
 
 SoftHSM may be used when a real HSM is unavailable in development, CI or lab clusters. It is not proof of production HSM coverage.
 
 MinIO with Object Lock may be used to exercise S3/WORM audit shipment flows when a production object-lock service is unavailable. Treat it as dev/smoke unless the deployment has production-grade retention governance, durability, credentials, backup and operational controls.
 
-## 6. Normal administration
+## 7. Normal administration
 
 Kubernetes operators should not need `kubectl exec` into application pods for normal online operations. Use the Web Console/API over admin mTLS and Web MFA for metadata-only administration such as status, diagnostics, client views, access request views, audit views and one-shot enrollment token creation through `/web/client-enrollments`.
 
 Bootstrap, Kubernetes Secret creation, Helm values, CA/HSM material placement, external database provisioning and backup plumbing remain deployment/runbook tasks outside the Web Console.
 
-## 7. Verify
+## 8. Verify
 
 ```bash
 kubectl -n custodia get deploy,svc,pvc
