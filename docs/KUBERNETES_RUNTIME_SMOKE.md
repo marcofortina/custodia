@@ -56,7 +56,7 @@ Run the read-only smoke:
 The helper verifies:
 
 - current Kubernetes context is reachable;
-- namespace exists;
+- namespace exists, and stops with an actionable message instead of creating it;
 - Helm release exists when `helm` is installed;
 - server Deployment is present and rolled out;
 - signer Deployment is present and rolled out;
@@ -107,7 +107,7 @@ A PVC is required, but a PVC is not a backup. Do not treat a successful pod rest
 
 Stop at the first mismatch. Typical causes:
 
-- wrong namespace or Helm release name;
+- wrong namespace or Helm release name; if the namespace does not exist, complete the install runbook first or set `CUSTODIA_K8S_NAMESPACE` to the namespace that already contains the release;
 - custom chart fullname without `CUSTODIA_SERVER_DEPLOYMENT` / `CUSTODIA_SIGNER_DEPLOYMENT` overrides;
 - missing signer Deployment or Service;
 - pods not ready because Secret keys do not match the chart values;

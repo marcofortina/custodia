@@ -71,6 +71,12 @@ require_labeled_resource() {
   printf '%s\n' "$names"
 }
 
+require_namespace() {
+  if ! kubectl get namespace "$CUSTODIA_K8S_NAMESPACE" >/dev/null 2>&1; then
+    die "namespace '$CUSTODIA_K8S_NAMESPACE' does not exist. This smoke is read-only and will not create namespaces or install Helm releases; complete docs/KUBERNETES_INSTALL.md first, or set CUSTODIA_K8S_NAMESPACE to the namespace that already contains the Custodia release."
+  fi
+}
+
 rollout_status() {
   resource="$1"
   echo "kubernetes-runtime-smoke: waiting for $resource"
@@ -94,7 +100,7 @@ cluster_check() {
   echo "kubernetes-runtime-smoke: context=$(kubectl config current-context 2>/dev/null || echo unknown)"
   echo "kubernetes-runtime-smoke: namespace=$CUSTODIA_K8S_NAMESPACE release=$CUSTODIA_HELM_RELEASE profile=$CUSTODIA_K8S_PROFILE"
 
-  kubectl get namespace "$CUSTODIA_K8S_NAMESPACE" >/dev/null
+  require_namespace
 
   if command -v helm >/dev/null 2>&1; then
     helm -n "$CUSTODIA_K8S_NAMESPACE" status "$CUSTODIA_HELM_RELEASE" >/dev/null
