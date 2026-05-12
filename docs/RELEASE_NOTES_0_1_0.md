@@ -18,7 +18,7 @@ The server remains a metadata-only control plane: it authenticates clients, vali
 - Keyspace addressing for normal user workflows with `namespace/key`.
 - Hash-chained audit events, browser/API JSONL exports and export verification helpers.
 - Package builds for server, client and SDK artifacts.
-- Release guardrails for build metadata, package manifests, install smoke, structured runtime YAML, Helm render safety, keyspace regressions, client crypto documentation and opt-in end-to-end operator smoke rehearsal.
+- Release guardrails for build metadata, package manifests, extraction smoke, clean-install package smoke, structured runtime YAML, Helm render safety, keyspace regressions, client crypto documentation and opt-in end-to-end operator smoke rehearsal.
 
 ## Namespace/key workflow
 
@@ -79,6 +79,7 @@ Before publishing 0.1.0 artifacts, run:
 ```bash
 make release-check
 make package-smoke
+make package-install-smoke
 make operator-e2e-smoke
 make kubernetes-runtime-smoke
 ```

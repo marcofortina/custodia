@@ -33,7 +33,7 @@ make test-java-client
 make test-cpp-client
 make test-rust-client
 make test-bash-client
-bash -n scripts/check-formal.sh scripts/pkcs11-sign-command.sh scripts/softhsm-dev-token.sh scripts/minio-object-lock-smoke.sh scripts/k3s-cockroachdb-smoke.sh scripts/passkey-assertion-verify-command.sh scripts/sqlite-backup.sh scripts/lite-upgrade-check.sh scripts/helm-render-check.sh scripts/operator-e2e-smoke.sh scripts/kubernetes-runtime-smoke.sh
+bash -n scripts/check-formal.sh scripts/pkcs11-sign-command.sh scripts/softhsm-dev-token.sh scripts/minio-object-lock-smoke.sh scripts/k3s-cockroachdb-smoke.sh scripts/passkey-assertion-verify-command.sh scripts/sqlite-backup.sh scripts/lite-upgrade-check.sh scripts/helm-render-check.sh scripts/operator-e2e-smoke.sh scripts/kubernetes-runtime-smoke.sh scripts/package-install-smoke.sh
 
 if command -v tlc >/dev/null 2>&1; then
   ./scripts/check-formal.sh

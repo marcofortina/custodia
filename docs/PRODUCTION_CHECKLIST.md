@@ -88,3 +88,8 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 - `CUSTODIA_WEB_PASSKEY_ASSERTION_VERIFY_COMMAND` must point to an audited verifier before passkeys are promoted beyond pre-signature validation.
 - The fail-closed template `scripts/passkey-assertion-verify-command.sh` must never be used as a production verifier.
 - Capture verifier version, negative tests and audit evidence in the release evidence bundle.
+
+
+## Package clean-install smoke
+
+Before publishing release artifacts, run `make package-install-smoke` locally for wiring and run `scripts/package-install-smoke.sh install-verify` on disposable Debian/Ubuntu and Fedora/RHEL-compatible clean machines. This validates package-manager installation, package database state, systemd units, manpages, runtime directories and side-effect-free CLI entrypoints without starting services.

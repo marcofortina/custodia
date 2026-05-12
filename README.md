@@ -133,6 +133,15 @@ Smoke-test package contents without installing them into the host system:
 make package-smoke
 ```
 
+Validate package installation on a disposable clean VM/container before publishing:
+
+```bash
+make package-install-smoke
+# On the clean test machine, after copying artifacts:
+export CUSTODIA_PACKAGE_INSTALL_CONFIRM=YES
+sudo -E ./scripts/package-install-smoke.sh install-verify
+```
+
 Generate a release SBOM:
 
 ```bash

@@ -304,6 +304,10 @@ package-checksums:
 package-smoke:
 	./scripts/package-smoke.sh
 
+.PHONY: package-install-smoke
+package-install-smoke:
+	./scripts/package-install-smoke.sh check-only
+
 .PHONY: sbom
 sbom:
 	./scripts/generate-sbom.sh

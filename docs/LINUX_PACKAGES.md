@@ -189,6 +189,23 @@ The smoke check does not install packages into the host system. It extracts `.de
 
 For server packages, the smoke check executes `custodia-admin version` because it is side-effect free. It verifies that both `custodia-server.service` and `custodia-signer.service` are packaged, but it does not start `custodia-server` or `custodia-signer`; runtime startup belongs to deployment or integration tests with real configuration and certificates.
 
+## Clean-install package smoke
+
+Before publishing release artifacts, validate the package manager path on disposable clean machines:
+
+```bash
+# Safe local wiring check only.
+make package-install-smoke
+
+# On a clean Debian/Ubuntu or Fedora/RHEL-compatible test machine:
+export PACKAGE_DIR=/path/to/dist/packages
+export CUSTODIA_PACKAGE_INSTALL_FORMAT=deb   # or rpm
+export CUSTODIA_PACKAGE_INSTALL_CONFIRM=YES
+sudo -E ./scripts/package-install-smoke.sh install-verify
+```
+
+The clean-install smoke uses `dpkg -i` or `rpm -Uvh --replacepkgs`, then checks the installed package database, binaries, manpages, docs, SDK snapshots, systemd units, server runtime user/directories and service enablement state. It does not enable or start services. See [`PACKAGE_INSTALL_SMOKE.md`](PACKAGE_INSTALL_SMOKE.md).
+
 ## GitHub release workflow
 
 The manual GitHub Actions workflow `.github/workflows/release.yml` builds release artifacts from a selected commit. It runs the repository release check, builds `.deb` and `.rpm` packages, generates `SHA256SUMS` and `artifacts-manifest.json`, smoke-tests the package contents and uploads all release files as workflow artifacts.
