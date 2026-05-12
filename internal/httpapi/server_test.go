@@ -1486,6 +1486,70 @@ func TestWebClientEnrollmentCreatesOneShotToken(t *testing.T) {
 	}
 }
 
+func TestWebClientDetailRevokesClient(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	for _, clientID := range []string{"admin", "client_bob"} {
+		if err := memoryStore.CreateClient(ctx, model.Client{ClientID: clientID, MTLSSubject: clientID}); err != nil {
+			t.Fatalf("create client %s: %v", clientID, err)
+		}
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	getReq := mtlsRequest(http.MethodGet, "/web/clients/client_bob", "", "admin")
+	getRes := httptest.NewRecorder()
+	handler.ServeHTTP(getRes, getReq)
+	if getRes.Code != http.StatusOK {
+		t.Fatalf("expected client detail 200, got %d: %s", getRes.Code, getRes.Body.String())
+	}
+	if !strings.Contains(getRes.Body.String(), "Revoke Client") || !strings.Contains(getRes.Body.String(), `action="/web/clients/client_bob/revoke"`) {
+		t.Fatalf("client detail missing revoke controls: %s", getRes.Body.String())
+	}
+
+	postReq := httptest.NewRequest(http.MethodPost, "/web/clients/client_bob/revoke", strings.NewReader("reason=lost+device&confirm=yes"))
+	postReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	postReq.TLS = &tls.ConnectionState{PeerCertificates: []*x509.Certificate{{DNSNames: []string{"admin"}, Subject: pkix.Name{CommonName: "admin"}}}}
+	postRes := httptest.NewRecorder()
+	handler.ServeHTTP(postRes, postReq)
+	if postRes.Code != http.StatusSeeOther {
+		t.Fatalf("expected client revoke redirect, got %d: %s", postRes.Code, postRes.Body.String())
+	}
+	if got := postRes.Header().Get("Location"); got != "/web/clients/client_bob?revoked=1" {
+		t.Fatalf("unexpected revoke redirect location %q", got)
+	}
+	client, err := memoryStore.GetClient(ctx, "client_bob")
+	if err != nil {
+		t.Fatalf("get revoked client: %v", err)
+	}
+	if client.IsActive || client.RevokedAt == nil {
+		t.Fatalf("expected client to be revoked, got %+v", client)
+	}
+	assertLastAudit(t, memoryStore, "web.client_revoke", "success", "")
+}
+
+func TestWebRevocationStatusPage(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/web/revocation", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected revocation status page 200, got %d: %s", res.Code, res.Body.String())
+	}
+	body := res.Body.String()
+	for _, expected := range []string{"Revocation Status", "Client CRL", "not configured", "strong revocation"} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("revocation status page missing %q: %s", expected, body)
+		}
+	}
+	assertLastAudit(t, memoryStore, "web.revocation_status", "success", "")
+}
+
 func TestWebClientEnrollmentRejectsInvalidTTL(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()

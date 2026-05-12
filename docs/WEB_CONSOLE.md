@@ -18,6 +18,8 @@ The Custodia web console is an admin-only, metadata-only surface.
 - `/web/clients` — client metadata.
 - `/web/clients/{client_id}` — client detail drilldown with metadata-only visible keyspace, ownership and share summaries.
 - `/web/client-enrollments` — create one-shot client enrollment tokens without shell access to a server or Kubernetes pod.
+- `/web/revocation` — client CRL health and certificate revocation metadata.
+- `POST /web/clients/{client_id}/revoke` — future client revocation from the client detail page.
 - `/web/access-requests` — pending grant metadata.
 - `/web/audit` — latest audit metadata.
 - `/web/audit/verify` — audit hash-chain verification summary.
@@ -29,7 +31,7 @@ The API remains the source of truth for automation. The web console is a respons
 
 Client enrollment token creation mirrors `custodia-admin client enrollment create`: it returns the configured server URL, a one-shot enrollment token and the expiry time. The token is shown once, must be transferred through a trusted channel, and does not expose client private keys because clients still generate their mTLS key and CSR locally. In disposable lab flows using an untrusted bootstrap CA, the client may add `--insecure`; real remote clients should trust the Custodia CA and avoid `--insecure`.
 
-Client detail pages are scoped by client because `namespace/key` is not globally unique. The admin drilldown shows the keyspace visible to that client, whether each entry is owned by the client or shared with the client, and share metadata for secrets owned by that client. It still never renders plaintext, ciphertext, recipient envelopes, DEKs or client-side key material.
+Client detail pages are scoped by client because `namespace/key` is not globally unique. The admin drilldown shows the keyspace visible to that client, whether each entry is owned by the client or shared with the client, and share metadata for secrets owned by that client. Active client detail pages include a future-revocation form so Kubernetes operators do not need shell access to run `custodia-admin client revoke`. Client revocation does not claw back already downloaded material; strong revocation still requires a new encrypted version excluding the revoked client. The page still never renders plaintext, ciphertext, recipient envelopes, DEKs or client-side key material.
 
 ## Local assets and refresh behavior
 
@@ -51,6 +53,8 @@ The metadata console supports bounded query filters for operational views. Clien
 - `/web/audit/verify?limit=500`
 - `/web/clients?active=true`
 - `/web/client-enrollments` plus `POST /web/client-enrollments` with form field `ttl=15m`
+- `/web/revocation`
+- `/web/clients?active=true` and `POST /web/clients/{client_id}/revoke` with form fields `reason=...&confirm=yes`
 - `/web/access-requests?limit=100&namespace=db01&key=user:sys&status=pending&client_id=client_bob&requested_by_client_id=admin`
 
 Invalid filters return `400` and are audited as failures. These filters only affect metadata records already visible to an admin mTLS identity; the web console still never renders ciphertext, envelopes, plaintext or key material. Client detail pages show `namespace/key`, relationship, owner, permissions and active share metadata only.

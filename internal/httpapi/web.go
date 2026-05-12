@@ -245,6 +245,7 @@ func writeWebPageStatusWithOptions(w http.ResponseWriter, statusCode int, title 
 <a href="/web/diagnostics">Diagnostics</a>
 <a href="/web/clients">Clients</a>
 <a href="/web/client-enrollments">Client Enrollments</a>
+<a href="/web/revocation">Revocation</a>
 <a href="/web/access-requests">Access Requests</a>
 <a href="/web/audit">Audit</a>
 <a href="/web/audit/verify">Verify Audit</a>
@@ -254,7 +255,7 @@ func writeWebPageStatusWithOptions(w http.ResponseWriter, statusCode int, title 
 <header class="console-mobile-nav" aria-label="Console mobile navigation">
 <a class="console-brand" href="/web/" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true" aria-label="Custodia overview"><span class="console-logo" aria-hidden="true">C</span><span>Custodia</span></a>
 <nav aria-label="Console mobile sections" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">
-<a href="/web/status">Status</a><a href="/web/clients">Clients</a><a href="/web/client-enrollments">Enrollments</a><a href="/web/audit">Audit</a>
+<a href="/web/status">Status</a><a href="/web/clients">Clients</a><a href="/web/client-enrollments">Enrollments</a><a href="/web/revocation">Revocation</a><a href="/web/audit">Audit</a>
 </nav>
 </header>`
 		refreshControls = webRefreshControls()
@@ -763,6 +764,54 @@ func webClientEnrollmentForm(ttlText string) string {
 		`<button type="submit">Create enrollment token</button></form></section>`
 }
 
+func (s *Server) handleWebRevocationStatus(w http.ResponseWriter, r *http.Request) {
+	status, statusCode, failureReason := s.clientRevocationStatus()
+	if failureReason != "" {
+		s.auditFailure(r, "web.revocation_status", "system", "", map[string]string{"reason": failureReason})
+	} else {
+		s.audit(r, "web.revocation_status", "system", "", "success", nil)
+	}
+	body := webHero("Revocation Status", "Client certificate revocation metadata visible without entering a server or Kubernetes pod.") + webRevocationStatusPanel(status)
+	writeWebPageStatusWithOptions(w, statusCode, "Revocation Status", body, true)
+}
+
+func webRevocationStatusPanel(status model.RevocationStatus) string {
+	configured := webBadge("not configured")
+	if status.Configured {
+		configured = webBadge("configured")
+	}
+	valid := webBadge("ok")
+	if !status.Valid {
+		valid = webBadge("unavailable")
+	}
+	return `<section class="console-panel"><p class="console-panel-label">Client CRL</p>` +
+		`<dl class="console-detail"><dt>Configured</dt><dd>` + configured + `</dd>` +
+		`<dt>Valid</dt><dd>` + valid + `</dd>` +
+		`<dt>Source</dt><dd>` + webOptionalText(status.Source) + `</dd>` +
+		`<dt>Issuer</dt><dd>` + webOptionalText(status.Issuer) + `</dd>` +
+		`<dt>This update</dt><dd>` + webOptionalTimeValue(status.ThisUpdate) + `</dd>` +
+		`<dt>Next update</dt><dd>` + webOptionalTimeValue(status.NextUpdate) + `</dd>` +
+		`<dt>Revoked certificates</dt><dd>` + html.EscapeString(strconv.Itoa(status.RevokedCount)) + `</dd>` +
+		`<dt>Expires in seconds</dt><dd>` + html.EscapeString(strconv.FormatInt(status.ExpiresInSeconds, 10)) + `</dd>` +
+		`<dt>Error</dt><dd>` + webOptionalText(status.Error) + `</dd></dl>` +
+		`<p class="console-muted">This page reports certificate revocation distribution health only. Secret access revocation is future-only; strong revocation still requires creating a new encrypted version without the revoked recipient.</p></section>`
+}
+
+func webOptionalText(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return `<span class="console-muted">not set</span>`
+	}
+	return html.EscapeString(value)
+}
+
+func webOptionalTimeValue(value time.Time) string {
+	if value.IsZero() {
+		return `<span class="console-muted">not set</span>`
+	}
+	return html.EscapeString(value.Format(time.RFC3339))
+}
+
 func (s *Server) handleWebClients(w http.ResponseWriter, r *http.Request) {
 	clients, err := s.store.ListClients(r.Context())
 	if err != nil {
@@ -856,15 +905,66 @@ func (s *Server) handleWebClientDetail(w http.ResponseWriter, r *http.Request) {
 	if !client.IsActive {
 		state = "revoked"
 	}
+	revokePanel := webClientRevokePanel(client, r.URL.Query().Get("revoked") == "1")
 	body := webHero("Client Detail", "Metadata-only view of one client visible keyspace, ownership and shares.") +
 		`<p><a class="console-button console-button--ghost" href="/web/clients" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">Back to clients</a></p>` +
 		`<dl class="console-panel console-stat"><dt>Client ID</dt><dd>` + html.EscapeString(client.ClientID) + `</dd><dt>mTLS subject</dt><dd>` + html.EscapeString(client.MTLSSubject) + `</dd><dt>Status</dt><dd>` + webBadge(state) + `</dd></dl>` +
+		revokePanel +
 		`<h2>Visible Keyspace</h2><p class="console-muted">Secrets this client can resolve by namespace/key. Secret plaintext, ciphertext, envelopes and DEKs are never rendered.</p>` +
 		webPaginatedTable([]string{"Keyspace", "Relationship", "Owner", "Permissions", "Current version", "Access expires"}, visibleRows, 6, "No visible keyspace entries found for this client.", 10, "Client visible keyspace pagination") +
 		`<h2>Shares From This Client</h2><p class="console-muted">Active metadata-only shares for secrets owned by this client.</p>` +
 		webPaginatedTable([]string{"Keyspace", "Shared with", "Permissions", "Expires"}, shareRows, 4, "No active shares from this client.", 10, "Client shares pagination")
 	s.audit(r, "web.client_detail", "client", clientID, "success", nil)
 	writeWebPage(w, "Client Detail", body)
+}
+
+func webClientRevokePanel(client model.Client, justRevoked bool) string {
+	if !client.IsActive {
+		message := "This client is already revoked."
+		if justRevoked {
+			message = "Client revoked successfully."
+		}
+		return `<section class="console-panel" role="status" aria-label="Client revocation status"><p class="console-panel-label">Client revocation</p><p>` + html.EscapeString(message) + `</p><p class="console-muted">Certificate and access revocation are future-only. Already downloaded material cannot be clawed back; strong secret revocation requires a new encrypted version excluding the revoked client.</p></section>`
+	}
+	clientPath := url.PathEscape(client.ClientID)
+	return `<section class="console-panel" aria-label="Revoke client"><p class="console-panel-label">Danger zone</p><h2>Revoke Client</h2><p class="console-muted">Revoking a client disables future server-side use of this mTLS identity. It does not erase already downloaded ciphertext, envelopes or plaintext; strong revocation requires a new encrypted version without this client.</p>` +
+		`<form class="console-toolbar" method="post" action="/web/clients/` + clientPath + `/revoke">` +
+		`<label>Reason<input name="reason" maxlength="512" placeholder="lost device, decommissioned host, compromised certificate"></label>` +
+		`<label class="console-checkbox"><input type="checkbox" name="confirm" value="yes"> Confirm future access revocation</label>` +
+		`<button type="submit">Revoke client</button></form></section>`
+}
+
+func (s *Server) handleWebClientRevoke(w http.ResponseWriter, r *http.Request) {
+	clientID := strings.TrimSpace(r.PathValue("client_id"))
+	if !model.ValidClientID(clientID) {
+		s.auditFailure(r, "web.client_revoke", "client", clientID, map[string]string{"reason": "invalid_client_id"})
+		writeWebStatusError(w, http.StatusBadRequest, "invalid_client_id")
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		s.auditFailure(r, "web.client_revoke", "client", clientID, map[string]string{"reason": "invalid_form"})
+		writeWebStatusError(w, http.StatusBadRequest, "invalid_form")
+		return
+	}
+	if r.FormValue("confirm") != "yes" {
+		s.auditFailure(r, "web.client_revoke", "client", clientID, map[string]string{"reason": "missing_confirmation"})
+		writeWebStatusError(w, http.StatusBadRequest, "missing_confirmation")
+		return
+	}
+	reason := strings.TrimSpace(r.FormValue("reason"))
+	if !model.ValidRevocationReason(reason) {
+		s.auditFailure(r, "web.client_revoke", "client", clientID, map[string]string{"reason": "invalid_revoke_reason"})
+		writeWebStatusError(w, http.StatusBadRequest, "invalid_revoke_reason")
+		return
+	}
+	if err := s.store.RevokeClient(r.Context(), clientID); err != nil {
+		s.auditStoreFailure(r, "web.client_revoke", "client", clientID, err)
+		writeWebMappedError(w, err)
+		return
+	}
+	metadata, _ := json.Marshal(map[string]string{"reason": reason})
+	s.audit(r, "web.client_revoke", "client", clientID, "success", metadata)
+	http.Redirect(w, r, "/web/clients/"+url.PathEscape(clientID)+"?revoked=1", http.StatusSeeOther)
 }
 
 func (s *Server) handleWebAudit(w http.ResponseWriter, r *http.Request) {

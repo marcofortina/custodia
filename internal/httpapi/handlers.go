@@ -134,29 +134,32 @@ func (s *Server) handleDiagnostics(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRevocationStatus(w http.ResponseWriter, r *http.Request) {
-	if strings.TrimSpace(s.clientCRLFile) == "" {
+	status, statusCode, failureReason := s.clientRevocationStatus()
+	if failureReason != "" {
+		s.auditFailure(r, "revocation.status", "system", "", map[string]string{"reason": failureReason})
+	} else {
 		s.audit(r, "revocation.status", "system", "", "success", nil)
-		writeJSON(w, http.StatusOK, model.RevocationStatus{Configured: false, Valid: true})
-		return
+	}
+	writeJSON(w, statusCode, status)
+}
+
+func (s *Server) clientRevocationStatus() (model.RevocationStatus, int, string) {
+	if strings.TrimSpace(s.clientCRLFile) == "" {
+		return model.RevocationStatus{Configured: false, Valid: true}, http.StatusOK, ""
 	}
 	caPEM, err := os.ReadFile(s.clientCAFile)
 	if err != nil {
-		s.auditFailure(r, "revocation.status", "system", "", map[string]string{"reason": "client_ca_unavailable"})
-		writeJSON(w, http.StatusServiceUnavailable, model.RevocationStatus{Configured: true, Valid: false, Source: s.clientCRLFile, Error: "client_ca_unavailable"})
-		return
+		return model.RevocationStatus{Configured: true, Valid: false, Source: s.clientCRLFile, Error: "client_ca_unavailable"}, http.StatusServiceUnavailable, "client_ca_unavailable"
 	}
 	crlStatus, err := mtls.LoadClientCRLStatus(s.clientCRLFile, caPEM)
 	if err != nil {
-		s.auditFailure(r, "revocation.status", "system", "", map[string]string{"reason": "client_crl_invalid"})
-		writeJSON(w, http.StatusServiceUnavailable, model.RevocationStatus{Configured: true, Valid: false, Source: s.clientCRLFile, Error: "client_crl_invalid"})
-		return
+		return model.RevocationStatus{Configured: true, Valid: false, Source: s.clientCRLFile, Error: "client_crl_invalid"}, http.StatusServiceUnavailable, "client_crl_invalid"
 	}
 	expiresIn := int64(0)
 	if !crlStatus.NextUpdate.IsZero() {
 		expiresIn = int64(time.Until(crlStatus.NextUpdate).Seconds())
 	}
-	s.audit(r, "revocation.status", "system", "", "success", nil)
-	writeJSON(w, http.StatusOK, model.RevocationStatus{
+	return model.RevocationStatus{
 		Configured:       true,
 		Valid:            true,
 		Source:           crlStatus.Source,
@@ -165,7 +168,7 @@ func (s *Server) handleRevocationStatus(w http.ResponseWriter, r *http.Request) 
 		NextUpdate:       crlStatus.NextUpdate,
 		RevokedCount:     crlStatus.RevokedCount,
 		ExpiresInSeconds: expiresIn,
-	})
+	}, http.StatusOK, ""
 }
 
 func (s *Server) handleMe(w http.ResponseWriter, r *http.Request) {

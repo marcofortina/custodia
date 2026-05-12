@@ -46,6 +46,6 @@ Kubernetes can run the same Lite/Full profile vocabulary, but unsafe Lite combin
 
 ## Admin surface expectation
 
-Bare-metal operators may run `custodia-admin` locally on the server/admin host. Kubernetes operators should not need `kubectl exec` into application pods for normal online administration. Metadata-only, API-backed admin operations belong in the Web Console/API over admin mTLS and Web MFA. Bootstrap, file ownership, CA material placement, Helm values, Kubernetes Secret creation and backup plumbing remain deployment/runbook tasks outside the Web Console.
+Bare-metal operators may run `custodia-admin` locally on the server/admin host. Kubernetes operators should not need `kubectl exec` into application pods for normal online administration. Metadata-only, API-backed admin operations such as one-shot client enrollment, future client revocation and client-CRL status belong in the Web Console/API over admin mTLS and Web MFA. Bootstrap, file ownership, CA material placement, Helm values, Kubernetes Secret creation and backup plumbing remain deployment/runbook tasks outside the Web Console.
 
 One-shot client enrollment token creation is available from both CLI and Web Console, so client onboarding does not require shell access to a Kubernetes pod. The Helm chart runs `custodia-server` and `custodia-signer` as separate Deployments from the same Git-built image. Validate chart values with `make helm-check`; it renders the Full/Lite examples and checks unsafe combinations fail closed.
