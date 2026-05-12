@@ -12,7 +12,7 @@ The server remains a metadata-only control plane: it authenticates clients, vali
 - PostgreSQL-compatible schema and runtime selection for Full deployments.
 - Kubernetes Helm path for `custodia-server` plus `custodia-signer`, with Full/Lite example values and fail-closed Lite PVC guardrails.
 - mTLS client identity and admin metadata workflows.
-- Web console for operational metadata, diagnostics, client enrollment tokens, client revocation, secret version/access inspection, future access-grant revocation, revocation status, audit views and audit JSONL downloads.
+- Web console for operational metadata, diagnostics, client enrollment tokens, client revocation, secret version/access inspection, future access-grant revocation, revocation status, CRL PEM downloads, CRL serial checks, audit views and audit JSONL downloads.
 - Client-side crypto SDKs for Go, Python, Node.js, C++, Java and Rust.
 - Encrypted `custodia-client` CLI workflows for put/get/share/update/revoke/delete.
 - Keyspace addressing for normal user workflows with `namespace/key`.

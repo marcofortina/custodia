@@ -9,13 +9,17 @@ package httpapi
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -1599,12 +1603,124 @@ func TestWebRevocationStatusPage(t *testing.T) {
 		t.Fatalf("expected revocation status page 200, got %d: %s", res.Code, res.Body.String())
 	}
 	body := res.Body.String()
-	for _, expected := range []string{"Revocation Status", "Client CRL", "not configured", "strong revocation"} {
+	for _, expected := range []string{"Revocation Status", "Client CRL", "not configured", "Check serial", "strong revocation"} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("revocation status page missing %q: %s", expected, body)
 		}
 	}
 	assertLastAudit(t, memoryStore, "web.revocation_status", "success", "")
+}
+
+func TestWebRevocationCRLDownloadAndSerialCheck(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	caFile, crlFile := writeTestClientCRL(t, big.NewInt(0x64))
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100, ClientCAFile: caFile, ClientCRLFile: crlFile})
+
+	pageReq := mtlsRequest(http.MethodGet, "/web/revocation", "", "admin")
+	pageRes := httptest.NewRecorder()
+	handler.ServeHTTP(pageRes, pageReq)
+	if pageRes.Code != http.StatusOK {
+		t.Fatalf("expected revocation page 200, got %d: %s", pageRes.Code, pageRes.Body.String())
+	}
+	for _, expected := range []string{"Download client CRL PEM", "Check serial", "Revoked certificates", "1"} {
+		if !strings.Contains(pageRes.Body.String(), expected) {
+			t.Fatalf("revocation page missing %q: %s", expected, pageRes.Body.String())
+		}
+	}
+
+	downloadReq := mtlsRequest(http.MethodGet, "/web/revocation/client.crl.pem", "", "admin")
+	downloadRes := httptest.NewRecorder()
+	handler.ServeHTTP(downloadRes, downloadReq)
+	if downloadRes.Code != http.StatusOK {
+		t.Fatalf("expected CRL download 200, got %d: %s", downloadRes.Code, downloadRes.Body.String())
+	}
+	if got := downloadRes.Header().Get("Content-Type"); got != "application/pkix-crl" {
+		t.Fatalf("unexpected CRL content type %q", got)
+	}
+	if got := downloadRes.Header().Get("Content-Disposition"); !strings.Contains(got, "custodia-client.crl.pem") {
+		t.Fatalf("unexpected CRL content disposition %q", got)
+	}
+	if !strings.Contains(downloadRes.Body.String(), "BEGIN X509 CRL") {
+		t.Fatalf("expected PEM CRL body, got: %s", downloadRes.Body.String())
+	}
+
+	revokedReq := mtlsRequest(http.MethodGet, "/web/revocation/check-serial?serial_hex=64", "", "admin")
+	revokedRes := httptest.NewRecorder()
+	handler.ServeHTTP(revokedRes, revokedReq)
+	if revokedRes.Code != http.StatusOK {
+		t.Fatalf("expected serial check 200, got %d: %s", revokedRes.Code, revokedRes.Body.String())
+	}
+	for _, expected := range []string{"Serial result", "revoked", "64"} {
+		if !strings.Contains(revokedRes.Body.String(), expected) {
+			t.Fatalf("revoked serial page missing %q: %s", expected, revokedRes.Body.String())
+		}
+	}
+
+	goodReq := mtlsRequest(http.MethodGet, "/web/revocation/check-serial?serial_hex=65", "", "admin")
+	goodRes := httptest.NewRecorder()
+	handler.ServeHTTP(goodRes, goodReq)
+	if goodRes.Code != http.StatusOK || !strings.Contains(goodRes.Body.String(), "good") {
+		t.Fatalf("expected good serial status, got %d: %s", goodRes.Code, goodRes.Body.String())
+	}
+
+	missingReq := mtlsRequest(http.MethodGet, "/web/revocation/check-serial", "", "admin")
+	missingRes := httptest.NewRecorder()
+	handler.ServeHTTP(missingRes, missingReq)
+	if missingRes.Code != http.StatusBadRequest || !strings.Contains(missingRes.Body.String(), "missing_serial_hex") {
+		t.Fatalf("expected missing serial error, got %d: %s", missingRes.Code, missingRes.Body.String())
+	}
+}
+
+func writeTestClientCRL(t *testing.T, revokedSerial *big.Int) (string, string) {
+	t.Helper()
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("generate CA key: %v", err)
+	}
+	now := time.Now().UTC().Add(-time.Minute)
+	caTemplate := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "Custodia Test Client CA"},
+		NotBefore:             now.Add(-time.Hour),
+		NotAfter:              now.Add(time.Hour),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+	caDER, err := x509.CreateCertificate(rand.Reader, caTemplate, caTemplate, &key.PublicKey, key)
+	if err != nil {
+		t.Fatalf("create CA certificate: %v", err)
+	}
+	caCert, err := x509.ParseCertificate(caDER)
+	if err != nil {
+		t.Fatalf("parse CA certificate: %v", err)
+	}
+	crlDER, err := x509.CreateRevocationList(rand.Reader, &x509.RevocationList{
+		Number:     big.NewInt(1),
+		ThisUpdate: now,
+		NextUpdate: now.Add(time.Hour),
+		RevokedCertificateEntries: []x509.RevocationListEntry{{
+			SerialNumber:   revokedSerial,
+			RevocationTime: now,
+		}},
+	}, caCert, key)
+	if err != nil {
+		t.Fatalf("create CRL: %v", err)
+	}
+	dir := t.TempDir()
+	caFile := dir + "/client-ca.crt"
+	crlFile := dir + "/client.crl.pem"
+	if err := os.WriteFile(caFile, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: caDER}), 0o600); err != nil {
+		t.Fatalf("write CA file: %v", err)
+	}
+	if err := os.WriteFile(crlFile, pem.EncodeToMemory(&pem.Block{Type: "X509 CRL", Bytes: crlDER}), 0o600); err != nil {
+		t.Fatalf("write CRL file: %v", err)
+	}
+	return caFile, crlFile
 }
 
 func TestWebClientEnrollmentRejectsInvalidTTL(t *testing.T) {

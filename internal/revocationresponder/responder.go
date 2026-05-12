@@ -56,6 +56,42 @@ func CheckCRL(list *x509.RevocationList, serialHex string) (*Status, error) {
 	return status, nil
 }
 
+// CheckCRLs evaluates a serial against multiple verified CRL snapshots and aggregates revocation metadata.
+func CheckCRLs(lists []*x509.RevocationList, serialHex string) (*Status, error) {
+	serial, normalized, err := parseSerialHex(serialHex)
+	if err != nil {
+		return nil, err
+	}
+	status := &Status{
+		SerialHex: normalized,
+		Status:    StatusGood,
+	}
+	var revokedAt *time.Time
+	for _, list := range lists {
+		if list == nil {
+			continue
+		}
+		if status.ThisUpdate.IsZero() || list.ThisUpdate.Before(status.ThisUpdate) {
+			status.ThisUpdate = list.ThisUpdate
+		}
+		if status.NextUpdate.IsZero() || list.NextUpdate.Before(status.NextUpdate) {
+			status.NextUpdate = list.NextUpdate
+		}
+		status.RevokedCount += len(list.RevokedCertificateEntries)
+		for _, entry := range list.RevokedCertificateEntries {
+			if entry.SerialNumber != nil && entry.SerialNumber.Cmp(serial) == 0 {
+				value := entry.RevocationTime
+				revokedAt = &value
+			}
+		}
+	}
+	if revokedAt != nil {
+		status.Status = StatusRevoked
+		status.RevokedAt = revokedAt
+	}
+	return status, nil
+}
+
 func parseSerialHex(value string) (*big.Int, string, error) {
 	serialHex := strings.TrimSpace(value)
 	serialHex = strings.TrimPrefix(serialHex, "0x")

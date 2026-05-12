@@ -30,33 +30,12 @@ type ClientCRLStatus struct {
 
 // LoadClientCRLStatus verifies the CRL signature before reporting status so diagnostics cannot trust forged revocation metadata.
 func LoadClientCRLStatus(crlFile string, caPEM []byte) (ClientCRLStatus, error) {
-	crlPEM, err := os.ReadFile(crlFile)
-	if err != nil {
-		return ClientCRLStatus{}, fmt.Errorf("read client CRL: %w", err)
-	}
-	issuers, err := parseCertificatesFromPEM(caPEM)
+	lists, err := LoadClientRevocationLists(crlFile, caPEM)
 	if err != nil {
 		return ClientCRLStatus{}, err
 	}
 	status := ClientCRLStatus{Source: crlFile}
-	parsedAny := false
-	for len(crlPEM) > 0 {
-		var block *pem.Block
-		block, crlPEM = pem.Decode(crlPEM)
-		if block == nil {
-			break
-		}
-		if block.Type != "X509 CRL" {
-			continue
-		}
-		parsedAny = true
-		list, err := x509.ParseRevocationList(block.Bytes)
-		if err != nil {
-			return ClientCRLStatus{}, fmt.Errorf("parse client CRL: %w", err)
-		}
-		if err := verifyRevocationList(list, issuers); err != nil {
-			return ClientCRLStatus{}, err
-		}
+	for _, list := range lists {
 		if status.Issuer == "" {
 			status.Issuer = list.Issuer.String()
 		}
@@ -68,23 +47,25 @@ func LoadClientCRLStatus(crlFile string, caPEM []byte) (ClientCRLStatus, error) 
 		}
 		status.RevokedCount += len(list.RevokedCertificateEntries)
 	}
-	if !parsedAny {
-		return ClientCRLStatus{}, fmt.Errorf("client CRL file does not contain a valid PEM CRL")
-	}
 	return status, nil
 }
 
-func LoadRevokedClientSerials(crlFile string, caPEM []byte) (map[string]struct{}, error) {
+// LoadClientRevocationLists loads and verifies every PEM CRL in crlFile against the trusted client CA.
+func LoadClientRevocationLists(crlFile string, caPEM []byte) ([]*x509.RevocationList, error) {
 	crlPEM, err := os.ReadFile(crlFile)
 	if err != nil {
 		return nil, fmt.Errorf("read client CRL: %w", err)
 	}
+	return ParseClientRevocationLists(crlPEM, caPEM)
+}
+
+// ParseClientRevocationLists verifies PEM CRLs before returning them to callers that expose operator metadata.
+func ParseClientRevocationLists(crlPEM []byte, caPEM []byte) ([]*x509.RevocationList, error) {
 	issuers, err := parseCertificatesFromPEM(caPEM)
 	if err != nil {
 		return nil, err
 	}
-	revoked := make(map[string]struct{})
-	parsedAny := false
+	var lists []*x509.RevocationList
 	for len(crlPEM) > 0 {
 		var block *pem.Block
 		block, crlPEM = pem.Decode(crlPEM)
@@ -94,7 +75,6 @@ func LoadRevokedClientSerials(crlFile string, caPEM []byte) (map[string]struct{}
 		if block.Type != "X509 CRL" {
 			continue
 		}
-		parsedAny = true
 		list, err := x509.ParseRevocationList(block.Bytes)
 		if err != nil {
 			return nil, fmt.Errorf("parse client CRL: %w", err)
@@ -102,12 +82,24 @@ func LoadRevokedClientSerials(crlFile string, caPEM []byte) (map[string]struct{}
 		if err := verifyRevocationList(list, issuers); err != nil {
 			return nil, err
 		}
+		lists = append(lists, list)
+	}
+	if len(lists) == 0 {
+		return nil, fmt.Errorf("client CRL file does not contain a valid PEM CRL")
+	}
+	return lists, nil
+}
+
+func LoadRevokedClientSerials(crlFile string, caPEM []byte) (map[string]struct{}, error) {
+	lists, err := LoadClientRevocationLists(crlFile, caPEM)
+	if err != nil {
+		return nil, err
+	}
+	revoked := make(map[string]struct{})
+	for _, list := range lists {
 		for _, entry := range list.RevokedCertificateEntries {
 			revoked[serialKey(entry.SerialNumber)] = struct{}{}
 		}
-	}
-	if !parsedAny {
-		return nil, fmt.Errorf("client CRL file does not contain a valid PEM CRL")
 	}
 	return revoked, nil
 }

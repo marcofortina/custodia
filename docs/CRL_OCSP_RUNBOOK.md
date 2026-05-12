@@ -16,6 +16,16 @@ Custodia currently supports local client CRL enforcement. This runbook defines t
 4. Operators verify revocation with a blocked client certificate.
 5. Audit events are exported after revocation propagation.
 
+## Web Console CRL operations
+
+Kubernetes operators can use the admin Web Console instead of entering application pods for normal CRL drills:
+
+- `/web/revocation` shows client CRL health.
+- `/web/revocation/client.crl.pem` downloads the configured client CRL PEM after server-side CA signature verification.
+- `/web/revocation/check-serial?serial_hex=HEX` checks a certificate serial against the configured, verified client CRL.
+
+These browser workflows mirror `custodia-admin revocation fetch-crl` and `custodia-admin revocation check-serial` for online operations. They do not replace the deployment runbook for creating, signing, distributing and atomically mounting CRLs.
+
 ## OCSP gap
 
 OCSP stapling is not implemented in the API process yet. Until then, CRL enforcement is the implemented revocation control and must be monitored as a production dependency.

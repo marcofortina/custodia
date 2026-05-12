@@ -12,6 +12,8 @@ import (
 	"custodia/internal/audit"
 	"custodia/internal/build"
 	"custodia/internal/model"
+	"custodia/internal/mtls"
+	"custodia/internal/revocationresponder"
 	"custodia/internal/webauth"
 	_ "embed"
 	"encoding/base64"
@@ -20,6 +22,7 @@ import (
 	"html"
 	"net/http"
 	"net/url"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -972,7 +975,79 @@ func (s *Server) handleWebRevocationStatus(w http.ResponseWriter, r *http.Reques
 	} else {
 		s.audit(r, "web.revocation_status", "system", "", "success", nil)
 	}
-	body := webHero("Revocation Status", "Client certificate revocation metadata visible without entering a server or Kubernetes pod.") + webRevocationStatusPanel(status)
+	body := webHero("Revocation Status", "Client certificate revocation metadata visible without entering a server or Kubernetes pod.") + webRevocationStatusPanel(status) + webRevocationSerialCheckForm("")
+	writeWebPageStatusWithOptions(w, statusCode, "Revocation Status", body, true)
+}
+
+func (s *Server) handleWebClientCRLDownload(w http.ResponseWriter, r *http.Request) {
+	if strings.TrimSpace(s.clientCRLFile) == "" {
+		s.auditFailure(r, "web.revocation_crl_download", "system", "", map[string]string{"reason": "crl_not_configured"})
+		writeWebStatusError(w, http.StatusNotFound, "crl_not_configured")
+		return
+	}
+	caPEM, err := os.ReadFile(s.clientCAFile)
+	if err != nil {
+		s.auditFailure(r, "web.revocation_crl_download", "system", "", map[string]string{"reason": "client_ca_unavailable"})
+		writeWebStatusError(w, http.StatusServiceUnavailable, "client_ca_unavailable")
+		return
+	}
+	if _, err := mtls.LoadClientRevocationLists(s.clientCRLFile, caPEM); err != nil {
+		s.auditFailure(r, "web.revocation_crl_download", "system", "", map[string]string{"reason": "client_crl_invalid"})
+		writeWebStatusError(w, http.StatusServiceUnavailable, "client_crl_invalid")
+		return
+	}
+	payload, err := os.ReadFile(s.clientCRLFile)
+	if err != nil {
+		s.auditFailure(r, "web.revocation_crl_download", "system", "", map[string]string{"reason": "client_crl_unavailable"})
+		writeWebStatusError(w, http.StatusServiceUnavailable, "client_crl_unavailable")
+		return
+	}
+	w.Header().Set("Content-Type", "application/pkix-crl")
+	w.Header().Set("Content-Disposition", `attachment; filename="custodia-client.crl.pem"`)
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(payload)
+	s.audit(r, "web.revocation_crl_download", "system", "", "success", nil)
+}
+
+func (s *Server) handleWebRevocationCheckSerial(w http.ResponseWriter, r *http.Request) {
+	serialHex := strings.TrimSpace(r.URL.Query().Get("serial_hex"))
+	if serialHex == "" {
+		s.auditFailure(r, "web.revocation_check_serial", "system", "", map[string]string{"reason": "missing_serial_hex"})
+		s.renderWebRevocationSerialResult(w, http.StatusBadRequest, "missing_serial_hex", serialHex, nil)
+		return
+	}
+	if strings.TrimSpace(s.clientCRLFile) == "" {
+		s.auditFailure(r, "web.revocation_check_serial", "system", serialHex, map[string]string{"reason": "crl_not_configured"})
+		s.renderWebRevocationSerialResult(w, http.StatusNotFound, "crl_not_configured", serialHex, nil)
+		return
+	}
+	caPEM, err := os.ReadFile(s.clientCAFile)
+	if err != nil {
+		s.auditFailure(r, "web.revocation_check_serial", "system", serialHex, map[string]string{"reason": "client_ca_unavailable"})
+		s.renderWebRevocationSerialResult(w, http.StatusServiceUnavailable, "client_ca_unavailable", serialHex, nil)
+		return
+	}
+	lists, err := mtls.LoadClientRevocationLists(s.clientCRLFile, caPEM)
+	if err != nil {
+		s.auditFailure(r, "web.revocation_check_serial", "system", serialHex, map[string]string{"reason": "client_crl_invalid"})
+		s.renderWebRevocationSerialResult(w, http.StatusServiceUnavailable, "client_crl_invalid", serialHex, nil)
+		return
+	}
+	serialStatus, err := revocationresponder.CheckCRLs(lists, serialHex)
+	if err != nil {
+		s.auditFailure(r, "web.revocation_check_serial", "system", serialHex, map[string]string{"reason": "invalid_serial_hex"})
+		s.renderWebRevocationSerialResult(w, http.StatusBadRequest, "invalid_serial_hex", serialHex, nil)
+		return
+	}
+	metadata, _ := json.Marshal(map[string]string{"status": serialStatus.Status})
+	s.audit(r, "web.revocation_check_serial", "system", serialStatus.SerialHex, "success", metadata)
+	s.renderWebRevocationSerialResult(w, http.StatusOK, "", serialHex, serialStatus)
+}
+
+func (s *Server) renderWebRevocationSerialResult(w http.ResponseWriter, statusCode int, errorCode string, serialHex string, serialStatus *revocationresponder.Status) {
+	status, _, _ := s.clientRevocationStatus()
+	body := webHero("Revocation Status", "Client certificate revocation metadata visible without entering a server or Kubernetes pod.") + webRevocationStatusPanel(status) + webRevocationSerialCheckForm(serialHex) + webRevocationSerialResultPanel(errorCode, serialStatus)
 	writeWebPageStatusWithOptions(w, statusCode, "Revocation Status", body, true)
 }
 
@@ -985,7 +1060,7 @@ func webRevocationStatusPanel(status model.RevocationStatus) string {
 	if !status.Valid {
 		valid = webBadge("unavailable")
 	}
-	return `<section class="console-panel"><p class="console-panel-label">Client CRL</p>` +
+	body := `<section class="console-panel"><p class="console-panel-label">Client CRL</p>` +
 		`<dl class="console-detail"><dt>Configured</dt><dd>` + configured + `</dd>` +
 		`<dt>Valid</dt><dd>` + valid + `</dd>` +
 		`<dt>Source</dt><dd>` + webOptionalText(status.Source) + `</dd>` +
@@ -994,8 +1069,35 @@ func webRevocationStatusPanel(status model.RevocationStatus) string {
 		`<dt>Next update</dt><dd>` + webOptionalTimeValue(status.NextUpdate) + `</dd>` +
 		`<dt>Revoked certificates</dt><dd>` + html.EscapeString(strconv.Itoa(status.RevokedCount)) + `</dd>` +
 		`<dt>Expires in seconds</dt><dd>` + html.EscapeString(strconv.FormatInt(status.ExpiresInSeconds, 10)) + `</dd>` +
-		`<dt>Error</dt><dd>` + webOptionalText(status.Error) + `</dd></dl>` +
-		`<p class="console-muted">This page reports certificate revocation distribution health only. Secret access revocation is future-only; strong revocation still requires creating a new encrypted version without the revoked recipient.</p></section>`
+		`<dt>Error</dt><dd>` + webOptionalText(status.Error) + `</dd></dl>`
+	if status.Configured && status.Valid {
+		body += `<p><a class="console-button" href="/web/revocation/client.crl.pem">Download client CRL PEM</a></p>`
+	}
+	return body + `<p class="console-muted">This page reports certificate revocation distribution health only. Secret access revocation is future-only; strong revocation still requires creating a new encrypted version without the revoked recipient.</p></section>`
+}
+
+func webRevocationSerialCheckForm(serialHex string) string {
+	return `<section class="console-panel"><p class="console-panel-label">Check serial</p><p class="console-muted">Check a certificate serial number against the configured, CA-verified client CRL without entering a server or Kubernetes pod.</p>` +
+		`<form class="console-toolbar" method="get" action="/web/revocation/check-serial">` +
+		`<label>Serial hex<input name="serial_hex" value="` + html.EscapeString(strings.TrimSpace(serialHex)) + `" placeholder="64"></label>` +
+		`<button type="submit">Check serial</button></form></section>`
+}
+
+func webRevocationSerialResultPanel(errorCode string, serialStatus *revocationresponder.Status) string {
+	if serialStatus == nil {
+		if strings.TrimSpace(errorCode) == "" {
+			return ""
+		}
+		return `<section class="console-panel" role="alert"><p class="console-panel-label">Serial check error</p><p>Error code: <code>` + html.EscapeString(errorCode) + `</code></p></section>`
+	}
+	return `<section class="console-panel"><p class="console-panel-label">Serial result</p>` +
+		`<dl class="console-detail"><dt>Serial</dt><dd><code>` + html.EscapeString(serialStatus.SerialHex) + `</code></dd>` +
+		`<dt>Status</dt><dd>` + webBadge(serialStatus.Status) + `</dd>` +
+		`<dt>Revoked at</dt><dd>` + webOptionalTime(serialStatus.RevokedAt) + `</dd>` +
+		`<dt>This update</dt><dd>` + webOptionalTimeValue(serialStatus.ThisUpdate) + `</dd>` +
+		`<dt>Next update</dt><dd>` + webOptionalTimeValue(serialStatus.NextUpdate) + `</dd>` +
+		`<dt>CRL revoked certificates</dt><dd>` + html.EscapeString(strconv.Itoa(serialStatus.RevokedCount)) + `</dd></dl>` +
+		`<p class="console-muted">This is CRL evidence only. Certificate revocation blocks future mTLS use after the CRL is enforced by the receiving component.</p></section>`
 }
 
 func webOptionalText(value string) string {
