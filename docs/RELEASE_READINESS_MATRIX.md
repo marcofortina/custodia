@@ -27,6 +27,7 @@ not different products and they are not different server binaries.
 | Kubernetes runtime smoke | already installed release-candidate cluster | Kubernetes promotion | [`KUBERNETES_RUNTIME_SMOKE.md`](KUBERNETES_RUNTIME_SMOKE.md) |
 | Operational readiness smoke | running bare-metal or Kubernetes endpoint | endpoint promotion | [`OPERATIONAL_READINESS_SMOKE.md`](OPERATIONAL_READINESS_SMOKE.md) |
 | Production config gate | offline production evidence workstation | production promotion | [`PRODUCTION_READINESS_GATE.md`](PRODUCTION_READINESS_GATE.md) |
+| Security hardening final review | release manager / security reviewer | production-ready claim | [`SECURITY_HARDENING_FINAL_REVIEW.md`](SECURITY_HARDENING_FINAL_REVIEW.md) |
 | External evidence gate | offline production evidence workstation | Fort Knox production claim | [`PRODUCTION_EVIDENCE.md`](PRODUCTION_EVIDENCE.md) |
 
 ## Minimal release-candidate command set
@@ -62,6 +63,7 @@ captured for the exact commit and artifacts being shipped:
 - source/bare-metal operator smoke evidence for the public Quickstart path;
 - Kubernetes runtime smoke evidence for Kubernetes artifacts;
 - operational readiness smoke evidence for at least one bootstrapped endpoint;
+- completed security hardening final review with findings and promotion decision;
 - `custodia-admin production check` output for the production environment file;
 - `custodia-admin production evidence-check` output for external infrastructure
   evidence.
@@ -79,6 +81,7 @@ Stop promotion immediately when any of the following happens:
   `/usr/share/man` or `/usr/share/doc` through `dpkg` path-exclude filters;
 - operational smoke cannot reach `/live`, `/ready`, admin status, diagnostics or
   revocation status through the expected TLS/mTLS boundary;
+- the security hardening final review has open critical findings;
 - production readiness reports a critical finding;
 - external evidence files are missing or point to placeholders.
 
