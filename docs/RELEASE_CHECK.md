@@ -18,9 +18,10 @@ It runs:
 
 ```bash
 make release-check
+make helm-check
 ```
 
-If Helm is not installed, the script skips chart render checks with a warning; release pipelines that publish Kubernetes artifacts should install Helm and run `make helm-check` as a required job. If TLC is not installed, the script skips formal verification with a warning. Production release pipelines should install TLC and run `make formal-check` as a required job.
+If Helm is not installed, the script skips chart render checks with a warning; release pipelines that publish Kubernetes artifacts should install Helm and run `make helm-check` as a required job. `make helm-check` renders the committed Full and Lite example values and verifies that unsafe combinations such as Lite without PVC and Full with SQLite fail closed. If TLC is not installed, the script skips formal verification with a warning. Production release pipelines should install TLC and run `make formal-check` as a required job.
 
 ## Scope
 

@@ -14,11 +14,13 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - Admin client IDs are explicitly configured; no wildcard admin mode exists.
 - Web console remains metadata-only and requires admin mTLS; enable TOTP MFA before production.
 - Passkey endpoints are available behind admin mTLS and Web MFA. Keep TOTP enabled unless an audited external assertion verifier is configured and evidenced.
-- Audit export integrity headers are validated by downstream archival jobs with `custodia-admin audit verify-export`.
+- Audit export integrity headers are validated by downstream archival jobs with `custodia-admin audit verify-export`; Web Console JSONL downloads are acceptable evidence capture only when the SHA-256 and event-count headers are preserved with the body.
 - Audit export artifacts are bundled with `custodia-admin audit archive-export` before WORM/SIEM ingestion.
 - Verified audit archive bundles are shipped with `custodia-admin audit ship-archive` before SIEM/WORM ingestion.
 - `CUSTODIA_SIGNER_KEY_PROVIDER` is explicitly set; production must not rely on file-backed CA keys unless this is an isolated bootstrap environment.
+- Kubernetes values pass `make helm-check`; unsafe chart combinations fail before render.
 - Kubernetes Lite, when used outside disposable labs, has `persistence.enabled=true`, one server replica and a documented PVC snapshot/off-cluster backup plan. See [`KUBERNETES_LITE_BACKUP_RESTORE.md`](KUBERNETES_LITE_BACKUP_RESTORE.md).
+- Kubernetes Full uses external PostgreSQL/CockroachDB, Valkey, HSM/PKCS#11 or equivalent signer controls and WORM/SIEM/object-lock evidence; SoftHSM and MinIO remain development/smoke substitutes unless independently production-governed.
 
 ## Must remain false
 

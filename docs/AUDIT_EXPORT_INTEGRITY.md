@@ -63,3 +63,7 @@ custodia-admin audit verify-export \
 ```
 
 The command recomputes SHA-256 over the exact JSONL body and compares the non-empty JSONL line count with the recorded event-count header. It returns a JSON verification result and exits non-zero on digest or count mismatch.
+
+## Web Console export
+
+The Web Console Audit Events page provides a `Download JSONL` action at `/web/audit/export`. It uses the same bounded audit filters as the HTML page and returns the same `X-Custodia-Audit-Export-SHA256` and `X-Custodia-Audit-Export-Events` headers as the API export endpoint. Kubernetes operators can use this path for evidence capture without entering application pods, provided the JSONL body and both headers are stored together for later verification.

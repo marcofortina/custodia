@@ -7,16 +7,18 @@ The server remains a metadata-only control plane: it authenticates clients, vali
 ## Highlights
 
 - Universal server build with runtime-selected store backend.
+- Deployment matrix covering bare-metal source install, DEB/RPM install and Kubernetes image/chart install.
 - Lite profile with SQLite support and the same server binary as Full.
 - PostgreSQL-compatible schema and runtime selection for Full deployments.
+- Kubernetes Helm path for `custodia-server` plus `custodia-signer`, with Full/Lite example values and fail-closed Lite PVC guardrails.
 - mTLS client identity and admin metadata workflows.
-- Web console for operational metadata, diagnostics, audit and access requests.
+- Web console for operational metadata, diagnostics, client enrollment tokens, client revocation, revocation status, audit views and audit JSONL downloads.
 - Client-side crypto SDKs for Go, Python, Node.js, C++, Java and Rust.
 - Encrypted `custodia-client` CLI workflows for put/get/share/update/revoke/delete.
 - Keyspace addressing for normal user workflows with `namespace/key`.
-- Hash-chained audit events and export verification helpers.
+- Hash-chained audit events, browser/API JSONL exports and export verification helpers.
 - Package builds for server, client and SDK artifacts.
-- Release guardrails for build metadata, package manifests, install smoke, structured runtime YAML, keyspace regressions and client crypto documentation.
+- Release guardrails for build metadata, package manifests, install smoke, structured runtime YAML, Helm render safety, keyspace regressions and client crypto documentation.
 
 ## Namespace/key workflow
 
@@ -61,6 +63,10 @@ The server does not derive DEKs, decrypt ciphertext, unwrap envelopes or interpr
 The repository includes Go, Python, Node.js, C++, Java and Rust SDKs. The canonical feature matrix is [`CLIENT_LIBRARIES.md`](CLIENT_LIBRARIES.md).
 
 0.1.0 requires keyspace parity for normal public workflows across all SDKs. Release checks and package smoke tests guard this surface.
+
+## Deployment targets and profiles
+
+0.1.0 documents three install targets: bare-metal from source, bare-metal from DEB/RPM packages and Kubernetes from a Git-built image plus Helm chart. Lite, Full and custom are runtime profiles selected through configuration, not separate server products. Kubernetes Lite requires one server replica, SQLite on a PersistentVolumeClaim and an explicit backup plan; Kubernetes Full expects external PostgreSQL/CockroachDB, Valkey and production signer/evidence integrations.
 
 ## Runtime configuration
 
