@@ -9,25 +9,19 @@ Custodia is a REST vault for encrypted secrets. The server authenticates clients
 
 ## Start here
 
-New to Custodia? Start with the step-by-step quickstart:
+New to Custodia? Start with the document that matches your task:
 
-**[`docs/DEPLOYMENT_MATRIX.md` — choose bare metal vs Kubernetes and Lite vs Full](docs/DEPLOYMENT_MATRIX.md)**
-
-**[`docs/QUICKSTART.md` — bare-metal install from packages or from source](docs/QUICKSTART.md)**
-
-**[`docs/KUBERNETES_INSTALL.md` — Kubernetes install from a Git-built image](docs/KUBERNETES_INSTALL.md)**
-
-**[`docs/BARE_METAL_FULL_INSTALL.md` — Full bare-metal server/signer install checklist](docs/BARE_METAL_FULL_INSTALL.md)**
-
-**[`docs/KUBERNETES_BOOTSTRAP_MATERIAL.md` — Kubernetes Secret and Web MFA bootstrap material](docs/KUBERNETES_BOOTSTRAP_MATERIAL.md)**
-
-**[`docs/RELEASE_READINESS_MATRIX.md` — final release-candidate sign-off map](docs/RELEASE_READINESS_MATRIX.md)**
-
-**[`docs/KUBERNETES_RUNTIME_SMOKE.md` — read-only Kubernetes runtime smoke](docs/KUBERNETES_RUNTIME_SMOKE.md)**
-
-**[`docs/LITE_BACKUP_RESTORE_SMOKE.md` — disposable Lite backup/restore smoke](docs/LITE_BACKUP_RESTORE_SMOKE.md)**
-
-**[`docs/END_TO_END_OPERATOR_SMOKE.md` — release-candidate end-to-end operator smoke](docs/END_TO_END_OPERATOR_SMOKE.md)**
+| Task | Document | Use it when |
+| --- | --- | --- |
+| Choose deployment target and profile | [`docs/DEPLOYMENT_MATRIX.md`](docs/DEPLOYMENT_MATRIX.md) | You need to decide between bare metal, Kubernetes, Lite and Full. |
+| Install on bare metal | [`docs/QUICKSTART.md`](docs/QUICKSTART.md) | You want the first package/source install path and Lite bootstrap. |
+| Install Full on bare metal | [`docs/BARE_METAL_FULL_INSTALL.md`](docs/BARE_METAL_FULL_INSTALL.md) | You already have PostgreSQL/CockroachDB, Valkey and signer dependencies. |
+| Install on Kubernetes | [`docs/KUBERNETES_INSTALL.md`](docs/KUBERNETES_INSTALL.md) | You are deploying a Git-built image with the Helm chart. |
+| Prepare Kubernetes Secrets | [`docs/KUBERNETES_BOOTSTRAP_MATERIAL.md`](docs/KUBERNETES_BOOTSTRAP_MATERIAL.md) | You need mTLS, signer and Web MFA material before Helm install. |
+| Sign off a release candidate | [`docs/RELEASE_READINESS_MATRIX.md`](docs/RELEASE_READINESS_MATRIX.md) | You are validating release artifacts and production-readiness gates. |
+| Smoke-test Kubernetes | [`docs/KUBERNETES_RUNTIME_SMOKE.md`](docs/KUBERNETES_RUNTIME_SMOKE.md) | You need a read-only runtime check against an installed cluster. |
+| Smoke-test Lite backup/restore | [`docs/LITE_BACKUP_RESTORE_SMOKE.md`](docs/LITE_BACKUP_RESTORE_SMOKE.md) | You need disposable SQLite backup/restore validation. |
+| Run the end-to-end operator rehearsal | [`docs/END_TO_END_OPERATOR_SMOKE.md`](docs/END_TO_END_OPERATOR_SMOKE.md) | You are rehearsing server/admin, Alice, Bob and backup flows. |
 
 If you are not sure what to choose, use the package install path. It covers Debian/Ubuntu `.deb`, Fedora `.rpm`, the server/client/SDK package split, Lite bootstrap, admin certificate setup, Web TOTP, the first API check and the first encrypted client smoke test.
 
