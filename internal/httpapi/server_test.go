@@ -3157,6 +3157,41 @@ func TestWebTOTPLoginUnlocksConsole(t *testing.T) {
 	}
 }
 
+func TestWebLoginAllowsCrossOriginPreSessionHandoff(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	secret := "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+	handler := New(Options{
+		Store:            memoryStore,
+		Limiter:          ratelimit.NewMemoryLimiter(),
+		AdminClientIDs:   map[string]bool{"admin": true},
+		ClientRateLimit:  100,
+		GlobalRateLimit:  100,
+		WebMFARequired:   true,
+		WebTOTPSecret:    secret,
+		WebSessionSecret: "01234567890123456789012345678901",
+		WebSessionTTL:    time.Minute,
+		WebSessionSecure: false,
+	})
+	code, err := webauth.TOTPCode(secret, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("TOTPCode() error = %v", err)
+	}
+
+	login := mtlsRequest(http.MethodPost, "/web/login", "totp="+code, "admin")
+	login.Host = "192.0.2.10:9443"
+	login.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	login.Header.Set("Origin", "https://192.0.2.10:9443")
+	loginRes := httptest.NewRecorder()
+	handler.ServeHTTP(loginRes, login)
+	if loginRes.Code != http.StatusSeeOther {
+		t.Fatalf("expected login redirect, got %d: %s", loginRes.Code, loginRes.Body.String())
+	}
+}
+
 func TestWebLogoutClearsSessionCookie(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()

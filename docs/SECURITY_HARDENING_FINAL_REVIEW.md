@@ -38,7 +38,8 @@ Verify:
 - Web MFA is enabled before production exposure.
 - Session cookies use secure attributes appropriate for HTTPS-only operation.
 - Browser mutations are protected by same-origin `Origin`/`Referer` checks.
-- POST actions fail closed for cross-origin requests.
+- Authenticated POST actions fail closed for cross-origin requests.
+- `POST /web/login` is treated as a pre-session handoff: it may bypass the same-origin guard, but still requires admin mTLS and valid Web MFA before issuing a session.
 - Logout invalidates the Web session.
 - Web pages remain metadata-only.
 - Secret metadata pages do not render plaintext, ciphertext, DEKs, recipient

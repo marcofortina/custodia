@@ -285,6 +285,10 @@ func (s *Server) webMutationOriginGuard(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		if isWebPreSessionMutationPath(r.URL.Path) {
+			next.ServeHTTP(w, r)
+			return
+		}
 		if origin := strings.TrimSpace(r.Header.Get("Origin")); origin != "" && !sameOriginWebHeader(origin, r.Host) {
 			s.auditFailure(r, "web.origin_guard", "system", "", map[string]string{"reason": "origin_mismatch"})
 			writeWebErrorPage(w, http.StatusForbidden, "Cross-origin request blocked", "The Custodia Console rejected this browser request because its Origin header does not match this host.")
@@ -299,6 +303,10 @@ func (s *Server) webMutationOriginGuard(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func isWebPreSessionMutationPath(path string) bool {
+	return path == "/web/login"
 }
 
 func isMutatingMethod(method string) bool {

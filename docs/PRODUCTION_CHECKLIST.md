@@ -13,7 +13,7 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - `CUSTODIA_CLIENT_CRL_FILE` is mounted when local CRL enforcement is used.
 - `custodia-admin revocation status` is monitored and alerts before CRL expiry.
 - Web Console CRL download and serial-check drills are exercised for Kubernetes operations where pod shell access is not part of the normal workflow.
-- The same-origin Web Console mutation guard is covered by tests and operators access the console through the canonical HTTPS host, not ad-hoc alternate origins.
+- The same-origin Web Console mutation guard is covered by tests and operators access the console through the canonical HTTPS host, not ad-hoc alternate origins. The pre-session `POST /web/login` handoff is allowed to proceed to mTLS/Web MFA validation so browser-origin quirks cannot lock out administrators before a session exists.
 - `/ready` runs on a dedicated health listener that is not exposed outside the cluster.
 - Admin client IDs are explicitly configured; no wildcard admin mode exists.
 - Web console remains metadata-only and requires admin mTLS; enable TOTP MFA before production. Kubernetes operators can inspect secret version/access metadata and revoke future access grants without entering application pods.

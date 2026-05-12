@@ -14,6 +14,8 @@ The Custodia web console is an admin-only, metadata-only surface.
 
 The Web Console uses admin mTLS plus the configured web MFA/session layer for authenticated pages. Mutating browser requests under `/web/` also enforce same-origin `Origin`/`Referer` guardrails when those headers are present. Cross-origin form posts and JavaScript mutations are rejected before the handler runs. CLI/API callers are unaffected because the guard applies only to Web Console paths and mutating HTTP methods.
 
+The pre-session `POST /web/login` handoff is intentionally exempt from this origin guard. It still requires an authenticated admin mTLS identity and a valid Web MFA assertion, but it must not fail closed on browser-origin quirks before the session cookie exists. Authenticated Web Console mutations after login remain covered by the same-origin guard.
+
 This guard complements, rather than replaces, the existing `SameSite=Strict`, `HttpOnly` web session cookie, Content Security Policy and metadata-only page boundary.
 
 ## Pages
