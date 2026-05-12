@@ -171,7 +171,7 @@ MinIO with Object Lock may be used to exercise S3/WORM audit shipment flows when
 
 ## 6. Normal administration
 
-Kubernetes operators should not need `kubectl exec` into application pods for normal online operations. Use the Web Console/API over admin mTLS and Web MFA for metadata-only administration such as status, diagnostics, client views, access request views, audit views and enrollment token creation.
+Kubernetes operators should not need `kubectl exec` into application pods for normal online operations. Use the Web Console/API over admin mTLS and Web MFA for metadata-only administration such as status, diagnostics, client views, access request views, audit views and one-shot enrollment token creation through `/web/client-enrollments`.
 
 Bootstrap, Kubernetes Secret creation, Helm values, CA/HSM material placement, external database provisioning and backup plumbing remain deployment/runbook tasks outside the Web Console.
 

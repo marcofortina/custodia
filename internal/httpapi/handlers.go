@@ -63,6 +63,7 @@ func (s *Server) handleWeb(w http.ResponseWriter, r *http.Request) {
 		`<section class="console-grid" aria-label="Console sections">` +
 		`<a class="console-link-card" href="/web/status" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Operational Status</strong><span>Store, rate limiter, build and web auth posture.</span></a>` +
 		`<a class="console-link-card" href="/web/clients" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Clients</strong><span>mTLS identities and active/revoked state.</span></a>` +
+		`<a class="console-link-card" href="/web/client-enrollments" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Client Enrollments</strong><span>Create one-shot onboarding tokens without pod shell access.</span></a>` +
 		`<a class="console-link-card" href="/web/access-requests" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Access Requests</strong><span>Pending grant metadata without envelopes.</span></a>` +
 		`<a class="console-link-card" href="/web/audit" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Audit Events</strong><span>Recent admin-visible audit metadata.</span></a>` +
 		`<a class="console-link-card" href="/web/audit/verify" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Verify Audit</strong><span>Hash-chain integrity summary.</span></a>` +

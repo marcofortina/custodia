@@ -45,26 +45,31 @@ func (s *Server) handleCreateClientEnrollment(w http.ResponseWriter, r *http.Req
 	if !decodeJSON(w, r, &req) {
 		return
 	}
+	response, status, code := s.createClientEnrollment(r, time.Duration(req.TTLSeconds)*time.Second)
+	if code != "" {
+		writeError(w, status, code)
+		return
+	}
+	writeJSON(w, http.StatusCreated, response)
+}
+
+func (s *Server) createClientEnrollment(r *http.Request, ttl time.Duration) (model.ClientEnrollmentCreateResponse, int, string) {
 	serverURL := strings.TrimSpace(s.enrollmentServerURL)
 	if serverURL == "" {
 		s.auditFailure(r, "client.enrollment_create", "client_enrollment", "", map[string]string{"reason": "server_url_not_configured"})
-		writeError(w, http.StatusServiceUnavailable, "server_url_not_configured")
-		return
+		return model.ClientEnrollmentCreateResponse{}, http.StatusServiceUnavailable, "server_url_not_configured"
 	}
-	ttl := time.Duration(req.TTLSeconds) * time.Second
 	if ttl <= 0 {
 		ttl = defaultEnrollmentTTL
 	}
 	if ttl > maxEnrollmentTTL {
 		s.auditFailure(r, "client.enrollment_create", "client_enrollment", "", map[string]string{"reason": "invalid_ttl"})
-		writeError(w, http.StatusBadRequest, "invalid_ttl")
-		return
+		return model.ClientEnrollmentCreateResponse{}, http.StatusBadRequest, "invalid_ttl"
 	}
 	token, tokenHash, err := newEnrollmentToken()
 	if err != nil {
 		s.auditFailure(r, "client.enrollment_create", "client_enrollment", "", map[string]string{"reason": "token_generation_failed"})
-		writeError(w, http.StatusInternalServerError, "internal_error")
-		return
+		return model.ClientEnrollmentCreateResponse{}, http.StatusInternalServerError, "internal_error"
 	}
 	now := time.Now().UTC()
 	expiresAt := now.Add(ttl)
@@ -72,11 +77,11 @@ func (s *Server) handleCreateClientEnrollment(w http.ResponseWriter, r *http.Req
 	s.enrollmentTokens[tokenHash] = enrollmentToken{Hash: tokenHash, CreatedAt: now, ExpiresAt: expiresAt}
 	s.enrollmentMu.Unlock()
 	s.audit(r, "client.enrollment_create", "client_enrollment", "", "success", nil)
-	writeJSON(w, http.StatusCreated, model.ClientEnrollmentCreateResponse{
+	return model.ClientEnrollmentCreateResponse{
 		ServerURL:       serverURL,
 		EnrollmentToken: token,
 		ExpiresAt:       expiresAt,
-	})
+	}, http.StatusCreated, ""
 }
 
 func (s *Server) handleClientEnrollmentClaim(w http.ResponseWriter, r *http.Request) {

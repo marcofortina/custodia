@@ -244,6 +244,7 @@ func writeWebPageStatusWithOptions(w http.ResponseWriter, statusCode int, title 
 <a href="/web/status">Status</a>
 <a href="/web/diagnostics">Diagnostics</a>
 <a href="/web/clients">Clients</a>
+<a href="/web/client-enrollments">Client Enrollments</a>
 <a href="/web/access-requests">Access Requests</a>
 <a href="/web/audit">Audit</a>
 <a href="/web/audit/verify">Verify Audit</a>
@@ -253,7 +254,7 @@ func writeWebPageStatusWithOptions(w http.ResponseWriter, statusCode int, title 
 <header class="console-mobile-nav" aria-label="Console mobile navigation">
 <a class="console-brand" href="/web/" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true" aria-label="Custodia overview"><span class="console-logo" aria-hidden="true">C</span><span>Custodia</span></a>
 <nav aria-label="Console mobile sections" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">
-<a href="/web/status">Status</a><a href="/web/clients">Clients</a><a href="/web/audit">Audit</a>
+<a href="/web/status">Status</a><a href="/web/clients">Clients</a><a href="/web/client-enrollments">Enrollments</a><a href="/web/audit">Audit</a>
 </nav>
 </header>`
 		refreshControls = webRefreshControls()
@@ -683,6 +684,83 @@ func statusOutcome(storeStatus, rateLimiterStatus string) string {
 		return "degraded"
 	}
 	return "success"
+}
+
+func (s *Server) handleWebClientEnrollments(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		s.renderWebClientEnrollmentForm(w, http.StatusOK, "", "", "")
+		return
+	}
+	if r.Method != http.MethodPost {
+		writeWebStatusError(w, http.StatusMethodNotAllowed, "method_not_allowed")
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		s.auditFailure(r, "web.client_enrollment_create", "client_enrollment", "", map[string]string{"reason": "invalid_form"})
+		s.renderWebClientEnrollmentForm(w, http.StatusBadRequest, "", "invalid_form", "The submitted enrollment form could not be parsed. Check the values and try again.")
+		return
+	}
+	ttlText := strings.TrimSpace(r.Form.Get("ttl"))
+	ttl := defaultEnrollmentTTL
+	if ttlText != "" {
+		parsed, err := time.ParseDuration(ttlText)
+		if err != nil || parsed <= 0 {
+			s.auditFailure(r, "web.client_enrollment_create", "client_enrollment", "", map[string]string{"reason": "invalid_ttl"})
+			s.renderWebClientEnrollmentForm(w, http.StatusBadRequest, ttlText, "invalid_ttl", "TTL must be a positive Go duration, for example 15m, 1h or 24h.")
+			return
+		}
+		ttl = parsed
+	}
+	response, status, code := s.createClientEnrollment(r, ttl)
+	if code != "" {
+		if code == "invalid_ttl" {
+			s.renderWebClientEnrollmentForm(w, status, ttlText, code, "TTL must not exceed 24h for one-shot enrollment tokens.")
+			return
+		}
+		writeWebStatusError(w, status, code)
+		return
+	}
+	body := webHero("Client Enrollments", "Create one-shot client onboarding tokens without shell access to a server or Kubernetes pod.") +
+		webClientEnrollmentForm(ttlText) +
+		`<section class="console-panel" aria-label="New enrollment token"><p class="console-panel-label">Enrollment token</p>` +
+		`<dl class="console-detail"><dt>Server URL</dt><dd><code>` + html.EscapeString(response.ServerURL) + `</code></dd>` +
+		`<dt>Enrollment token</dt><dd><code>` + html.EscapeString(response.EnrollmentToken) + `</code></dd>` +
+		`<dt>Expires at</dt><dd>` + html.EscapeString(response.ExpiresAt.Format(time.RFC3339)) + `</dd></dl>` +
+		`<p class="console-muted">The token is shown only in this response. Treat it as sensitive and transfer it to the client host through your normal trusted channel.</p>` +
+		`<pre><code>custodia-client mtls enroll --client-id client_alice --server-url ` + html.EscapeString(response.ServerURL) + ` --enrollment-token ` + html.EscapeString(response.EnrollmentToken) + `</code></pre>` +
+		`<p class="console-muted">If this is a disposable lab using the bootstrap CA before the client trusts it, add <code>--insecure</code>. Do not use <code>--insecure</code> for real remote clients.</p></section>`
+	writeWebPage(w, "Client Enrollments", body)
+}
+
+func (s *Server) renderWebClientEnrollmentForm(w http.ResponseWriter, statusCode int, ttlText string, errorCode string, errorMessage string) {
+	body := webHero("Client Enrollments", "Create one-shot client onboarding tokens without shell access to a server or Kubernetes pod.") + webClientEnrollmentNotice(errorCode, errorMessage) + webClientEnrollmentForm(ttlText)
+	writeWebPageStatusWithOptions(w, statusCode, "Client Enrollments", body, true)
+}
+
+func webClientEnrollmentNotice(errorCode string, errorMessage string) string {
+	errorCode = strings.TrimSpace(errorCode)
+	errorMessage = strings.TrimSpace(errorMessage)
+	if errorCode == "" && errorMessage == "" {
+		return ""
+	}
+	if errorMessage == "" {
+		errorMessage = "The enrollment token request could not be processed."
+	}
+	body := `<section class="console-panel" role="alert" aria-label="Enrollment error"><p class="console-panel-label">Enrollment error</p><p>` + html.EscapeString(errorMessage) + `</p>`
+	if errorCode != "" {
+		body += `<p class="console-muted">Error code: <code>` + html.EscapeString(errorCode) + `</code></p>`
+	}
+	return body + `</section>`
+}
+
+func webClientEnrollmentForm(ttlText string) string {
+	if strings.TrimSpace(ttlText) == "" {
+		ttlText = "15m"
+	}
+	return `<section class="console-panel"><p class="console-panel-label">Create token</p><p class="console-muted">Tokens are one-shot bootstrap secrets. The server receives only the client CSR and token during enrollment; client mTLS private keys remain client-side.</p>` +
+		`<form class="console-toolbar" method="post" action="/web/client-enrollments">` +
+		`<label>TTL<input name="ttl" value="` + html.EscapeString(ttlText) + `" placeholder="15m"></label>` +
+		`<button type="submit">Create enrollment token</button></form></section>`
 }
 
 func (s *Server) handleWebClients(w http.ResponseWriter, r *http.Request) {

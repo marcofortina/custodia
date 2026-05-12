@@ -331,7 +331,7 @@ Create a short-lived enrollment token on the server/admin host:
 sudo -u custodia custodia-admin client enrollment create --ttl 15m
 ```
 
-The command reads `/etc/custodia/custodia-server.yaml`, contacts the configured server URL, and prints a one-shot enrollment token plus the server URL. Transfer those values to the client host. The token is sensitive and expires quickly.
+The command reads `/etc/custodia/custodia-server.yaml`, contacts the configured server URL, and prints a one-shot enrollment token plus the server URL. Transfer those values to the client host. The token is sensitive and expires quickly. When operating through the Web Console, use **Client Enrollments** to create the same one-shot token without shell access to the server or Kubernetes pod.
 
 Enrollment uses normal TLS certificate validation by default. The server URL must match the server certificate SAN. This Quickstart uses a locally generated lab CA that is not installed in the client trust store yet, so the first disposable lab enrollment uses `--insecure`. For real remote clients, install/trust the Custodia CA first and remove `--insecure`.
 

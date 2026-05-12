@@ -17,6 +17,7 @@ The Custodia web console is an admin-only, metadata-only surface.
 - `/web/diagnostics` — runtime counters and uptime metadata only.
 - `/web/clients` — client metadata.
 - `/web/clients/{client_id}` — client detail drilldown with metadata-only visible keyspace, ownership and share summaries.
+- `/web/client-enrollments` — create one-shot client enrollment tokens without shell access to a server or Kubernetes pod.
 - `/web/access-requests` — pending grant metadata.
 - `/web/audit` — latest audit metadata.
 - `/web/audit/verify` — audit hash-chain verification summary.
@@ -25,6 +26,8 @@ The Custodia web console is an admin-only, metadata-only surface.
 Unknown HTML console routes and handled web-console `4xx`/`5xx` responses render the shared styled error page instead of Go's plain fallback bodies. JSON-only passkey endpoints remain JSON/error surfaces and must not render the HTML console shell.
 
 The API remains the source of truth for automation. The web console is a responsive, metadata-only operator surface even when TOTP/passkey web authentication is enabled. Authenticated pages include a logout button that clears only the web MFA session cookie; mTLS identity remains controlled by the browser certificate.
+
+Client enrollment token creation mirrors `custodia-admin client enrollment create`: it returns the configured server URL, a one-shot enrollment token and the expiry time. The token is shown once, must be transferred through a trusted channel, and does not expose client private keys because clients still generate their mTLS key and CSR locally. In disposable lab flows using an untrusted bootstrap CA, the client may add `--insecure`; real remote clients should trust the Custodia CA and avoid `--insecure`.
 
 Client detail pages are scoped by client because `namespace/key` is not globally unique. The admin drilldown shows the keyspace visible to that client, whether each entry is owned by the client or shared with the client, and share metadata for secrets owned by that client. It still never renders plaintext, ciphertext, recipient envelopes, DEKs or client-side key material.
 
@@ -47,6 +50,7 @@ The metadata console supports bounded query filters for operational views. Clien
 - `/web/audit?limit=100&outcome=failure&action=secret.read&actor_client_id=client_alice&resource_type=secret&resource_id=<id>`
 - `/web/audit/verify?limit=500`
 - `/web/clients?active=true`
+- `/web/client-enrollments` plus `POST /web/client-enrollments` with form field `ttl=15m`
 - `/web/access-requests?limit=100&namespace=db01&key=user:sys&status=pending&client_id=client_bob&requested_by_client_id=admin`
 
 Invalid filters return `400` and are audited as failures. These filters only affect metadata records already visible to an admin mTLS identity; the web console still never renders ciphertext, envelopes, plaintext or key material. Client detail pages show `namespace/key`, relationship, owner, permissions and active share metadata only.

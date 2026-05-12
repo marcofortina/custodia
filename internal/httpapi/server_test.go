@@ -1447,6 +1447,66 @@ func TestWebConsoleRequiresAdminClient(t *testing.T) {
 	}
 }
 
+func TestWebClientEnrollmentCreatesOneShotToken(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100, EnrollmentServerURL: "https://custodia.example.internal:8443"})
+
+	getReq := mtlsRequest(http.MethodGet, "/web/client-enrollments", "", "admin")
+	getRes := httptest.NewRecorder()
+	handler.ServeHTTP(getRes, getReq)
+	if getRes.Code != http.StatusOK {
+		t.Fatalf("expected enrollment form 200, got %d: %s", getRes.Code, getRes.Body.String())
+	}
+	if !strings.Contains(getRes.Body.String(), `Create enrollment token`) || !strings.Contains(getRes.Body.String(), `method="post" action="/web/client-enrollments"`) {
+		t.Fatalf("enrollment form missing expected controls: %s", getRes.Body.String())
+	}
+
+	postReq := httptest.NewRequest(http.MethodPost, "/web/client-enrollments", strings.NewReader("ttl=15m"))
+	postReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	postReq.TLS = &tls.ConnectionState{PeerCertificates: []*x509.Certificate{{DNSNames: []string{"admin"}, Subject: pkix.Name{CommonName: "admin"}}}}
+	postRes := httptest.NewRecorder()
+	handler.ServeHTTP(postRes, postReq)
+	if postRes.Code != http.StatusOK {
+		t.Fatalf("expected enrollment token 200, got %d: %s", postRes.Code, postRes.Body.String())
+	}
+	body := postRes.Body.String()
+	for _, expected := range []string{"Enrollment token", "https://custodia.example.internal:8443", "custodia-client mtls enroll", "--enrollment-token", "--insecure"} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("enrollment page expected token %q, got: %s", expected, body)
+		}
+	}
+	for _, forbidden := range []string{"private key", "private_key", "dek", "plaintext"} {
+		if strings.Contains(strings.ToLower(body), forbidden) && !strings.Contains(body, "private keys remain client-side") {
+			t.Fatalf("enrollment page leaked forbidden concept %q: %s", forbidden, body)
+		}
+	}
+}
+
+func TestWebClientEnrollmentRejectsInvalidTTL(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100, EnrollmentServerURL: "https://custodia.example.internal:8443"})
+
+	req := httptest.NewRequest(http.MethodPost, "/web/client-enrollments", strings.NewReader("ttl=25h"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.TLS = &tls.ConnectionState{PeerCertificates: []*x509.Certificate{{DNSNames: []string{"admin"}, Subject: pkix.Name{CommonName: "admin"}}}}
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusBadRequest {
+		t.Fatalf("expected invalid ttl 400, got %d: %s", res.Code, res.Body.String())
+	}
+	if !strings.Contains(res.Body.String(), "invalid_ttl") {
+		t.Fatalf("expected invalid_ttl page, got: %s", res.Body.String())
+	}
+}
+
 func TestAPIListsSecretAccessMetadataOnlyForShareClient(t *testing.T) {
 	ctx := context.Background()
 	memoryStore := store.NewMemoryStore()
@@ -2183,7 +2243,7 @@ func TestWebConsoleRendersMetadataOnlyPages(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	for _, path := range []string{"/web/", "/web/status", "/web/clients", "/web/access-requests", "/web/audit", "/web/audit/verify"} {
+	for _, path := range []string{"/web/", "/web/status", "/web/clients", "/web/client-enrollments", "/web/access-requests", "/web/audit", "/web/audit/verify"} {
 		req := mtlsRequest(http.MethodGet, path, "", "admin")
 		res := httptest.NewRecorder()
 		handler.ServeHTTP(res, req)
@@ -2618,7 +2678,7 @@ func TestWebConsoleFinalGuardrails(t *testing.T) {
 	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
 
-	for _, path := range []string{"/web/", "/web/status", "/web/clients", "/web/audit", "/web/login", "/web/does-not-exist"} {
+	for _, path := range []string{"/web/", "/web/status", "/web/clients", "/web/client-enrollments", "/web/audit", "/web/login", "/web/does-not-exist"} {
 		method := http.MethodGet
 		req := mtlsRequest(method, path, "", "admin")
 		res := httptest.NewRecorder()
