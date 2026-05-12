@@ -33,6 +33,14 @@ config:
   auditShipmentSink: "local"
   signerURL: ""
 
+mtls:
+  clientCRLKey: client.crl.pem
+
+web:
+  mfaSecretName: custodia-web-mfa
+  totpSecretKey: totp-secret
+  sessionSecretKey: session-secret
+
 persistence:
   enabled: true
   existingClaim: ""

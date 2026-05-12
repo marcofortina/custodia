@@ -53,6 +53,24 @@ type cliConfig struct {
 	caFile    string
 }
 
+type repeatedStringFlag []string
+
+func (f *repeatedStringFlag) String() string {
+	if f == nil {
+		return ""
+	}
+	return strings.Join(*f, ",")
+}
+
+func (f *repeatedStringFlag) Set(value string) error {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return fmt.Errorf("value must not be empty")
+	}
+	*f = append(*f, value)
+	return nil
+}
+
 func main() {
 	cfg := cliConfig{}
 	flags := flag.NewFlagSet("custodia-admin", flag.ExitOnError)
@@ -555,6 +573,8 @@ func runCABootstrapLocal(args []string) error {
 	outDir := cmd.String("out-dir", "", "directory for generated Lite CA artifacts")
 	adminClientID := cmd.String("admin-client-id", "admin", "initial admin client id")
 	serverName := cmd.String("server-name", "localhost", "server DNS name or IP address for the TLS certificate SANs")
+	var additionalServerSANs repeatedStringFlag
+	cmd.Var(&additionalServerSANs, "server-san", "additional DNS name or IP address to include in the server TLS certificate SANs; repeat for Kubernetes service names")
 	passphraseFile := cmd.String("ca-passphrase-file", "", "optional file containing the CA key passphrase")
 	generatePassphrase := cmd.Bool("generate-ca-passphrase", false, "generate a CA key passphrase file when --ca-passphrase-file is not provided")
 	_ = cmd.Parse(args)
@@ -565,7 +585,7 @@ func runCABootstrapLocal(args []string) error {
 	if err != nil {
 		return err
 	}
-	artifacts, err := certutil.GenerateLiteBootstrap(certutil.LiteBootstrapRequest{AdminClientID: *adminClientID, ServerName: *serverName, Passphrase: passphrase})
+	artifacts, err := certutil.GenerateLiteBootstrap(certutil.LiteBootstrapRequest{AdminClientID: *adminClientID, ServerName: *serverName, AdditionalServerSANs: additionalServerSANs, Passphrase: passphrase})
 	if err != nil {
 		return err
 	}
@@ -1777,7 +1797,7 @@ func usage() {
   custodia-admin [global flags] access revoke --key KEY [--namespace NS] --client-id ID
   custodia-admin [global flags] lite upgrade-check --lite-env-file FILE --full-env-file FILE
   custodia-admin migration plan --source-config FILE --target-config FILE
-  custodia-admin ca bootstrap-local [--out-dir DIR] [--admin-client-id ID] [--server-name NAME] [--generate-ca-passphrase]
+  custodia-admin ca bootstrap-local [--out-dir DIR] [--admin-client-id ID] [--server-name NAME] [--server-san NAME]... [--generate-ca-passphrase]
   custodia-admin web totp generate [--issuer NAME] [--account NAME] [--format text|yaml|json]
   custodia-admin web totp configure [--config FILE] [--issuer NAME] [--account NAME]
 

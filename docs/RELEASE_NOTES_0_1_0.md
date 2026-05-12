@@ -10,7 +10,7 @@ The server remains a metadata-only control plane: it authenticates clients, vali
 - Deployment matrix covering bare-metal source install, DEB/RPM install and Kubernetes image/chart install.
 - Lite profile with SQLite support and the same server binary as Full.
 - PostgreSQL-compatible schema and runtime selection for Full deployments.
-- Kubernetes Helm path for `custodia-server` plus `custodia-signer`, with Full/Lite example values and fail-closed Lite PVC guardrails.
+- Kubernetes Helm path for `custodia-server` plus `custodia-signer`, with Full/Lite example values, Web MFA Secret wiring, explicit PKCS#11 command delivery and fail-closed Lite PVC guardrails.
 - mTLS client identity and admin metadata workflows.
 - Web console for operational metadata, diagnostics, client enrollment tokens, client revocation, secret version/access inspection, future access-grant revocation, revocation status, CRL PEM downloads, CRL serial checks, audit views and audit JSONL downloads.
 - Client-side crypto SDKs for Go, Python, Node.js, C++, Java and Rust.
@@ -66,7 +66,7 @@ The repository includes Go, Python, Node.js, C++, Java and Rust SDKs. The canoni
 
 ## Deployment targets and profiles
 
-0.1.0 documents three install targets: bare-metal from source, bare-metal from DEB/RPM packages and Kubernetes from a Git-built image plus Helm chart. Lite, Full and custom are runtime profiles selected through configuration, not separate server products. Kubernetes Lite requires one server replica, SQLite on a PersistentVolumeClaim and an explicit backup plan; Kubernetes Full expects external PostgreSQL/CockroachDB, Valkey and production signer/evidence integrations. A read-only Kubernetes runtime smoke validates installed server/signer rollouts, Services and Lite PVC presence before promotion.
+0.1.0 documents three install targets: bare-metal from source, bare-metal from DEB/RPM packages and Kubernetes from a Git-built image plus Helm chart. Lite, Full and custom are runtime profiles selected through configuration, not separate server products. The server install docs now include a server-only source path, a Full bare-metal checklist with source/package example-copy steps and a Kubernetes bootstrap material runbook with namespace, Secret, Web MFA and admin browser certificate guidance. Kubernetes Lite requires one server replica, SQLite on a PersistentVolumeClaim, Web MFA Secret material and an explicit backup plan; Kubernetes Full expects external PostgreSQL/CockroachDB, Valkey, explicit PKCS#11/HSM command delivery and production signer/evidence integrations. A read-only Kubernetes runtime smoke validates installed server/signer rollouts, Services and Lite PVC presence before promotion.
 
 ## Runtime configuration
 

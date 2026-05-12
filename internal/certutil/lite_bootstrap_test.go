@@ -78,7 +78,7 @@ func TestGenerateLiteBootstrapServerIPAddsLocalhostSANs(t *testing.T) {
 }
 
 func TestLiteServerSANsAddsResolvedNonLoopbackIP(t *testing.T) {
-	dnsNames, ipAddresses := liteServerSANs("custodia.example.internal", func(name string) ([]net.IP, error) {
+	dnsNames, ipAddresses := liteServerSANs("custodia.example.internal", nil, func(name string) ([]net.IP, error) {
 		if name != "custodia.example.internal" {
 			t.Fatalf("unexpected lookup name %q", name)
 		}
@@ -93,6 +93,18 @@ func TestLiteServerSANsAddsResolvedNonLoopbackIP(t *testing.T) {
 	if containsIPString(ipAddresses, "127.0.1.1") {
 		t.Fatalf("resolved loopback should not be added automatically: %#v", ipAddresses)
 	}
+}
+
+func TestGenerateLiteBootstrapAddsAdditionalServerSANs(t *testing.T) {
+	artifacts, err := GenerateLiteBootstrap(LiteBootstrapRequest{AdminClientID: "admin", ServerName: "custodia.example.internal", AdditionalServerSANs: []string{"custodia-custodia-signer", "custodia-custodia-signer.custodia.svc", "192.0.2.20"}})
+	if err != nil {
+		t.Fatalf("GenerateLiteBootstrap() error = %v", err)
+	}
+	cert := parseTestCertificate(t, artifacts.ServerCertPEM)
+	assertTestDNSName(t, cert, "custodia.example.internal")
+	assertTestDNSName(t, cert, "custodia-custodia-signer")
+	assertTestDNSName(t, cert, "custodia-custodia-signer.custodia.svc")
+	assertTestIPAddress(t, cert, "192.0.2.20")
 }
 
 func parseTestCertificate(t *testing.T, certPEM []byte) *x509.Certificate {

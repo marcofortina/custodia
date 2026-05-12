@@ -4,6 +4,7 @@ usr/bin/custodia-server
 usr/bin/custodia-admin
 usr/bin/custodia-signer
 usr/sbin/custodia-sqlite-backup
+usr/sbin/custodia-operational-readiness-smoke
 usr/lib/systemd/system/custodia-server.service
 usr/lib/systemd/system/custodia-signer.service
 usr/share/man/man1/custodia-admin.1.gz
@@ -14,6 +15,14 @@ usr/share/doc/custodia/QUICKSTART.md
 usr/share/doc/custodia/DOCTOR.md
 usr/share/doc/custodia/LITE_INSTALL.md
 usr/share/doc/custodia/LITE_BACKUP_RESTORE.md
+usr/share/doc/custodia/PRODUCTION_READINESS_GATE.md
+usr/share/doc/custodia/PRODUCTION_EVIDENCE.md
+usr/share/doc/custodia/RELEASE_READINESS_MATRIX.md
+usr/share/doc/custodia/SECURITY_HARDENING_FINAL_REVIEW.md
+usr/share/doc/custodia/BARE_METAL_FULL_INSTALL.md
+usr/share/doc/custodia/KUBERNETES_BOOTSTRAP_MATERIAL.md
+usr/share/doc/custodia/OPERATIONAL_READINESS_SMOKE.md
+usr/share/doc/custodia/production-readiness.env.example
 usr/share/doc/custodia/custodia-server.lite.yaml.example
 usr/share/doc/custodia/custodia-server.full.yaml.example
 usr/share/doc/custodia/custodia-signer.yaml.example

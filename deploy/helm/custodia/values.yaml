@@ -34,6 +34,12 @@ web:
   enabled: true
   port: 9443
   exposeOnService: true
+  # Web MFA material is provided through a Kubernetes Secret so operators do
+  # not need to exec into pods. Create it from an operator workstation with
+  # docs/KUBERNETES_BOOTSTRAP_MATERIAL.md before installing the chart.
+  mfaSecretName: custodia-web-mfa
+  totpSecretKey: totp-secret
+  sessionSecretKey: session-secret
 
 podAnnotations: {}
 
@@ -93,7 +99,13 @@ signer:
   shutdownTimeoutSeconds: 10
   keyProvider: file
   pkcs11SignCommand: ""
+  # Required when keyProvider=pkcs11. Use custom-image when the command is
+  # baked into the image, or volume when signer.extraVolumes/extraVolumeMounts
+  # deliver it at runtime.
+  pkcs11SignCommandDelivery: ""
   auditLogFile: ""
+  extraVolumeMounts: []
+  extraVolumes: []
   secretName: custodia-signer-ca
   caCertKey: ca.crt
   caKeyKey: ca.key

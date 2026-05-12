@@ -66,4 +66,14 @@ expect_failure 'full with sqlite store' \
     --values "$full_values" \
     --set config.storeBackend=sqlite
 
+expect_failure 'full pkcs11 without command delivery' \
+  helm template custodia-full-pkcs11-unsafe "$chart_dir" \
+    --values "$full_values" \
+    --set signer.pkcs11SignCommandDelivery=
+
+expect_failure 'web enabled without MFA secret' \
+  helm template custodia-web-unsafe "$chart_dir" \
+    --values "$lite_values" \
+    --set web.mfaSecretName=
+
 printf 'helm-render-check: OK\n'

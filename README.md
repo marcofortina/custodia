@@ -17,6 +17,10 @@ New to Custodia? Start with the step-by-step quickstart:
 
 **[`docs/KUBERNETES_INSTALL.md` — Kubernetes install from a Git-built image](docs/KUBERNETES_INSTALL.md)**
 
+**[`docs/BARE_METAL_FULL_INSTALL.md` — Full bare-metal server/signer install checklist](docs/BARE_METAL_FULL_INSTALL.md)**
+
+**[`docs/KUBERNETES_BOOTSTRAP_MATERIAL.md` — Kubernetes Secret and Web MFA bootstrap material](docs/KUBERNETES_BOOTSTRAP_MATERIAL.md)**
+
 **[`docs/RELEASE_READINESS_MATRIX.md` — final release-candidate sign-off map](docs/RELEASE_READINESS_MATRIX.md)**
 
 **[`docs/KUBERNETES_RUNTIME_SMOKE.md` — read-only Kubernetes runtime smoke](docs/KUBERNETES_RUNTIME_SMOKE.md)**
@@ -45,7 +49,7 @@ If you are not sure what to choose, use the package install path. It covers Debi
 - Go, Python and Node.js / TypeScript client libraries with raw transport helpers; all three include high-level client-side crypto wrappers that keep plaintext, DEKs and private keys outside the server.
 - Java, C++ and Rust client libraries with raw transport helpers plus high-level client-side crypto wrappers that use the shared AES-256-GCM/HPKE-v1 vectors.
 - Go `custodia-client` CLI for encrypted namespace/key put/get/share/update, access revoke/delete workflows, server-published application public-key metadata, reusable JSON client profiles and one-shot enrollment for client-side mTLS CSR signing.
-- Docker, Compose, Helm and Lite/Full deployment examples, with the install/profile split documented in [`docs/DEPLOYMENT_MATRIX.md`](docs/DEPLOYMENT_MATRIX.md), Kubernetes example values and render guardrails via `make helm-check`, runtime and operational readiness smoke runbooks, and a final sign-off matrix in [`docs/RELEASE_READINESS_MATRIX.md`](docs/RELEASE_READINESS_MATRIX.md), plus a human security hardening review in [`docs/SECURITY_HARDENING_FINAL_REVIEW.md`](docs/SECURITY_HARDENING_FINAL_REVIEW.md).
+- Docker, Compose, Helm and Lite/Full deployment examples, with the install/profile split documented in [`docs/DEPLOYMENT_MATRIX.md`](docs/DEPLOYMENT_MATRIX.md), a Full bare-metal runbook, Kubernetes bootstrap material guidance, Kubernetes example values and render guardrails via `make helm-check`, runtime and operational readiness smoke runbooks, and a final sign-off matrix in [`docs/RELEASE_READINESS_MATRIX.md`](docs/RELEASE_READINESS_MATRIX.md), plus a human security hardening review in [`docs/SECURITY_HARDENING_FINAL_REVIEW.md`](docs/SECURITY_HARDENING_FINAL_REVIEW.md).
 - Dedicated `custodia-signer` service for enrollment-backed client CSR signing.
 - Custodia Lite profile with YAML config, SQLite build-tag artifact, local CA bootstrap, backup helper and Lite-to-Full readiness checks.
 
@@ -111,8 +115,10 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 - Client crypto threat model: [`docs/CLIENT_CRYPTO_THREAT_MODEL.md`](docs/CLIENT_CRYPTO_THREAT_MODEL.md)
 - Namespace/key secret keyspace model: [`docs/SECRET_KEYSPACE_MODEL.md`](docs/SECRET_KEYSPACE_MODEL.md)
 - SDK release policy: [`docs/SDK_RELEASE_POLICY.md`](docs/SDK_RELEASE_POLICY.md)
-- Linux DEB/RPM packaging: [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md)
+- Linux DEB/RPM packaging: [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md) including the installed `/usr/sbin/custodia-operational-readiness-smoke` helper
 - Start here / install quickstart: [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
+- Full bare-metal install: [`docs/BARE_METAL_FULL_INSTALL.md`](docs/BARE_METAL_FULL_INSTALL.md)
+- Kubernetes bootstrap material: [`docs/KUBERNETES_BOOTSTRAP_MATERIAL.md`](docs/KUBERNETES_BOOTSTRAP_MATERIAL.md)
 - Release readiness matrix: [`docs/RELEASE_READINESS_MATRIX.md`](docs/RELEASE_READINESS_MATRIX.md)
 - Release notes for 0.1.0: [`docs/RELEASE_NOTES_0_1_0.md`](docs/RELEASE_NOTES_0_1_0.md)
 - SBOM artifacts: [`docs/SBOM.md`](docs/SBOM.md)

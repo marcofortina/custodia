@@ -51,10 +51,12 @@ Print server build metadata from
 .B client create --client-id ID --mtls-subject SUBJECT
 Register client metadata in the vault.
 .TP
-.B ca bootstrap-local --out-dir DIR --admin-client-id ID --server-name NAME
+.B ca bootstrap-local --out-dir DIR --admin-client-id ID --server-name NAME [--server-san NAME]...
 Generate Lite first-run CA material. Do not pass localhost as the server name;
 use the DNS name clients and browsers will actually use. IP addresses are supported,
-but DNS is strongly recommended for operational stability.
+but DNS is strongly recommended for operational stability. Repeat
+.B --server-san
+for additional TLS SANs such as Kubernetes signer Service DNS names.
 .TP
 .B client enrollment create [--config FILE] [--ttl DURATION]
 Create a short-lived, one-shot enrollment token for remote client onboarding. The command reads the configured server URL from the server YAML and prints the token and server URL for transfer to the client host.

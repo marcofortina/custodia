@@ -26,10 +26,11 @@ import (
 var ErrInvalidLiteBootstrapInput = errors.New("invalid lite bootstrap input")
 
 type LiteBootstrapRequest struct {
-	AdminClientID string
-	ServerName    string
-	Passphrase    []byte
-	Now           time.Time
+	AdminClientID        string
+	ServerName           string
+	AdditionalServerSANs []string
+	Passphrase           []byte
+	Now                  time.Time
 }
 
 // LiteBootstrapArtifacts are generated for single-node bootstrap and should be moved into restricted paths immediately.
@@ -72,7 +73,7 @@ func GenerateLiteBootstrap(req LiteBootstrapRequest) (*LiteBootstrapArtifacts, e
 	if err != nil {
 		return nil, err
 	}
-	serverCertPEM, serverKeyPEM, err := createLiteLeaf(now, caCert, caKey, serverName, x509.ExtKeyUsageServerAuth)
+	serverCertPEM, serverKeyPEM, err := createLiteLeafWithAdditionalServerSANs(now, caCert, caKey, serverName, req.AdditionalServerSANs, x509.ExtKeyUsageServerAuth)
 	if err != nil {
 		return nil, err
 	}
@@ -124,6 +125,10 @@ func createLiteCA(now time.Time, key *ecdsa.PrivateKey) (*x509.Certificate, []by
 }
 
 func createLiteLeaf(now time.Time, caCert *x509.Certificate, caKey *ecdsa.PrivateKey, name string, usage x509.ExtKeyUsage) ([]byte, []byte, error) {
+	return createLiteLeafWithAdditionalServerSANs(now, caCert, caKey, name, nil, usage)
+}
+
+func createLiteLeafWithAdditionalServerSANs(now time.Time, caCert *x509.Certificate, caKey *ecdsa.PrivateKey, name string, additionalServerSANs []string, usage x509.ExtKeyUsage) ([]byte, []byte, error) {
 	leafKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, nil, err
@@ -141,7 +146,7 @@ func createLiteLeaf(now time.Time, caCert *x509.Certificate, caKey *ecdsa.Privat
 		ExtKeyUsage:  []x509.ExtKeyUsage{usage},
 	}
 	if usage == x509.ExtKeyUsageServerAuth {
-		tmpl.DNSNames, tmpl.IPAddresses = liteServerSANs(name, net.LookupIP)
+		tmpl.DNSNames, tmpl.IPAddresses = liteServerSANs(name, additionalServerSANs, net.LookupIP)
 	} else {
 		tmpl.DNSNames = []string{name}
 	}
@@ -156,7 +161,7 @@ func createLiteLeaf(now time.Time, caCert *x509.Certificate, caKey *ecdsa.Privat
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), keyPEM, nil
 }
 
-func liteServerSANs(serverName string, lookup func(string) ([]net.IP, error)) ([]string, []net.IP) {
+func liteServerSANs(serverName string, additionalSANs []string, lookup func(string) ([]net.IP, error)) ([]string, []net.IP) {
 	var dnsNames []string
 	var ipAddresses []net.IP
 	dnsSeen := make(map[string]bool)
@@ -196,6 +201,18 @@ func liteServerSANs(serverName string, lookup func(string) ([]net.IP, error)) ([
 				}
 			}
 		}
+	}
+
+	for _, san := range additionalSANs {
+		san = strings.TrimSpace(san)
+		if san == "" {
+			continue
+		}
+		if ip := net.ParseIP(san); ip != nil {
+			addIP(ip)
+			continue
+		}
+		addDNS(san)
 	}
 
 	addDNS("localhost")

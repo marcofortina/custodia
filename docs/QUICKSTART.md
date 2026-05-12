@@ -144,7 +144,14 @@ git clone https://github.com/marcofortina/custodia.git
 cd custodia
 ```
 
-Build the artifacts you want to install. For a server node plus local client smoke tests:
+Build the artifacts you want to install. For a server-only host:
+
+```bash
+make build-server man
+sudo make install-server PREFIX=/usr/local
+```
+
+For a server node plus local client smoke tests:
 
 ```bash
 make build-server build-client man
@@ -238,7 +245,7 @@ Expected files:
 /etc/custodia/server.key
 ```
 
-For Full/custom deployments, keep the same binaries and replace the runtime configuration. Start from `/usr/share/doc/custodia/custodia-server.full.yaml.example`, `/usr/local/share/doc/custodia/custodia-server.full.yaml.example` or `deploy/examples/custodia-server.full.yaml`, then configure real external dependencies such as PostgreSQL/CockroachDB, Valkey, PKCS#11/HSM signer material, audit shipment/WORM evidence and production readiness checks. Do not treat Lite's SQLite/memory defaults as Full production settings.
+For Full/custom deployments, keep the same binaries and replace the runtime configuration. Start from `/usr/share/doc/custodia/custodia-server.full.yaml.example`, `/usr/local/share/doc/custodia/custodia-server.full.yaml.example` or `deploy/examples/custodia-server.full.yaml`, then configure real external dependencies such as PostgreSQL/CockroachDB, Valkey, PKCS#11/HSM signer material, audit shipment/WORM evidence and production readiness checks. Do not treat Lite's SQLite/memory defaults as Full production settings. Use [`BARE_METAL_FULL_INSTALL.md`](BARE_METAL_FULL_INSTALL.md) for the copyable Full bare-metal checklist.
 
 ## 5. Configure first admin web access
 

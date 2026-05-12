@@ -31,6 +31,14 @@ config:
   auditShipmentSink: "object-lock-or-siem"
   signerURL: ""
 
+mtls:
+  clientCRLKey: client.crl.pem
+
+web:
+  mfaSecretName: custodia-web-mfa
+  totpSecretKey: totp-secret
+  sessionSecretKey: session-secret
+
 persistence:
   enabled: false
 
@@ -38,6 +46,10 @@ signer:
   enabled: true
   keyProvider: pkcs11
   pkcs11SignCommand: /usr/local/bin/custodia-pkcs11-sign
+  # Full profile images must deliver this command explicitly. Use
+  # custom-image when the helper is baked into the image, or volume when
+  # signer.extraVolumes/extraVolumeMounts mount it at runtime.
+  pkcs11SignCommandDelivery: custom-image
   adminSubjects: admin
   secretName: custodia-signer-ca
   clientSecretName: custodia-signer-client

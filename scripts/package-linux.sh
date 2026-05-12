@@ -167,11 +167,13 @@ stage_server() {
   install -m 0755 "$WORK_DIR/bin/custodia-admin" "$stage/usr/bin/custodia-admin"
   install -m 0755 "$WORK_DIR/bin/custodia-signer" "$stage/usr/bin/custodia-signer"
   install -m 0755 scripts/sqlite-backup.sh "$stage/usr/sbin/custodia-sqlite-backup"
+  install -m 0755 scripts/operational-readiness-smoke.sh "$stage/usr/sbin/custodia-operational-readiness-smoke"
   install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia/"
-  install -m 0644 docs/QUICKSTART.md docs/DOCTOR.md docs/LITE_PROFILE.md docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/LITE_BACKUP_RESTORE.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md "$stage/usr/share/doc/custodia/"
+  install -m 0644 docs/QUICKSTART.md docs/DOCTOR.md docs/LITE_PROFILE.md docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/LITE_BACKUP_RESTORE.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md docs/PRODUCTION_READINESS_GATE.md docs/PRODUCTION_EVIDENCE.md docs/RELEASE_READINESS_MATRIX.md docs/SECURITY_HARDENING_FINAL_REVIEW.md docs/BARE_METAL_FULL_INSTALL.md docs/KUBERNETES_BOOTSTRAP_MATERIAL.md docs/OPERATIONAL_READINESS_SMOKE.md "$stage/usr/share/doc/custodia/"
   install -m 0644 deploy/examples/custodia-server.lite.yaml "$stage/usr/share/doc/custodia/custodia-server.lite.yaml.example"
   install -m 0644 deploy/examples/custodia-server.full.yaml "$stage/usr/share/doc/custodia/custodia-server.full.yaml.example"
   install -m 0644 deploy/examples/custodia-signer.yaml "$stage/usr/share/doc/custodia/custodia-signer.yaml.example"
+  install -m 0644 deploy/examples/checks/production-readiness.env.example "$stage/usr/share/doc/custodia/production-readiness.env.example"
   install_manpages "$stage" custodia-admin custodia-server custodia-signer
 
   cat > "$stage/usr/lib/systemd/system/custodia-server.service" <<'SERVICE'

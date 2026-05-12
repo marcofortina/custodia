@@ -22,13 +22,14 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - Audit export artifacts are bundled with `custodia-admin audit archive-export` before WORM/SIEM ingestion.
 - Verified audit archive bundles are shipped with `custodia-admin audit ship-archive` before SIEM/WORM ingestion.
 - `CUSTODIA_SIGNER_KEY_PROVIDER` is explicitly set; production must not rely on file-backed CA keys unless this is an isolated bootstrap environment.
-- Kubernetes values pass `make helm-check`; unsafe chart combinations fail before render.
+- Kubernetes values pass `make helm-check`; unsafe chart combinations fail before render, including missing Web MFA Secret wiring and missing PKCS#11 command delivery for Full signer pods. The API/Web TLS Secret certificate includes the internal signer Service DNS names used by `config.signerURL`.
+- Kubernetes bootstrap material evidence includes namespace and Secret creation, Web MFA Secret creation, admin browser certificate package handling, and a decision on whether Full signer PKCS#11 delivery uses a custom image or volume mount.
 - Installed Kubernetes release passes [`KUBERNETES_RUNTIME_SMOKE.md`](KUBERNETES_RUNTIME_SMOKE.md) read-only cluster checks for server/signer rollouts, Services and Lite PVC presence when applicable.
 - Kubernetes Lite, when used outside disposable labs, has `persistence.enabled=true`, one server replica and a documented PVC snapshot/off-cluster backup plan. See [`KUBERNETES_LITE_BACKUP_RESTORE.md`](KUBERNETES_LITE_BACKUP_RESTORE.md).
 - Lite backup/restore release-candidate smoke passes with `./scripts/lite-backup-restore-smoke.sh smoke`; live restore remains a stopped-service procedure with off-host backup retention evidence.
 - Operational readiness smoke passes against the release-candidate endpoint using admin mTLS. For local bare-metal `/etc/custodia/...` paths run it with `sudo -E`; for remote operator workstations use operator-readable copies of `admin.crt`, `admin.key` and `ca.crt`.
 - The final security hardening review in [`SECURITY_HARDENING_FINAL_REVIEW.md`](SECURITY_HARDENING_FINAL_REVIEW.md) is complete and has no open critical findings.
-- Kubernetes Full uses external PostgreSQL/CockroachDB, Valkey, HSM/PKCS#11 or equivalent signer controls and WORM/SIEM/object-lock evidence; SoftHSM and MinIO remain development/smoke substitutes unless independently production-governed.
+- Kubernetes Full uses external PostgreSQL/CockroachDB, Valkey, HSM/PKCS#11 or equivalent signer controls and WORM/SIEM/object-lock evidence; SoftHSM and MinIO remain development/smoke substitutes unless independently production-governed. The signer image or mounted volume must actually deliver the configured PKCS#11 signing command; the stock image alone is not a Full PKCS#11 production image.
 - The end-to-end operator smoke in [`END_TO_END_OPERATOR_SMOKE.md`](END_TO_END_OPERATOR_SMOKE.md) is rehearsed on disposable release-candidate hosts before promotion, including source install, Web Console checkpoints, Alice/Bob enrollment/share/revoke/delete and Lite backup.
 - `make systemd-hardening-check` passes and packaged units retain the same hardening directives as `deploy/examples/*.service`.
 

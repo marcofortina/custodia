@@ -163,7 +163,7 @@ operational-readiness-smoke:
 	./scripts/operational-readiness-smoke.sh check-only
 
 .PHONY: install-server
-install-server: install-server-binaries install-server-man install-server-systemd install-server-backup install-server-docs
+install-server: install-server-binaries install-server-man install-server-systemd install-server-backup install-server-helpers install-server-docs
 
 .PHONY: install-client
 install-client: install-client-binaries install-client-man install-client-docs
@@ -197,13 +197,19 @@ install-server-backup:
 	$(INSTALL) -d "$(DESTDIR)$(SBINDIR)"
 	$(INSTALL) -m 0755 scripts/sqlite-backup.sh "$(DESTDIR)$(SBINDIR)/custodia-sqlite-backup"
 
+.PHONY: install-server-helpers
+install-server-helpers:
+	$(INSTALL) -d "$(DESTDIR)$(SBINDIR)"
+	$(INSTALL) -m 0755 scripts/operational-readiness-smoke.sh "$(DESTDIR)$(SBINDIR)/custodia-operational-readiness-smoke"
+
 .PHONY: install-server-docs
 install-server-docs:
 	$(INSTALL) -d "$(DESTDIR)$(DOCDIR)/custodia"
-	$(INSTALL) -m 0644 LICENSE README.md docs/QUICKSTART.md docs/DOCTOR.md docs/LITE_PROFILE.md docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/LITE_BACKUP_RESTORE.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md "$(DESTDIR)$(DOCDIR)/custodia/"
+	$(INSTALL) -m 0644 LICENSE README.md docs/QUICKSTART.md docs/DOCTOR.md docs/LITE_PROFILE.md docs/LITE_INSTALL.md docs/LITE_CONFIG.md docs/LITE_BACKUP_RESTORE.md docs/PRODUCTION_CHECKLIST.md docs/RELEASE_CHECK.md docs/PRODUCTION_READINESS_GATE.md docs/PRODUCTION_EVIDENCE.md docs/RELEASE_READINESS_MATRIX.md docs/SECURITY_HARDENING_FINAL_REVIEW.md docs/BARE_METAL_FULL_INSTALL.md docs/KUBERNETES_BOOTSTRAP_MATERIAL.md docs/OPERATIONAL_READINESS_SMOKE.md "$(DESTDIR)$(DOCDIR)/custodia/"
 	$(INSTALL) -m 0644 deploy/examples/custodia-server.lite.yaml "$(DESTDIR)$(DOCDIR)/custodia/custodia-server.lite.yaml.example"
 	$(INSTALL) -m 0644 deploy/examples/custodia-server.full.yaml "$(DESTDIR)$(DOCDIR)/custodia/custodia-server.full.yaml.example"
 	$(INSTALL) -m 0644 deploy/examples/custodia-signer.yaml "$(DESTDIR)$(DOCDIR)/custodia/custodia-signer.yaml.example"
+	$(INSTALL) -m 0644 deploy/examples/checks/production-readiness.env.example "$(DESTDIR)$(DOCDIR)/custodia/production-readiness.env.example"
 
 .PHONY: install-client-binaries
 install-client-binaries:

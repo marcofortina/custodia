@@ -33,3 +33,31 @@ See the accompanying LICENSE file for details.
 {{- fail "profile=full must not use config.rateLimitBackend=memory; configure Valkey or use profile=lite/custom" -}}
 {{- end -}}
 {{- end -}}
+
+{{- if and .Values.web.enabled (or (eq $profile "lite") (eq $profile "full")) -}}
+{{- if not .Values.web.mfaSecretName -}}
+{{- fail "profile=lite/full with web.enabled=true requires web.mfaSecretName; create the Web MFA Secret before installing the chart" -}}
+{{- end -}}
+{{- if not .Values.web.totpSecretKey -}}
+{{- fail "web.mfaSecretName requires web.totpSecretKey" -}}
+{{- end -}}
+{{- if not .Values.web.sessionSecretKey -}}
+{{- fail "web.mfaSecretName requires web.sessionSecretKey" -}}
+{{- end -}}
+{{- end -}}
+{{- if and (eq $profile "full") .Values.signer.enabled (eq (lower .Values.signer.keyProvider) "pkcs11") -}}
+{{- if not .Values.signer.pkcs11SignCommand -}}
+{{- fail "profile=full with signer.keyProvider=pkcs11 requires signer.pkcs11SignCommand" -}}
+{{- end -}}
+{{- if not .Values.signer.pkcs11SignCommandDelivery -}}
+{{- fail "profile=full with signer.keyProvider=pkcs11 requires signer.pkcs11SignCommandDelivery=custom-image or volume so the command is actually present in the signer container" -}}
+{{- end -}}
+{{- if and (ne .Values.signer.pkcs11SignCommandDelivery "custom-image") (ne .Values.signer.pkcs11SignCommandDelivery "volume") -}}
+{{- fail "signer.pkcs11SignCommandDelivery must be custom-image or volume" -}}
+{{- end -}}
+{{- if eq .Values.signer.pkcs11SignCommandDelivery "volume" -}}
+{{- if or (eq (len .Values.signer.extraVolumes) 0) (eq (len .Values.signer.extraVolumeMounts) 0) -}}
+{{- fail "signer.pkcs11SignCommandDelivery=volume requires signer.extraVolumes and signer.extraVolumeMounts to deliver the PKCS#11 signing command" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}

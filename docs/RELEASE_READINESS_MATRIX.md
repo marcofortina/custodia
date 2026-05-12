@@ -24,6 +24,7 @@ not different products and they are not different server binaries.
 | Package clean install smoke | disposable clean Debian/Ubuntu and Fedora/RHEL-compatible machines | package publication | [`PACKAGE_INSTALL_SMOKE.md`](PACKAGE_INSTALL_SMOKE.md) |
 | Lite backup/restore smoke | developer/CI checkout with `sqlite3` | Lite-capable release candidates | [`LITE_BACKUP_RESTORE_SMOKE.md`](LITE_BACKUP_RESTORE_SMOKE.md) |
 | Bare-metal/source operator smoke | disposable release-candidate hosts | source install and first-use UX | [`END_TO_END_OPERATOR_SMOKE.md`](END_TO_END_OPERATOR_SMOKE.md) |
+| Kubernetes bootstrap material review | operator workstation / cluster namespace | Kubernetes install readiness | [`KUBERNETES_BOOTSTRAP_MATERIAL.md`](KUBERNETES_BOOTSTRAP_MATERIAL.md) |
 | Kubernetes runtime smoke | already installed release-candidate cluster | Kubernetes promotion | [`KUBERNETES_RUNTIME_SMOKE.md`](KUBERNETES_RUNTIME_SMOKE.md) |
 | Operational readiness smoke | running bare-metal or Kubernetes endpoint | endpoint promotion | [`OPERATIONAL_READINESS_SMOKE.md`](OPERATIONAL_READINESS_SMOKE.md) |
 | Production config gate | offline production evidence workstation | production promotion | [`PRODUCTION_READINESS_GATE.md`](PRODUCTION_READINESS_GATE.md) |
@@ -55,12 +56,13 @@ A release candidate is not ready for publication until the following evidence is
 captured for the exact commit and artifacts being shipped:
 
 - `make release-check` output;
-- `make helm-check` output, including expected negative Helm validation tests;
+- `make helm-check` output, including expected negative Helm validation tests for Lite PVC, Web MFA Secret and PKCS#11 delivery;
 - package checksum/SBOM output when packages are published;
 - clean-install smoke output for DEB and RPM packages when those formats are
   published;
 - Lite backup/restore smoke output when the release claims Lite support;
 - source/bare-metal operator smoke evidence for the public Quickstart path;
+- Kubernetes bootstrap material review evidence, including namespace/Secret creation, Web MFA Secret creation, signer Service certificate SANs, admin browser certificate package handling and PKCS#11/HSM command delivery decision, with proof that the selected custom image or volume actually contains the configured signing command;
 - Kubernetes runtime smoke evidence for Kubernetes artifacts;
 - operational readiness smoke evidence for at least one bootstrapped endpoint;
 - completed security hardening final review with findings and promotion decision;
@@ -73,7 +75,8 @@ captured for the exact commit and artifacts being shipped:
 Stop promotion immediately when any of the following happens:
 
 - repository tests or release checks fail;
-- Helm unsafe combinations render instead of failing closed;
+- Helm unsafe combinations render instead of failing closed, including missing Web MFA Secret wiring or missing Full PKCS#11 command delivery;
+- Kubernetes bootstrap material is deleted before admin browser certificate import/archive is complete;
 - Lite Kubernetes renders without a PVC or with more than one server replica;
 - package payload manifests miss binaries, systemd units, manpages, docs or
   example YAMLs;

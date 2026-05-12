@@ -4,7 +4,11 @@
   "properties": {
     "profile": {
       "type": "string",
-      "enum": ["lite", "full", "custom"]
+      "enum": [
+        "lite",
+        "full",
+        "custom"
+      ]
     },
     "replicaCount": {
       "type": "integer",
@@ -30,13 +34,26 @@
     "web": {
       "type": "object",
       "properties": {
-        "enabled": { "type": "boolean" },
+        "enabled": {
+          "type": "boolean"
+        },
         "port": {
           "type": "integer",
           "minimum": 1,
           "maximum": 65535
         },
-        "exposeOnService": { "type": "boolean" }
+        "exposeOnService": {
+          "type": "boolean"
+        },
+        "mfaSecretName": {
+          "type": "string"
+        },
+        "totpSecretKey": {
+          "type": "string"
+        },
+        "sessionSecretKey": {
+          "type": "string"
+        }
       }
     },
     "health": {
@@ -55,10 +72,18 @@
     "config": {
       "type": "object",
       "properties": {
-        "serverURL": { "type": "string" },
-        "webAddr": { "type": "string" },
-        "databaseURL": { "type": "string" },
-        "signerURL": { "type": "string" },
+        "serverURL": {
+          "type": "string"
+        },
+        "webAddr": {
+          "type": "string"
+        },
+        "databaseURL": {
+          "type": "string"
+        },
+        "signerURL": {
+          "type": "string"
+        },
         "maxEnvelopesPerSecret": {
           "type": "integer",
           "minimum": 1
@@ -91,32 +116,85 @@
     "signer": {
       "type": "object",
       "properties": {
-        "enabled": { "type": "boolean" },
-        "replicaCount": { "type": "integer", "minimum": 1 },
-        "addr": { "type": "string", "minLength": 1 },
-        "keyProvider": { "type": "string", "enum": ["file", "pkcs11"] },
-        "defaultTTLHours": { "type": "integer", "minimum": 1 },
-        "shutdownTimeoutSeconds": { "type": "integer", "minimum": 1 },
+        "enabled": {
+          "type": "boolean"
+        },
+        "replicaCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "addr": {
+          "type": "string",
+          "minLength": 1
+        },
+        "keyProvider": {
+          "type": "string",
+          "enum": [
+            "file",
+            "pkcs11"
+          ]
+        },
+        "defaultTTLHours": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "shutdownTimeoutSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
         "service": {
           "type": "object",
           "properties": {
-            "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            }
           }
+        },
+        "pkcs11SignCommand": {
+          "type": "string"
+        },
+        "pkcs11SignCommandDelivery": {
+          "type": "string",
+          "enum": [
+            "",
+            "custom-image",
+            "volume"
+          ]
+        },
+        "extraVolumeMounts": {
+          "type": "array"
+        },
+        "extraVolumes": {
+          "type": "array"
         }
       }
     },
     "persistence": {
       "type": "object",
       "properties": {
-        "enabled": { "type": "boolean" },
-        "existingClaim": { "type": "string" },
-        "storageClassName": { "type": "string" },
+        "enabled": {
+          "type": "boolean"
+        },
+        "existingClaim": {
+          "type": "string"
+        },
+        "storageClassName": {
+          "type": "string"
+        },
         "accessModes": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
-        "size": { "type": "string" },
-        "mountPath": { "type": "string" }
+        "size": {
+          "type": "string"
+        },
+        "mountPath": {
+          "type": "string"
+        }
       }
     },
     "autoscaling": {

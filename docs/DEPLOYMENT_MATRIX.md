@@ -11,9 +11,9 @@ The deployment target decides how `custodia-server` and `custodia-signer` are in
 
 | Target | Install method | Current status | Primary docs |
 | --- | --- | --- | --- |
-| Bare metal | Source install from a Git clone | Supported for maintainers, developers, packagers and local testing. | [`QUICKSTART.md`](QUICKSTART.md) |
-| Bare metal | DEB/RPM packages | Supported operator path and recommended first-run path. | [`QUICKSTART.md`](QUICKSTART.md), [`LINUX_PACKAGES.md`](LINUX_PACKAGES.md) |
-| Kubernetes | Image built from a Git clone, then installed with the Helm chart/manifests | Supported deployment path for cluster rehearsals and production hardening. | [`KUBERNETES_INSTALL.md`](KUBERNETES_INSTALL.md), [`K3S_COCKROACHDB_HA.md`](K3S_COCKROACHDB_HA.md) |
+| Bare metal | Source install from a Git clone | Supported for maintainers, developers, packagers and local testing. | [`QUICKSTART.md`](QUICKSTART.md), [`BARE_METAL_FULL_INSTALL.md`](BARE_METAL_FULL_INSTALL.md) |
+| Bare metal | DEB/RPM packages | Supported operator path and recommended first-run path. | [`QUICKSTART.md`](QUICKSTART.md), [`LINUX_PACKAGES.md`](LINUX_PACKAGES.md), [`BARE_METAL_FULL_INSTALL.md`](BARE_METAL_FULL_INSTALL.md) |
+| Kubernetes | Image built from a Git clone, then installed with the Helm chart/manifests | Supported deployment path for cluster rehearsals and production hardening. | [`KUBERNETES_INSTALL.md`](KUBERNETES_INSTALL.md), [`KUBERNETES_BOOTSTRAP_MATERIAL.md`](KUBERNETES_BOOTSTRAP_MATERIAL.md), [`K3S_COCKROACHDB_HA.md`](K3S_COCKROACHDB_HA.md) |
 
 Bare-metal installs own local filesystem layout, systemd units, `/etc/custodia`, `/var/lib/custodia` and `/var/log/custodia` directly. Kubernetes installs own those concerns through container images, Kubernetes Secrets, ConfigMaps, volumes, Services and Helm values. Do not mix the operational commands blindly: `systemctl` and local path ownership checks are bare-metal concerns, while image tags, Secrets, PVCs and chart values are Kubernetes concerns.
 
@@ -48,7 +48,7 @@ Kubernetes can run the same Lite/Full profile vocabulary, but unsafe Lite combin
 
 Bare-metal operators may run `custodia-admin` locally on the server/admin host. Kubernetes operators should not need `kubectl exec` into application pods for normal online administration. Metadata-only, API-backed admin operations such as one-shot client enrollment, future client revocation, secret version/access inspection, future access-grant revocation, client-CRL status, CRL PEM download and CRL serial checks belong in the Web Console/API over admin mTLS and Web MFA. Bootstrap, file ownership, CA material placement, Helm values, Kubernetes Secret creation and backup plumbing remain deployment/runbook tasks outside the Web Console.
 
-One-shot client enrollment token creation is available from both CLI and Web Console, so client onboarding does not require shell access to a Kubernetes pod. The Helm chart runs `custodia-server` and `custodia-signer` as separate Deployments from the same Git-built image. Validate chart values with `make helm-check`; it renders the Full/Lite examples and checks unsafe combinations fail closed. After installation, use [`KUBERNETES_RUNTIME_SMOKE.md`](KUBERNETES_RUNTIME_SMOKE.md) to verify cluster objects and [`OPERATIONAL_READINESS_SMOKE.md`](OPERATIONAL_READINESS_SMOKE.md) to verify the exposed operator endpoints without mutating cluster state or using `kubectl exec`.
+One-shot client enrollment token creation is available from both CLI and Web Console, so client onboarding does not require shell access to a Kubernetes pod. The Helm chart runs `custodia-server` and `custodia-signer` as separate Deployments from the same Git-built image. Validate chart values with `make helm-check`; it renders the Full/Lite examples and checks unsafe combinations fail closed, including missing Web MFA Secrets and Full PKCS#11 command delivery. Use [`KUBERNETES_BOOTSTRAP_MATERIAL.md`](KUBERNETES_BOOTSTRAP_MATERIAL.md) to create the required Secrets before installing. After installation, use [`KUBERNETES_RUNTIME_SMOKE.md`](KUBERNETES_RUNTIME_SMOKE.md) to verify cluster objects and [`OPERATIONAL_READINESS_SMOKE.md`](OPERATIONAL_READINESS_SMOKE.md) to verify the exposed operator endpoints without mutating cluster state or using `kubectl exec`.
 
 ## Kubernetes operator surface
 

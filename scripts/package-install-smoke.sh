@@ -354,6 +354,7 @@ verify_server() {
   require_executable_path /usr/bin/custodia-admin
   require_executable_path /usr/bin/custodia-signer
   require_executable_path /usr/sbin/custodia-sqlite-backup
+  require_executable_path /usr/sbin/custodia-operational-readiness-smoke
   require_path /usr/lib/systemd/system/custodia-server.service
   require_path /usr/lib/systemd/system/custodia-signer.service
   require_contains /usr/lib/systemd/system/custodia-server.service 'NoNewPrivileges=true'

@@ -50,8 +50,24 @@ export CUSTODIA_WEB_URL=https://SERVER_IP_OR_HOSTNAME:9443
 export CUSTODIA_ADMIN_CERT=/etc/custodia/admin.crt
 export CUSTODIA_ADMIN_KEY=/etc/custodia/admin.key
 export CUSTODIA_CA_CERT=/etc/custodia/ca.crt
+```
 
+From a source checkout, run:
+
+```bash
 sudo -E ./scripts/operational-readiness-smoke.sh endpoint-check
+```
+
+After `sudo make install-server`, the same helper is installed as:
+
+```bash
+sudo -E /usr/local/sbin/custodia-operational-readiness-smoke endpoint-check
+```
+
+After a DEB/RPM package install, run:
+
+```bash
+sudo -E /usr/sbin/custodia-operational-readiness-smoke endpoint-check
 ```
 
 Bare-metal bootstrap intentionally restricts `/etc/custodia` and the admin

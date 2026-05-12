@@ -11,8 +11,10 @@ import (
 	"archive/zip"
 	"bytes"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -685,6 +687,43 @@ func TestRunCABootstrapLocalWritesLiteArtifacts(t *testing.T) {
 	if !bytes.Contains(caKeyPayload, []byte("ENCRYPTED PRIVATE KEY")) {
 		t.Fatalf("expected encrypted ca key: %s", string(caKeyPayload))
 	}
+}
+
+func TestRunCABootstrapLocalAddsServerSANs(t *testing.T) {
+	outDir := filepath.Join(t.TempDir(), "lite")
+	if err := runCABootstrapLocal([]string{"--out-dir", outDir, "--admin-client-id", "admin", "--server-name", "custodia.example.internal", "--server-san", "custodia-custodia-signer", "--server-san", "custodia-custodia-signer.custodia.svc"}); err != nil {
+		t.Fatalf("runCABootstrapLocal() error = %v", err)
+	}
+	certPayload, err := os.ReadFile(filepath.Join(outDir, "server.crt"))
+	if err != nil {
+		t.Fatalf("ReadFile(server.crt) error = %v", err)
+	}
+	cert := parseAdminTestCertificate(t, certPayload)
+	for _, san := range []string{"custodia.example.internal", "custodia-custodia-signer", "custodia-custodia-signer.custodia.svc"} {
+		found := false
+		for _, dnsName := range cert.DNSNames {
+			if dnsName == san {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("missing server SAN %q in %#v", san, cert.DNSNames)
+		}
+	}
+}
+
+func parseAdminTestCertificate(t *testing.T, certPEM []byte) *x509.Certificate {
+	t.Helper()
+	block, _ := pem.Decode(certPEM)
+	if block == nil || block.Type != "CERTIFICATE" {
+		t.Fatalf("expected certificate PEM, got: %s", string(certPEM))
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatalf("ParseCertificate() error = %v", err)
+	}
+	return cert
 }
 
 func TestRunCABootstrapLocalRefusesOverwrite(t *testing.T) {

@@ -93,6 +93,7 @@ smoke_extracted_tree() {
       require_contains "$root" usr/lib/systemd/system/custodia-signer.service "ReadWritePaths=/var/log/custodia"
       require_contains "$root" usr/lib/systemd/system/custodia-signer.service "CapabilityBoundingSet="
       require_executable "$root" usr/sbin/custodia-sqlite-backup
+      require_executable "$root" usr/sbin/custodia-operational-readiness-smoke
       require_file "$root" usr/share/doc/custodia/custodia-server.lite.yaml.example
       require_file "$root" usr/share/doc/custodia/custodia-server.full.yaml.example
       require_file "$root" usr/share/doc/custodia/custodia-signer.yaml.example

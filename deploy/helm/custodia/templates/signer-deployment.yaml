@@ -105,6 +105,9 @@ spec:
             - name: signer-ca
               mountPath: /etc/custodia/signer
               readOnly: true
+{{- with .Values.signer.extraVolumeMounts }}
+{{ toYaml . | indent 12 }}
+{{- end }}
           resources:
 {{ toYaml .Values.signer.resources | indent 12 }}
       volumes:
@@ -114,4 +117,7 @@ spec:
         - name: signer-ca
           secret:
             secretName: {{ .Values.signer.secretName }}
+{{- with .Values.signer.extraVolumes }}
+{{ toYaml . | indent 8 }}
+{{- end }}
 {{- end }}

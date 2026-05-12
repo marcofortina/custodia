@@ -114,7 +114,7 @@ sudo editor /etc/custodia/custodia-signer.yaml
 sudo systemctl enable --now custodia-server custodia-signer
 ```
 
-Set `server.url` in `custodia-server.yaml` to the HTTPS API URL that remote clients will use. `custodia-admin client enrollment create` prints that configured URL with each one-shot enrollment token.
+Set `server.url` in `custodia-server.yaml` to the HTTPS API URL that remote clients will use. `custodia-admin client enrollment create` prints that configured URL with each one-shot enrollment token. For Full package installs, copy `custodia-server.full.yaml.example` instead and follow [`BARE_METAL_FULL_INSTALL.md`](BARE_METAL_FULL_INSTALL.md) before starting services; do not run Full with Lite SQLite/memory defaults.
 
 ## Client package layout
 
@@ -204,7 +204,7 @@ export CUSTODIA_PACKAGE_INSTALL_CONFIRM=YES
 sudo -E ./scripts/package-install-smoke.sh install-verify
 ```
 
-The clean-install smoke first extracts the selected artifacts and validates their package manifests, checks Debian `dpkg` path filters, then uses `dpkg -i` or `rpm -Uvh --replacepkgs` and checks the installed package database, binaries, manpages, docs, SDK snapshots, systemd units, server runtime user/directories and service enablement state. It also verifies key systemd hardening directives such as `NoNewPrivileges=true`, `PrivateDevices=true`, `ProtectSystem=strict`, `ProtectKernelTunables=true` and restricted address families. Stale or incomplete artifacts and minimized Debian images that drop `/usr/share/man` or `/usr/share/doc` fail before the clean VM is modified. It does not enable or start services. See [`PACKAGE_INSTALL_SMOKE.md`](PACKAGE_INSTALL_SMOKE.md).
+The clean-install smoke first extracts the selected artifacts and validates their package manifests, checks Debian `dpkg` path filters, then uses `dpkg -i` or `rpm -Uvh --replacepkgs` and checks the installed package database, binaries, helper scripts, manpages, docs, SDK snapshots, systemd units, server runtime user/directories and service enablement state. It also verifies key systemd hardening directives such as `NoNewPrivileges=true`, `PrivateDevices=true`, `ProtectSystem=strict`, `ProtectKernelTunables=true` and restricted address families. Stale or incomplete artifacts and minimized Debian images that drop `/usr/share/man` or `/usr/share/doc` fail before the clean VM is modified. It does not enable or start services. See [`PACKAGE_INSTALL_SMOKE.md`](PACKAGE_INSTALL_SMOKE.md).
 
 ## GitHub release workflow
 
@@ -223,3 +223,13 @@ The workflow creates or updates tag release `vVERSION` and uploads the package a
 ## Runtime file permissions
 
 Packages create the `custodia` user and the main runtime directories. Install runtime YAML, certificates and private keys with the ownership and modes documented in [`FILE_PERMISSIONS.md`](FILE_PERMISSIONS.md).
+
+## Installed operational helper
+
+The server package installs the read-only endpoint smoke helper as:
+
+```bash
+/usr/sbin/custodia-operational-readiness-smoke
+```
+
+Use it for package-only Full and Lite server checks when the Git checkout is not present on the target host. See [`OPERATIONAL_READINESS_SMOKE.md`](OPERATIONAL_READINESS_SMOKE.md).
