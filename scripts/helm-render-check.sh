@@ -77,6 +77,16 @@ if ! printf '%s\n' "$lite_render" | grep -F 'CUSTODIA_LOG_FILE: ""' >/dev/null; 
   exit 1
 fi
 
+if printf '%s\n' "$lite_render" | grep -F 'tcpSocket:' >/dev/null; then
+  printf 'helm-render-check: signer probes must not use tcpSocket against the TLS listener\n' >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$lite_render" | grep -F 'exec:' >/dev/null; then
+  printf 'helm-render-check: signer probes must render exec checks to avoid TLS probe noise\n' >&2
+  exit 1
+fi
+
 expect_failure() {
   local description="$1"
   shift

@@ -85,15 +85,35 @@ spec:
               value: {{ .Values.signer.auditLogFile | quote }}
 {{- end }}
           readinessProbe:
-            tcpSocket:
-              port: signer
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - |
+                  test -r /etc/custodia/tls/{{ .Values.mtls.certKey }}
+                  test -r /etc/custodia/tls/{{ .Values.mtls.keyKey }}
+                  test -r /etc/custodia/tls/{{ .Values.mtls.clientCAKey }}
+                  test -r /etc/custodia/signer/{{ .Values.signer.caCertKey }}
+                  test -r /etc/custodia/signer/{{ .Values.signer.caKeyKey }}
+                  test -r /etc/custodia/signer/{{ .Values.signer.caPassphraseKey }}
+                  test -r /etc/custodia/signer/{{ .Values.signer.crlKey }}
             initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
             timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
             failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
           livenessProbe:
-            tcpSocket:
-              port: signer
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - |
+                  test -r /etc/custodia/tls/{{ .Values.mtls.certKey }}
+                  test -r /etc/custodia/tls/{{ .Values.mtls.keyKey }}
+                  test -r /etc/custodia/tls/{{ .Values.mtls.clientCAKey }}
+                  test -r /etc/custodia/signer/{{ .Values.signer.caCertKey }}
+                  test -r /etc/custodia/signer/{{ .Values.signer.caKeyKey }}
+                  test -r /etc/custodia/signer/{{ .Values.signer.caPassphraseKey }}
+                  test -r /etc/custodia/signer/{{ .Values.signer.crlKey }}
             initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
             timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
