@@ -64,6 +64,30 @@ paths and the server URL are derived from the standard client profile directory 
 Validate the profile, HTTPS URL, local mTLS certificate/key pair, CA bundle,
 and optional crypto key without contacting the server.
 .TP
+.B profile list
+List standard per-user client profile ids found under
+.I $XDG_CONFIG_HOME/custodia
+or
+.I $HOME/.config/custodia
+when
+.B XDG_CONFIG_HOME
+is not set. The command ignores non-profile files and never reads
+.IR /etc/custodia-client .
+.TP
+.B profile show --client-id ID
+Print local profile metadata and file-presence booleans without exposing private
+key content, enrollment tokens, secret values, or private-key file paths.
+.TP
+.B profile path --client-id ID
+Print the resolved standard local profile directory for
+.IR ID .
+.TP
+.B profile delete --client-id ID --yes
+Delete the local per-user profile directory. The explicit
+.B --yes
+confirmation is required. This removes local files only; it does not revoke the
+client on the server, delete secrets, revoke access grants, or rotate keys.
+.TP
 .B key generate --client-id ID [--private-key-out FILE --public-key-out FILE]
 Generate a local X25519 application key pair. Without explicit output paths,
 write
@@ -87,7 +111,9 @@ Run read-only diagnostics for a local client profile. The default mode validates
 local profile, mTLS files, CA bundle and crypto key without contacting the server.
 Pass
 .B --online
-for an mTLS current-client reachability check.
+for an mTLS current-client reachability check. Use
+.BR "profile show"
+for a non-validating inventory of the local profile files.
 .TP
 .B secret put --client-id ID|--config FILE --key KEY [--namespace NS] --value-file FILE [--recipient ID|ID=FILE] [--permissions read[,write,share]|all|BITS]
 Encrypt a plaintext file locally and create a secret in the caller-visible namespace/key keyspace.
