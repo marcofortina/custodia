@@ -298,6 +298,132 @@ func TestConfigWriteUsesDefaultClientProfile(t *testing.T) {
 	}
 }
 
+func TestProfileCommandsManageXDGProfiles(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	alice, err := defaultClientProfilePaths("client_alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	bob, err := defaultClientProfilePaths("client_bob")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, profile := range []clientProfilePaths{alice, bob} {
+		if err := os.MkdirAll(profile.Dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for path, body := range map[string]string{
+		alice.Config:        `{"client_id":"client_alice"}`,
+		alice.ServerURL:     "https://vault.example:8443\n",
+		alice.MTLSKey:       "PRIVATE KEY MATERIAL\n",
+		alice.MTLSCSR:       "CSR\n",
+		alice.MTLSCert:      "CERT\n",
+		alice.CA:            "CA\n",
+		alice.CryptoPrivate: "CRYPTO PRIVATE MATERIAL\n",
+		alice.CryptoPublic:  "PUBLIC\n",
+	} {
+		if err := os.WriteFile(path, []byte(body), keyFileMode); err != nil {
+			t.Fatalf("WriteFile(%s): %v", path, err)
+		}
+	}
+
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{"profile", "list"})
+	if code != 0 {
+		t.Fatalf("profile list failed with %d: %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "client_alice") || !strings.Contains(stdout.String(), "client_bob") {
+		t.Fatalf("profile list missing profiles: %s", stdout.String())
+	}
+	if strings.Contains(stdout.String(), "/etc/custodia-client") {
+		t.Fatalf("profile list referenced forbidden system path: %s", stdout.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = (&app{stdout: &stdout, stderr: &stderr}).run([]string{"profile", "path", "--client-id", "client_alice"})
+	if code != 0 {
+		t.Fatalf("profile path failed with %d: %s", code, stderr.String())
+	}
+	if got := strings.TrimSpace(stdout.String()); got != alice.Dir {
+		t.Fatalf("profile path = %q, want %q", got, alice.Dir)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = (&app{stdout: &stdout, stderr: &stderr}).run([]string{"profile", "show", "--client-id", "client_alice"})
+	if code != 0 {
+		t.Fatalf("profile show failed with %d: %s", code, stderr.String())
+	}
+	show := stdout.String()
+	for _, want := range []string{`"client_id": "client_alice"`, `"has_mtls_key": true`, `"has_crypto_private_key": true`, alice.Dir} {
+		if !strings.Contains(show, want) {
+			t.Fatalf("profile show missing %q: %s", want, show)
+		}
+	}
+	for _, forbidden := range []string{"PRIVATE KEY MATERIAL", "CRYPTO PRIVATE MATERIAL", alice.MTLSKey, alice.CryptoPrivate, "/etc/custodia-client"} {
+		if strings.Contains(show, forbidden) {
+			t.Fatalf("profile show exposed forbidden value %q: %s", forbidden, show)
+		}
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = (&app{stdout: &stdout, stderr: &stderr}).run([]string{"profile", "delete", "--client-id", "client_alice"})
+	if code != 2 {
+		t.Fatalf("expected delete confirmation failure, got %d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "--yes is required to delete a client profile") {
+		t.Fatalf("unexpected delete confirmation error: %s", stderr.String())
+	}
+	if _, err := os.Stat(alice.Dir); err != nil {
+		t.Fatalf("profile was deleted without --yes: %v", err)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = (&app{stdout: &stdout, stderr: &stderr}).run([]string{"profile", "delete", "--client-id", "client_alice", "--yes"})
+	if code != 0 {
+		t.Fatalf("profile delete failed with %d: %s", code, stderr.String())
+	}
+	if _, err := os.Stat(alice.Dir); !os.IsNotExist(err) {
+		t.Fatalf("expected profile directory removed, stat err=%v", err)
+	}
+}
+
+func TestProfilePathUsesHomeFallbackWhenXDGUnset(t *testing.T) {
+	dir := t.TempDir()
+	unsetEnvForTest(t, "XDG_CONFIG_HOME")
+	t.Setenv("HOME", dir)
+
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{"profile", "path", "--client-id", "client_home"})
+	if code != 0 {
+		t.Fatalf("profile path failed with %d: %s", code, stderr.String())
+	}
+	want := filepath.Join(dir, ".config", "custodia", "client_home")
+	if got := strings.TrimSpace(stdout.String()); got != want {
+		t.Fatalf("profile path = %q, want %q", got, want)
+	}
+}
+
+func unsetEnvForTest(t *testing.T, key string) {
+	t.Helper()
+	old, ok := os.LookupEnv(key)
+	if err := os.Unsetenv(key); err != nil {
+		t.Fatalf("Unsetenv(%s): %v", key, err)
+	}
+	t.Cleanup(func() {
+		if ok {
+			_ = os.Setenv(key, old)
+			return
+		}
+		_ = os.Unsetenv(key)
+	})
+}
+
 func TestConfigCheckValidatesLocalFiles(t *testing.T) {
 	dir := t.TempDir()
 	artifacts, err := certutil.GenerateLiteBootstrap(certutil.LiteBootstrapRequest{AdminClientID: "client_alice", ServerName: "localhost"})
@@ -401,7 +527,7 @@ func TestHelpMentionsEncryptedSecretCommands(t *testing.T) {
 		t.Fatalf("help failed: %d %s", code, stderr.String())
 	}
 	body := stdout.String()
-	for _, token := range []string{"config write", "config check", "doctor --client-id ID|--config FILE [--online]", "mtls install-cert", "key inspect", "--client-id ID", "secret put", "secret get", "secret update", "secret share", "secret delete", "secret versions", "secret access list", "secret access revoke", "Secret payloads are encrypted/decrypted locally"} {
+	for _, token := range []string{"config write", "config check", "profile list", "profile show", "profile delete", "doctor --client-id ID|--config FILE [--online]", "mtls install-cert", "key inspect", "--client-id ID", "secret put", "secret get", "secret update", "secret share", "secret delete", "secret versions", "secret access list", "secret access revoke", "Secret payloads are encrypted/decrypted locally"} {
 		if !strings.Contains(body, token) {
 			t.Fatalf("help missing %q: %s", token, body)
 		}

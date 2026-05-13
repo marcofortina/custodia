@@ -118,6 +118,8 @@ func (a *app) run(args []string) int {
 		return a.runDoctor(args[1:])
 	case "mtls":
 		return a.runMTLS(args[1:])
+	case "profile":
+		return a.runProfile(args[1:])
 	case "secret":
 		return a.runSecret(args[1:])
 	case "version":
@@ -142,6 +144,10 @@ func (a *app) usage() {
   custodia-client key inspect --key FILE
   custodia-client config write --client-id ID [--server-url URL --out FILE --cert FILE --key FILE --ca FILE --crypto-key FILE]
   custodia-client config check --client-id ID|--config FILE
+  custodia-client profile list
+  custodia-client profile show --client-id ID
+  custodia-client profile path --client-id ID
+  custodia-client profile delete --client-id ID --yes
   custodia-client doctor --client-id ID|--config FILE [--online]
   custodia-client secret put --client-id ID --key KEY [--namespace NS] --value-file FILE [--recipient ID|ID=PUBLIC.json] [--permissions read[,write,share]|all|BITS]
   custodia-client secret get --client-id ID --key KEY [--namespace NS] [--out FILE]
@@ -158,6 +164,106 @@ Common options may still be stored in a JSON config file and loaded with --confi
 For secret subcommands, --key identifies the secret; use --mtls-key for an explicit mTLS private key path.
 
 Secret payloads are encrypted/decrypted locally. Custodia receives only ciphertext, crypto_metadata and opaque recipient envelopes.`)
+}
+
+func (a *app) runProfile(args []string) int {
+	if len(args) == 0 {
+		fmt.Fprintln(a.stderr, "missing profile subcommand")
+		return 2
+	}
+	switch args[0] {
+	case "list":
+		return a.runProfileList(args[1:])
+	case "show":
+		return a.runProfileShow(args[1:])
+	case "path":
+		return a.runProfilePath(args[1:])
+	case "delete":
+		return a.runProfileDelete(args[1:])
+	default:
+		fmt.Fprintf(a.stderr, "unknown profile subcommand: %s\n", args[0])
+		return 2
+	}
+}
+
+func (a *app) runProfileList(args []string) int {
+	fs := newFlagSet("custodia-client profile list", a.stderr)
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	profiles, err := listClientProfileIDs()
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	return writeJSON(a.stdout, map[string]any{"profiles": profiles})
+}
+
+func (a *app) runProfileShow(args []string) int {
+	fs := newFlagSet("custodia-client profile show", a.stderr)
+	clientID := fs.String("client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "local client id for the standard profile")
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	id := strings.TrimSpace(*clientID)
+	if id == "" {
+		fmt.Fprintln(a.stderr, "--client-id is required")
+		return 2
+	}
+	summary, err := buildClientProfileSummary(id)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 2
+	}
+	return writeJSON(a.stdout, summary)
+}
+
+func (a *app) runProfilePath(args []string) int {
+	fs := newFlagSet("custodia-client profile path", a.stderr)
+	clientID := fs.String("client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "local client id for the standard profile")
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	id := strings.TrimSpace(*clientID)
+	if id == "" {
+		fmt.Fprintln(a.stderr, "--client-id is required")
+		return 2
+	}
+	paths, err := defaultClientProfilePaths(id)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 2
+	}
+	fmt.Fprintln(a.stdout, paths.Dir)
+	return 0
+}
+
+func (a *app) runProfileDelete(args []string) int {
+	fs := newFlagSet("custodia-client profile delete", a.stderr)
+	clientID := fs.String("client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "local client id for the standard profile")
+	yes := fs.Bool("yes", false, "confirm deletion of the local client profile directory")
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	id := strings.TrimSpace(*clientID)
+	if id == "" {
+		fmt.Fprintln(a.stderr, "--client-id is required")
+		return 2
+	}
+	if !*yes {
+		fmt.Fprintln(a.stderr, "--yes is required to delete a client profile")
+		return 2
+	}
+	paths, err := defaultClientProfilePaths(id)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 2
+	}
+	if err := deleteClientProfile(paths); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	return writeJSON(a.stdout, map[string]string{"client_id": id, "profile_dir": paths.Dir, "status": "deleted"})
 }
 
 func (a *app) runMTLS(args []string) int {
