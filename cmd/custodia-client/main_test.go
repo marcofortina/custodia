@@ -393,6 +393,139 @@ func TestProfileCommandsManageXDGProfiles(t *testing.T) {
 	}
 }
 
+func TestProfileExportImportMovesProfileAndProtectsPrivateKeys(t *testing.T) {
+	sourceConfigHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", sourceConfigHome)
+	paths, err := defaultClientProfilePaths("client_alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(paths.Dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	oldConfig := clientConfigFile{ServerURL: "https://vault.example:8443", CertFile: paths.MTLSCert, KeyFile: paths.MTLSKey, CAFile: paths.CA, ClientID: "client_alice", CryptoKey: paths.CryptoPrivate}
+	if err := writeJSONFileExclusive(paths.Config, oldConfig, keyFileMode); err != nil {
+		t.Fatal(err)
+	}
+	for path, body := range map[string]string{
+		paths.ServerURL:     "https://vault.example:8443\n",
+		paths.MTLSKey:       "MTLS PRIVATE SECRET\n",
+		paths.MTLSCSR:       "CSR\n",
+		paths.MTLSCert:      "CERT\n",
+		paths.CA:            "CA\n",
+		paths.CryptoPrivate: "CRYPTO PRIVATE SECRET\n",
+		paths.CryptoPublic:  "PUBLIC\n",
+	} {
+		mode := publicFileMode
+		if path == paths.MTLSKey || path == paths.CryptoPrivate {
+			mode = keyFileMode
+		}
+		if err := os.WriteFile(path, []byte(body), mode); err != nil {
+			t.Fatalf("WriteFile(%s): %v", path, err)
+		}
+	}
+
+	metadataOnlyArchive := filepath.Join(t.TempDir(), "client_alice.metadata.json")
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{"profile", "export", "--client-id", "client_alice", "--out", metadataOnlyArchive})
+	if code != 0 {
+		t.Fatalf("metadata profile export failed with %d: %s", code, stderr.String())
+	}
+	for _, forbidden := range []string{"MTLS PRIVATE SECRET", "CRYPTO PRIVATE SECRET"} {
+		if strings.Contains(stdout.String(), forbidden) || strings.Contains(stderr.String(), forbidden) {
+			t.Fatalf("profile export leaked private material %q", forbidden)
+		}
+	}
+	var metadataOnly clientProfileExport
+	if err := readJSONFile(metadataOnlyArchive, &metadataOnly); err != nil {
+		t.Fatal(err)
+	}
+	if metadataOnly.IncludesPrivateKey {
+		t.Fatalf("metadata-only export was marked as including private keys")
+	}
+	for _, file := range metadataOnly.Files {
+		if file.Role == "mtls_private_key" || file.Role == "crypto_private_key" {
+			t.Fatalf("metadata-only export included private role %q", file.Role)
+		}
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	privateArchive := filepath.Join(t.TempDir(), "client_alice.profile.json")
+	code = (&app{stdout: &stdout, stderr: &stderr}).run([]string{"profile", "export", "--client-id", "client_alice", "--out", privateArchive, "--include-private-keys"})
+	if code != 2 {
+		t.Fatalf("expected private export confirmation failure, got %d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "--yes is required with --include-private-keys") {
+		t.Fatalf("unexpected private export confirmation error: %s", stderr.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = (&app{stdout: &stdout, stderr: &stderr}).run([]string{"profile", "export", "--client-id", "client_alice", "--out", privateArchive, "--include-private-keys", "--yes"})
+	if code != 0 {
+		t.Fatalf("private profile export failed with %d: %s", code, stderr.String())
+	}
+	for _, forbidden := range []string{"MTLS PRIVATE SECRET", "CRYPTO PRIVATE SECRET"} {
+		if strings.Contains(stdout.String(), forbidden) || strings.Contains(stderr.String(), forbidden) {
+			t.Fatalf("profile export leaked private material %q", forbidden)
+		}
+	}
+
+	targetConfigHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", targetConfigHome)
+	stdout.Reset()
+	stderr.Reset()
+	code = (&app{stdout: &stdout, stderr: &stderr}).run([]string{"profile", "import", "--file", privateArchive, "--client-id", "client_alice"})
+	if code != 0 {
+		t.Fatalf("profile import failed with %d: %s", code, stderr.String())
+	}
+	imported, err := defaultClientProfilePaths("client_alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for path, want := range map[string]string{imported.MTLSKey: "MTLS PRIVATE SECRET\n", imported.CryptoPrivate: "CRYPTO PRIVATE SECRET\n"} {
+		body, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read imported private file %s: %v", path, err)
+		}
+		if string(body) != want {
+			t.Fatalf("imported private file %s = %q, want %q", path, string(body), want)
+		}
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := info.Mode().Perm(); got != keyFileMode {
+			t.Fatalf("imported private file mode = %o, want %o", got, keyFileMode)
+		}
+	}
+	importedConfig, err := readClientConfigFile(imported.Config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if importedConfig.CertFile != imported.MTLSCert || importedConfig.KeyFile != imported.MTLSKey || importedConfig.CAFile != imported.CA || importedConfig.CryptoKey != imported.CryptoPrivate {
+		t.Fatalf("imported config was not normalized to target profile: %+v want paths %+v", importedConfig, imported)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = (&app{stdout: &stdout, stderr: &stderr}).run([]string{"profile", "import", "--file", privateArchive, "--client-id", "client_alice"})
+	if code != 1 {
+		t.Fatalf("expected overwrite refusal, got %d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "refusing to overwrite existing client profile") {
+		t.Fatalf("unexpected overwrite refusal: %s", stderr.String())
+	}
+
+	stdout.Reset()
+	stderr.Reset()
+	code = (&app{stdout: &stdout, stderr: &stderr}).run([]string{"profile", "import", "--file", privateArchive, "--client-id", "client_alice", "--force"})
+	if code != 0 {
+		t.Fatalf("forced profile import failed with %d: %s", code, stderr.String())
+	}
+}
+
 func TestProfilePathUsesHomeFallbackWhenXDGUnset(t *testing.T) {
 	dir := t.TempDir()
 	unsetEnvForTest(t, "XDG_CONFIG_HOME")
@@ -527,7 +660,7 @@ func TestHelpMentionsEncryptedSecretCommands(t *testing.T) {
 		t.Fatalf("help failed: %d %s", code, stderr.String())
 	}
 	body := stdout.String()
-	for _, token := range []string{"config write", "config check", "profile list", "profile show", "profile delete", "doctor --client-id ID|--config FILE [--online]", "mtls install-cert", "key inspect", "--client-id ID", "secret put", "secret get", "secret update", "secret share", "secret delete", "secret versions", "secret access list", "secret access revoke", "Secret payloads are encrypted/decrypted locally"} {
+	for _, token := range []string{"config write", "config check", "profile list", "profile show", "profile path", "profile export", "profile import", "profile delete", "doctor --client-id ID|--config FILE [--online]", "mtls install-cert", "key inspect", "--client-id ID", "secret put", "secret get", "secret update", "secret share", "secret delete", "secret versions", "secret access list", "secret access revoke", "Secret payloads are encrypted/decrypted locally"} {
 		if !strings.Contains(body, token) {
 			t.Fatalf("help missing %q: %s", token, body)
 		}
