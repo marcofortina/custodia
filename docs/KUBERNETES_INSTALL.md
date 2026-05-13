@@ -42,11 +42,16 @@ You also need:
 
 ## 2. Build the image from a Git clone
 
+For release smoke, build from the public release tag, not from the moving default branch:
+
 ```bash
 git clone https://github.com/marcofortina/custodia.git
 cd custodia
 
 CUSTODIA_VERSION=0.1.0
+git fetch --tags origin
+git checkout "v${CUSTODIA_VERSION}"
+
 CUSTODIA_COMMIT="$(git rev-parse --short=12 HEAD)"
 CUSTODIA_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
@@ -57,6 +62,8 @@ DOCKER_BUILDKIT=1 docker build \
   --build-arg CUSTODIA_DATE="$CUSTODIA_DATE" \
   -t registry.example.internal/custodia/custodia-server:${CUSTODIA_VERSION} .
 ```
+
+For unreleased development testing, replace the checkout step with the exact branch or commit under review and tag the image with a non-release identifier such as `0.1.1-dev`.
 
 Push the image to the registry used by your cluster:
 
