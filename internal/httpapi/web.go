@@ -916,7 +916,7 @@ func (s *Server) handleWebClientEnrollments(w http.ResponseWriter, r *http.Reque
 		}
 		ttl = parsed
 	}
-	response, status, code := s.createClientEnrollment(r, ttl)
+	response, status, code := s.createClientEnrollment(r, ttl, "web.client_enrollment_create")
 	if code != "" {
 		if code == "invalid_ttl" {
 			s.renderWebClientEnrollmentForm(w, status, ttlText, code, "TTL must not exceed 24h for one-shot enrollment tokens.")
@@ -925,14 +925,16 @@ func (s *Server) handleWebClientEnrollments(w http.ResponseWriter, r *http.Reque
 		writeWebStatusError(w, status, code)
 		return
 	}
+	serverURL := html.EscapeString(response.ServerURL)
+	enrollmentToken := html.EscapeString(response.EnrollmentToken)
 	body := webHero("Client Enrollments", "Create one-shot client onboarding tokens without shell access to a server or Kubernetes pod.") +
 		webClientEnrollmentForm(ttlText) +
 		`<section class="console-panel" aria-label="New enrollment token"><p class="console-panel-label">Enrollment token</p>` +
-		`<dl class="console-detail"><dt>Server URL</dt><dd><code>` + html.EscapeString(response.ServerURL) + `</code></dd>` +
-		`<dt>Enrollment token</dt><dd><code>` + html.EscapeString(response.EnrollmentToken) + `</code></dd>` +
+		`<dl class="console-detail"><dt>Server URL</dt><dd><code id="enrollment-server-url">` + serverURL + `</code> <button type="button" class="console-button console-button--ghost" data-copy-target="enrollment-server-url" data-copy-value="` + serverURL + `">Copy server URL</button></dd>` +
+		`<dt>Enrollment token</dt><dd><code id="enrollment-token">` + enrollmentToken + `</code> <button type="button" class="console-button console-button--ghost" data-copy-target="enrollment-token" data-copy-value="` + enrollmentToken + `">Copy token</button></dd>` +
 		`<dt>Expires at</dt><dd>` + html.EscapeString(response.ExpiresAt.Format(time.RFC3339)) + `</dd></dl>` +
 		`<p class="console-muted">The token is shown only in this response. Treat it as sensitive and transfer it to the client host through your normal trusted channel.</p>` +
-		`<pre><code>custodia-client mtls enroll --client-id client_alice --server-url ` + html.EscapeString(response.ServerURL) + ` --enrollment-token ` + html.EscapeString(response.EnrollmentToken) + `</code></pre>` +
+		`<pre><code>custodia-client mtls enroll --client-id client_alice --server-url ` + serverURL + ` --enrollment-token ` + enrollmentToken + `</code></pre>` +
 		`<p class="console-muted">If this is a disposable lab using the bootstrap CA before the client trusts it, add <code>--insecure</code>. Do not use <code>--insecure</code> for real remote clients.</p></section>`
 	writeWebPage(w, "Client Enrollments", body)
 }

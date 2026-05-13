@@ -135,6 +135,33 @@
     });
   };
 
+  const initCopyButtons = (root = document) => {
+    root.querySelectorAll('[data-copy-value]').forEach((button) => {
+      if (button.dataset.copyReady === 'true') return;
+      button.dataset.copyReady = 'true';
+      const originalText = button.textContent;
+      button.addEventListener('click', async () => {
+        const value = button.getAttribute('data-copy-value') || '';
+        try {
+          await navigator.clipboard.writeText(value);
+          button.textContent = 'Copied';
+        } catch {
+          const targetId = button.getAttribute('data-copy-target');
+          const target = targetId ? document.getElementById(targetId) : null;
+          const selection = window.getSelection();
+          if (target && selection) {
+            const range = document.createRange();
+            range.selectNodeContents(target);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+          button.textContent = 'Select and copy';
+        }
+        window.setTimeout(() => { button.textContent = originalText; }, 2000);
+      });
+    });
+  };
+
   const initRefreshControls = (root = document) => {
     const control = root.querySelector('[data-console-refresh-control]') || document.querySelector('[data-console-refresh-control]');
     clearRefreshTimers();
@@ -191,6 +218,7 @@
     document.title = parsed.title || document.title;
     currentMain.replaceWith(nextMain);
     initPaginatedTables(nextMain);
+    initCopyButtons(nextMain);
     initRefreshControls(nextMain);
     if (focus) nextMain.focus({ preventScroll: true });
     if (scroll) window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -245,11 +273,13 @@
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       initPaginatedTables();
+      initCopyButtons();
       setLastUpdated();
       initRefreshControls();
     });
   } else {
     initPaginatedTables();
+    initCopyButtons();
     setLastUpdated();
     initRefreshControls();
   }
