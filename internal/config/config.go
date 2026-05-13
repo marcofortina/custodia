@@ -566,7 +566,7 @@ func applyEnv(cfg *Config) {
 	cfg.ServerURL = env("CUSTODIA_SERVER_URL", cfg.ServerURL)
 	cfg.HealthAddr = env("CUSTODIA_HEALTH_ADDR", cfg.HealthAddr)
 	cfg.WebAddr = env("CUSTODIA_WEB_ADDR", cfg.WebAddr)
-	cfg.LogFile = env("CUSTODIA_LOG_FILE", cfg.LogFile)
+	cfg.LogFile = envAllowEmpty("CUSTODIA_LOG_FILE", cfg.LogFile)
 	cfg.StoreBackend = env("CUSTODIA_STORE_BACKEND", cfg.StoreBackend)
 	cfg.DatabaseURL = env("CUSTODIA_DATABASE_URL", cfg.DatabaseURL)
 	cfg.TLSCertFile = env("CUSTODIA_TLS_CERT_FILE", cfg.TLSCertFile)
@@ -658,6 +658,14 @@ func env(key, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func envAllowEmpty(key, fallback string) string {
+	value, ok := os.LookupEnv(key)
+	if !ok {
+		return fallback
+	}
+	return strings.TrimSpace(value)
 }
 
 func envBool(key string, fallback bool) bool {
