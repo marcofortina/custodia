@@ -9,7 +9,7 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "custodia.fullname" . }}
+  name: {{ include "custodia.serverFullname" . }}
   labels:
     app.kubernetes.io/name: {{ include "custodia.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
