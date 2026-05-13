@@ -491,7 +491,7 @@ func webSecretMetadataResults(records []webSecretMetadataRecord, revokedClientID
 	if len(records) == 0 {
 		return `<section class="console-panel"><p class="console-panel-label">Lookup result</p><p>No active owned secret metadata matched this namespace/key.</p></section>`
 	}
-	body := ""
+	body := `<section class="console-panel console-security-boundary"><p class="console-panel-label">Strong revocation guidance</p><p>Server-side access revocation removes future reads only. Strong cryptographic revocation requires a new encrypted version excluding the revoked client.</p></section>`
 	if revokedClientID != "" {
 		body += `<section class="console-panel" role="status"><p class="console-panel-label">Access revocation</p><p>Access revoked for <code>` + html.EscapeString(revokedClientID) + `</code>. Already obtained material cannot be clawed back; create a new encrypted version excluding the revoked client for strong rotation.</p></section>`
 	}
@@ -503,7 +503,7 @@ func webSecretMetadataResults(records []webSecretMetadataRecord, revokedClientID
 		}
 		accessRows := ""
 		for _, access := range record.Access {
-			accessRows += `<tr><td>` + html.EscapeString(access.ClientID) + `</td><td>` + html.EscapeString(access.VersionID) + `</td><td>` + html.EscapeString(webPermissions(access.Permissions)) + `</td><td>` + html.EscapeString(access.GrantedAt.Format(time.RFC3339)) + `</td><td>` + webOptionalTime(access.ExpiresAt) + `</td><td>` + webSecretAccessRevokeForm(secret.Namespace, secret.Key, secret.CreatedByClientID, access.ClientID) + `</td></tr>`
+			accessRows += `<tr><td>` + html.EscapeString(secret.CreatedByClientID) + `</td><td>` + html.EscapeString(access.ClientID) + `</td><td>` + html.EscapeString(access.VersionID) + `</td><td>` + html.EscapeString(webPermissions(access.Permissions)) + `</td><td>` + html.EscapeString(access.GrantedAt.Format(time.RFC3339)) + `</td><td>` + webOptionalTime(access.ExpiresAt) + `</td><td>` + webSecretAccessRevokeForm(secret.Namespace, secret.Key, secret.CreatedByClientID, access.ClientID) + `</td></tr>`
 		}
 		body += `<section class="console-panel"><p class="console-panel-label">Secret record</p><dl class="console-detail">` +
 			`<dt>Keyspace</dt><dd>` + webKeyspace(secret.Namespace, secret.Key) + `</dd>` +
@@ -512,8 +512,8 @@ func webSecretMetadataResults(records []webSecretMetadataRecord, revokedClientID
 			`<dt>Current version</dt><dd><code>` + html.EscapeString(secret.VersionID) + `</code></dd>` +
 			`<dt>Created at</dt><dd>` + html.EscapeString(secret.CreatedAt.Format(time.RFC3339)) + `</dd></dl>` +
 			`<h2>Versions</h2>` + webPaginatedTable([]string{"Version", "Created by", "Created", "Revoked"}, versionsRows, 4, "No versions found.", 10, "Secret versions pagination") +
-			`<h2>Access Grants</h2><p class="console-muted">Future access revocation removes active grants only. Strong revocation requires a new encrypted version without the revoked client.</p>` +
-			webPaginatedTable([]string{"Client", "Version", "Permissions", "Granted", "Expires", "Action"}, accessRows, 6, "No active access grants found.", 10, "Secret access pagination") + `</section>`
+			`<h2>Access Grants</h2><p class="console-muted">Future access revocation removes active grants only. Strong cryptographic revocation requires a new encrypted version excluding the revoked client.</p>` +
+			webPaginatedTable([]string{"Owner client", "Target client", "Version", "Permissions", "Granted", "Expires", "Action"}, accessRows, 7, "No active access grants found.", 10, "Secret access pagination") + `</section>`
 	}
 	return body
 }

@@ -1703,7 +1703,7 @@ func TestWebSecretMetadataWorkflow(t *testing.T) {
 		t.Fatalf("expected secret metadata 200, got %d: %s", getRes.Code, getRes.Body.String())
 	}
 	body := getRes.Body.String()
-	for _, expected := range []string{"Secret Metadata", "alice-bob-demo", "client_alice", "client_bob", "Access Grants", `action="/web/secret-metadata/revoke"`} {
+	for _, expected := range []string{"Secret Metadata", "alice-bob-demo", "client_alice", "client_bob", "Access Grants", "Owner client", "Target client", "Strong cryptographic revocation requires a new encrypted version excluding the revoked client", `action="/web/secret-metadata/revoke"`} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("secret metadata page missing %q: %s", expected, body)
 		}
@@ -1712,6 +1712,21 @@ func TestWebSecretMetadataWorkflow(t *testing.T) {
 		if strings.Contains(body, forbidden) {
 			t.Fatalf("secret metadata leaked cryptographic material %q: %s", forbidden, body)
 		}
+	}
+
+	missingConfirmReq := httptest.NewRequest(http.MethodPost, "/web/secret-metadata/revoke", strings.NewReader("namespace=default&key=alice-bob-demo&owner_client_id=client_alice&target_client_id=client_bob"))
+	missingConfirmReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	missingConfirmReq.TLS = &tls.ConnectionState{PeerCertificates: []*x509.Certificate{{DNSNames: []string{"admin"}, Subject: pkix.Name{CommonName: "admin"}}}}
+	missingConfirmRes := httptest.NewRecorder()
+	handler.ServeHTTP(missingConfirmRes, missingConfirmReq)
+	if missingConfirmRes.Code != http.StatusBadRequest {
+		t.Fatalf("expected missing confirmation to be rejected with 400, got %d: %s", missingConfirmRes.Code, missingConfirmRes.Body.String())
+	}
+	preRevokeBobReq := mtlsRequest(http.MethodGet, "/v1/secrets/by-key?namespace=default&key=alice-bob-demo", "", "client_bob")
+	preRevokeBobRes := httptest.NewRecorder()
+	handler.ServeHTTP(preRevokeBobRes, preRevokeBobReq)
+	if preRevokeBobRes.Code != http.StatusOK {
+		t.Fatalf("expected bob read before confirmed web access revoke to succeed, got %d: %s", preRevokeBobRes.Code, preRevokeBobRes.Body.String())
 	}
 
 	revokeReq := httptest.NewRequest(http.MethodPost, "/web/secret-metadata/revoke", strings.NewReader("namespace=default&key=alice-bob-demo&owner_client_id=client_alice&target_client_id=client_bob&confirm=yes"))
@@ -1725,6 +1740,7 @@ func TestWebSecretMetadataWorkflow(t *testing.T) {
 	if got := revokeRes.Header().Get("Location"); !strings.Contains(got, "/web/secret-metadata?") || !strings.Contains(got, "revoked_client_id=client_bob") {
 		t.Fatalf("unexpected revoke redirect location %q", got)
 	}
+	assertLastAudit(t, memoryStore, "web.secret_access_revoke", "success", "")
 
 	bobReq := mtlsRequest(http.MethodGet, "/v1/secrets/by-key?namespace=default&key=alice-bob-demo", "", "client_bob")
 	bobRes := httptest.NewRecorder()
