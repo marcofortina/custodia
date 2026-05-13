@@ -35,6 +35,19 @@ custodia-client mtls enroll \
 
 This creates the standard per-user profile under `$XDG_CONFIG_HOME/custodia/$CLIENT_ID`, or `$HOME/.config/custodia/$CLIENT_ID` when `XDG_CONFIG_HOME` is not set. The mTLS private key and CSR are generated locally; only the CSR and token are sent to Custodia. The response installs the signed certificate and public CA certificate into the client profile.
 
+### Enrollment troubleshooting
+
+`custodia-client mtls enroll` prints an operator hint when the claim fails. Treat the hint as the first remediation step, but keep the token private and do not paste it into logs or issues.
+
+Common failures:
+
+- `invalid_or_expired_token`, `invalid_token`, `401` or `403`: create a fresh one-shot token on the server/admin host, copy it exactly and retry. Tokens are short-lived and may be single-use.
+- TLS trust or `unknown authority`: install/trust the Custodia CA first, or use `--insecure` only for a disposable lab bootstrap where that risk is explicit.
+- certificate SAN or hostname mismatch: use the `server.url` host or IP that is present in the server certificate SANs, or rebootstrap/reissue the server certificate with the reachable DNS/IP.
+- DNS/network failure: verify that `--server-url` resolves from the client host and reaches the API listener on port `8443`.
+- `404`: verify that `--server-url` points to the Custodia API listener, not the Web Console or signer listener.
+- existing local profile files: choose a new `--client-id`, remove only the stale profile files you intentionally want to replace, or keep the existing enrolled profile. The CLI checks local targets before claiming the token so a local overwrite error does not consume the token.
+
 Then generate the local application encryption key and write the client profile:
 
 ```bash

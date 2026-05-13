@@ -66,6 +66,8 @@ custodia-client mtls enroll \
 
 This writes the mTLS private key, CSR, signed certificate and CA certificate into the standard client profile. The mTLS private key remains local to the client host.
 
+If enrollment fails, read the `hint:` line printed by the CLI before retrying. Token errors usually require a fresh one-shot token. TLS trust errors require trusting the Custodia CA, using a `--server-url` host/IP covered by the server certificate SANs, or using `--insecure` only for a disposable lab bootstrap. DNS/network errors mean the client host cannot reach the API listener. A `404` usually means the URL points at the wrong listener. Existing local profile files are checked before the token is claimed, so refusing to overwrite local material does not consume the enrollment token.
+
 Manual CSR signing remains available for advanced/offline workflows with `custodia-client mtls generate-csr`, `custodia-admin client sign-csr` and `custodia-client mtls install-cert`.
 
 ## Application encryption key
