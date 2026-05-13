@@ -65,6 +65,8 @@ config:
   valkeyURLSecretName: custodia-valkey
   valkeyURLSecretKey: valkey-url
   adminClientIDs: admin
+  # Comma-separated client_id:mtls_subject mappings used only for first-run bootstrap.
+  bootstrapClients: admin:admin
   maxEnvelopesPerSecret: 100
   clientRateLimitPerSecond: 100
   globalRateLimitPerSecond: 5000
