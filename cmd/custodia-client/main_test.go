@@ -535,6 +535,38 @@ func TestMTLSEnrollExplainsTLSVerificationFailures(t *testing.T) {
 	}
 }
 
+func TestMTLSEnrollExplainsUnreachableServerFailures(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("claim should not reach a stopped test server")
+	}))
+	serverURL := server.URL
+	server.Close()
+
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{
+		"mtls", "enroll",
+		"--client-id", "client_alice",
+		"--server-url", serverURL,
+		"--enrollment-token", "dead-token",
+		"--insecure",
+	})
+	if code == 0 {
+		t.Fatalf("expected unreachable server failure")
+	}
+	if !strings.Contains(stderr.String(), "enrollment request failed") || !strings.Contains(stderr.String(), "network path is open") {
+		t.Fatalf("expected actionable unreachable server diagnostic, got: %s", stderr.String())
+	}
+	if strings.Contains(stderr.String(), "dead-token") {
+		t.Fatalf("enrollment diagnostics leaked token: %s", stderr.String())
+	}
+	profile := filepath.Join(dir, "custodia", "client_alice")
+	if _, err := os.Stat(profile); !os.IsNotExist(err) {
+		t.Fatalf("expected no enrollment profile material after unreachable server claim, stat err=%v", err)
+	}
+}
+
 func TestMTLSEnrollChecksLocalTargetsBeforeClaimingToken(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
