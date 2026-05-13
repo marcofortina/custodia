@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -294,7 +295,7 @@ func claimEnrollment(serverURL string, insecure bool, claim model.ClientEnrollme
 	}
 	response, err := client.Do(request)
 	if err != nil {
-		return model.ClientEnrollmentClaimResponse{}, err
+		return model.ClientEnrollmentClaimResponse{}, enrollmentRequestError(serverURL, insecure, err)
 	}
 	defer response.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(response.Body, 1<<20))
@@ -302,13 +303,76 @@ func claimEnrollment(serverURL string, insecure bool, claim model.ClientEnrollme
 		return model.ClientEnrollmentClaimResponse{}, err
 	}
 	if response.StatusCode < 200 || response.StatusCode > 299 {
-		return model.ClientEnrollmentClaimResponse{}, fmt.Errorf("enrollment failed: %s: %s", response.Status, strings.TrimSpace(string(body)))
+		return model.ClientEnrollmentClaimResponse{}, enrollmentStatusError(response.StatusCode, response.Status, body)
 	}
 	var decoded model.ClientEnrollmentClaimResponse
 	if err := json.Unmarshal(body, &decoded); err != nil {
 		return model.ClientEnrollmentClaimResponse{}, err
 	}
 	return decoded, nil
+}
+
+func enrollmentRequestError(serverURL string, insecure bool, err error) error {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) && urlErr.Err != nil {
+		err = urlErr.Err
+	}
+
+	hint := "check --server-url points to the reachable Custodia API endpoint and that the network path is open"
+	var dnsErr *net.DNSError
+	var unknownAuthority x509.UnknownAuthorityError
+	var hostnameErr x509.HostnameError
+	var certInvalidErr x509.CertificateInvalidError
+	var netErr net.Error
+	switch {
+	case errors.As(err, &dnsErr):
+		hint = "check the --server-url host name; DNS resolution failed. Use the reachable Custodia server name or IP from the enrollment runbook"
+	case errors.As(err, &hostnameErr):
+		hint = "the server certificate does not match --server-url. Use a DNS name or IP present in the server certificate SANs, or rebootstrap the server certificate"
+	case errors.As(err, &unknownAuthority):
+		if insecure {
+			hint = "server certificate verification failed even though --insecure was requested; check the server TLS listener and certificate chain"
+		} else {
+			hint = "server certificate is not trusted. Install/trust the Custodia CA, use a --server-url covered by the certificate SANs, or use --insecure only for disposable lab bootstrap"
+		}
+	case errors.As(err, &certInvalidErr):
+		hint = "server certificate is invalid or expired. Check the Custodia server certificate and CA material"
+	case errors.As(err, &netErr) && netErr.Timeout():
+		hint = "connection timed out. Check that the Custodia API listener is reachable from this client and that firewalls allow the port"
+	}
+	return fmt.Errorf("enrollment request failed: %w\nhint: %s", err, hint)
+}
+
+func enrollmentStatusError(statusCode int, status string, body []byte) error {
+	code := enrollmentErrorCode(body)
+	hint := "check the Custodia server logs and retry with a fresh enrollment command if needed"
+	switch statusCode {
+	case http.StatusBadRequest:
+		hint = "check --client-id and the generated enrollment request; the server rejected the claim payload"
+	case http.StatusUnauthorized, http.StatusForbidden:
+		hint = "check that the enrollment token is valid, unexpired and unused, and copy the token exactly from the admin enrollment command"
+	case http.StatusNotFound:
+		hint = "check --server-url; it must point to the Custodia API listener, not the Web Console or signer listener"
+	case http.StatusTooManyRequests:
+		hint = "the server is rate limiting enrollment claims; wait and retry with a valid token"
+	}
+	if statusCode >= 500 {
+		hint = "check the Custodia server and signer logs; enrollment signing may be unavailable"
+	}
+	return fmt.Errorf("enrollment failed: %s: %s\nhint: %s", status, code, hint)
+}
+
+func enrollmentErrorCode(body []byte) string {
+	var payload struct {
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal(body, &payload); err == nil && strings.TrimSpace(payload.Error) != "" {
+		return strings.TrimSpace(payload.Error)
+	}
+	if strings.TrimSpace(string(body)) == "" {
+		return "empty_error_response"
+	}
+	return "non_json_error_response"
 }
 
 func insecureEnrollmentTransport() *http.Transport {

@@ -493,9 +493,45 @@ func TestMTLSEnrollDoesNotWriteLocalMaterialWhenClaimFails(t *testing.T) {
 	if code == 0 {
 		t.Fatalf("expected enrollment failure")
 	}
+	if !strings.Contains(stderr.String(), "invalid_token") || !strings.Contains(stderr.String(), "enrollment token is valid, unexpired and unused") {
+		t.Fatalf("expected actionable token diagnostic, got: %s", stderr.String())
+	}
+	if strings.Contains(stderr.String(), "bad-token") {
+		t.Fatalf("enrollment diagnostics leaked token: %s", stderr.String())
+	}
 	profile := filepath.Join(dir, "custodia", "client_alice")
 	if _, err := os.Stat(profile); !os.IsNotExist(err) {
 		t.Fatalf("expected no enrollment profile material after failed claim, stat err=%v", err)
+	}
+}
+
+func TestMTLSEnrollExplainsTLSVerificationFailures(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("claim should not reach an untrusted test server")
+	}))
+	defer server.Close()
+
+	var stdout, stderr bytes.Buffer
+	code := (&app{stdout: &stdout, stderr: &stderr}).run([]string{
+		"mtls", "enroll",
+		"--client-id", "client_alice",
+		"--server-url", server.URL,
+		"--enrollment-token", "lab-token",
+	})
+	if code == 0 {
+		t.Fatalf("expected TLS verification failure")
+	}
+	if !strings.Contains(stderr.String(), "server certificate is not trusted") || !strings.Contains(stderr.String(), "--insecure only for disposable lab bootstrap") {
+		t.Fatalf("expected actionable TLS diagnostic, got: %s", stderr.String())
+	}
+	if strings.Contains(stderr.String(), "lab-token") {
+		t.Fatalf("enrollment diagnostics leaked token: %s", stderr.String())
+	}
+	profile := filepath.Join(dir, "custodia", "client_alice")
+	if _, err := os.Stat(profile); !os.IsNotExist(err) {
+		t.Fatalf("expected no enrollment profile material after failed TLS claim, stat err=%v", err)
 	}
 }
 
