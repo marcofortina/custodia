@@ -14,10 +14,12 @@ import (
 	"custodia/internal/model"
 	"custodia/internal/mtls"
 	"custodia/internal/revocationresponder"
+	"custodia/internal/store"
 	"custodia/internal/webauth"
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 
 	"html"
 	"net/http"
@@ -1117,6 +1119,41 @@ func webOptionalTimeValue(value time.Time) string {
 	return html.EscapeString(value.Format(time.RFC3339))
 }
 
+type webClientPublicKeySummary struct {
+	status      string
+	fingerprint string
+	scheme      string
+	publishedAt time.Time
+}
+
+func (s *Server) webClientPublicKeySummary(ctx context.Context, client model.Client) (webClientPublicKeySummary, error) {
+	if !client.IsActive {
+		return webClientPublicKeySummary{status: "unavailable for revoked client"}, nil
+	}
+	publicKey, err := s.store.GetClientPublicKey(ctx, client.ClientID)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) || errors.Is(err, store.ErrForbidden) {
+			return webClientPublicKeySummary{status: "not published"}, nil
+		}
+		return webClientPublicKeySummary{}, err
+	}
+	return webClientPublicKeySummary{status: "published", fingerprint: publicKey.Fingerprint, scheme: publicKey.Scheme, publishedAt: publicKey.PublishedAt}, nil
+}
+
+func (summary webClientPublicKeySummary) ListHTML() string {
+	if summary.status != "published" {
+		return `<span class="console-muted">` + html.EscapeString(summary.status) + `</span>`
+	}
+	return webBadge("published")
+}
+
+func (summary webClientPublicKeySummary) DetailHTML() string {
+	if summary.status != "published" {
+		return `<dt>Public key</dt><dd><span class="console-muted">` + html.EscapeString(summary.status) + `</span></dd><dt>Public key fingerprint</dt><dd><span class="console-muted">not available</span></dd><dt>Public key published at</dt><dd><span class="console-muted">not available</span></dd>`
+	}
+	return `<dt>Public key</dt><dd>` + webBadge("published") + ` <span class="console-muted">` + html.EscapeString(summary.scheme) + `</span></dd><dt>Public key fingerprint</dt><dd><code>` + html.EscapeString(summary.fingerprint) + `</code></dd><dt>Public key published at</dt><dd>` + webOptionalTimeValue(summary.publishedAt) + `</dd>`
+}
+
 func (s *Server) handleWebClients(w http.ResponseWriter, r *http.Request) {
 	clients, err := s.store.ListClients(r.Context())
 	if err != nil {
@@ -1146,13 +1183,19 @@ func (s *Server) handleWebClients(w http.ResponseWriter, r *http.Request) {
 		if !client.IsActive {
 			state = "revoked"
 		}
-		rows += `<tr><td><a href="/web/clients/` + url.PathEscape(client.ClientID) + `" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">` + html.EscapeString(client.ClientID) + `</a></td><td>` + html.EscapeString(client.MTLSSubject) + `</td><td>` + webBadge(state) + `</td></tr>`
+		publicKey, err := s.webClientPublicKeySummary(r.Context(), client)
+		if err != nil {
+			s.auditStoreFailure(r, "web.client_list", "client_public_key", client.ClientID, err)
+			writeWebMappedError(w, err)
+			return
+		}
+		rows += `<tr><td><a href="/web/clients/` + url.PathEscape(client.ClientID) + `" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">` + html.EscapeString(client.ClientID) + `</a></td><td>` + html.EscapeString(client.MTLSSubject) + `</td><td>` + webBadge(state) + `</td><td>` + publicKey.ListHTML() + `</td></tr>`
 	}
 	body := webHero("Clients", "mTLS client identities visible to the admin console.") +
 		`<form class="console-toolbar" method="get" action="/web/clients" hx-get="/web/clients" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">` +
 		`<label>Status<select name="active">` + webSelectOption("", "All", activeFilter) + webSelectOption("true", "Active", activeFilter) + webSelectOption("false", "Revoked", activeFilter) + `</select></label>` +
 		`<button type="submit">Apply filter</button><a class="console-button console-button--ghost" href="/web/clients" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">Reset</a></form>` +
-		webPaginatedTable([]string{"Client ID", "mTLS subject", "Status"}, rows, 3, "No clients found.", 10, "Clients pagination")
+		webPaginatedTable([]string{"Client ID", "mTLS subject", "Status", "Public key"}, rows, 4, "No clients found.", 10, "Clients pagination")
 	s.audit(r, "web.client_list", "client", "", "success", nil)
 	writeWebPage(w, "Clients", body)
 }
@@ -1210,10 +1253,16 @@ func (s *Server) handleWebClientDetail(w http.ResponseWriter, r *http.Request) {
 	if !client.IsActive {
 		state = "revoked"
 	}
+	publicKey, err := s.webClientPublicKeySummary(r.Context(), client)
+	if err != nil {
+		s.auditStoreFailure(r, "web.client_detail", "client_public_key", client.ClientID, err)
+		writeWebMappedError(w, err)
+		return
+	}
 	revokePanel := webClientRevokePanel(client, r.URL.Query().Get("revoked") == "1")
 	body := webHero("Client Detail", "Metadata-only view of one client visible keyspace, ownership and shares.") +
 		`<p><a class="console-button console-button--ghost" href="/web/clients" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">Back to clients</a></p>` +
-		`<dl class="console-panel console-stat"><dt>Client ID</dt><dd>` + html.EscapeString(client.ClientID) + `</dd><dt>mTLS subject</dt><dd>` + html.EscapeString(client.MTLSSubject) + `</dd><dt>Status</dt><dd>` + webBadge(state) + `</dd></dl>` +
+		`<dl class="console-panel console-stat"><dt>Client ID</dt><dd>` + html.EscapeString(client.ClientID) + `</dd><dt>mTLS subject</dt><dd>` + html.EscapeString(client.MTLSSubject) + `</dd><dt>Status</dt><dd>` + webBadge(state) + `</dd><dt>Created at</dt><dd>` + webOptionalTimeValue(client.CreatedAt) + `</dd><dt>Revoked at</dt><dd>` + webOptionalTime(client.RevokedAt) + `</dd>` + publicKey.DetailHTML() + `<dt>Certificate serial</dt><dd><span class="console-muted">not stored in the client registry; use Revocation Status to check a serial from the certificate or CRL evidence.</span></dd><dt>Revocation status</dt><dd><a href="/web/revocation" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">Open CRL status and serial check</a></dd></dl>` +
 		revokePanel +
 		`<h2>Visible Keyspace</h2><p class="console-muted">Secrets this client can resolve by namespace/key. Secret plaintext, ciphertext, envelopes and DEKs are never rendered.</p>` +
 		webPaginatedTable([]string{"Keyspace", "Relationship", "Owner", "Permissions", "Current version", "Access expires"}, visibleRows, 6, "No visible keyspace entries found for this client.", 10, "Client visible keyspace pagination") +

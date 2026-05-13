@@ -23,8 +23,8 @@ This guard complements, rather than replaces, the existing `SameSite=Strict`, `H
 - `/web/` — metadata console landing page.
 - `/web/status` — operational status.
 - `/web/diagnostics` — runtime counters and uptime metadata only.
-- `/web/clients` — client metadata.
-- `/web/clients/{client_id}` — client detail drilldown with metadata-only visible keyspace, ownership and share summaries.
+- `/web/clients` — client metadata, active/revoked state and public-key publication status.
+- `/web/clients/{client_id}` — client detail drilldown with metadata-only lifecycle, public-key, revocation, visible keyspace, ownership and share summaries.
 - `/web/client-enrollments` — create one-shot client enrollment tokens without shell access to a server or Kubernetes pod.
 - `/web/revocation` — client CRL health, PEM download and certificate serial checks.
 - `/web/revocation/client.crl.pem` — browser-downloadable client CRL PEM after CA signature verification.
@@ -44,7 +44,7 @@ The API remains the source of truth for automation. The web console is a respons
 
 Client enrollment token creation mirrors `custodia-admin client enrollment create`: it returns the configured server URL, a one-shot enrollment token and the expiry time. The token is shown once, the server URL and token have browser copy controls, and the values must be transferred through a trusted channel. The workflow does not expose client private keys because clients still generate their mTLS key and CSR locally. Token creation is audited as a Web Console action. In disposable lab flows using an untrusted bootstrap CA, the client may add `--insecure`; real remote clients should trust the Custodia CA and avoid `--insecure`.
 
-Client detail pages are scoped by client because `namespace/key` is not globally unique. The admin drilldown shows the keyspace visible to that client, whether each entry is owned by the client or shared with the client, and share metadata for secrets owned by that client. Active client detail pages include a future-revocation form so Kubernetes operators do not need shell access to run `custodia-admin client revoke`. Client revocation does not claw back already downloaded material; strong revocation still requires a new encrypted version excluding the revoked client. The page still never renders plaintext, ciphertext, recipient envelopes, DEKs or client-side key material.
+Client detail pages are scoped by client because `namespace/key` is not globally unique. The admin drilldown shows lifecycle metadata, active/revoked state, public-key publication status and fingerprint metadata, CRL status/serial-check links, the keyspace visible to that client, whether each entry is owned by the client or shared with the client, and share metadata for secrets owned by that client. Active client detail pages include a future-revocation form so Kubernetes operators do not need shell access to run `custodia-admin client revoke`. Client revocation requires explicit confirmation, is audited, and does not claw back already downloaded material; strong revocation still requires a new encrypted version excluding the revoked client. The page still never renders plaintext, ciphertext, recipient envelopes, DEKs, private keys or client-side private key material. The current client registry does not persist issued certificate serial numbers; operators can use the linked Revocation Status serial check with certificate/CRL evidence when serial verification is required.
 
 Secret Metadata provides the Web Console equivalent of `custodia-admin secret versions`, `custodia-admin access list` and `custodia-admin access revoke` for online Kubernetes operations. Operators search by `namespace/key`, optionally pin the owner client id when required, inspect version/access metadata and revoke a target client's future access from the browser. The page intentionally uses owner client id in the revoke form so an operator cannot revoke an ambiguous keyspace record by accident. It still never renders plaintext, ciphertext, recipient envelopes, DEKs or client-side key material.
 
@@ -72,6 +72,7 @@ The metadata console supports bounded query filters for operational views. Clien
 - `/web/audit/export?limit=500&outcome=failure&action=secret.read`
 - `/web/audit/verify?limit=500`
 - `/web/clients?active=true`
+- `/web/clients/client_alice`
 - `/web/client-enrollments` plus `POST /web/client-enrollments` with form field `ttl=15m`
 - `/web/revocation`
 - `/web/revocation/client.crl.pem`
