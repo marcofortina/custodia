@@ -146,7 +146,15 @@ Read a secret by namespace/key, decrypt locally, and write plaintext output with
 .TP
 .B secret share --client-id ID|--config FILE --key KEY [--namespace NS] --target-client-id ID [--recipient ID=FILE] [--permissions read[,write,share]|all|BITS]
 Grant another client access by rewrapping local key material to the target
-recipient public key. Without a pinned
+recipient public key. Use
+.B --permissions read
+for the normal Alice-to-Bob read-only flow; readable permission names
+.BR read ,
+.BR write ,
+.BR share
+and
+.B all
+are preferred over numeric bitmasks for operators. Without a pinned
 .B --recipient
 override, the CLI resolves the target from server-published public-key metadata.
 Sharing fails when the target already has the same namespace/key in its visible
@@ -159,7 +167,7 @@ Create a new encrypted version. Include every recipient that should keep access.
 List secret version metadata.
 .TP
 .B secret access list --client-id ID|--config FILE --key KEY [--namespace NS] [--limit N]
-List access grant metadata.
+List access grant metadata. Output includes both numeric permissions and readable permission_names.
 .TP
 .B secret access revoke --client-id ID|--config FILE --key KEY [--namespace NS] --target-client-id ID --yes
 Revoke future server-side access for a target client. Only the owner can revoke
@@ -167,7 +175,9 @@ other clients. Already downloaded material may remain decryptable offline.
 .TP
 .B secret delete --client-id ID|--config FILE --key KEY [--namespace NS] [--cascade] --yes
 Delete a caller-visible key. Non-owners remove only their own visibility; owners
-are blocked while the key is still shared unless --cascade is supplied.
+are blocked while the key is still shared unless --cascade is supplied. A shared
+owner delete conflict prints an actionable hint to list grants, revoke clients,
+or rerun with --cascade --yes.
 .SH GLOBAL OPTIONS
 .TP
 .BI --client-id " ID"

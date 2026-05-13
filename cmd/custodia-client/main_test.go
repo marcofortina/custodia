@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -204,6 +205,53 @@ func TestParsePermissionBitsAcceptsNamesAndBitmasks(t *testing.T) {
 func TestParsePermissionBitsRejectsInvalidNames(t *testing.T) {
 	if _, err := parsePermissionBits("read,admin", sdk.PermissionAll); err == nil {
 		t.Fatal("expected invalid permission error")
+	}
+}
+
+func TestPermissionNamesDescribeAccessListPermissions(t *testing.T) {
+	for _, tc := range []struct {
+		bits int
+		want string
+	}{
+		{bits: sdk.PermissionRead, want: "read"},
+		{bits: sdk.PermissionRead | sdk.PermissionWrite, want: "read,write"},
+		{bits: sdk.PermissionAll, want: "all"},
+		{bits: 99, want: "unknown(99)"},
+	} {
+		t.Run(tc.want, func(t *testing.T) {
+			if got := permissionNames(tc.bits); got != tc.want {
+				t.Fatalf("permissionNames(%d) = %q, want %q", tc.bits, got, tc.want)
+			}
+		})
+	}
+
+	out := accessWithPermissionNames([]sdk.SecretAccessMetadata{{ClientID: "client_bob", Permissions: sdk.PermissionRead}})
+	if len(out) != 1 || out[0].ClientID != "client_bob" || out[0].PermissionNames != "read" {
+		t.Fatalf("unexpected access output: %+v", out)
+	}
+}
+
+func TestActionableSecretDeleteConflictExplainsSharedCleanup(t *testing.T) {
+	err := errors.New(`custodia request failed: 409 Conflict: {"error":"conflict"}`)
+	message := actionableSecretDeleteError(err, "team/db", "db/password", false)
+	for _, want := range []string{
+		"delete secret:",
+		"is still shared",
+		"secret access list",
+		"secret access revoke",
+		"--cascade --yes",
+	} {
+		if !strings.Contains(message, want) {
+			t.Fatalf("expected %q in actionable delete error, got: %s", want, message)
+		}
+	}
+}
+
+func TestActionableSecretDeleteErrorLeavesNonConflictUnchanged(t *testing.T) {
+	err := errors.New("network unavailable")
+	message := actionableSecretDeleteError(err, "default", "smoke-demo", false)
+	if message != "delete secret: network unavailable" {
+		t.Fatalf("unexpected non-conflict delete error: %s", message)
 	}
 }
 
@@ -660,7 +708,7 @@ func TestHelpMentionsEncryptedSecretCommands(t *testing.T) {
 		t.Fatalf("help failed: %d %s", code, stderr.String())
 	}
 	body := stdout.String()
-	for _, token := range []string{"config write", "config check", "profile list", "profile show", "profile path", "profile export", "profile import", "profile delete", "doctor --client-id ID|--config FILE [--online]", "mtls install-cert", "key inspect", "--client-id ID", "secret put", "secret get", "secret update", "secret share", "secret delete", "secret versions", "secret access list", "secret access revoke", "Secret payloads are encrypted/decrypted locally"} {
+	for _, token := range []string{"config write", "config check", "profile list", "profile show", "profile path", "profile export", "profile import", "profile delete", "doctor --client-id ID|--config FILE [--online]", "mtls install-cert", "key inspect", "--client-id ID", "secret put", "secret get", "secret update", "secret share", "secret delete", "secret versions", "secret access list", "secret access revoke", "Secret payloads are encrypted/decrypted locally", "client_alice", "client_bob", "--permissions read", "secret access revoke --client-id client_alice"} {
 		if !strings.Contains(body, token) {
 			t.Fatalf("help missing %q: %s", token, body)
 		}

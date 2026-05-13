@@ -165,7 +165,18 @@ Passing --client-id ID uses the standard profile at $XDG_CONFIG_HOME/custodia/ID
 Common options may still be stored in a JSON config file and loaded with --config FILE or CUSTODIA_CLIENT_CONFIG.
 For secret subcommands, --key identifies the secret; use --mtls-key for an explicit mTLS private key path.
 
-Secret payloads are encrypted/decrypted locally. Custodia receives only ciphertext, crypto_metadata and opaque recipient envelopes.`)
+Secret payloads are encrypted/decrypted locally. Custodia receives only ciphertext, crypto_metadata and opaque recipient envelopes.
+
+Examples:
+  # Alice shares read-only access with Bob using a readable permission name.
+  custodia-client secret share --client-id client_alice --key smoke-demo --target-client-id client_bob --permissions read
+
+  # Alice lists and revokes Bob's future server-side access.
+  custodia-client secret access list --client-id client_alice --key smoke-demo
+  custodia-client secret access revoke --client-id client_alice --key smoke-demo --target-client-id client_bob --yes
+
+  # If Alice owns a shared secret, delete without --cascade fails until active shares are revoked.
+  custodia-client secret delete --client-id client_alice --key smoke-demo --cascade --yes`)
 }
 
 func (a *app) runProfile(args []string) int {
@@ -1051,7 +1062,7 @@ func (a *app) runSecretDelete(args []string) int {
 		return 1
 	}
 	if err := client.DeleteSecretByKey(*namespace, *key, *cascade); err != nil {
-		fmt.Fprintf(a.stderr, "delete secret: %v\n", err)
+		fmt.Fprintln(a.stderr, actionableSecretDeleteError(err, *namespace, *key, *cascade))
 		return 1
 	}
 	return writeJSON(a.stdout, map[string]string{"namespace": strings.TrimSpace(*namespace), "key": strings.TrimSpace(*key), "status": "deleted"})
@@ -1214,7 +1225,7 @@ func (a *app) runSecretAccessList(args []string) int {
 		fmt.Fprintf(a.stderr, "list secret access: %v\n", err)
 		return 1
 	}
-	return writeJSON(a.stdout, map[string]any{"access": access})
+	return writeJSON(a.stdout, map[string]any{"access": accessWithPermissionNames(access)})
 }
 
 func (a *app) runSecretAccessRevoke(args []string) int {
@@ -1288,6 +1299,85 @@ func parseFlags(fs *flag.FlagSet, args []string, stderr io.Writer) bool {
 		return false
 	}
 	return true
+}
+
+func actionableSecretDeleteError(err error, namespace, key string, cascade bool) string {
+	message := fmt.Sprintf("delete secret: %v", err)
+	if cascade || !isHTTPConflict(err) {
+		return message
+	}
+	namespace = strings.TrimSpace(namespace)
+	key = strings.TrimSpace(key)
+	return message + fmt.Sprintf(
+		"\nsecret %q/%q is still shared. Run `custodia-client secret access list --namespace %s --key %s`, revoke active grants with `custodia-client secret access revoke --namespace %s --key %s --target-client-id CLIENT_ID --yes`, or rerun delete with `--cascade --yes` to revoke active shares and delete the owner key.",
+		namespace,
+		key,
+		shellQuote(namespace),
+		shellQuote(key),
+		shellQuote(namespace),
+		shellQuote(key),
+	)
+}
+
+func isHTTPConflict(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := err.Error()
+	return strings.Contains(message, "409 Conflict") || strings.Contains(message, `"error":"conflict"`)
+}
+
+func shellQuote(value string) string {
+	if value == "" {
+		return "''"
+	}
+	return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'"
+}
+
+type secretAccessCLIOutput struct {
+	SecretID        string     `json:"secret_id"`
+	VersionID       string     `json:"version_id"`
+	ClientID        string     `json:"client_id"`
+	Permissions     int        `json:"permissions"`
+	PermissionNames string     `json:"permission_names"`
+	GrantedAt       time.Time  `json:"granted_at"`
+	ExpiresAt       *time.Time `json:"expires_at,omitempty"`
+}
+
+func accessWithPermissionNames(access []sdk.SecretAccessMetadata) []secretAccessCLIOutput {
+	out := make([]secretAccessCLIOutput, 0, len(access))
+	for _, grant := range access {
+		out = append(out, secretAccessCLIOutput{
+			SecretID:        grant.SecretID,
+			VersionID:       grant.VersionID,
+			ClientID:        grant.ClientID,
+			Permissions:     grant.Permissions,
+			PermissionNames: permissionNames(grant.Permissions),
+			GrantedAt:       grant.GrantedAt,
+			ExpiresAt:       grant.ExpiresAt,
+		})
+	}
+	return out
+}
+
+func permissionNames(bits int) string {
+	if bits == int(model.PermissionAll) {
+		return "all"
+	}
+	names := make([]string, 0, 3)
+	if bits&int(model.PermissionRead) != 0 {
+		names = append(names, "read")
+	}
+	if bits&int(model.PermissionWrite) != 0 {
+		names = append(names, "write")
+	}
+	if bits&int(model.PermissionShare) != 0 {
+		names = append(names, "share")
+	}
+	if len(names) == 0 || !model.ValidPermissionBits(bits) {
+		return fmt.Sprintf("unknown(%d)", bits)
+	}
+	return strings.Join(names, ",")
 }
 
 func parsePermissionBits(value string, fallback int) (int, error) {
