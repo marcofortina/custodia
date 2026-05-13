@@ -9,6 +9,15 @@ Kubernetes uses the same runtime profiles as bare metal:
 - `profile: lite` for lab/single-node-style clusters where SQLite persistence, local signer material and PVC backup handling are explicitly accepted;
 - `profile: full` for production-oriented clusters with external PostgreSQL/CockroachDB, Valkey, HSM/PKCS#11 signer integration, WORM/SIEM/object-lock evidence and readiness gates.
 
+## Runbook metadata
+
+| Field | Value |
+| --- | --- |
+| Audience | Operators deploying Custodia with the Helm chart from a Git-built image. |
+| Prerequisites | Docker, kubectl, Helm, registry access, cluster permissions and bootstrap material prepared for the target namespace. |
+| Outcome | A Helm-installed server/signer release with profile-specific storage, signer and Web MFA wiring. |
+| Do not continue if | Kubernetes Secrets, external Full dependencies or certificate SANs are not ready. |
+
 ## 1. Prerequisites
 
 Run these commands from an operator workstation or build host with access to the target cluster and image registry:

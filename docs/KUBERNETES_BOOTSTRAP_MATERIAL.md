@@ -4,6 +4,15 @@ This runbook generates the Kubernetes Secrets required by [`KUBERNETES_INSTALL.m
 
 The commands below are safe for a Lite/lab bootstrap and for release-candidate rehearsals. For Full production, replace local CA private-key material with your enterprise PKI/HSM procedure and keep private CA material out of ordinary Kubernetes Secrets whenever the platform supports that.
 
+## Runbook metadata
+
+| Field | Value |
+| --- | --- |
+| Audience | Operators preparing Kubernetes Secrets before Helm install. |
+| Prerequisites | A working `custodia-admin`, kubectl access, chosen namespace/release name and the external server URL. |
+| Outcome | mTLS, signer, Web MFA and optional PKCS#11 delivery material ready for Helm values. |
+| Do not continue if | You have not captured the admin browser certificate or cannot protect temporary CA/signing material. |
+
 ## 1. Build or install the admin CLI
 
 From a Git checkout, this path requires a local Go toolchain:

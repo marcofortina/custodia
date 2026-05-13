@@ -21,6 +21,15 @@ This split is intentional. Operating-system packages are good for deployable bin
 
 Creating one `.deb`/`.rpm` per SDK language would add distro-package maintenance overhead before those registry workflows exist. The `custodia-sdk` package keeps source snapshots, shared vectors and SDK documentation installable while avoiding premature language-registry package names that would look officially published.
 
+## Runbook metadata
+
+| Field | Value |
+| --- | --- |
+| Audience | Packagers and operators installing Custodia from DEB/RPM artifacts. |
+| Prerequisites | Built or downloaded package artifacts plus checksum/manifest files for the target version. |
+| Outcome | Validated package installation path for `custodia-server`, `custodia-client` and `custodia-sdk`. |
+| Do not continue if | Artifacts are mixed across versions or the clean-install smoke has not been run on disposable hosts. |
+
 ## Build DEB packages
 
 ```bash

@@ -9,6 +9,15 @@ The smoke is not part of `make release-check` because it installs binaries,
 creates real runtime state, starts systemd units, creates client profiles and
 writes Lite backup artifacts. Use disposable hosts or snapshots.
 
+## Runbook metadata
+
+| Field | Value |
+| --- | --- |
+| Audience | Release engineers rehearsing the public first-use path across server/admin, Alice and Bob hosts. |
+| Prerequisites | Disposable hosts or snapshots, a Git checkout and explicit confirmation variables for destructive roles. |
+| Outcome | Evidence that install, enrollment, key publish, secret share/revoke/delete and Lite backup flows work end to end. |
+| Do not continue if | You are on a production host or cannot reset the VM state after the smoke. |
+
 ## Scope
 
 Roles:

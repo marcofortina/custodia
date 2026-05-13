@@ -4,6 +4,15 @@ This runbook is for installing `custodia-server` plus `custodia-signer` on a bar
 
 Use [`QUICKSTART.md`](QUICKSTART.md) for the first Lite run. Use this runbook when you already know the Full dependency endpoints and want a copyable checklist that avoids accidentally running Lite defaults in production.
 
+## Runbook metadata
+
+| Field | Value |
+| --- | --- |
+| Audience | Operators installing `custodia-server` and `custodia-signer` with the Full profile on a VM or bare-metal host. |
+| Prerequisites | Known DNS/IP, PostgreSQL/CockroachDB, Valkey, signer/HSM plan, audit evidence target and admin mTLS identity. |
+| Outcome | A validated Full configuration ready for systemd start and operational readiness smoke. |
+| Do not continue if | Any dependency is still a placeholder, signer command delivery is unknown or production checks are not clean. |
+
 ## 1. Pre-flight decisions
 
 Record these values before touching the host:

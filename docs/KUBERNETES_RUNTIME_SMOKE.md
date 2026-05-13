@@ -8,6 +8,15 @@ This runbook validates that a rendered and installed Custodia Helm release is al
 
 The smoke is intentionally read-only. It does not install charts, create Secrets, read Secret data, exec into pods or mutate cluster state.
 
+## Runbook metadata
+
+| Field | Value |
+| --- | --- |
+| Audience | Operators validating an already installed Kubernetes release without mutating cluster state. |
+| Prerequisites | A Helm release, namespace, profile selection and read-only kubectl access to cluster objects. |
+| Outcome | Evidence that deployments, services, rollouts and Lite PVC expectations match the installed profile. |
+| Do not continue if | The Helm install is incomplete or you need to create Secrets/charts first. |
+
 ## 1. Preconditions
 
 Complete [`KUBERNETES_INSTALL.md`](KUBERNETES_INSTALL.md) first. At minimum, the cluster must already have:

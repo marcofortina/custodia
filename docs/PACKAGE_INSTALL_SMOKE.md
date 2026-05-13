@@ -7,6 +7,15 @@ This smoke validates the Linux package install path on a disposable clean releas
 
 Use this smoke after building release-candidate packages and before publishing artifacts. Run it on clean Debian/Ubuntu and Fedora/RHEL-compatible machines, not on a developer workstation with existing Custodia packages or real data.
 
+## Runbook metadata
+
+| Field | Value |
+| --- | --- |
+| Audience | Release engineers validating DEB/RPM package installation on clean machines. |
+| Prerequisites | Fresh generated packages copied to a disposable Debian/Ubuntu or Fedora/RHEL-compatible host. |
+| Outcome | Package-manager installation evidence without automatic service enablement/start side effects. |
+| Do not continue if | The host has existing Custodia state, minimized doc/manpage filters or production data. |
+
 ## Build artifacts first
 
 From the repository checkout used to produce the release candidate:

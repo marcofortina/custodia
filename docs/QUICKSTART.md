@@ -9,6 +9,15 @@ For the full deployment/profile map, including Kubernetes, read [`DEPLOYMENT_MAT
 
 The guided runtime path below uses the single-node Lite profile because it is the smallest honest first run. Lite keeps the Custodia security model: API mTLS, client-side cryptography, opaque ciphertext/envelope storage, Web MFA and audit integrity. Full/custom deployments use the same binaries but require real external infrastructure such as PostgreSQL/CockroachDB, Valkey, HSM/PKCS#11, WORM/SIEM shipment and production evidence gates.
 
+## Runbook metadata
+
+| Field | Value |
+| --- | --- |
+| Audience | First-time bare-metal operators, developers and package evaluators. |
+| Prerequisites | A clean Linux host and either release packages or a Git checkout with the documented toolchain. |
+| Outcome | A Lite server/signer install with Web MFA, admin checks and the first encrypted client smoke path. |
+| Do not continue if | You need Kubernetes or Full production dependencies; use the dedicated Kubernetes or Full runbooks first. |
+
 ## 1. Choose an install path
 
 | Bare-metal path | Best for | Installs to |

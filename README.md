@@ -14,6 +14,7 @@ New to Custodia? Start with the document that matches your task:
 | Task | Document | Use it when |
 | --- | --- | --- |
 | Choose deployment target and profile | [`docs/DEPLOYMENT_MATRIX.md`](docs/DEPLOYMENT_MATRIX.md) | You need to decide between bare metal, Kubernetes, Lite and Full. |
+| Browse the documentation index | [`docs/README.md`](docs/README.md) | You want the repository documentation map grouped by task. |
 | Install on bare metal | [`docs/QUICKSTART.md`](docs/QUICKSTART.md) | You want the first package/source install path and Lite bootstrap. |
 | Install Full on bare metal | [`docs/BARE_METAL_FULL_INSTALL.md`](docs/BARE_METAL_FULL_INSTALL.md) | You already have PostgreSQL/CockroachDB, Valkey and signer dependencies. |
 | Install on Kubernetes | [`docs/KUBERNETES_INSTALL.md`](docs/KUBERNETES_INSTALL.md) | You are deploying a Git-built image with the Helm chart. |
@@ -71,23 +72,6 @@ Custodia is licensed under the **GNU Affero General Public License v3.0 only** (
 Custodia is open source, but the AGPL network-copyleft terms are intentional: if you modify Custodia and make that modified version available to users over a network, you must make the corresponding source code available under the AGPL.
 
 Commercial licensing, enterprise support and integration work may be available separately from the maintainer.
-
-## Support the project
-
-Custodia is maintained as an open-source privacy-first secret-management project. If this repository helps your lab, research, compliance work, or integration testing, sponsorship helps keep development, testing, documentation, and security hardening moving.
-
-Ways to support the project:
-
-- GitHub Sponsors: use the repository **Sponsor** button or sponsor `@marcofortina`.
-- PayPal: `https://paypal.me/marcofortina`.
-- Bitcoin: `36jDV57roGb4o59TwK1CB7viPrXToQHGiP`.
-
-Bitcoin URI:
-
-```text
-bitcoin:36jDV57roGb4o59TwK1CB7viPrXToQHGiP
-```
-
 
 ## Client SDKs
 
@@ -274,6 +258,7 @@ The admin web console is intentionally metadata-only. It requires an admin mTLS 
 
 The server has bounded HTTP timeouts by default: read/write 15s, idle 60s and graceful shutdown 10s. Override with `CUSTODIA_HTTP_READ_TIMEOUT_SECONDS`, `CUSTODIA_HTTP_WRITE_TIMEOUT_SECONDS`, `CUSTODIA_HTTP_IDLE_TIMEOUT_SECONDS` and `CUSTODIA_SHUTDOWN_TIMEOUT_SECONDS`.
 
+## Verification and operations
 
 ### PostgreSQL integration tests
 
@@ -305,7 +290,7 @@ client-profile examples.
 
 ### Operational runbooks
 
-The operational documentation is grouped by the workflow it supports, rather than by the order in which the documents were added.
+The operational documentation is grouped by the workflow it supports, rather than by the order in which the documents were added. For the complete repository documentation index, see [`docs/README.md`](docs/README.md).
 
 **Release readiness and closure**
 
@@ -438,3 +423,19 @@ make audit-log-permissions-check
 ```
 
 - Reproducible build notes: [`docs/REPRODUCIBLE_BUILDS.md`](docs/REPRODUCIBLE_BUILDS.md)
+
+## Support the project
+
+Custodia is maintained as an open-source privacy-first secret-management project. If this repository helps your lab, research, compliance work, or integration testing, sponsorship helps keep development, testing, documentation, and security hardening moving.
+
+Ways to support the project:
+
+- GitHub Sponsors: use the repository **Sponsor** button or sponsor `@marcofortina`.
+- PayPal: `https://paypal.me/marcofortina`.
+- Bitcoin: `36jDV57roGb4o59TwK1CB7viPrXToQHGiP`.
+
+Bitcoin URI:
+
+```text
+bitcoin:36jDV57roGb4o59TwK1CB7viPrXToQHGiP
+```

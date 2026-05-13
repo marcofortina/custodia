@@ -8,6 +8,15 @@ It is intentionally separate from `make release-check`: the real endpoint check
 contacts a live server, requires admin mTLS material and writes normal audit
 entries for status and diagnostics reads.
 
+## Runbook metadata
+
+| Field | Value |
+| --- | --- |
+| Audience | Operators checking read-only visibility endpoints on a running bare-metal or Kubernetes deployment. |
+| Prerequisites | A bootstrapped server, admin mTLS material, CA bundle and explicit confirmation variable. |
+| Outcome | Evidence that live/ready/status/diagnostics/revocation/Web login surfaces are reachable. |
+| Do not continue if | You lack admin mTLS credentials, CA trust or the deployment is not already running. |
+
 ## Scope
 
 The smoke checks:
