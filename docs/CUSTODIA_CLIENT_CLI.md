@@ -42,6 +42,28 @@ client_alice.config.json
 
 Use `--config`, explicit path flags or environment variables only for advanced automation.
 
+## Profile management
+
+Inspect local profiles without exposing private key material:
+
+```bash
+custodia-client profile list
+custodia-client profile path --client-id "$CLIENT_ID"
+custodia-client profile show --client-id "$CLIENT_ID"
+```
+
+`profile list` reads only the standard per-user profile base directory and returns valid client ids found under `$XDG_CONFIG_HOME/custodia`, or `$HOME/.config/custodia` when `XDG_CONFIG_HOME` is not set. It never reads `/etc/custodia-client`.
+
+`profile path` prints the resolved standard profile directory for the selected client id. `profile show` prints file presence and public/reference paths such as the profile directory, config file, CSR, certificate, CA, server URL and public application key. It deliberately does not print mTLS private-key paths, application private-key paths, private-key content, tokens or secret values.
+
+Delete a local profile only with explicit confirmation:
+
+```bash
+custodia-client profile delete --client-id "$CLIENT_ID" --yes
+```
+
+Deletion removes the local per-user profile directory and all files inside it. It does not revoke the client on the server, delete secrets, revoke access grants or rotate application keys. Use the admin/client lifecycle commands separately for server-side revocation.
+
 ## Client mTLS material
 
 The preferred remote-client workflow uses a short-lived enrollment token created by an admin. The client generates its mTLS private key locally, submits only a CSR to Custodia, and receives only public certificate material.
