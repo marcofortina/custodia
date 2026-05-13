@@ -197,7 +197,7 @@ VERSION=0.1.0 REVISION=1 ./scripts/github-release-assets.sh verify
 
 ## Automated local GitHub release flow
 
-For the complete local release flow from a clean repository checkout, use:
+For the complete local release flow from a clean repository checkout, including annotated tag checks and post-download checksum verification, use [`RELEASE_PUBLISHING.md`](RELEASE_PUBLISHING.md). The short form is:
 
 ```bash
 VERSION=0.1.0 REVISION=1 ./scripts/release-publish.sh dry-run

@@ -20,6 +20,7 @@ New to Custodia? Start with the document that matches your task:
 | Install on Kubernetes | [`docs/KUBERNETES_INSTALL.md`](docs/KUBERNETES_INSTALL.md) | You are deploying a Git-built image with the Helm chart. |
 | Prepare Kubernetes Secrets | [`docs/KUBERNETES_BOOTSTRAP_MATERIAL.md`](docs/KUBERNETES_BOOTSTRAP_MATERIAL.md) | You need mTLS, signer and Web MFA material before Helm install. |
 | Sign off a release candidate | [`docs/RELEASE_READINESS_MATRIX.md`](docs/RELEASE_READINESS_MATRIX.md) | You are validating release artifacts and production-readiness gates. |
+| Publish a release | [`docs/RELEASE_PUBLISHING.md`](docs/RELEASE_PUBLISHING.md) | You need the end-to-end local release flow, tag checks and asset verification. |
 | Smoke-test Kubernetes | [`docs/KUBERNETES_RUNTIME_SMOKE.md`](docs/KUBERNETES_RUNTIME_SMOKE.md) | You need a read-only runtime check against an installed cluster. |
 | Smoke-test Lite backup/restore | [`docs/LITE_BACKUP_RESTORE_SMOKE.md`](docs/LITE_BACKUP_RESTORE_SMOKE.md) | You need disposable SQLite backup/restore validation. |
 | Run the end-to-end operator rehearsal | [`docs/END_TO_END_OPERATOR_SMOKE.md`](docs/END_TO_END_OPERATOR_SMOKE.md) | You are rehearsing server/admin, Alice, Bob and backup flows. |
@@ -99,6 +100,7 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 - Full bare-metal install: [`docs/BARE_METAL_FULL_INSTALL.md`](docs/BARE_METAL_FULL_INSTALL.md)
 - Kubernetes bootstrap material: [`docs/KUBERNETES_BOOTSTRAP_MATERIAL.md`](docs/KUBERNETES_BOOTSTRAP_MATERIAL.md)
 - Release readiness matrix: [`docs/RELEASE_READINESS_MATRIX.md`](docs/RELEASE_READINESS_MATRIX.md)
+- Release publishing runbook: [`docs/RELEASE_PUBLISHING.md`](docs/RELEASE_PUBLISHING.md)
 - Release notes for 0.1.0: [`docs/RELEASE_NOTES_0_1_0.md`](docs/RELEASE_NOTES_0_1_0.md)
 - SBOM artifacts: [`docs/SBOM.md`](docs/SBOM.md)
 
@@ -118,7 +120,7 @@ VERSION=0.1.0 REVISION=1 make package-checksums
 cd dist/packages && sha256sum -c SHA256SUMS
 ```
 
-Automate the full local GitHub release flow from checks through tag, package build, draft release creation, asset upload and remote asset verification:
+Automate the full local GitHub release flow from checks through tag, package build, draft release creation, asset upload and remote asset verification. See [`docs/RELEASE_PUBLISHING.md`](docs/RELEASE_PUBLISHING.md) for the complete step-by-step publishing runbook, including annotated tag checks and post-download checksum verification:
 
 ```bash
 VERSION=0.1.0 REVISION=1 ./scripts/release-publish.sh dry-run
@@ -303,6 +305,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 **Release readiness and closure**
 
 - [Release readiness matrix](docs/RELEASE_READINESS_MATRIX.md)
+- [Release publishing runbook](docs/RELEASE_PUBLISHING.md)
 - [Production checklist](docs/PRODUCTION_CHECKLIST.md)
 - [Production readiness gate](docs/PRODUCTION_READINESS_GATE.md)
 - [Production external evidence gate](docs/PRODUCTION_EVIDENCE.md)

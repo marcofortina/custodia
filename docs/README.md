@@ -12,6 +12,7 @@ Use this index when the top-level README is too small for the task. Documents ar
 | Kubernetes install | [`KUBERNETES_INSTALL.md`](KUBERNETES_INSTALL.md) |
 | Kubernetes Secret and Web MFA bootstrap | [`KUBERNETES_BOOTSTRAP_MATERIAL.md`](KUBERNETES_BOOTSTRAP_MATERIAL.md) |
 | Release-candidate sign-off | [`RELEASE_READINESS_MATRIX.md`](RELEASE_READINESS_MATRIX.md) |
+| Publish a GitHub release | [`RELEASE_PUBLISHING.md`](RELEASE_PUBLISHING.md) |
 
 ## Runbook format
 
@@ -29,6 +30,7 @@ Use that block before commands so an operator can stop before making unsafe assu
 - [`LINUX_PACKAGES.md`](LINUX_PACKAGES.md)
 - [`PACKAGE_INSTALL_SMOKE.md`](PACKAGE_INSTALL_SMOKE.md)
 - [`RELEASE_CHECK.md`](RELEASE_CHECK.md)
+- [`RELEASE_PUBLISHING.md`](RELEASE_PUBLISHING.md)
 - [`RELEASE_NOTES_0_1_0.md`](RELEASE_NOTES_0_1_0.md)
 - [`REPRODUCIBLE_BUILDS.md`](REPRODUCIBLE_BUILDS.md)
 - [`SBOM.md`](SBOM.md)
@@ -102,6 +104,7 @@ Use that block before commands so an operator can stop before making unsafe assu
 - [`PRODUCTION_READINESS_GATE.md`](PRODUCTION_READINESS_GATE.md)
 - [`PRODUCTION_EVIDENCE.md`](PRODUCTION_EVIDENCE.md)
 - [`RELEASE_READINESS_MATRIX.md`](RELEASE_READINESS_MATRIX.md)
+- [`RELEASE_PUBLISHING.md`](RELEASE_PUBLISHING.md)
 - [`SECURITY_HARDENING_FINAL_REVIEW.md`](SECURITY_HARDENING_FINAL_REVIEW.md)
 
 ## Project history and formal model

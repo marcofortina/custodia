@@ -21,6 +21,7 @@ not different products and they are not different server binaries.
 | Repository baseline | developer/CI checkout | every release candidate | `make release-check` |
 | Helm render safety | developer/CI checkout with Helm | Kubernetes artifacts | `make helm-check` |
 | Package payload smoke | developer/CI checkout | DEB/RPM artifacts | `make package-smoke` |
+| Release publishing flow | maintainer checkout with `gh` | GitHub release publication | [`RELEASE_PUBLISHING.md`](RELEASE_PUBLISHING.md) |
 | Package clean install smoke | disposable clean Debian/Ubuntu and Fedora/RHEL-compatible machines | package publication | [`PACKAGE_INSTALL_SMOKE.md`](PACKAGE_INSTALL_SMOKE.md) |
 | Lite backup/restore smoke | developer/CI checkout with `sqlite3` | Lite-capable release candidates | [`LITE_BACKUP_RESTORE_SMOKE.md`](LITE_BACKUP_RESTORE_SMOKE.md) |
 | Bare-metal/source operator smoke | disposable release-candidate hosts | source install and first-use UX | [`END_TO_END_OPERATOR_SMOKE.md`](END_TO_END_OPERATOR_SMOKE.md) |
@@ -30,6 +31,10 @@ not different products and they are not different server binaries.
 | Production config gate | offline production evidence workstation | production promotion | [`PRODUCTION_READINESS_GATE.md`](PRODUCTION_READINESS_GATE.md) |
 | Security hardening final review | release manager / security reviewer | production-ready claim | [`SECURITY_HARDENING_FINAL_REVIEW.md`](SECURITY_HARDENING_FINAL_REVIEW.md) |
 | External evidence gate | offline production evidence workstation | Fort Knox production claim | [`PRODUCTION_EVIDENCE.md`](PRODUCTION_EVIDENCE.md) |
+
+## Publishing runbook
+
+After the release-candidate gates pass, use [`RELEASE_PUBLISHING.md`](RELEASE_PUBLISHING.md) to create the annotated tag, build packages, create the GitHub draft release, upload `SHA256SUMS` and `artifacts-manifest.json`, verify downloaded assets and publish the draft.
 
 ## Minimal release-candidate command set
 
@@ -58,7 +63,7 @@ captured for the exact commit and artifacts being shipped:
 - `make release-check` output;
 - `make helm-check` output, including expected negative Helm validation tests for Lite PVC, Web MFA Secret and PKCS#11 delivery;
 - package checksum/SBOM output when packages are published;
-- GitHub release asset helper output proving `.deb`, `.rpm`, `SHA256SUMS` and `artifacts-manifest.json` were uploaded;
+- release publishing runbook output proving the annotated tag, `.deb`, `.rpm`, `SHA256SUMS`, `artifacts-manifest.json`, remote asset list and downloaded checksums were verified;
 - clean-install smoke output for DEB and RPM packages when those formats are
   published;
 - Lite backup/restore smoke output when the release claims Lite support;
@@ -81,7 +86,7 @@ Stop promotion immediately when any of the following happens:
 - Lite Kubernetes renders without a PVC or with more than one server replica;
 - package payload manifests miss binaries, systemd units, manpages, docs or
   example YAMLs;
-- GitHub release assets are missing `SHA256SUMS` or `artifacts-manifest.json`;
+- GitHub release assets are missing `SHA256SUMS` or `artifacts-manifest.json`, downloaded checksum verification fails, or the annotated tag does not dereference to the intended release commit;
 - package clean-install smoke runs on a minimized Debian image that drops
   `/usr/share/man` or `/usr/share/doc` through `dpkg` path-exclude filters;
 - operational smoke cannot reach `/live`, `/ready`, admin status, diagnostics or
