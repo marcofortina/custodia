@@ -1606,7 +1606,25 @@ func TestWebClientDetailRevokesClient(t *testing.T) {
 			t.Fatalf("create client %s: %v", clientID, err)
 		}
 	}
+	publicKeyB64 := base64.StdEncoding.EncodeToString([]byte(strings.Repeat("p", model.X25519PublicKeyBytes)))
+	publicKey, err := memoryStore.UpsertClientPublicKey(ctx, "client_bob", model.PublishClientPublicKeyRequest{Scheme: model.ClientPublicKeySchemeHPKEV1, PublicKeyB64: publicKeyB64})
+	if err != nil {
+		t.Fatalf("publish client public key: %v", err)
+	}
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	listReq := mtlsRequest(http.MethodGet, "/web/clients", "", "admin")
+	listRes := httptest.NewRecorder()
+	handler.ServeHTTP(listRes, listReq)
+	if listRes.Code != http.StatusOK {
+		t.Fatalf("expected client list 200, got %d: %s", listRes.Code, listRes.Body.String())
+	}
+	if !strings.Contains(listRes.Body.String(), "Public key") || !strings.Contains(listRes.Body.String(), "published") {
+		t.Fatalf("client list missing public key status: %s", listRes.Body.String())
+	}
+	if strings.Contains(listRes.Body.String(), publicKeyB64) {
+		t.Fatalf("client list leaked public key material: %s", listRes.Body.String())
+	}
 
 	getReq := mtlsRequest(http.MethodGet, "/web/clients/client_bob", "", "admin")
 	getRes := httptest.NewRecorder()
@@ -1614,8 +1632,29 @@ func TestWebClientDetailRevokesClient(t *testing.T) {
 	if getRes.Code != http.StatusOK {
 		t.Fatalf("expected client detail 200, got %d: %s", getRes.Code, getRes.Body.String())
 	}
-	if !strings.Contains(getRes.Body.String(), "Revoke Client") || !strings.Contains(getRes.Body.String(), `action="/web/clients/client_bob/revoke"`) {
-		t.Fatalf("client detail missing revoke controls: %s", getRes.Body.String())
+	for _, expected := range []string{"Revoke Client", `action="/web/clients/client_bob/revoke"`, "Public key", publicKey.Fingerprint, "Certificate serial", "Open CRL status and serial check"} {
+		if !strings.Contains(getRes.Body.String(), expected) {
+			t.Fatalf("client detail expected token %q, got: %s", expected, getRes.Body.String())
+		}
+	}
+	if strings.Contains(getRes.Body.String(), publicKeyB64) {
+		t.Fatalf("client detail leaked public key material: %s", getRes.Body.String())
+	}
+
+	missingConfirmReq := httptest.NewRequest(http.MethodPost, "/web/clients/client_bob/revoke", strings.NewReader("reason=lost+device"))
+	missingConfirmReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	missingConfirmReq.TLS = &tls.ConnectionState{PeerCertificates: []*x509.Certificate{{DNSNames: []string{"admin"}, Subject: pkix.Name{CommonName: "admin"}}}}
+	missingConfirmRes := httptest.NewRecorder()
+	handler.ServeHTTP(missingConfirmRes, missingConfirmReq)
+	if missingConfirmRes.Code != http.StatusBadRequest {
+		t.Fatalf("expected missing confirmation to be rejected with 400, got %d: %s", missingConfirmRes.Code, missingConfirmRes.Body.String())
+	}
+	clientBeforeRevoke, err := memoryStore.GetClient(ctx, "client_bob")
+	if err != nil {
+		t.Fatalf("get client before confirmed revoke: %v", err)
+	}
+	if !clientBeforeRevoke.IsActive {
+		t.Fatalf("client was revoked without confirmation: %+v", clientBeforeRevoke)
 	}
 
 	postReq := httptest.NewRequest(http.MethodPost, "/web/clients/client_bob/revoke", strings.NewReader("reason=lost+device&confirm=yes"))
@@ -2689,6 +2728,10 @@ func TestWebClientDetailShowsVisibleKeyspaceAndShares(t *testing.T) {
 	}
 	body := detailRes.Body.String()
 	for _, expected := range []string{
+		"Public key",
+		"not published",
+		"Certificate serial",
+		"Open CRL status and serial check",
 		"Visible Keyspace",
 		"Shares From This Client",
 		`class="console-keyspace__namespace">db01</span>`,
