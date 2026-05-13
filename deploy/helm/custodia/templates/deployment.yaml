@@ -8,7 +8,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "custodia.fullname" . }}
+  name: {{ include "custodia.serverFullname" . }}
   labels:
     app.kubernetes.io/name: {{ include "custodia.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}
@@ -78,7 +78,7 @@ spec:
 {{ toYaml . | indent 8 }}
 {{- end }}
       containers:
-        - name: custodia
+        - name: custodia-server
           securityContext:
 {{ toYaml .Values.containerSecurityContext | indent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

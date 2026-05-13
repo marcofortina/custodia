@@ -36,7 +36,7 @@ It requires downtime.
 1. Stop writes by scaling the server deployment to zero:
 
 ```bash
-kubectl -n custodia scale deploy/custodia-custodia --replicas=0
+kubectl -n custodia scale deploy/custodia-custodia-server --replicas=0
 ```
 
 2. Copy the SQLite database from the PVC using a temporary maintenance pod
@@ -47,7 +47,7 @@ approved by your cluster policy.
 4. Scale the server deployment back to one replica:
 
 ```bash
-kubectl -n custodia scale deploy/custodia-custodia --replicas=1
+kubectl -n custodia scale deploy/custodia-custodia-server --replicas=1
 ```
 
 Use the real Deployment name from your Helm release; do not copy this example

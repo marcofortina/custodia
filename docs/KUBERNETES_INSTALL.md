@@ -182,7 +182,7 @@ Bootstrap, Kubernetes Secret creation, Helm values, CA/HSM material placement, e
 
 ```bash
 kubectl -n custodia get deploy,svc,pvc
-kubectl -n custodia rollout status deploy/custodia-custodia
+kubectl -n custodia rollout status deploy/custodia-custodia-server
 kubectl -n custodia rollout status deploy/custodia-custodia-signer
 ```
 

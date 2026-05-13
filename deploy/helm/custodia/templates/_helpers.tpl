@@ -29,6 +29,10 @@ See the accompanying LICENSE file for details.
 {{- end -}}
 
 
+{{- define "custodia.serverFullname" -}}
+{{- printf "%s-server" (include "custodia.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
 {{- define "custodia.signerFullname" -}}
 {{- printf "%s-signer" (include "custodia.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}

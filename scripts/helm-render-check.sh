@@ -40,6 +40,17 @@ lite_render="$(helm template custodia-lite "$chart_dir" \
   --values "$lite_values")"
 printf '%s\n' "$lite_render" >/dev/null
 
+for required_server_resource in \
+  'name: custodia-lite-custodia-server' \
+  'app.kubernetes.io/component: server' \
+  'name: custodia-server' \
+  'name: custodia-lite-custodia-signer'; do
+  if ! printf '%s\n' "$lite_render" | grep -F "$required_server_resource" >/dev/null; then
+    printf 'helm-render-check: lite chart is missing component naming field: %s\n' "$required_server_resource" >&2
+    exit 1
+  fi
+done
+
 if ! printf '%s\n' "$lite_render" | awk '
   /^[[:space:]]+strategy:[[:space:]]*$/ {
     in_strategy = 1

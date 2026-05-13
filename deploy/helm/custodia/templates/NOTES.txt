@@ -13,13 +13,13 @@ Deployment profile:
   {{ .Values.profile }}
 
 API service:
-  {{ include "custodia.fullname" . }}:{{ .Values.service.port }}
+  {{ include "custodia.serverFullname" . }}:{{ .Values.service.port }}
 
 Web console service:
-  {{ include "custodia.fullname" . }}:{{ .Values.web.port }}
+  {{ include "custodia.serverFullname" . }}:{{ .Values.web.port }}
 
 Health listener:
-  {{ include "custodia.fullname" . }}:{{ .Values.health.port }}
+  {{ include "custodia.serverFullname" . }}:{{ .Values.health.port }}
 
 {{- if .Values.signer.enabled }}
 Signer service:
