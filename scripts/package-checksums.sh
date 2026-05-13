@@ -33,7 +33,10 @@ fi
 
 : > "$CHECKSUM_FILE"
 for artifact in "${artifacts[@]}"; do
-  sha256sum "$artifact" >> "$CHECKSUM_FILE"
+  (
+    cd "$PACKAGE_DIR"
+    sha256sum "$(basename "$artifact")"
+  ) >> "$CHECKSUM_FILE"
 done
 
 python3 - "$MANIFEST_FILE" "$PACKAGE_DIR" "$VERSION" "$REVISION" "$COMMIT" "$DATE" "${artifacts[@]}" <<'PY'

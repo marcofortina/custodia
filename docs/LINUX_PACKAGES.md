@@ -185,6 +185,16 @@ sha256sum -c SHA256SUMS
 
 The manifest is intentionally metadata-only and does not include package contents.
 
+To avoid manual release-asset mistakes, use the GitHub release asset helper after the package build:
+
+```bash
+VERSION=0.1.0 REVISION=1 ./scripts/github-release-assets.sh prepare
+VERSION=0.1.0 REVISION=1 CUSTODIA_RELEASE_CONFIRM=YES ./scripts/github-release-assets.sh upload
+VERSION=0.1.0 REVISION=1 ./scripts/github-release-assets.sh verify
+```
+
+`upload` attaches all local `.deb`, `.rpm`, `SHA256SUMS` and `artifacts-manifest.json` files to `v$VERSION` with `gh release upload --clobber`. Set `CUSTODIA_RELEASE_TAG` when the tag is not `v$VERSION`, and set `CUSTODIA_GITHUB_REPO=owner/repo` when uploading outside the checked-out repository.
+
 ## Package smoke checks
 
 After building packages, run extraction-based smoke checks:

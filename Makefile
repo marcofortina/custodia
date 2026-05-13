@@ -310,6 +310,14 @@ package-linux:
 package-checksums:
 	./scripts/package-checksums.sh
 
+.PHONY: github-release-assets
+github-release-assets:
+	./scripts/github-release-assets.sh prepare
+
+.PHONY: github-release-upload-assets
+github-release-upload-assets:
+	./scripts/github-release-assets.sh upload
+
 .PHONY: package-smoke
 package-smoke:
 	./scripts/package-smoke.sh

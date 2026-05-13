@@ -58,6 +58,7 @@ captured for the exact commit and artifacts being shipped:
 - `make release-check` output;
 - `make helm-check` output, including expected negative Helm validation tests for Lite PVC, Web MFA Secret and PKCS#11 delivery;
 - package checksum/SBOM output when packages are published;
+- GitHub release asset helper output proving `.deb`, `.rpm`, `SHA256SUMS` and `artifacts-manifest.json` were uploaded;
 - clean-install smoke output for DEB and RPM packages when those formats are
   published;
 - Lite backup/restore smoke output when the release claims Lite support;
@@ -80,6 +81,7 @@ Stop promotion immediately when any of the following happens:
 - Lite Kubernetes renders without a PVC or with more than one server replica;
 - package payload manifests miss binaries, systemd units, manpages, docs or
   example YAMLs;
+- GitHub release assets are missing `SHA256SUMS` or `artifacts-manifest.json`;
 - package clean-install smoke runs on a minimized Debian image that drops
   `/usr/share/man` or `/usr/share/doc` through `dpkg` path-exclude filters;
 - operational smoke cannot reach `/live`, `/ready`, admin status, diagnostics or
