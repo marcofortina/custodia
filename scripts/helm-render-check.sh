@@ -72,6 +72,11 @@ for required_security_field in \
   fi
 done
 
+if ! printf '%s\n' "$lite_render" | grep -F 'CUSTODIA_LOG_FILE: ""' >/dev/null; then
+  printf 'helm-render-check: lite chart must disable server file logging for hardened containers\n' >&2
+  exit 1
+fi
+
 expect_failure() {
   local description="$1"
   shift

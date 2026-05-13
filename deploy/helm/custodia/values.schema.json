@@ -84,6 +84,9 @@
         "signerURL": {
           "type": "string"
         },
+        "logFile": {
+          "type": "string"
+        },
         "maxEnvelopesPerSecret": {
           "type": "integer",
           "minimum": 1

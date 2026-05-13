@@ -77,6 +77,9 @@ config:
   databaseHATarget: external
   auditShipmentSink: ""
   signerURL: ""
+  # Kubernetes pods log to stdout/stderr by default. Keep this empty to avoid
+  # requiring a writable /var/log/custodia path in hardened containers.
+  logFile: ""
 
 mtls:
   enabled: true

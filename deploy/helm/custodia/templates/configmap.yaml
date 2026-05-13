@@ -18,6 +18,7 @@ data:
   CUSTODIA_API_ADDR: {{ .Values.config.apiAddr | quote }}
   CUSTODIA_WEB_ADDR: {{ .Values.config.webAddr | quote }}
   CUSTODIA_HEALTH_ADDR: {{ .Values.config.healthAddr | quote }}
+  CUSTODIA_LOG_FILE: {{ .Values.config.logFile | quote }}
   CUSTODIA_STORE_BACKEND: {{ .Values.config.storeBackend | quote }}
 {{- if .Values.config.databaseURL }}
   CUSTODIA_DATABASE_URL: {{ .Values.config.databaseURL | quote }}
