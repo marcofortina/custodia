@@ -261,7 +261,7 @@ custodia-client secret share \
 
 The CLI opens Alice's current envelope locally, resolves Bob's public key from server-published metadata unless a pinned `--recipient client_bob=/path/to/client_bob.x25519.pub.json` override is supplied, rewraps the existing DEK for Bob, and sends only Bob's opaque envelope to the server.
 
-`--permissions` accepts readable names (`read`, `write`, `share`, `all`) or comma-separated combinations such as `read,write`. Numeric bitmasks remain accepted for advanced/debug workflows.
+`--permissions` accepts readable names (`read`, `write`, `share`, `all`) or comma-separated combinations such as `read,write`. Use `--permissions read` for the normal Alice-to-Bob read-only flow. Numeric bitmasks remain accepted only for advanced/debug workflows.
 
 ## Create a new encrypted version
 
@@ -298,7 +298,7 @@ custodia-client secret versions \
   --limit 50
 ```
 
-Inspect the server-side access grants for a secret. The output contains grant metadata and never includes recipient envelopes or plaintext:
+Inspect the server-side access grants for a secret. The output contains grant metadata and never includes recipient envelopes or plaintext. The CLI includes both numeric `permissions` and readable `permission_names` so operators do not need to decode bitmasks during normal Alice/Bob workflows:
 
 ```bash
 custodia-client secret access list \
@@ -321,7 +321,7 @@ custodia-client secret access revoke \
 
 ## Delete a secret
 
-Delete semantics depend on ownership. Owners delete only when no active shares remain, unless `--cascade` is supplied. Non-owners delete only their own visibility/access to a shared key.
+Delete semantics depend on ownership. Owners delete only when no active shares remain, unless `--cascade` is supplied. If owner delete fails because a key is still shared, the CLI prints an actionable hint to list access grants, revoke individual clients with `secret access revoke`, or rerun delete with `--cascade --yes`. Non-owners delete only their own visibility/access to a shared key.
 
 ```bash
 custodia-client secret delete \
