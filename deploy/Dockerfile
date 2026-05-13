@@ -19,11 +19,12 @@ RUN go build -tags="${GO_BUILD_TAGS}" -trimpath -ldflags="-s -w -X custodia/inte
  && go build -tags="${GO_BUILD_TAGS}" -trimpath -ldflags="-s -w -X custodia/internal/build.Version=${CUSTODIA_VERSION} -X custodia/internal/build.Commit=${CUSTODIA_COMMIT} -X custodia/internal/build.Date=${CUSTODIA_DATE}" -o /out/custodia-signer ./cmd/custodia-signer
 
 FROM alpine:3.23
-RUN addgroup -S custodia && adduser -S -G custodia custodia
+RUN addgroup -S -g 65532 custodia \
+ && adduser -S -D -H -u 65532 -G custodia custodia
 WORKDIR /app
 COPY --from=builder /out/custodia-server /usr/local/bin/custodia-server
 COPY --from=builder /out/custodia-admin /usr/local/bin/custodia-admin
 COPY --from=builder /out/custodia-signer /usr/local/bin/custodia-signer
-USER custodia
+USER 65532:65532
 EXPOSE 8443 8080 9444
 ENTRYPOINT ["/usr/local/bin/custodia-server"]
