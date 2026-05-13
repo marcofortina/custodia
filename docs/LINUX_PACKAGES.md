@@ -195,6 +195,25 @@ VERSION=0.1.0 REVISION=1 ./scripts/github-release-assets.sh verify
 
 `upload` attaches all local `.deb`, `.rpm`, `SHA256SUMS` and `artifacts-manifest.json` files to `v$VERSION` with `gh release upload --clobber`. Set `CUSTODIA_RELEASE_TAG` when the tag is not `v$VERSION`, and set `CUSTODIA_GITHUB_REPO=owner/repo` when uploading outside the checked-out repository.
 
+## Automated local GitHub release flow
+
+For the complete local release flow from a clean repository checkout, use:
+
+```bash
+VERSION=0.1.0 REVISION=1 ./scripts/release-publish.sh dry-run
+VERSION=0.1.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh draft
+```
+
+The `draft` command runs repository checks, builds DEB/RPM packages, generates `SHA256SUMS` and `artifacts-manifest.json`, creates the annotated Git tag, pushes the branch and tag, creates a GitHub draft release, uploads all package/checksum/manifest assets and verifies the remote asset list.
+
+Use `publish` only when you intentionally want to create a public release immediately:
+
+```bash
+VERSION=0.1.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh publish
+```
+
+Set `RELEASE_REPO=OWNER/REPO` when `gh` cannot infer the repository from the current checkout. Use `RELEASE_ALLOW_EXISTING=YES` only when you intentionally want to reuse an existing release and replace assets.
+
 ## Package smoke checks
 
 After building packages, run extraction-based smoke checks:

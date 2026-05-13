@@ -117,6 +117,13 @@ VERSION=0.1.0 REVISION=1 make package-checksums
 cd dist/packages && sha256sum -c SHA256SUMS
 ```
 
+Automate the full local GitHub release flow from checks through tag, package build, draft release creation, asset upload and remote asset verification:
+
+```bash
+VERSION=0.1.0 REVISION=1 ./scripts/release-publish.sh dry-run
+VERSION=0.1.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh draft
+```
+
 Smoke-test package contents without installing them into the host system:
 
 ```bash

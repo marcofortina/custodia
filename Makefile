@@ -318,6 +318,18 @@ github-release-assets:
 github-release-upload-assets:
 	./scripts/github-release-assets.sh upload
 
+.PHONY: release-publish-check
+release-publish-check:
+	./scripts/release-publish.sh check-only
+
+.PHONY: release-draft
+release-draft:
+	./scripts/release-publish.sh draft
+
+.PHONY: release-publish
+release-publish:
+	./scripts/release-publish.sh publish
+
 .PHONY: package-smoke
 package-smoke:
 	./scripts/package-smoke.sh
