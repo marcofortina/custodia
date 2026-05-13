@@ -82,6 +82,29 @@ key content, enrollment tokens, secret values, or private-key file paths.
 Print the resolved standard local profile directory for
 .IR ID .
 .TP
+.B profile export --client-id ID --out FILE [--include-private-keys --yes]
+Export the standard local profile to a JSON archive. By default the archive
+contains metadata, public certificates, the CSR, server URL, config metadata and
+public application key only. Private mTLS and application keys are included only
+when
+.B --include-private-keys
+and
+.B --yes
+are both supplied. Treat such an archive as secret material.
+.TP
+.B profile import --file FILE [--client-id ID] [--force]
+Import a profile export into the standard XDG/HOME profile location. If
+.B --client-id
+is supplied, it must match the exported client id. Import refuses to overwrite an
+existing profile unless
+.B --force
+is supplied. The reusable config is normalized to the target host profile path.
+Run
+.BR "config check --client-id ID"
+and then
+.BR "doctor --client-id ID --online"
+after import.
+.TP
 .B profile delete --client-id ID --yes
 Delete the local per-user profile directory. The explicit
 .B --yes
@@ -234,6 +257,12 @@ Plaintext, DEKs, mTLS private keys and application private keys remain outside
 the server. Server-published application public keys are discovery metadata, not
 a substitute for caller-side trust or pinning policy. Avoid writing plaintext to
 stdout on shared terminals.
+.PP
+Profile exports created with
+.B --include-private-keys
+contain operational client identity material. Protect the JSON archive like any
+other private-key backup, transfer it only over a trusted channel, and remove
+temporary copies after import.
 .PP
 Revoking access is future server-side revocation. For strong revocation, create
 a new encrypted version without the removed recipient.

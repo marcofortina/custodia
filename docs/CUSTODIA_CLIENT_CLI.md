@@ -56,6 +56,64 @@ custodia-client profile show --client-id "$CLIENT_ID"
 
 `profile path` prints the resolved standard profile directory for the selected client id. `profile show` prints file presence and public/reference paths such as the profile directory, config file, CSR, certificate, CA, server URL and public application key. It deliberately does not print mTLS private-key paths, application private-key paths, private-key content, tokens or secret values.
 
+Export a local profile for backup or transfer:
+
+```bash
+custodia-client profile export --client-id "$CLIENT_ID" --out /tmp/client_alice.profile.json
+```
+
+By default, `profile export` writes only metadata, public certificates, the CSR, the server URL, the reusable config metadata and the public application key. This metadata-only export is useful as evidence or for non-secret backup, but it is not enough to operate as the client on another host because it deliberately excludes private keys.
+
+To move an operational client profile to another machine, private keys are exportable only with explicit confirmation:
+
+```bash
+custodia-client profile export \
+  --client-id "$CLIENT_ID" \
+  --out /tmp/client_alice.profile.json \
+  --include-private-keys \
+  --yes
+```
+
+The resulting JSON file contains base64-encoded profile files and must be handled as secret material when `includes_private_keys` is `true`. Transfer it over a protected channel, store it with restrictive permissions, and delete temporary copies after import.
+
+Import a profile into the standard XDG/HOME location on the target host:
+
+```bash
+custodia-client profile import --file /tmp/client_alice.profile.json --client-id "$CLIENT_ID"
+custodia-client config check --client-id "$CLIENT_ID"
+custodia-client doctor --client-id "$CLIENT_ID" --online
+```
+
+Import refuses to overwrite an existing local profile. Replace an existing profile only when you intentionally want to discard it:
+
+```bash
+custodia-client profile import --file /tmp/client_alice.profile.json --client-id "$CLIENT_ID" --force
+```
+
+During import, the reusable config is normalized to the target host profile path. This avoids carrying absolute paths from the source machine into `$XDG_CONFIG_HOME/custodia/$CLIENT_ID` or `$HOME/.config/custodia/$CLIENT_ID` on the target machine.
+
+### Profile export format
+
+`profile export` writes JSON with this top-level shape:
+
+```json
+{
+  "format": "custodia-client-profile-export-v1",
+  "client_id": "client_alice",
+  "includes_private_keys": false,
+  "files": [
+    {
+      "name": "client_alice.crt",
+      "role": "mtls_cert",
+      "mode": "0644",
+      "data_b64": "..."
+    }
+  ]
+}
+```
+
+The importer maps `role` values to canonical target filenames instead of trusting archive paths. Supported roles are `config`, `server_url`, `mtls_csr`, `mtls_cert`, `ca_cert`, `crypto_public_key`, `mtls_private_key` and `crypto_private_key`. Private-key roles are emitted only when `--include-private-keys --yes` is used. Imported private-key files are written with mode `0600`; public certificates, CSR, CA, server URL and public key files are written with mode `0644`; the normalized config is written with mode `0600`.
+
 Delete a local profile only with explicit confirmation:
 
 ```bash

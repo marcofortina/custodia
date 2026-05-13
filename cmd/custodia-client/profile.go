@@ -8,6 +8,8 @@
 package main
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +18,30 @@ import (
 
 	"custodia/internal/model"
 )
+
+const clientProfileExportFormat = "custodia-client-profile-export-v1"
+
+type clientProfileExport struct {
+	Format             string                    `json:"format"`
+	ClientID           string                    `json:"client_id"`
+	IncludesPrivateKey bool                      `json:"includes_private_keys"`
+	Files              []clientProfileExportFile `json:"files"`
+}
+
+type clientProfileExportFile struct {
+	Name    string `json:"name"`
+	Role    string `json:"role"`
+	Mode    string `json:"mode"`
+	DataB64 string `json:"data_b64"`
+}
+
+type clientProfileExportSpec struct {
+	path    string
+	name    string
+	role    string
+	mode    os.FileMode
+	private bool
+}
 
 type clientProfilePaths struct {
 	Dir           string
@@ -223,4 +249,233 @@ func deleteClientProfile(paths clientProfilePaths) error {
 func pathExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
+}
+
+func exportClientProfile(paths clientProfilePaths, includePrivateKeys bool) (clientProfileExport, error) {
+	if strings.TrimSpace(paths.Dir) == "" {
+		return clientProfileExport{}, fmt.Errorf("client profile directory is required")
+	}
+	info, err := os.Stat(paths.Dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return clientProfileExport{}, fmt.Errorf("client profile does not exist: %s", paths.Dir)
+		}
+		return clientProfileExport{}, fmt.Errorf("check client profile %s: %w", paths.Dir, err)
+	}
+	if !info.IsDir() {
+		return clientProfileExport{}, fmt.Errorf("client profile is not a directory: %s", paths.Dir)
+	}
+	clientID := strings.TrimSpace(filepath.Base(paths.Dir))
+	export := clientProfileExport{Format: clientProfileExportFormat, ClientID: clientID, IncludesPrivateKey: includePrivateKeys}
+	for _, spec := range clientProfileExportSpecs(paths) {
+		if spec.private && !includePrivateKeys {
+			continue
+		}
+		body, err := os.ReadFile(spec.path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return clientProfileExport{}, fmt.Errorf("read profile file %s: %w", spec.name, err)
+		}
+		export.Files = append(export.Files, clientProfileExportFile{
+			Name:    spec.name,
+			Role:    spec.role,
+			Mode:    fmt.Sprintf("%04o", spec.mode.Perm()),
+			DataB64: base64.StdEncoding.EncodeToString(body),
+		})
+	}
+	if len(export.Files) == 0 {
+		return clientProfileExport{}, fmt.Errorf("client profile has no exportable files: %s", paths.Dir)
+	}
+	return export, nil
+}
+
+func clientProfileExportSpecs(paths clientProfilePaths) []clientProfileExportSpec {
+	clientID := strings.TrimSpace(filepath.Base(paths.Dir))
+	return []clientProfileExportSpec{
+		{path: paths.Config, name: clientID + ".config.json", role: "config", mode: keyFileMode},
+		{path: paths.ServerURL, name: "server_url", role: "server_url", mode: publicFileMode},
+		{path: paths.MTLSCSR, name: clientID + ".csr", role: "mtls_csr", mode: publicFileMode},
+		{path: paths.MTLSCert, name: clientID + ".crt", role: "mtls_cert", mode: publicFileMode},
+		{path: paths.CA, name: "ca.crt", role: "ca_cert", mode: publicFileMode},
+		{path: paths.CryptoPublic, name: clientID + ".x25519.pub.json", role: "crypto_public_key", mode: publicFileMode},
+		{path: paths.MTLSKey, name: clientID + ".key", role: "mtls_private_key", mode: keyFileMode, private: true},
+		{path: paths.CryptoPrivate, name: clientID + ".x25519.json", role: "crypto_private_key", mode: keyFileMode, private: true},
+	}
+}
+
+func importClientProfile(archive clientProfileExport, targetClientID string, force bool) (clientProfilePaths, error) {
+	if archive.Format != clientProfileExportFormat {
+		return clientProfilePaths{}, fmt.Errorf("unsupported client profile export format: %s", archive.Format)
+	}
+	archiveClientID := strings.TrimSpace(archive.ClientID)
+	if !model.ValidClientID(archiveClientID) {
+		return clientProfilePaths{}, fmt.Errorf("invalid exported client id: %q", archive.ClientID)
+	}
+	targetClientID = strings.TrimSpace(targetClientID)
+	if targetClientID != "" && targetClientID != archiveClientID {
+		return clientProfilePaths{}, fmt.Errorf("--client-id %q does not match exported client id %q", targetClientID, archiveClientID)
+	}
+	if targetClientID == "" {
+		targetClientID = archiveClientID
+	}
+	paths, err := defaultClientProfilePaths(targetClientID)
+	if err != nil {
+		return clientProfilePaths{}, err
+	}
+	if _, err := os.Stat(paths.Dir); err == nil && !force {
+		return clientProfilePaths{}, fmt.Errorf("refusing to overwrite existing client profile: %s; pass --force to replace it", paths.Dir)
+	} else if err != nil && !os.IsNotExist(err) {
+		return clientProfilePaths{}, fmt.Errorf("check client profile %s: %w", paths.Dir, err)
+	}
+	baseDir := filepath.Dir(paths.Dir)
+	if err := os.MkdirAll(baseDir, 0o700); err != nil {
+		return clientProfilePaths{}, fmt.Errorf("create client profile base directory: %w", err)
+	}
+	tmpDir, err := os.MkdirTemp(baseDir, "."+targetClientID+".import-*")
+	if err != nil {
+		return clientProfilePaths{}, fmt.Errorf("create temporary import directory: %w", err)
+	}
+	cleanup := true
+	defer func() {
+		if cleanup {
+			_ = os.RemoveAll(tmpDir)
+		}
+	}()
+	if err := os.Chmod(tmpDir, 0o700); err != nil {
+		return clientProfilePaths{}, fmt.Errorf("set temporary import directory permissions: %w", err)
+	}
+	tmpPaths := paths
+	tmpPaths.Dir = tmpDir
+	tmpPaths.MTLSKey = filepath.Join(tmpDir, targetClientID+".key")
+	tmpPaths.MTLSCSR = filepath.Join(tmpDir, targetClientID+".csr")
+	tmpPaths.MTLSCert = filepath.Join(tmpDir, targetClientID+".crt")
+	tmpPaths.CA = filepath.Join(tmpDir, "ca.crt")
+	tmpPaths.CryptoPrivate = filepath.Join(tmpDir, targetClientID+".x25519.json")
+	tmpPaths.CryptoPublic = filepath.Join(tmpDir, targetClientID+".x25519.pub.json")
+	tmpPaths.Config = filepath.Join(tmpDir, targetClientID+".config.json")
+	tmpPaths.ServerURL = filepath.Join(tmpDir, "server_url")
+	if len(archive.Files) == 0 {
+		return clientProfilePaths{}, fmt.Errorf("client profile export contains no files")
+	}
+	importedRoles := map[string]bool{}
+	for _, file := range archive.Files {
+		target, mode, err := importTargetForRole(tmpPaths, file.Role)
+		if err != nil {
+			return clientProfilePaths{}, err
+		}
+		body, err := base64.StdEncoding.DecodeString(strings.TrimSpace(file.DataB64))
+		if err != nil {
+			return clientProfilePaths{}, fmt.Errorf("decode profile export file %s: %w", file.Role, err)
+		}
+		if err := writeExclusive(target, body, mode); err != nil {
+			return clientProfilePaths{}, err
+		}
+		importedRoles[file.Role] = true
+	}
+	if importedRoles["config"] {
+		config, err := normalizedImportedClientConfig(archive, paths, importedRoles)
+		if err != nil {
+			return clientProfilePaths{}, err
+		}
+		if err := os.Remove(tmpPaths.Config); err != nil && !os.IsNotExist(err) {
+			return clientProfilePaths{}, fmt.Errorf("replace imported config: %w", err)
+		}
+		if err := writeJSONFileExclusive(tmpPaths.Config, config, keyFileMode); err != nil {
+			return clientProfilePaths{}, err
+		}
+	}
+	if force {
+		if err := os.RemoveAll(paths.Dir); err != nil {
+			return clientProfilePaths{}, fmt.Errorf("replace existing client profile %s: %w", paths.Dir, err)
+		}
+	}
+	if err := os.Rename(tmpDir, paths.Dir); err != nil {
+		return clientProfilePaths{}, fmt.Errorf("install imported client profile: %w", err)
+	}
+	cleanup = false
+	if err := os.Chmod(paths.Dir, 0o700); err != nil {
+		return clientProfilePaths{}, fmt.Errorf("set client profile directory permissions: %w", err)
+	}
+	return paths, nil
+}
+
+func importTargetForRole(paths clientProfilePaths, role string) (string, os.FileMode, error) {
+	switch strings.TrimSpace(role) {
+	case "config":
+		return paths.Config, keyFileMode, nil
+	case "server_url":
+		return paths.ServerURL, publicFileMode, nil
+	case "mtls_csr":
+		return paths.MTLSCSR, publicFileMode, nil
+	case "mtls_cert":
+		return paths.MTLSCert, publicFileMode, nil
+	case "ca_cert":
+		return paths.CA, publicFileMode, nil
+	case "crypto_public_key":
+		return paths.CryptoPublic, publicFileMode, nil
+	case "mtls_private_key":
+		return paths.MTLSKey, keyFileMode, nil
+	case "crypto_private_key":
+		return paths.CryptoPrivate, keyFileMode, nil
+	default:
+		return "", 0, fmt.Errorf("unsupported profile export file role: %s", role)
+	}
+}
+
+func normalizedImportedClientConfig(archive clientProfileExport, paths clientProfilePaths, importedRoles map[string]bool) (clientConfigFile, error) {
+	config := clientConfigFile{ClientID: archive.ClientID}
+	for _, file := range archive.Files {
+		if file.Role != "config" {
+			continue
+		}
+		body, err := base64.StdEncoding.DecodeString(strings.TrimSpace(file.DataB64))
+		if err != nil {
+			return clientConfigFile{}, fmt.Errorf("decode profile export config: %w", err)
+		}
+		if err := json.Unmarshal(body, &config); err != nil {
+			return clientConfigFile{}, fmt.Errorf("parse profile export config: %w", err)
+		}
+		break
+	}
+	config.ClientID = archive.ClientID
+	if strings.TrimSpace(config.ServerURL) == "" {
+		if serverURL, ok, err := exportedServerURL(archive); err != nil {
+			return clientConfigFile{}, err
+		} else if ok {
+			config.ServerURL = serverURL
+		}
+	}
+	if importedRoles["mtls_cert"] {
+		config.CertFile = paths.MTLSCert
+	}
+	if importedRoles["mtls_private_key"] {
+		config.KeyFile = paths.MTLSKey
+	} else {
+		config.KeyFile = ""
+	}
+	if importedRoles["ca_cert"] {
+		config.CAFile = paths.CA
+	}
+	if importedRoles["crypto_private_key"] {
+		config.CryptoKey = paths.CryptoPrivate
+	} else {
+		config.CryptoKey = ""
+	}
+	return config, nil
+}
+
+func exportedServerURL(archive clientProfileExport) (string, bool, error) {
+	for _, file := range archive.Files {
+		if file.Role != "server_url" {
+			continue
+		}
+		body, err := base64.StdEncoding.DecodeString(strings.TrimSpace(file.DataB64))
+		if err != nil {
+			return "", false, fmt.Errorf("decode profile export server_url: %w", err)
+		}
+		return strings.TrimSpace(string(body)), true, nil
+	}
+	return "", false, nil
 }

@@ -199,7 +199,7 @@ Release checks call the language-specific targets when the required toolchains a
 
 ## CLI validation helpers
 
-`custodia-client profile list`, `profile show`, `profile path` and `profile delete --yes` inspect and manage standard per-user profiles under the XDG/HOME config location without reading `/etc/custodia-client` or exposing private key material. `custodia-client config check --client-id ID` validates standard per-user profiles and referenced mTLS/crypto files. `custodia-client key inspect` reports a local X25519 key fingerprint without exposing private key material.
+`custodia-client profile list`, `profile show`, `profile path`, `profile export`, `profile import` and `profile delete --yes` inspect, move and manage standard per-user profiles under the XDG/HOME config location without reading `/etc/custodia-client`. Metadata-only export avoids private key material by default; portable private-key export requires explicit `--include-private-keys --yes`. `custodia-client config check --client-id ID` validates standard per-user profiles and referenced mTLS/crypto files. `custodia-client key inspect` reports a local X25519 key fingerprint without exposing private key material.
 
 
 ## End-to-end smoke test

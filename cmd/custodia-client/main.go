@@ -147,6 +147,8 @@ func (a *app) usage() {
   custodia-client profile list
   custodia-client profile show --client-id ID
   custodia-client profile path --client-id ID
+  custodia-client profile export --client-id ID --out FILE [--include-private-keys --yes]
+  custodia-client profile import --file FILE [--client-id ID] [--force]
   custodia-client profile delete --client-id ID --yes
   custodia-client doctor --client-id ID|--config FILE [--online]
   custodia-client secret put --client-id ID --key KEY [--namespace NS] --value-file FILE [--recipient ID|ID=PUBLIC.json] [--permissions read[,write,share]|all|BITS]
@@ -178,6 +180,10 @@ func (a *app) runProfile(args []string) int {
 		return a.runProfileShow(args[1:])
 	case "path":
 		return a.runProfilePath(args[1:])
+	case "export":
+		return a.runProfileExport(args[1:])
+	case "import":
+		return a.runProfileImport(args[1:])
 	case "delete":
 		return a.runProfileDelete(args[1:])
 	default:
@@ -236,6 +242,70 @@ func (a *app) runProfilePath(args []string) int {
 	}
 	fmt.Fprintln(a.stdout, paths.Dir)
 	return 0
+}
+
+func (a *app) runProfileExport(args []string) int {
+	fs := newFlagSet("custodia-client profile export", a.stderr)
+	clientID := fs.String("client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "local client id for the standard profile")
+	out := fs.String("out", "", "output client profile export JSON file")
+	includePrivateKeys := fs.Bool("include-private-keys", false, "include mTLS and application private keys in the export")
+	yes := fs.Bool("yes", false, "confirm exporting private key material")
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	id := strings.TrimSpace(*clientID)
+	if id == "" {
+		fmt.Fprintln(a.stderr, "--client-id is required")
+		return 2
+	}
+	if strings.TrimSpace(*out) == "" {
+		fmt.Fprintln(a.stderr, "--out is required")
+		return 2
+	}
+	if *includePrivateKeys && !*yes {
+		fmt.Fprintln(a.stderr, "--yes is required with --include-private-keys because the export will contain mTLS and application private keys")
+		return 2
+	}
+	paths, err := defaultClientProfilePaths(id)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 2
+	}
+	export, err := exportClientProfile(paths, *includePrivateKeys)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	if err := writeJSONFileExclusive(*out, export, keyFileMode); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	return writeJSON(a.stdout, map[string]any{"client_id": id, "format": clientProfileExportFormat, "includes_private_keys": *includePrivateKeys, "file_count": len(export.Files), "status": "exported"})
+}
+
+func (a *app) runProfileImport(args []string) int {
+	fs := newFlagSet("custodia-client profile import", a.stderr)
+	file := fs.String("file", "", "input client profile export JSON file")
+	clientID := fs.String("client-id", envDefault("CUSTODIA_CLIENT_ID", ""), "expected local client id for the standard profile")
+	force := fs.Bool("force", false, "replace an existing local client profile directory")
+	if !parseFlags(fs, args, a.stderr) {
+		return 2
+	}
+	if strings.TrimSpace(*file) == "" {
+		fmt.Fprintln(a.stderr, "--file is required")
+		return 2
+	}
+	var archive clientProfileExport
+	if err := readJSONFile(*file, &archive); err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	paths, err := importClientProfile(archive, *clientID, *force)
+	if err != nil {
+		fmt.Fprintf(a.stderr, "%v\n", err)
+		return 1
+	}
+	return writeJSON(a.stdout, map[string]any{"client_id": archive.ClientID, "profile_dir": paths.Dir, "format": clientProfileExportFormat, "includes_private_keys": archive.IncludesPrivateKey, "status": "imported"})
 }
 
 func (a *app) runProfileDelete(args []string) int {
