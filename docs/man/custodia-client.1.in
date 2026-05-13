@@ -46,7 +46,7 @@ application keys never leave the client host.
 .SH COMMANDS
 .TP
 .B mtls enroll --client-id ID --server-url URL --enrollment-token TOKEN [--insecure]
-Generate a client-side mTLS private key and CSR, claim a short-lived enrollment token, and install the returned client certificate and CA certificate into the standard profile. TLS certificate validation is enabled by default; use --insecure only for disposable first-run labs with an untrusted local CA. For real remote clients, install the Custodia CA into the client OS trust store before enrollment; see CLIENT_TRUSTED_CA.md. The mTLS private key never leaves the client host.
+Generate a client-side mTLS private key and CSR, claim a short-lived enrollment token, and install the returned client certificate and CA certificate into the standard profile. TLS certificate validation is enabled by default; use --insecure only for disposable first-run labs with an untrusted local CA. For real remote clients, install the Custodia CA into the client OS trust store before enrollment; see CLIENT_TRUSTED_CA.md. The mTLS private key never leaves the client host. Enrollment failures include an operator hint for token, TLS trust, SAN/hostname, DNS/network, wrong-listener and local-profile overwrite cases.
 .TP
 .B mtls generate-csr --client-id ID [--private-key-out FILE --csr-out FILE]
 Generate a client-side mTLS private key and CSR for manual/offline enrollment workflows.
