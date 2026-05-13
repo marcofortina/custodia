@@ -36,9 +36,30 @@ helm template custodia-full "$chart_dir" \
   >/dev/null
 
 printf 'helm-render-check: rendering lite example\n'
-helm template custodia-lite "$chart_dir" \
-  --values "$lite_values" \
-  >/dev/null
+lite_render="$(helm template custodia-lite "$chart_dir" \
+  --values "$lite_values")"
+printf '%s\n' "$lite_render" >/dev/null
+
+if ! printf '%s\n' "$lite_render" | awk '
+  /^[[:space:]]+strategy:[[:space:]]*$/ {
+    in_strategy = 1
+    saw_recreate = 0
+    saw_rolling_update = 0
+    next
+  }
+  in_strategy && /^[^[:space:]]/ {
+    if (saw_recreate && saw_rolling_update) { exit 1 }
+    in_strategy = 0
+  }
+  in_strategy && /^[[:space:]]+type:[[:space:]]*Recreate[[:space:]]*$/ { saw_recreate = 1 }
+  in_strategy && /^[[:space:]]+rollingUpdate:[[:space:]]*$/ { saw_rolling_update = 1 }
+  END {
+    if (in_strategy && saw_recreate && saw_rolling_update) { exit 1 }
+  }
+'; then
+  printf 'helm-render-check: lite Recreate strategy rendered rollingUpdate fields\n' >&2
+  exit 1
+fi
 
 expect_failure() {
   local description="$1"

@@ -16,8 +16,14 @@ metadata:
 spec:
   replicas: {{ .Values.replicaCount }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+{{- $deploymentStrategy := .Values.deploymentStrategy | default dict }}
+{{- $deploymentStrategyType := default "RollingUpdate" $deploymentStrategy.type }}
   strategy:
-{{ toYaml .Values.deploymentStrategy | indent 4 }}
+    type: {{ $deploymentStrategyType }}
+{{- if and (eq $deploymentStrategyType "RollingUpdate") $deploymentStrategy.rollingUpdate }}
+    rollingUpdate:
+{{ toYaml $deploymentStrategy.rollingUpdate | indent 6 }}
+{{- end }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "custodia.name" . }}
