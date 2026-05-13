@@ -52,6 +52,14 @@ func TestLoadReadsLogFileOverride(t *testing.T) {
 	}
 }
 
+func TestLoadReadsEmptyLogFileOverride(t *testing.T) {
+	t.Setenv("CUSTODIA_LOG_FILE", "")
+	cfg := Load()
+	if cfg.LogFile != "" {
+		t.Fatalf("expected empty log file from env, got %q", cfg.LogFile)
+	}
+}
+
 func TestLoadReadsOptionalHealthAddress(t *testing.T) {
 	t.Setenv("CUSTODIA_HEALTH_ADDR", ":8080")
 	cfg := Load()
