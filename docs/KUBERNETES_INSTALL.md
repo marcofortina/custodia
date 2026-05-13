@@ -49,6 +49,8 @@ git clone https://github.com/marcofortina/custodia.git
 cd custodia
 
 CUSTODIA_VERSION=0.1.0
+# Build the universal Kubernetes image with both supported store backends.
+CUSTODIA_GO_BUILD_TAGS="sqlite postgres"
 git fetch --tags origin
 git checkout "v${CUSTODIA_VERSION}"
 
@@ -57,11 +59,14 @@ CUSTODIA_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 DOCKER_BUILDKIT=1 docker build \
   -f deploy/Dockerfile \
+  --build-arg GO_BUILD_TAGS="$CUSTODIA_GO_BUILD_TAGS" \
   --build-arg CUSTODIA_VERSION="$CUSTODIA_VERSION" \
   --build-arg CUSTODIA_COMMIT="$CUSTODIA_COMMIT" \
   --build-arg CUSTODIA_DATE="$CUSTODIA_DATE" \
   -t registry.example.internal/custodia/custodia-server:${CUSTODIA_VERSION} .
 ```
+
+Do not omit `GO_BUILD_TAGS` for Kubernetes Lite: the SQLite backend is a build-tagged store backend. The recommended Kubernetes image is universal, with both `sqlite` and `postgres`, so the active backend is still selected by YAML values rather than by shipping separate products.
 
 For unreleased development testing, replace the checkout step with the exact branch or commit under review and tag the image with a non-release identifier such as `0.1.1-dev`.
 

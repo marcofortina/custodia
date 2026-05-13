@@ -17,10 +17,11 @@ Default development values are `dev`, `unknown`, `unknown`; those are compile-ti
 make build VERSION=v0.1.0 COMMIT=$(git rev-parse --short HEAD) DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 ```
 
-Docker builds accept equivalent build args:
+Docker builds accept equivalent build args. For the standard server image, keep both supported store backends enabled and let runtime configuration select the active backend:
 
 ```bash
 docker build \
+  --build-arg GO_BUILD_TAGS="sqlite postgres" \
   --build-arg CUSTODIA_VERSION=v0.1.0 \
   --build-arg CUSTODIA_COMMIT=$(git rev-parse --short HEAD) \
   --build-arg CUSTODIA_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
