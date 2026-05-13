@@ -61,6 +61,17 @@ if ! printf '%s\n' "$lite_render" | awk '
   exit 1
 fi
 
+for required_security_field in \
+  'runAsNonRoot: true' \
+  'runAsUser: 65532' \
+  'runAsGroup: 65532' \
+  'fsGroup: 65532'; do
+  if ! printf '%s\n' "$lite_render" | grep -F "$required_security_field" >/dev/null; then
+    printf 'helm-render-check: lite chart is missing numeric non-root security field: %s\n' "$required_security_field" >&2
+    exit 1
+  fi
+done
+
 expect_failure() {
   local description="$1"
   shift
