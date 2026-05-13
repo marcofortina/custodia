@@ -386,6 +386,8 @@ verify_client() {
   require_executable_path /usr/bin/custodia-client
   require_path /usr/share/man/man1/custodia-client.1.gz
   require_path /usr/share/doc/custodia-client/CUSTODIA_CLIENT_CLI.md
+  require_path /usr/share/doc/custodia-client/CUSTODIA_ALICE_BOB_SMOKE.md
+  require_path /usr/share/doc/custodia-client/CLIENT_TRUSTED_CA.md
   /usr/bin/custodia-client help >/dev/null
 }
 

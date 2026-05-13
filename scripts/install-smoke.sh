@@ -76,6 +76,7 @@ require_file "${PREFIX#/}/share/custodia/sdk/clients/cpp/include/custodia/client
 require_file "${PREFIX#/}/share/custodia/sdk/clients/rust/Cargo.toml"
 require_file "${PREFIX#/}/share/custodia/sdk/testdata/client-crypto/v1/create_secret_single_recipient.json"
 require_file "${PREFIX#/}/share/doc/custodia-client/CUSTODIA_CLIENT_CLI.md"
+require_file "${PREFIX#/}/share/doc/custodia-client/CLIENT_TRUSTED_CA.md"
 require_file "${PREFIX#/}/share/doc/custodia-sdk/CLIENT_LIBRARIES.md"
 
 log "temporary install smoke passed"

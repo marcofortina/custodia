@@ -6,21 +6,23 @@ The commands assume the server side is already running. Each client is enrolled 
 
 ## 1. Provision Alice
 
-On the server/admin host, create an enrollment token and transfer the printed server URL and token to Alice. Enrollment verifies TLS normally by default. This smoke test usually runs with the locally generated lab CA not installed in Alice's trust store yet, so the first disposable lab enrollment uses `--insecure`. For real remote clients, install/trust the Custodia CA first and remove `--insecure`:
+On the server/admin host, create an enrollment token and transfer the printed server URL and token to Alice. Enrollment verifies TLS normally by default. This smoke test usually runs with the locally generated lab CA not installed in Alice's trust store yet, so the first disposable lab enrollment uses `--insecure`. For real remote clients, install/trust the Custodia CA first with [`CLIENT_TRUSTED_CA.md`](CLIENT_TRUSTED_CA.md) and remove `--insecure`:
 
 ```bash
 sudo -u custodia custodia-admin client enrollment create --ttl 15m
 ```
 
-On Alice's client host:
+On Alice's client host, set the values printed by the server/admin host. Do not paste the literal placeholder token:
 
 ```bash
 export ALICE_ID=client_alice
+export CUSTODIA_SERVER_URL="https://SERVER_IP_OR_HOSTNAME:8443"
+export ALICE_ENROLLMENT_TOKEN="ENROLLMENT_TOKEN"
 
 custodia-client mtls enroll \
   --client-id "$ALICE_ID" \
-  --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
-  --enrollment-token "ENROLLMENT_TOKEN" \
+  --server-url "$CUSTODIA_SERVER_URL" \
+  --enrollment-token "$ALICE_ENROLLMENT_TOKEN" \
   --insecure
 
 custodia-client key generate --client-id "$ALICE_ID"
@@ -68,21 +70,23 @@ super secret demo value
 
 ## 3. Provision Bob
 
-On the server/admin host, create a second enrollment token and transfer the printed server URL and token to Bob. Enrollment verifies TLS normally by default. This smoke test usually runs with the locally generated lab CA not installed in Bob's trust store yet, so the first disposable lab enrollment uses `--insecure`. For real remote clients, install/trust the Custodia CA first and remove `--insecure`:
+On the server/admin host, create a second enrollment token and transfer the printed server URL and token to Bob. Enrollment verifies TLS normally by default. This smoke test usually runs with the locally generated lab CA not installed in Bob's trust store yet, so the first disposable lab enrollment uses `--insecure`. For real remote clients, install/trust the Custodia CA first with [`CLIENT_TRUSTED_CA.md`](CLIENT_TRUSTED_CA.md) and remove `--insecure`:
 
 ```bash
 sudo -u custodia custodia-admin client enrollment create --ttl 15m
 ```
 
-On Bob's client host:
+On Bob's client host, set the values printed by the server/admin host. Do not reuse Alice's token and do not paste the literal placeholder token:
 
 ```bash
 export BOB_ID=client_bob
+export CUSTODIA_SERVER_URL="https://SERVER_IP_OR_HOSTNAME:8443"
+export BOB_ENROLLMENT_TOKEN="ENROLLMENT_TOKEN"
 
 custodia-client mtls enroll \
   --client-id "$BOB_ID" \
-  --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
-  --enrollment-token "ENROLLMENT_TOKEN" \
+  --server-url "$CUSTODIA_SERVER_URL" \
+  --enrollment-token "$BOB_ENROLLMENT_TOKEN" \
   --insecure
 
 custodia-client key generate --client-id "$BOB_ID"

@@ -159,7 +159,7 @@ and must provide the recipient envelopes required for the new version.
 Default share grants read access only:
 
 ```bash
-custodia-client secret share --namespace db01 --key user:sys --to-client-id bob
+custodia-client secret share --client-id alice --namespace db01 --key user:sys --target-client-id bob --permissions read
 ```
 
 Share must fail before changing ACLs when the target client already has the same
@@ -169,16 +169,17 @@ Explicit update access is separate:
 
 ```bash
 custodia-client secret share \
+  --client-id alice \
   --namespace db01 \
   --key user:sys \
-  --to-client-id bob \
-  --permissions read,update
+  --target-client-id bob \
+  --permissions read,write
 ```
 
 `revoke` is owner/admin controlled. A shared recipient cannot revoke other recipients:
 
 ```bash
-custodia-client secret revoke --namespace db01 --key user:sys --from-client-id bob
+custodia-client secret access revoke --client-id alice --namespace db01 --key user:sys --target-client-id bob --yes
 ```
 
 Revocation removes the target client's visibility and active grants. It does not make
@@ -196,8 +197,8 @@ requires a new encrypted version excluding the revoked recipient.
 Examples:
 
 ```bash
-custodia-client secret delete --namespace db01 --key user:sys
-custodia-client secret delete --namespace db01 --key user:sys --cascade
+custodia-client secret delete --client-id alice --namespace db01 --key user:sys --yes
+custodia-client secret delete --client-id alice --namespace db01 --key user:sys --cascade --yes
 ```
 
 Recommended conflict for owner delete while shared:

@@ -239,7 +239,7 @@ install-client-man:
 .PHONY: install-client-docs
 install-client-docs:
 	$(INSTALL) -d "$(DESTDIR)$(DOCDIR)/custodia-client"
-	$(INSTALL) -m 0644 LICENSE README.md docs/CUSTODIA_CLIENT_CLI.md docs/DOCTOR.md "$(DESTDIR)$(DOCDIR)/custodia-client/"
+	$(INSTALL) -m 0644 LICENSE README.md docs/CUSTODIA_CLIENT_CLI.md docs/CUSTODIA_ALICE_BOB_SMOKE.md docs/CLIENT_TRUSTED_CA.md docs/DOCTOR.md "$(DESTDIR)$(DOCDIR)/custodia-client/"
 
 .PHONY: install-sdk-tree
 install-sdk-tree:

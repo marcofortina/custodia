@@ -247,8 +247,18 @@ super secret demo value
 
 ## Revoke, deny and delete
 
-Use the Web Console Secret Metadata page or CLI to revoke Bob's future access.
-Then verify Bob is denied:
+Use the Web Console Secret Metadata page or CLI to revoke Bob's future access. CLI revoke runs on Alice because Alice owns the smoke secret:
+
+```bash
+custodia-client secret access revoke \
+  --client-id "$ALICE_ID" \
+  --namespace "$SMOKE_NAMESPACE" \
+  --key "$SMOKE_KEY" \
+  --target-client-id "$BOB_ID" \
+  --yes
+```
+
+Then verify Bob is denied from Bob's host:
 
 ```bash
 if custodia-client secret get --client-id "$BOB_ID" --namespace "$SMOKE_NAMESPACE" --key "$SMOKE_KEY" --out "$HOME/custodia-bob-after-revoke.txt"; then
@@ -263,7 +273,8 @@ Back on Alice, delete the smoke secret:
 custodia-client secret delete \
   --client-id "$ALICE_ID" \
   --namespace "$SMOKE_NAMESPACE" \
-  --key "$SMOKE_KEY"
+  --key "$SMOKE_KEY" \
+  --yes
 ```
 
 ## Lite backup checkpoint

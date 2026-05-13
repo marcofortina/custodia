@@ -43,14 +43,17 @@ Typical client-side modes:
 | `<client_id>.x25519.pub.json` | `0644` | Public application key for trusted handoff. |
 | `<client_id>.config.json` | `0600` | Local config referencing the files above. |
 
-Example client provisioning flow:
+Example client provisioning flow. Enrollment verifies TLS normally; for production-style enrollment trust the Custodia CA first with [`CLIENT_TRUSTED_CA.md`](CLIENT_TRUSTED_CA.md). For a disposable first-run lab with an untrusted local CA, add `--insecure` only to the `mtls enroll` command.
 
 ```bash
 export CLIENT_ID=client_alice
+export CUSTODIA_SERVER_URL="https://SERVER_IP_OR_HOSTNAME:8443"
+export CUSTODIA_ENROLLMENT_TOKEN="ENROLLMENT_TOKEN"
+
 custodia-client mtls enroll \
   --client-id "$CLIENT_ID" \
-  --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
-  --enrollment-token "ENROLLMENT_TOKEN"
+  --server-url "$CUSTODIA_SERVER_URL" \
+  --enrollment-token "$CUSTODIA_ENROLLMENT_TOKEN"
 custodia-client key generate --client-id "$CLIENT_ID"
 custodia-client config write --client-id "$CLIENT_ID"
 custodia-client config check --client-id "$CLIENT_ID"

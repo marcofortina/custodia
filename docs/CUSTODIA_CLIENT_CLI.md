@@ -52,13 +52,16 @@ On the server/admin host, create a one-shot enrollment token:
 sudo -u custodia custodia-admin client enrollment create --ttl 15m
 ```
 
-Transfer the printed server URL and token to the client host. Enrollment verifies TLS normally by default; use `--insecure` only for disposable first-run labs with an untrusted local CA. Then enroll the client:
+Transfer the printed server URL and token to the client host. Enrollment verifies TLS normally by default; use `--insecure` only for disposable first-run labs with an untrusted local CA. For production-style enrollment, trust the Custodia CA first with [`CLIENT_TRUSTED_CA.md`](CLIENT_TRUSTED_CA.md). Then set the printed values on the client host and enroll the client. Do not paste the literal placeholder token:
 
 ```bash
+export CUSTODIA_SERVER_URL="https://SERVER_IP_OR_HOSTNAME:8443"
+export CUSTODIA_ENROLLMENT_TOKEN="ENROLLMENT_TOKEN"
+
 custodia-client mtls enroll \
   --client-id "$CLIENT_ID" \
-  --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
-  --enrollment-token "ENROLLMENT_TOKEN"
+  --server-url "$CUSTODIA_SERVER_URL" \
+  --enrollment-token "$CUSTODIA_ENROLLMENT_TOKEN"
 ```
 
 This writes the mTLS private key, CSR, signed certificate and CA certificate into the standard client profile. The mTLS private key remains local to the client host.
@@ -227,7 +230,7 @@ custodia-client secret access list \
 Revoke a target client's future server-side access to a secret. This does not make already downloaded ciphertext/envelope material undecryptable; for strong revocation, create a new encrypted version with only the remaining authorized recipients.
 
 ```bash
-custodia-client secret revoke \
+custodia-client secret access revoke \
   --client-id client_alice \
   --key smoke-demo \
   --target-client-id client_bob \

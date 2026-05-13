@@ -3,4 +3,6 @@
 usr/bin/custodia-client
 usr/share/man/man1/custodia-client.1.gz
 usr/share/doc/custodia-client/CUSTODIA_CLIENT_CLI.md
+usr/share/doc/custodia-client/CUSTODIA_ALICE_BOB_SMOKE.md
+usr/share/doc/custodia-client/CLIENT_TRUSTED_CA.md
 usr/share/doc/custodia-client/DOCTOR.md

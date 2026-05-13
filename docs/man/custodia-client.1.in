@@ -46,7 +46,7 @@ application keys never leave the client host.
 .SH COMMANDS
 .TP
 .B mtls enroll --client-id ID --server-url URL --enrollment-token TOKEN [--insecure]
-Generate a client-side mTLS private key and CSR, claim a short-lived enrollment token, and install the returned client certificate and CA certificate into the standard profile. TLS certificate validation is enabled by default; use --insecure only for disposable first-run labs with an untrusted local CA. The mTLS private key never leaves the client host.
+Generate a client-side mTLS private key and CSR, claim a short-lived enrollment token, and install the returned client certificate and CA certificate into the standard profile. TLS certificate validation is enabled by default; use --insecure only for disposable first-run labs with an untrusted local CA. For real remote clients, install the Custodia CA into the client OS trust store before enrollment; see CLIENT_TRUSTED_CA.md. The mTLS private key never leaves the client host.
 .TP
 .B mtls generate-csr --client-id ID [--private-key-out FILE --csr-out FILE]
 Generate a client-side mTLS private key and CSR for manual/offline enrollment workflows.
@@ -112,7 +112,7 @@ List secret version metadata.
 .B secret access list --client-id ID|--config FILE --key KEY [--namespace NS] [--limit N]
 List access grant metadata.
 .TP
-.B secret revoke --client-id ID|--config FILE --key KEY [--namespace NS] --target-client-id ID --yes
+.B secret access revoke --client-id ID|--config FILE --key KEY [--namespace NS] --target-client-id ID --yes
 Revoke future server-side access for a target client. Only the owner can revoke
 other clients. Already downloaded material may remain decryptable offline.
 .TP
@@ -216,9 +216,11 @@ Create and validate a local client profile:
 .PP
 .EX
 CLIENT_ID=client_alice
+CUSTODIA_SERVER_URL=https://vault.example:8443
+CUSTODIA_ENROLLMENT_TOKEN=PASTE_TOKEN_HERE
 custodia-client mtls enroll --client-id "$CLIENT_ID" \
-  --server-url https://vault.example:8443 \
-  --enrollment-token ENROLLMENT_TOKEN
+  --server-url "$CUSTODIA_SERVER_URL" \
+  --enrollment-token "$CUSTODIA_ENROLLMENT_TOKEN"
 custodia-client key generate --client-id "$CLIENT_ID"
 custodia-client config write --client-id "$CLIENT_ID"
 custodia-client key publish --client-id "$CLIENT_ID"

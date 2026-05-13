@@ -83,10 +83,37 @@ Package split:
 | Package | Installs |
 | --- | --- |
 | `custodia-server` | `custodia-server`, `custodia-admin`, `custodia-signer`, systemd units, server docs, YAML examples and the SQLite backup helper. |
-| `custodia-client` | `custodia-client` CLI and its manpage. |
+| `custodia-client` | `custodia-client` CLI, manpage and client smoke documentation. |
 | `custodia-sdk` | SDK source snapshots, the sourceable Bash SDK helper, shared crypto test vectors and SDK docs. |
 
-Continue with [Configure the server profile](#4-configure-the-server-profile).
+For a client-only workstation, install only `custodia-client`. Do not install `custodia-server` on Alice/Bob hosts unless that host is intentionally also a server/admin host.
+
+Debian or Ubuntu client-only install:
+
+```bash
+sudo apt update
+sudo apt install -y ca-certificates curl openssl
+
+curl -fLO "${BASE_URL}/custodia-client_${VERSION}-${REVISION}_amd64.deb"
+curl -fLO "${BASE_URL}/SHA256SUMS"
+sha256sum --ignore-missing -c SHA256SUMS
+
+sudo apt install -y "./custodia-client_${VERSION}-${REVISION}_amd64.deb"
+```
+
+Fedora client-only install:
+
+```bash
+sudo dnf install -y ca-certificates curl openssl
+
+curl -fLO "${BASE_URL}/custodia-client-${VERSION}-${REVISION}.x86_64.rpm"
+curl -fLO "${BASE_URL}/SHA256SUMS"
+sha256sum --ignore-missing -c SHA256SUMS
+
+sudo dnf install -y "./custodia-client-${VERSION}-${REVISION}.x86_64.rpm"
+```
+
+Continue with [Configure the server profile](#4-configure-the-server-profile) for server/admin hosts. For client-only Alice/Bob hosts, skip server setup and continue when the server/admin host provides the printed server URL plus enrollment token in [Configure two clients and run an encrypted smoke test](#8-configure-two-clients-and-run-an-encrypted-smoke-test).
 
 ## 3. Install from source
 
@@ -349,12 +376,14 @@ sudo -u custodia custodia-admin client enrollment create --ttl 15m
 
 The command reads `/etc/custodia/custodia-server.yaml`, contacts the configured server URL, and prints a one-shot enrollment token plus the server URL. Transfer those values to the client host. The token is sensitive and expires quickly. When operating through the Web Console, use **Client Enrollments** to create the same one-shot token without shell access to the server or Kubernetes pod.
 
-Enrollment uses normal TLS certificate validation by default. The server URL must match the server certificate SAN. This Quickstart uses a locally generated lab CA that is not installed in the client trust store yet, so the first disposable lab enrollment uses `--insecure`. For real remote clients, install/trust the Custodia CA first and remove `--insecure`.
+Enrollment uses normal TLS certificate validation by default. The server URL must match the server certificate SAN. This Quickstart uses a locally generated lab CA that is not installed in the client trust store yet, so the first disposable lab enrollment uses `--insecure`. For real remote clients, install/trust the Custodia CA first and remove `--insecure`; use [`CLIENT_TRUSTED_CA.md`](CLIENT_TRUSTED_CA.md) for the copyable Linux trust-store steps.
 
-Set Alice's client id on Alice's workstation:
+Set Alice's client id and the enrollment values on Alice's workstation. Use the server URL and token printed by the server/admin host; do not paste the literal placeholder values below:
 
 ```bash
 export ALICE_ID=client_alice
+export CUSTODIA_SERVER_URL="https://SERVER_IP_OR_HOSTNAME:8443"
+export ALICE_ENROLLMENT_TOKEN="ENROLLMENT_TOKEN"
 ```
 
 Enroll Alice from Alice's workstation:
@@ -362,8 +391,8 @@ Enroll Alice from Alice's workstation:
 ```bash
 custodia-client mtls enroll \
   --client-id "$ALICE_ID" \
-  --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
-  --enrollment-token "ENROLLMENT_TOKEN" \
+  --server-url "$CUSTODIA_SERVER_URL" \
+  --enrollment-token "$ALICE_ENROLLMENT_TOKEN" \
   --insecure
 ```
 
@@ -411,15 +440,17 @@ Create another enrollment token for Bob on the server/admin host:
 sudo -u custodia custodia-admin client enrollment create --ttl 15m
 ```
 
-Transfer Bob's enrollment values to Bob. Enroll Bob from Bob's workstation. This disposable lab flow still uses the locally generated untrusted CA, so the example keeps `--insecure`. Remove it for real remote clients after installing/trusting the Custodia CA:
+Transfer Bob's enrollment values to Bob. Enroll Bob from Bob's workstation. This disposable lab flow still uses the locally generated untrusted CA, so the example keeps `--insecure`. Remove it for real remote clients after installing/trusting the Custodia CA with [`CLIENT_TRUSTED_CA.md`](CLIENT_TRUSTED_CA.md):
 
 ```bash
 export BOB_ID=client_bob
+export CUSTODIA_SERVER_URL="https://SERVER_IP_OR_HOSTNAME:8443"
+export BOB_ENROLLMENT_TOKEN="ENROLLMENT_TOKEN"
 
 custodia-client mtls enroll \
   --client-id "$BOB_ID" \
-  --server-url "https://SERVER_IP_OR_HOSTNAME:8443" \
-  --enrollment-token "ENROLLMENT_TOKEN" \
+  --server-url "$CUSTODIA_SERVER_URL" \
+  --enrollment-token "$BOB_ENROLLMENT_TOKEN" \
   --insecure
 ```
 
@@ -462,13 +493,15 @@ Expected output:
 super secret demo value
 ```
 
-Delete the smoke secret when the test is complete:
+Revoke Bob's future server-side access and delete the smoke secret when the test is complete:
 
 ```bash
+custodia-client secret access revoke --client-id "$ALICE_ID" --namespace "$SMOKE_NAMESPACE" --key "$SMOKE_KEY" --target-client-id "$BOB_ID" --yes
+
 custodia-client secret delete --client-id "$ALICE_ID" --namespace "$SMOKE_NAMESPACE" --key "$SMOKE_KEY" --yes
 ```
 
-The vault received only ciphertext, crypto metadata and opaque envelopes. Plaintext, mTLS private keys and application private keys stayed local to each client. Deletion prevents future server-side reads; material already downloaded by authorized clients remains outside server control.
+The vault received only ciphertext, crypto metadata and opaque envelopes. Plaintext, mTLS private keys and application private keys stayed local to each client. Access revocation and deletion prevent future server-side reads; material already downloaded by authorized clients remains outside server control.
 
 For a complete two-client version/revoke workflow, follow [`docs/CUSTODIA_ALICE_BOB_SMOKE.md`](CUSTODIA_ALICE_BOB_SMOKE.md). For a release-candidate end-to-end rehearsal that follows this Quickstart across server, Alice, Bob, Web Console checkpoints and Lite backup, use [`docs/END_TO_END_OPERATOR_SMOKE.md`](END_TO_END_OPERATOR_SMOKE.md).
 

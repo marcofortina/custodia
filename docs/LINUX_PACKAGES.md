@@ -135,7 +135,7 @@ Set `server.url` in `custodia-server.yaml` to the HTTPS API URL that remote clie
 /usr/share/doc/custodia-client/
 ```
 
-`/usr/bin/custodia-client` is the Go encrypted secrets CLI for local put/get/share/version workflows, client-side config validation, online doctor checks and mTLS CSR generation.
+`/usr/bin/custodia-client` is the Go encrypted secrets CLI for local put/get/share/version workflows, client-side config validation, online doctor checks and mTLS CSR generation. Client-only hosts should install only `custodia-client`; they do not need `/etc/custodia`, `/var/lib/custodia`, `/var/log/custodia`, the `custodia` service user or server systemd units. The installed client docs include `CUSTODIA_CLIENT_CLI.md` and `CUSTODIA_ALICE_BOB_SMOKE.md` so Alice/Bob hosts can follow the smoke workflow without a source checkout.
 
 ## SDK package layout
 

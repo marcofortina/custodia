@@ -257,7 +257,7 @@ stage_client() {
     "$stage/usr/share/doc/custodia-client"
   install -m 0755 "$WORK_DIR/bin/custodia-client" "$stage/usr/bin/custodia-client"
   install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia-client/"
-  install -m 0644 docs/CUSTODIA_CLIENT_CLI.md docs/DOCTOR.md "$stage/usr/share/doc/custodia-client/"
+  install -m 0644 docs/CUSTODIA_CLIENT_CLI.md docs/CUSTODIA_ALICE_BOB_SMOKE.md docs/CLIENT_TRUSTED_CA.md docs/DOCTOR.md "$stage/usr/share/doc/custodia-client/"
   install_manpages "$stage" custodia-client
 }
 

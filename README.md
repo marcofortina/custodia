@@ -23,6 +23,7 @@ New to Custodia? Start with the document that matches your task:
 | Smoke-test Kubernetes | [`docs/KUBERNETES_RUNTIME_SMOKE.md`](docs/KUBERNETES_RUNTIME_SMOKE.md) | You need a read-only runtime check against an installed cluster. |
 | Smoke-test Lite backup/restore | [`docs/LITE_BACKUP_RESTORE_SMOKE.md`](docs/LITE_BACKUP_RESTORE_SMOKE.md) | You need disposable SQLite backup/restore validation. |
 | Run the end-to-end operator rehearsal | [`docs/END_TO_END_OPERATOR_SMOKE.md`](docs/END_TO_END_OPERATOR_SMOKE.md) | You are rehearsing server/admin, Alice, Bob and backup flows. |
+| Configure client CA trust | [`docs/CLIENT_TRUSTED_CA.md`](docs/CLIENT_TRUSTED_CA.md) | You want real clients to enroll without `--insecure`. |
 
 If you are not sure what to choose, use the package install path. It covers Debian/Ubuntu `.deb`, Fedora `.rpm`, the server/client/SDK package split, Lite bootstrap, admin certificate setup, Web TOTP, the first API check and the first encrypted client smoke test.
 
