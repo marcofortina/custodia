@@ -1526,7 +1526,7 @@ func TestWebClientEnrollmentCreatesOneShotToken(t *testing.T) {
 		t.Fatalf("expected enrollment token 200, got %d: %s", postRes.Code, postRes.Body.String())
 	}
 	body := postRes.Body.String()
-	for _, expected := range []string{"Enrollment token", "https://custodia.example.internal:8443", "custodia-client mtls enroll", "--enrollment-token", "--insecure"} {
+	for _, expected := range []string{"Enrollment token", "https://custodia.example.internal:8443", "custodia-client mtls enroll", "--enrollment-token", "--insecure", "Copy server URL", "Copy token", `data-copy-target="enrollment-server-url"`, `data-copy-target="enrollment-token"`} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("enrollment page expected token %q, got: %s", expected, body)
 		}
@@ -1535,6 +1535,66 @@ func TestWebClientEnrollmentCreatesOneShotToken(t *testing.T) {
 		if strings.Contains(strings.ToLower(body), forbidden) && !strings.Contains(body, "private keys remain client-side") {
 			t.Fatalf("enrollment page leaked forbidden concept %q: %s", forbidden, body)
 		}
+	}
+	assertLastAudit(t, memoryStore, "web.client_enrollment_create", "success", "")
+}
+
+func TestWebClientEnrollmentRequiresWebMFASession(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	secret := "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+	handler := New(Options{
+		Store:                 memoryStore,
+		Limiter:               ratelimit.NewMemoryLimiter(),
+		AdminClientIDs:        map[string]bool{"admin": true},
+		MaxEnvelopesPerSecret: 100,
+		ClientRateLimit:       100,
+		GlobalRateLimit:       100,
+		EnrollmentServerURL:   "https://custodia.example.internal:8443",
+		WebMFARequired:        true,
+		WebTOTPSecret:         secret,
+		WebSessionSecret:      "01234567890123456789012345678901",
+		WebSessionTTL:         time.Minute,
+		WebSessionSecure:      false,
+	})
+
+	blocked := mtlsRequest(http.MethodPost, "/web/client-enrollments", "ttl=15m", "admin")
+	blocked.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	blockedRes := httptest.NewRecorder()
+	handler.ServeHTTP(blockedRes, blocked)
+	if blockedRes.Code != http.StatusSeeOther || blockedRes.Header().Get("Location") != "/web/login" {
+		t.Fatalf("expected Web MFA redirect before enrollment creation, got %d location=%q body=%s", blockedRes.Code, blockedRes.Header().Get("Location"), blockedRes.Body.String())
+	}
+
+	code, err := webauth.TOTPCode(secret, time.Now().UTC())
+	if err != nil {
+		t.Fatalf("TOTPCode() error = %v", err)
+	}
+	login := mtlsRequest(http.MethodPost, "/web/login", "totp="+code, "admin")
+	login.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	loginRes := httptest.NewRecorder()
+	handler.ServeHTTP(loginRes, login)
+	if loginRes.Code != http.StatusSeeOther {
+		t.Fatalf("expected login redirect, got %d: %s", loginRes.Code, loginRes.Body.String())
+	}
+	cookies := loginRes.Result().Cookies()
+	if len(cookies) == 0 {
+		t.Fatal("expected Web MFA session cookie")
+	}
+
+	req := mtlsRequest(http.MethodPost, "/web/client-enrollments", "ttl=15m", "admin")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(cookies[0])
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected enrollment creation after Web MFA session, got %d: %s", res.Code, res.Body.String())
+	}
+	if !strings.Contains(res.Body.String(), "Enrollment token") {
+		t.Fatalf("expected token page after Web MFA session, got: %s", res.Body.String())
 	}
 }
 
@@ -1787,8 +1847,9 @@ func TestWebClientEnrollmentRejectsInvalidTTL(t *testing.T) {
 	if res.Code != http.StatusBadRequest {
 		t.Fatalf("expected invalid ttl 400, got %d: %s", res.Code, res.Body.String())
 	}
-	if !strings.Contains(res.Body.String(), "invalid_ttl") {
-		t.Fatalf("expected invalid_ttl page, got: %s", res.Body.String())
+	body := res.Body.String()
+	if !strings.Contains(body, "invalid_ttl") || !strings.Contains(body, "TTL must not exceed 24h") || !strings.Contains(body, "Enrollment error") {
+		t.Fatalf("expected friendly invalid_ttl page, got: %s", body)
 	}
 }
 
@@ -2722,7 +2783,7 @@ func TestWebConsoleAssetIsLocalAndAdminOnly(t *testing.T) {
 			path:        "/web/assets/console.js",
 			contentType: "text/javascript",
 			file:        "web_assets/console.js",
-			tokens:      []string{"swapMain", "initPaginatedTables", "initRefreshControls", "refreshCurrentView", "custodia.console.refreshSeconds", "Refresh in ${remaining}s", "Refresh paused while editing", "document.visibilityState === 'hidden'", "setLastUpdated", "Table pagination", "custodia.console.paginationPage.", "data-pagination-first", "Showing ${start + 1}–${Math.min(end, rows.length)} of ${rows.length}", "Page ${currentPage + 1} of ${pageCount}", "responseURL.pathname === '/web/login'", "nextMain.classList.contains('console-auth-shell')"},
+			tokens:      []string{"swapMain", "initPaginatedTables", "initCopyButtons", "initRefreshControls", "refreshCurrentView", "custodia.console.refreshSeconds", "Refresh in ${remaining}s", "Refresh paused while editing", "document.visibilityState === 'hidden'", "setLastUpdated", "Table pagination", "custodia.console.paginationPage.", "data-pagination-first", "Showing ${start + 1}–${Math.min(end, rows.length)} of ${rows.length}", "Page ${currentPage + 1} of ${pageCount}", "responseURL.pathname === '/web/login'", "nextMain.classList.contains('console-auth-shell')", "data-copy-value", "Copied", "Select and copy"},
 		},
 		{
 			path:        "/web/assets/console.css",

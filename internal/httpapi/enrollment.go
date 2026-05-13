@@ -45,7 +45,7 @@ func (s *Server) handleCreateClientEnrollment(w http.ResponseWriter, r *http.Req
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	response, status, code := s.createClientEnrollment(r, time.Duration(req.TTLSeconds)*time.Second)
+	response, status, code := s.createClientEnrollment(r, time.Duration(req.TTLSeconds)*time.Second, "client.enrollment_create")
 	if code != "" {
 		writeError(w, status, code)
 		return
@@ -53,22 +53,26 @@ func (s *Server) handleCreateClientEnrollment(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusCreated, response)
 }
 
-func (s *Server) createClientEnrollment(r *http.Request, ttl time.Duration) (model.ClientEnrollmentCreateResponse, int, string) {
+func (s *Server) createClientEnrollment(r *http.Request, ttl time.Duration, auditAction string) (model.ClientEnrollmentCreateResponse, int, string) {
+	auditAction = strings.TrimSpace(auditAction)
+	if auditAction == "" {
+		auditAction = "client.enrollment_create"
+	}
 	serverURL := strings.TrimSpace(s.enrollmentServerURL)
 	if serverURL == "" {
-		s.auditFailure(r, "client.enrollment_create", "client_enrollment", "", map[string]string{"reason": "server_url_not_configured"})
+		s.auditFailure(r, auditAction, "client_enrollment", "", map[string]string{"reason": "server_url_not_configured"})
 		return model.ClientEnrollmentCreateResponse{}, http.StatusServiceUnavailable, "server_url_not_configured"
 	}
 	if ttl <= 0 {
 		ttl = defaultEnrollmentTTL
 	}
 	if ttl > maxEnrollmentTTL {
-		s.auditFailure(r, "client.enrollment_create", "client_enrollment", "", map[string]string{"reason": "invalid_ttl"})
+		s.auditFailure(r, auditAction, "client_enrollment", "", map[string]string{"reason": "invalid_ttl"})
 		return model.ClientEnrollmentCreateResponse{}, http.StatusBadRequest, "invalid_ttl"
 	}
 	token, tokenHash, err := newEnrollmentToken()
 	if err != nil {
-		s.auditFailure(r, "client.enrollment_create", "client_enrollment", "", map[string]string{"reason": "token_generation_failed"})
+		s.auditFailure(r, auditAction, "client_enrollment", "", map[string]string{"reason": "token_generation_failed"})
 		return model.ClientEnrollmentCreateResponse{}, http.StatusInternalServerError, "internal_error"
 	}
 	now := time.Now().UTC()
@@ -76,7 +80,7 @@ func (s *Server) createClientEnrollment(r *http.Request, ttl time.Duration) (mod
 	s.enrollmentMu.Lock()
 	s.enrollmentTokens[tokenHash] = enrollmentToken{Hash: tokenHash, CreatedAt: now, ExpiresAt: expiresAt}
 	s.enrollmentMu.Unlock()
-	s.audit(r, "client.enrollment_create", "client_enrollment", "", "success", nil)
+	s.audit(r, auditAction, "client_enrollment", "", "success", nil)
 	return model.ClientEnrollmentCreateResponse{
 		ServerURL:       serverURL,
 		EnrollmentToken: token,
