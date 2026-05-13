@@ -6,6 +6,8 @@ This runbook validates that a rendered and installed Custodia Helm release is al
 - this runbook proves that an installed release has the expected server/signer Deployments, Services, rollout state and Lite PVC when applicable;
 - the Web Console checks prove that normal Kubernetes administration does not require `kubectl exec` into application pods.
 
+For post-release smoke, run the helper from the same release tag/source archive used to build the image and install the Helm chart. Do not validate a public release with scripts from `master` unless you are explicitly testing a future fix.
+
 The smoke is intentionally read-only. It does not install charts, create Secrets, read Secret data, exec into pods or mutate cluster state.
 
 ## Runbook metadata

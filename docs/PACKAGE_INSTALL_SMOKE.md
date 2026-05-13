@@ -16,6 +16,15 @@ Use this smoke after building release-candidate packages and before publishing a
 | Outcome | Package-manager installation evidence without automatic service enablement/start side effects. |
 | Do not continue if | The host has existing Custodia state, minimized doc/manpage filters or production data. |
 
+## Choose the artifact source
+
+Run this smoke against exactly one artifact source:
+
+- local release-candidate packages built from the current checkout; or
+- public GitHub release assets plus the matching source archive/tag checkout.
+
+Do not mix package files from one version with smoke scripts or package manifests from another version.
+
 ## Build artifacts first
 
 From the repository checkout used to produce the release candidate:
@@ -27,6 +36,32 @@ cd dist/packages && sha256sum -c SHA256SUMS
 ```
 
 Copy the relevant artifacts to the clean test machine. The smoke reads packages from `dist/packages` by default; override `PACKAGE_DIR` when artifacts live elsewhere.
+
+## Use public GitHub release assets
+
+For post-release validation, use the published assets and the matching source archive. The packages come from GitHub Releases; the source archive provides `scripts/package-install-smoke.sh` and the expected package manifests used by that script.
+
+```bash
+export CUSTODIA_RELEASE=0.1.0
+export CUSTODIA_RELEASE_REPO=marcofortina/custodia
+
+rm -rf /tmp/custodia-package-smoke
+mkdir -p /tmp/custodia-package-smoke/assets /tmp/custodia-package-smoke/src
+cd /tmp/custodia-package-smoke/assets
+
+gh release download "v${CUSTODIA_RELEASE}" --repo "${CUSTODIA_RELEASE_REPO}"
+sha256sum --ignore-missing -c SHA256SUMS
+python3 -m json.tool artifacts-manifest.json >/dev/null
+
+cd /tmp/custodia-package-smoke/src
+curl -fsSLo custodia-source.tar.gz \
+  "https://github.com/${CUSTODIA_RELEASE_REPO}/archive/refs/tags/v${CUSTODIA_RELEASE}.tar.gz"
+tar -xzf custodia-source.tar.gz --strip-components=1
+
+export PACKAGE_DIR=/tmp/custodia-package-smoke/assets
+```
+
+Run the DEB or RPM commands below from `/tmp/custodia-package-smoke/src`. Keep `CUSTODIA_PACKAGE_INSTALL_FORMAT` explicit because the public release contains both formats in the same asset directory.
 
 ## Safe wiring check
 
