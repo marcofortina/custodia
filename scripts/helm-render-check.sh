@@ -87,6 +87,11 @@ if ! printf '%s\n' "$lite_render" | grep -F 'exec:' >/dev/null; then
   exit 1
 fi
 
+if ! printf '%s\n' "$lite_render" | grep -F 'CUSTODIA_BOOTSTRAP_CLIENTS: "admin:admin"' >/dev/null; then
+  printf 'helm-render-check: lite chart must bootstrap the initial admin client mapping\n' >&2
+  exit 1
+fi
+
 expect_failure() {
   local description="$1"
   shift

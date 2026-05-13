@@ -25,6 +25,7 @@ data:
 {{- end }}
   CUSTODIA_RATE_LIMIT_BACKEND: {{ .Values.config.rateLimitBackend | quote }}
   CUSTODIA_ADMIN_CLIENT_IDS: {{ .Values.config.adminClientIDs | quote }}
+  CUSTODIA_BOOTSTRAP_CLIENTS: {{ .Values.config.bootstrapClients | quote }}
   CUSTODIA_MAX_ENVELOPES_PER_SECRET: {{ .Values.config.maxEnvelopesPerSecret | quote }}
   CUSTODIA_CLIENT_RATE_LIMIT_PER_SECOND: {{ .Values.config.clientRateLimitPerSecond | quote }}
   CUSTODIA_GLOBAL_RATE_LIMIT_PER_SECOND: {{ .Values.config.globalRateLimitPerSecond | quote }}

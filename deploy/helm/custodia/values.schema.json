@@ -87,6 +87,10 @@
         "logFile": {
           "type": "string"
         },
+        "bootstrapClients": {
+          "type": "string",
+          "description": "Comma-separated client_id:mtls_subject mappings used for first-run bootstrap."
+        },
         "maxEnvelopesPerSecret": {
           "type": "integer",
           "minimum": 1
