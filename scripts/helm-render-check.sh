@@ -16,13 +16,14 @@ full_values="$chart_dir/values-full.example.yaml"
 lite_values="$chart_dir/values-lite.example.yaml"
 softhsm_values="deploy/k3s/softhsm/custodia-values.example.yaml"
 full_dependency_values="deploy/k3s/cockroachdb/custodia-values.example.yaml"
+hardened_ingress_values="$chart_dir/values-hardened-ingress.example.yaml"
 
 if ! command -v helm >/dev/null 2>&1; then
   printf 'helm-render-check: helm not found; skipping chart render checks\n' >&2
   exit 0
 fi
 
-for required in "$full_values" "$lite_values" "$full_dependency_values" "$softhsm_values"; do
+for required in "$full_values" "$lite_values" "$full_dependency_values" "$softhsm_values" "$hardened_ingress_values"; do
   if [ ! -f "$required" ]; then
     printf 'helm-render-check: missing required example values file: %s\n' "$required" >&2
     exit 1
@@ -83,6 +84,36 @@ for forbidden_bootstrap_job_field in \
     exit 1
   fi
 done
+
+
+
+printf 'helm-render-check: rendering hardened ingress example\n'
+hardened_ingress_render="$(helm template custodia-hardened "$chart_dir" \
+  --values "$hardened_ingress_values")"
+printf '%s\n' "$hardened_ingress_render" >/dev/null
+
+for required_hardened_ingress_field in \
+  'kind: Ingress' \
+  'custodia-api.example.internal' \
+  'custodia-web.example.internal' \
+  'nginx.ingress.kubernetes.io/backend-protocol: HTTPS' \
+  'kind: NetworkPolicy' \
+  'app.kubernetes.io/component: server' \
+  'app.kubernetes.io/component: signer' \
+  'podSelector:' \
+  'port: 9444' \
+  'type: ClusterIP'; do
+  if ! printf '%s\n' "$hardened_ingress_render" | grep -F "$required_hardened_ingress_field" >/dev/null; then
+    printf 'helm-render-check: hardened ingress chart is missing field: %s\n' "$required_hardened_ingress_field" >&2
+    exit 1
+  fi
+done
+
+if printf '%s\n' "$hardened_ingress_render" | grep -F 'type: NodePort' >/dev/null || \
+   printf '%s\n' "$hardened_ingress_render" | grep -F 'type: LoadBalancer' >/dev/null; then
+  printf 'helm-render-check: hardened ingress example must keep chart Services ClusterIP\n' >&2
+  exit 1
+fi
 
 printf 'helm-render-check: rendering Full dependency lab example\n'
 full_dependency_render="$(helm template custodia-full-deps "$chart_dir" \
@@ -215,5 +246,15 @@ expect_failure 'web enabled without MFA secret' \
   helm template custodia-web-unsafe "$chart_dir" \
     --values "$lite_values" \
     --set web.mfaSecretName=
+
+expect_failure 'ingress without backend protocol acknowledgement' \
+  helm template custodia-ingress-unsafe "$chart_dir" \
+    --values "$hardened_ingress_values" \
+    --set ingress.backendProtocolAcknowledged=false
+
+expect_failure 'ingress combined with NodePort service' \
+  helm template custodia-ingress-nodeport-unsafe "$chart_dir" \
+    --values "$hardened_ingress_values" \
+    --set service.type=NodePort
 
 printf 'helm-render-check: OK\n'

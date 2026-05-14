@@ -44,7 +44,7 @@ CUSTODIA_ADMIN=./custodia-admin
 
 ## 2. Generate Lite/lab bootstrap files
 
-Choose the externally reachable server name. It must match the DNS name or IP address clients and browsers will use and must later match Helm `config.serverURL`.
+Choose the externally reachable server name. It must match the DNS name or IP address clients and browsers will use and must later match Helm `config.serverURL`. If API and Web are exposed through different ingress/gateway hostnames, include each external hostname as an additional server SAN.
 
 The same TLS Secret is mounted by the API/Web pod and the signer pod. The server talks to the signer through the Kubernetes Service name, so the generated server certificate must include both the external API/Web name and the internal signer Service DNS names. For the default release `custodia` and chart name `custodia`, the signer Service is `custodia-custodia-signer`. If you use `fullnameOverride`, `nameOverride` or a different release name, compute the signer Service names from the rendered chart first.
 
@@ -54,6 +54,8 @@ CUSTODIA_HELM_RELEASE=custodia
 CUSTODIA_HELM_CHART_NAME=custodia
 CUSTODIA_SERVER_NAME=custodia.example.internal
 CUSTODIA_SIGNER_SERVICE="${CUSTODIA_HELM_RELEASE}-${CUSTODIA_HELM_CHART_NAME}-signer"
+# Optional when API/Web use separate ingress or gateway hostnames.
+CUSTODIA_WEB_HOST=custodia-web.example.internal
 CUSTODIA_BOOTSTRAP_DIR="$(mktemp -d)"
 chmod 700 "$CUSTODIA_BOOTSTRAP_DIR"
 ```
@@ -63,6 +65,7 @@ chmod 700 "$CUSTODIA_BOOTSTRAP_DIR"
   --out-dir "$CUSTODIA_BOOTSTRAP_DIR" \
   --admin-client-id admin \
   --server-name "$CUSTODIA_SERVER_NAME" \
+  --server-san "$CUSTODIA_WEB_HOST" \
   --server-san "$CUSTODIA_SIGNER_SERVICE" \
   --server-san "${CUSTODIA_SIGNER_SERVICE}.${CUSTODIA_K8S_NAMESPACE}" \
   --server-san "${CUSTODIA_SIGNER_SERVICE}.${CUSTODIA_K8S_NAMESPACE}.svc" \
@@ -85,7 +88,7 @@ custodia-server.yaml
 custodia-signer.yaml
 ```
 
-The YAML files are useful for inspection, but Kubernetes installs use Helm values and Secrets instead of copying those files into pods. Keep the `server.crt` SAN list aligned with the rendered signer Service name; otherwise enrollment signing fails later when the API server verifies the signer TLS certificate.
+The YAML files are useful for inspection, but Kubernetes installs use Helm values and Secrets instead of copying those files into pods. Keep the `server.crt` SAN list aligned with both the external API/Web ingress or gateway hostnames and the rendered signer Service name; otherwise remote clients can fail TLS hostname checks or enrollment signing can fail later when the API server verifies the signer TLS certificate.
 
 Before deleting the bootstrap directory, you still need the admin certificate and key to create the browser client certificate package in step 6.
 

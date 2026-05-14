@@ -1,0 +1,106 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
+# Hardened Kubernetes exposure example.
+# Copy this file, replace every DNS/registry/selector placeholder and keep the
+# signer Service internal. Controller-specific ingress annotations are required
+# because Custodia API/Web listeners use HTTPS with mTLS semantics.
+profile: full
+replicaCount: 3
+
+image:
+  repository: registry.example.internal/custodia/custodia-server
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8443
+
+web:
+  enabled: true
+  exposeOnService: true
+  mfaSecretName: custodia-web-mfa
+  totpSecretKey: totp-secret
+  sessionSecretKey: session-secret
+
+config:
+  serverURL: "https://custodia-api.example.internal:8443"
+  storeBackend: postgres
+  databaseURL: ""
+  databaseURLSecretName: custodia-database
+  databaseURLSecretKey: database-url
+  rateLimitBackend: valkey
+  valkeyURLSecretName: custodia-valkey
+  valkeyURLSecretKey: valkey-url
+  deploymentMode: kubernetes-full
+  databaseHATarget: external
+  auditShipmentSink: "object-lock-or-siem"
+  signerURL: ""
+
+mtls:
+  clientCRLKey: client.crl.pem
+
+ingress:
+  enabled: true
+  className: "nginx"
+  backendProtocolAcknowledged: true
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+  api:
+    enabled: true
+    host: custodia-api.example.internal
+    path: /
+    pathType: Prefix
+  web:
+    enabled: true
+    host: custodia-web.example.internal
+    path: /
+    pathType: Prefix
+  tls:
+    - secretName: custodia-ingress-tls
+      hosts:
+        - custodia-api.example.internal
+        - custodia-web.example.internal
+
+networkPolicy:
+  enabled: true
+  ingressNamespaceSelector:
+    matchLabels:
+      custodia.io/ingress: "true"
+  egress:
+    enabled: false
+    rules: []
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+signer:
+  enabled: true
+  keyProvider: pkcs11
+  pkcs11SignCommand: /usr/local/bin/custodia-pkcs11-sign
+  pkcs11SignCommandDelivery: custom-image
+  adminSubjects: admin
+  secretName: custodia-signer-ca
+  clientSecretName: custodia-signer-client
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2

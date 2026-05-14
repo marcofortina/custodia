@@ -39,6 +39,7 @@ Use that block before commands so an operator can stop before making unsafe assu
 ## Kubernetes and operations
 
 - [`KUBERNETES_INSTALL.md`](KUBERNETES_INSTALL.md)
+- Kubernetes hardened ingress example: [`deploy/helm/custodia/values-hardened-ingress.example.yaml`](../deploy/helm/custodia/values-hardened-ingress.example.yaml)
 - [`KUBERNETES_BOOTSTRAP_MATERIAL.md`](KUBERNETES_BOOTSTRAP_MATERIAL.md)
 - [`KUBERNETES_RUNTIME_SMOKE.md`](KUBERNETES_RUNTIME_SMOKE.md)
 - [`KUBERNETES_LITE_BACKUP_RESTORE.md`](KUBERNETES_LITE_BACKUP_RESTORE.md)

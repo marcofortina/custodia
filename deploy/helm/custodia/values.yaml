@@ -26,9 +26,32 @@ image:
 imagePullSecrets: []
 
 service:
+  # Keep ClusterIP for chart-managed Services. Use ingress/gateway/load-balancer
+  # resources owned by the platform team for external exposure. Lab-only NodePort
+  # manifests live under deploy/k3s/ and must not be used as production evidence.
   type: ClusterIP
   port: 8443
   annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  # Set this only after configuring controller-specific annotations for HTTPS
+  # upstreams and mTLS/pass-through behavior. The chart cannot infer those
+  # controls safely across ingress implementations.
+  backendProtocolAcknowledged: false
+  annotations: {}
+  api:
+    enabled: true
+    host: ""
+    path: /
+    pathType: Prefix
+  web:
+    enabled: true
+    host: ""
+    path: /
+    pathType: Prefix
+  tls: []
 
 web:
   enabled: true
@@ -201,9 +224,13 @@ podDisruptionBudget:
 
 networkPolicy:
   enabled: true
+  # Select namespaces allowed to reach the API/Web Service ports. Use explicit
+  # labels for production ingress/gateway namespaces. The signer policy is
+  # rendered separately and allows only same-release server pods.
   ingressNamespaceSelector: {}
   egress:
     enabled: false
+    rules: []
 
 nodeSelector: {}
 

@@ -22,12 +22,20 @@
       "type": "object",
       "properties": {
         "type": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "ClusterIP",
+            "NodePort",
+            "LoadBalancer"
+          ]
         },
         "port": {
           "type": "integer",
           "minimum": 1,
           "maximum": 65535
+        },
+        "annotations": {
+          "type": "object"
         }
       }
     },
@@ -175,6 +183,9 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 65535
+            },
+            "annotations": {
+              "type": "object"
             }
           }
         },
@@ -197,6 +208,16 @@
         },
         "extraVolumes": {
           "type": "array"
+        },
+        "revisionHistoryLimit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "adminSubjects": {
+          "type": "string"
+        },
+        "resources": {
+          "type": "object"
         }
       }
     },
@@ -289,6 +310,104 @@
             "failureThreshold": {
               "type": "integer",
               "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "className": {
+          "type": "string"
+        },
+        "backendProtocolAcknowledged": {
+          "type": "boolean"
+        },
+        "annotations": {
+          "type": "object"
+        },
+        "api": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "host": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            },
+            "pathType": {
+              "type": "string",
+              "enum": [
+                "Exact",
+                "Prefix",
+                "ImplementationSpecific"
+              ]
+            }
+          }
+        },
+        "web": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "host": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            },
+            "pathType": {
+              "type": "string",
+              "enum": [
+                "Exact",
+                "Prefix",
+                "ImplementationSpecific"
+              ]
+            }
+          }
+        },
+        "tls": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "resources": {
+      "type": "object"
+    },
+    "podSecurityContext": {
+      "type": "object"
+    },
+    "containerSecurityContext": {
+      "type": "object"
+    },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "ingressNamespaceSelector": {
+          "type": "object"
+        },
+        "egress": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "rules": {
+              "type": "array"
             }
           }
         }

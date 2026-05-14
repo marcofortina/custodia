@@ -168,7 +168,35 @@ The chart intentionally rejects unsafe Lite/Full combinations before rendering K
 
 Use `profile: full` for HA deployments backed by PostgreSQL/CockroachDB and Valkey. Use `profile: custom` only when a maintainer has reviewed the non-standard combination.
 
-## 6. Chart validation
+## 6. Ingress, NetworkPolicy and resource hardening
+
+Keep chart-managed Services as `ClusterIP` for production-style installs. External
+API/Web exposure belongs to the platform ingress, gateway or load-balancer layer,
+with controller-specific handling for HTTPS upstreams and mTLS/pass-through
+semantics. The chart includes an optional Ingress template and a hardened example
+values file at `deploy/helm/custodia/values-hardened-ingress.example.yaml`; it is
+disabled by default and fails closed unless `ingress.backendProtocolAcknowledged`
+is set after those controller-specific controls are configured.
+
+Do not expose `custodia-signer` through NodePort, LoadBalancer or Ingress. The
+signer Service is intentionally rendered as internal `ClusterIP` only, and the
+NetworkPolicy template allows signer ingress only from same-release server pods.
+The server NetworkPolicy controls API/Web/health access through the configured
+ingress namespace selector; production operators should replace the default empty
+selector with explicit ingress/gateway namespace labels.
+
+The Helm defaults also set non-root pod/container security contexts, drop Linux
+capabilities, use a read-only root filesystem and define server/signer resource
+requests and limits. Tune the values for the target cluster, but keep equivalent
+controls in production evidence.
+
+Certificate SANs remain operator-owned. `config.serverURL`, external API/Web DNS
+names, ingress/gateway hostnames and the generated server certificate SANs must
+match. The same server TLS material is mounted by the signer pod, so the internal
+signer Service DNS names still need to be present as described in
+[`KUBERNETES_BOOTSTRAP_MATERIAL.md`](KUBERNETES_BOOTSTRAP_MATERIAL.md).
+
+## 7. Chart validation
 
 Run the chart render guardrail before committing values changes:
 
@@ -176,9 +204,9 @@ Run the chart render guardrail before committing values changes:
 make helm-check
 ```
 
-The check renders the Full, Lite, Full dependency lab and SoftHSM lab example values and verifies that unsafe combinations fail closed, including Lite without PVC, Full with SQLite, missing Web MFA Secret wiring and Full PKCS#11 without command delivery.
+The check renders the Full, Lite, hardened ingress, Full dependency lab and SoftHSM lab example values and verifies that unsafe combinations fail closed, including Lite without PVC, Full with SQLite, missing Web MFA Secret wiring, Full PKCS#11 without command delivery, Ingress without backend-protocol acknowledgement and Ingress combined with NodePort Service exposure.
 
-## 7. SoftHSM and MinIO boundaries
+## 8. SoftHSM and MinIO boundaries
 
 SoftHSM may be used when a real HSM is unavailable in development, CI or lab clusters. It is not proof of production HSM coverage.
 
@@ -188,13 +216,13 @@ For production, replace SoftHSM with a real HSM, TPM-backed signer or vendor PKC
 
 MinIO with Object Lock may be used to exercise S3/WORM audit shipment flows when a production object-lock service is unavailable. The lab-only Kubernetes example is available under `deploy/k3s/minio/`; it creates a PVC-backed single-pod MinIO service and initializes a `custodia-audit` bucket with Object Lock retention. Treat it as dev/smoke unless the deployment has production-grade retention governance, durability, credentials, backup and operational controls.
 
-## 8. Normal administration
+## 9. Normal administration
 
 Kubernetes operators should not need `kubectl exec` into application pods for normal online operations. Use the Web Console/API over admin mTLS and Web MFA for metadata-only administration such as status, diagnostics, client views, future client revocation, client-CRL status, CRL PEM download, CRL serial checks, secret version/access metadata, future access-grant revocation, access request views, audit views, browser-downloadable audit JSONL exports and one-shot enrollment token creation through `/web/client-enrollments`.
 
 Bootstrap, Kubernetes Secret creation, Helm values, CA/HSM material placement, external database provisioning and backup plumbing remain deployment/runbook tasks outside the Web Console. Use [`KUBERNETES_BOOTSTRAP_MATERIAL.md`](KUBERNETES_BOOTSTRAP_MATERIAL.md) for the copyable bootstrap material flow.
 
-## 9. Verify
+## 10. Verify
 
 ```bash
 kubectl -n custodia get deploy,svc,pvc
@@ -202,7 +230,7 @@ kubectl -n custodia rollout status deploy/custodia-custodia-server
 kubectl -n custodia rollout status deploy/custodia-custodia-signer
 ```
 
-Expose the API/Web services through your ingress, gateway or port-forward according to your cluster policy. The API and Web Console require mTLS; the health listener should remain private.
+Expose the API/Web services through the intended ingress, gateway or temporary port-forward according to your cluster policy. The API and Web Console require mTLS; the health listener should remain private. Keep the signer Service internal `ClusterIP` only.
 
 After the release is installed, run the read-only Kubernetes runtime smoke from [`KUBERNETES_RUNTIME_SMOKE.md`](KUBERNETES_RUNTIME_SMOKE.md):
 
