@@ -47,6 +47,36 @@ CUSTODIA_AUDIT_S3_SECRET_ACCESS_KEY=minioadmin \
 make minio-object-lock-smoke
 ```
 
+## Kubernetes MinIO lab profile
+
+For Kubernetes smoke rehearsal, use the lab-only manifests under `deploy/k3s/minio/`. They create a PVC-backed MinIO pod, internal ClusterIP Service and init Job that creates the `custodia-audit` bucket with Object Lock retention enabled.
+
+```bash
+kubectl apply -f deploy/k3s/minio/custodia-minio-secret.example.yaml
+kubectl apply -f deploy/k3s/minio/custodia-minio-pvc.yaml
+kubectl apply -f deploy/k3s/minio/custodia-minio-deployment.yaml
+kubectl apply -f deploy/k3s/minio/custodia-minio-service.yaml
+kubectl -n custodia rollout status deploy/custodia-lab-minio --timeout=180s
+kubectl apply -f deploy/k3s/minio/custodia-minio-init-job.yaml
+kubectl -n custodia wait --for=condition=complete job/custodia-lab-minio-init --timeout=180s
+```
+
+Use a temporary port-forward for the workstation smoke helper:
+
+```bash
+kubectl -n custodia port-forward svc/custodia-lab-minio 9000:9000
+```
+
+Then run:
+
+```bash
+CUSTODIA_AUDIT_S3_ENDPOINT=http://127.0.0.1:9000 \
+CUSTODIA_AUDIT_S3_ACCESS_KEY_ID=custodia-minio-lab \
+CUSTODIA_AUDIT_S3_SECRET_ACCESS_KEY=custodia-minio-lab-CHANGE-ME \
+CUSTODIA_AUDIT_S3_BUCKET=custodia-audit \
+make minio-object-lock-smoke
+```
+
 ## Security boundary
 
 The repository can verify bundle integrity and send Object Lock headers. It cannot prove legal immutability unless the external sink actually enforces retention. Production evidence must come from the storage provider or MinIO/S3 Object Lock configuration artifacts.

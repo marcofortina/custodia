@@ -67,6 +67,7 @@ Use that block before commands so an operator can stop before making unsafe assu
 - [`AUDIT_ARCHIVE_RUNBOOK.md`](AUDIT_ARCHIVE_RUNBOOK.md)
 - [`AUDIT_SHIPMENT_RUNBOOK.md`](AUDIT_SHIPMENT_RUNBOOK.md)
 - [`S3_OBJECT_LOCK_AUDIT_SHIPMENT.md`](S3_OBJECT_LOCK_AUDIT_SHIPMENT.md)
+- Kubernetes MinIO/Object Lock lab example: [`deploy/k3s/minio/`](../deploy/k3s/minio/)
 - [`SIEM_WORM_EXPORT.md`](SIEM_WORM_EXPORT.md)
 
 ## Identity, certificates and Web Console

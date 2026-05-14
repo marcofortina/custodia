@@ -186,7 +186,7 @@ A lab-only Kubernetes SoftHSM example is available under `deploy/k3s/softhsm/`. 
 
 For production, replace SoftHSM with a real HSM, TPM-backed signer or vendor PKCS#11 provider, governed PIN delivery, signer node/device controls and external attestation evidence. The stock image and the SoftHSM lab image are not production HSM proof.
 
-MinIO with Object Lock may be used to exercise S3/WORM audit shipment flows when a production object-lock service is unavailable. Treat it as dev/smoke unless the deployment has production-grade retention governance, durability, credentials, backup and operational controls.
+MinIO with Object Lock may be used to exercise S3/WORM audit shipment flows when a production object-lock service is unavailable. The lab-only Kubernetes example is available under `deploy/k3s/minio/`; it creates a PVC-backed single-pod MinIO service and initializes a `custodia-audit` bucket with Object Lock retention. Treat it as dev/smoke unless the deployment has production-grade retention governance, durability, credentials, backup and operational controls.
 
 ## 8. Normal administration
 

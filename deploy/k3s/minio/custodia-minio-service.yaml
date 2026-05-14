@@ -1,0 +1,27 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: custodia-lab-minio
+  namespace: custodia
+  labels:
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/component: object-lock-lab
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/component: object-lock-lab
+  ports:
+    - name: s3
+      port: 9000
+      targetPort: s3
+    - name: console
+      port: 9001
+      targetPort: console

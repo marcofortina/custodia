@@ -77,7 +77,7 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 - HSM/TPM attestation is attached to the production evidence gate.
 
 - S3/Object Lock audit shipment is configured and verified with `custodia-admin audit ship-archive-s3` or an equivalent WORM sink adapter.
-- `make minio-object-lock-smoke` passes in development if MinIO is used as the WORM-like test profile.
+- `make minio-object-lock-smoke` passes in development if MinIO is used as the WORM-like test profile; the Kubernetes lab manifests live under `deploy/k3s/minio/`.
 
 ## Kubernetes Full dependency lab boundary
 
