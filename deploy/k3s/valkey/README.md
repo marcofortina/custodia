@@ -31,8 +31,10 @@ kubectl -n custodia get secret custodia-valkey
 The development Valkey endpoint is:
 
 ```text
-redis://custodia-lab-valkey.custodia.svc.cluster.local:6379/0
+redis://custodia-lab-valkey:6379/0
 ```
+
+The short service name is intentional because the Custodia server runs in the same namespace as the Valkey lab service. Avoid hard-coding a cluster DNS suffix in lab Secrets.
 
 ## Production replacement
 

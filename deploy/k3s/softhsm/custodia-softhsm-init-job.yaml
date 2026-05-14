@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 #
 # Lab-only SoftHSM token initialization Job. It creates a filesystem-backed
-# token and signer key on the lab PVC. Do not use as production HSM evidence.
+# token and imports the existing signer CA key into SoftHSM. Do not use as
+# production HSM evidence.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -26,14 +27,46 @@ spec:
             - /bin/sh
             - -ec
             - |
-              mkdir -p /var/lib/softhsm/tokens /run/custodia-softhsm
+              mkdir -p /var/lib/softhsm/tokens /var/lib/softhsm/import /run/custodia-softhsm
               printf 'directories.tokendir = /var/lib/softhsm/tokens\nobjectstore.backend = file\n' > /run/custodia-softhsm/softhsm2.conf
               export SOFTHSM2_CONF=/run/custodia-softhsm/softhsm2.conf
+              pin="$(cat /run/custodia-softhsm/pin)"
               if ! softhsm2-util --show-slots | grep -F 'custodia-lab' >/dev/null; then
                 slot="$(softhsm2-util --show-slots | awk -F: '/Slot [0-9]+/{print $2; exit}' | tr -d ' ')"
-                softhsm2-util --init-token --slot "${slot:-0}" --label custodia-lab --so-pin "$(cat /run/custodia-softhsm/so-pin)" --pin "$(cat /run/custodia-softhsm/pin)"
-                pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --token-label custodia-lab --login --pin "$(cat /run/custodia-softhsm/pin)" --keypairgen --key-type EC:prime256v1 --id 01 --label custodia-signer-ca
+                softhsm2-util --init-token --slot "${slot:-0}" --label custodia-lab --so-pin "$(cat /run/custodia-softhsm/so-pin)" --pin "$pin"
               fi
+
+              if [ -s /etc/custodia/signer/ca.pass ]; then
+                openssl pkcs8 \
+                  -topk8 \
+                  -nocrypt \
+                  -passin file:/etc/custodia/signer/ca.pass \
+                  -in /etc/custodia/signer/ca.key \
+                  -outform DER \
+                  -out /var/lib/softhsm/import/custodia-signer-ca-key.der
+              else
+                openssl pkcs8 \
+                  -topk8 \
+                  -nocrypt \
+                  -in /etc/custodia/signer/ca.key \
+                  -outform DER \
+                  -out /var/lib/softhsm/import/custodia-signer-ca-key.der
+              fi
+
+              pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --token-label custodia-lab --login --pin "$pin" --delete-object --type privkey --id 01 --label custodia-signer-ca >/dev/null 2>&1 || true
+              pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --token-label custodia-lab --login --pin "$pin" --delete-object --type pubkey --id 01 --label custodia-signer-ca >/dev/null 2>&1 || true
+              pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --token-label custodia-lab --login --pin "$pin" --delete-object --type cert --id 01 --label custodia-signer-ca >/dev/null 2>&1 || true
+              pkcs11-tool \
+                --module /usr/lib/softhsm/libsofthsm2.so \
+                --token-label custodia-lab \
+                --login \
+                --pin "$pin" \
+                --write-object /var/lib/softhsm/import/custodia-signer-ca-key.der \
+                --type privkey \
+                --id 01 \
+                --label custodia-signer-ca \
+                --usage-sign
+              rm -f /var/lib/softhsm/import/custodia-signer-ca-key.der
           volumeMounts:
             - name: softhsm-tokens
               mountPath: /var/lib/softhsm
@@ -45,6 +78,9 @@ spec:
               mountPath: /run/custodia-softhsm/so-pin
               subPath: so-pin
               readOnly: true
+            - name: signer-ca
+              mountPath: /etc/custodia/signer
+              readOnly: true
       volumes:
         - name: softhsm-tokens
           persistentVolumeClaim:
@@ -52,3 +88,6 @@ spec:
         - name: softhsm-pin
           secret:
             secretName: custodia-softhsm-pin
+        - name: signer-ca
+          secret:
+            secretName: custodia-signer-ca

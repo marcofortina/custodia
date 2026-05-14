@@ -123,7 +123,7 @@ kubectl wait --for=condition=complete job/cockroachdb-init -n custodia-db --time
 kubectl rollout status statefulset/cockroachdb -n custodia-db --timeout=300s
 kubectl -n custodia-db exec cockroachdb-0 -- \
   ./cockroach sql --insecure \
-  --host=cockroachdb-public.custodia-db.svc.cluster.local \
+  --host=cockroachdb-public.custodia-db.svc \
   --database=custodia \
   -e 'SHOW TABLES;'
 kubectl apply -f deploy/k3s/cockroachdb/custodia-database-secret.example.yaml
@@ -151,6 +151,19 @@ monitoring, credential rotation, network policy and incident-response evidence.
 On a fresh CockroachDB lab cluster, the pods are expected to report `Ready=false`
 until the init Job completes. A `503` readiness response before `cockroach init`
 is not a storage failure by itself.
+
+For ad-hoc in-pod health checks, prefer the same HTTP client behavior used by
+normal operators and keep the timeout at least as large as the Kubernetes probe.
+Do not use raw `nc` output as readiness evidence; it can close the HTTP request
+stream early and produce a misleading `store_unavailable` response while the
+kubelet probe and a normal client report the pod Ready. Use `wget` or `curl`
+instead:
+
+```bash
+SERVER_POD="$(kubectl -n custodia get pod -l app.kubernetes.io/component=server -o jsonpath='{.items[0].metadata.name}')"
+kubectl -n custodia exec "$SERVER_POD" -- \
+  wget -T 10 -S -O - http://127.0.0.1:8080/ready
+```
 
 ## 6. Lite persistence smoke
 
