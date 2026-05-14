@@ -56,6 +56,8 @@ export CUSTODIA_K8S_PROFILE=full
 # For Lite clusters:
 # export CUSTODIA_K8S_PROFILE=lite
 export CUSTODIA_K8S_CONFIRM=YES
+# Optional: require the chart bootstrap Job to exist and be complete.
+# export CUSTODIA_BOOTSTRAP_JOB_REQUIRED=YES
 ```
 
 Run the read-only smoke:
@@ -69,10 +71,14 @@ The helper verifies:
 - current Kubernetes context is reachable;
 - namespace exists, and stops with an actionable message instead of creating it;
 - Helm release exists when `helm` is installed;
+- release ConfigMap exists and matches the selected profile;
+- Lite uses SQLite/memory and Full uses PostgreSQL/Valkey wiring;
 - server Deployment is present and rolled out;
 - signer Deployment is present and rolled out;
-- server and signer Services exist;
-- server and signer pods are visible;
+- server and signer pods report Ready;
+- server Service exposes the API port;
+- signer Service remains ClusterIP-only and exposes only the signer port;
+- optional chart bootstrap Job completed when present;
 - Lite profile has a PVC selected by the server labels.
 
 If the chart uses `fullnameOverride` or custom Deployment names, provide overrides instead of guessing:
@@ -187,6 +193,10 @@ Stop at the first mismatch. Typical causes:
 - pods not ready because Secret keys do not match the chart values;
 - `server.url` does not match the external DNS/IP and certificate SANs;
 - Lite values missing PVC-backed SQLite storage;
+- Lite runtime ConfigMap not using SQLite/memory;
+- Full runtime ConfigMap not using PostgreSQL/Valkey;
+- signer Service accidentally exposed as NodePort/LoadBalancer;
+- optional bootstrap Job missing or incomplete when `CUSTODIA_BOOTSTRAP_JOB_REQUIRED=YES`;
 - Full values accidentally pointing at SQLite or memory-only rate limiting.
 
 Fix the underlying chart values, Secrets, certificates, storage or external dependencies. Do not bypass the smoke with `kubectl exec` or ad-hoc pod changes.

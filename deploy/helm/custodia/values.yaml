@@ -41,6 +41,14 @@ web:
   totpSecretKey: totp-secret
   sessionSecretKey: session-secret
 
+bootstrapJob:
+  # Disabled by default. This optional Job is a safe pattern for non-secret-sensitive
+  # day-0 checks only; CA/HSM/Web MFA material remains operator-managed.
+  enabled: false
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 600
+  annotations: {}
+
 podAnnotations: {}
 
 serviceAccount:
