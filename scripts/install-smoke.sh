@@ -78,5 +78,6 @@ require_file "${PREFIX#/}/share/custodia/sdk/testdata/client-crypto/v1/create_se
 require_file "${PREFIX#/}/share/doc/custodia-client/CUSTODIA_CLIENT_CLI.md"
 require_file "${PREFIX#/}/share/doc/custodia-client/CLIENT_TRUSTED_CA.md"
 require_file "${PREFIX#/}/share/doc/custodia-sdk/CLIENT_LIBRARIES.md"
+require_file "${PREFIX#/}/share/doc/custodia-sdk/SDK_PUBLISHING_READINESS.md"
 
 log "temporary install smoke passed"

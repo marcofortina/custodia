@@ -251,7 +251,7 @@ install-sdk-tree:
 .PHONY: install-sdk-docs
 install-sdk-docs:
 	$(INSTALL) -d "$(DESTDIR)$(DOCDIR)/custodia-sdk"
-	$(INSTALL) -m 0644 LICENSE README.md docs/CLIENT_LIBRARIES.md docs/CLIENT_CRYPTO_SPEC.md docs/SDK_RELEASE_POLICY.md docs/GO_CLIENT_SDK.md docs/PYTHON_CLIENT_SDK.md docs/NODE_CLIENT_SDK.md docs/JAVA_CLIENT_SDK.md docs/CPP_CLIENT_SDK.md docs/RUST_CLIENT_SDK.md "$(DESTDIR)$(DOCDIR)/custodia-sdk/"
+	$(INSTALL) -m 0644 LICENSE README.md docs/CLIENT_LIBRARIES.md docs/CLIENT_CRYPTO_SPEC.md docs/SDK_RELEASE_POLICY.md docs/SDK_PUBLISHING_READINESS.md docs/GO_CLIENT_SDK.md docs/PYTHON_CLIENT_SDK.md docs/NODE_CLIENT_SDK.md docs/JAVA_CLIENT_SDK.md docs/CPP_CLIENT_SDK.md docs/RUST_CLIENT_SDK.md "$(DESTDIR)$(DOCDIR)/custodia-sdk/"
 
 .PHONY: build-postgres
 build-postgres:
