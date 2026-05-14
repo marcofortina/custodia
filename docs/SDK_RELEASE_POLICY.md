@@ -2,7 +2,7 @@
 
 ## Scope
 
-This policy defines when a Custodia client library can be presented as an official SDK and how SDK releases are versioned, packaged and supported.
+This policy defines when a Custodia client library can be presented as an official SDK and how SDK releases are versioned, packaged and supported. The external registry publishing gate is tracked in [`SDK_PUBLISHING_READINESS.md`](SDK_PUBLISHING_READINESS.md).
 
 Custodia keeps the server crypto boundary strict: SDKs may implement client-side encryption, decryption and envelope creation, but the server continues to receive only opaque ciphertext, opaque envelopes and crypto metadata.
 
@@ -68,7 +68,9 @@ A change to canonical AAD, ciphertext format, envelope format or crypto metadata
 
 ## Release checklist
 
-Before publishing SDK artifacts:
+Before publishing SDK artifacts, complete [`SDK_PUBLISHING_READINESS.md`](SDK_PUBLISHING_READINESS.md). Registry publishing remains blocked until that checklist and the relevant language-specific follow-up issues are complete.
+
+For repository release artifacts:
 
 ```bash
 make release-check

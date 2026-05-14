@@ -101,6 +101,7 @@ Use that block before commands so an operator can stop before making unsafe assu
 - [`RUST_CLIENT_SDK.md`](RUST_CLIENT_SDK.md)
 - [`BASH_SDK.md`](BASH_SDK.md)
 - [`SDK_RELEASE_POLICY.md`](SDK_RELEASE_POLICY.md)
+- [`SDK_PUBLISHING_READINESS.md`](SDK_PUBLISHING_READINESS.md)
 
 ## Production readiness and evidence
 

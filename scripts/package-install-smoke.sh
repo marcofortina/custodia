@@ -402,6 +402,7 @@ verify_sdk() {
   require_path /usr/share/custodia/sdk/clients/bash/custodia.bash
   require_path /usr/share/custodia/sdk/testdata/client-crypto/v1/create_secret_single_recipient.json
   require_path /usr/share/doc/custodia-sdk/SDK_RELEASE_POLICY.md
+  require_path /usr/share/doc/custodia-sdk/SDK_PUBLISHING_READINESS.md
 }
 
 verify_packages_installed() {
