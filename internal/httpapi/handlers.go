@@ -13,6 +13,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"html"
 	"io"
 	"mime"
 	"net/http"
@@ -51,7 +52,7 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }
 
-// handleWeb intentionally exposes a metadata-only console. Browser-side secret
+// handleWeb intentionally exposes a metadata-only operational dashboard. Browser-side secret
 // decryption is a separate client concern and must not be added here without a
 // dedicated WebCrypto/key-management design.
 func (s *Server) handleWeb(w http.ResponseWriter, r *http.Request) {
@@ -59,19 +60,49 @@ func (s *Server) handleWeb(w http.ResponseWriter, r *http.Request) {
 		writeWebNotFoundPage(w, true)
 		return
 	}
-	body := `<section class="console-hero"><p class="console-kicker">Custodia Console</p><h1>Custodia Console</h1><p>The console is a responsive metadata-only control plane for operators. It never decrypts secrets and never manages client-side encryption keys.</p></section>` +
-		`<section class="console-grid" aria-label="Console sections">` +
-		`<a class="console-link-card" href="/web/status" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Operational Status</strong><span>Store, rate limiter, build and web auth posture.</span></a>` +
-		`<a class="console-link-card" href="/web/clients" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Clients</strong><span>mTLS identities and active/revoked state.</span></a>` +
-		`<a class="console-link-card" href="/web/client-enrollments" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Client Enrollments</strong><span>Create one-shot onboarding tokens without pod shell access.</span></a>` +
+	storeStatus := "ok"
+	if err := s.store.Health(r.Context()); err != nil {
+		storeStatus = "unavailable"
+	}
+	rateLimiterStatus := "ok"
+	if checker, ok := s.limiter.(ratelimit.HealthChecker); ok {
+		if err := checker.Health(r.Context()); err != nil {
+			rateLimiterStatus = "unavailable"
+		}
+	}
+	overallStatus := statusOutcome(storeStatus, rateLimiterStatus)
+	revocationStatus, _, revocationFailure := s.clientRevocationStatus()
+	revocationSummary := "not configured"
+	if revocationStatus.Configured {
+		revocationSummary = "valid"
+		if !revocationStatus.Valid {
+			revocationSummary = "invalid"
+		}
+	}
+	if revocationFailure != "" {
+		revocationSummary = revocationFailure
+	}
+	var mem runtime.MemStats
+	runtime.ReadMemStats(&mem)
+	body := `<section class="console-hero"><p class="console-kicker">Custodia Console</p><h1>Operational Dashboard</h1><p>Metadata-only release readiness and operations signals for browser operators. Use these links instead of entering a Kubernetes pod for routine checks.</p></section>` +
+		`<section class="console-grid console-grid--two" aria-label="Dashboard signals">` +
+		`<dl class="console-panel console-stat"><dt>Server status</dt><dd>` + webBadge(overallStatus) + `</dd><dt>Store</dt><dd>` + webBadge(storeStatus) + `</dd><dt>Rate limiter</dt><dd>` + webBadge(rateLimiterStatus) + `</dd><dt>Action</dt><dd><a href="/web/status" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">Open Operational Status</a></dd></dl>` +
+		`<dl class="console-panel console-stat"><dt>Diagnostics summary</dt><dd>` + html.EscapeString(strconv.FormatInt(int64(time.Since(s.startedAt).Seconds()), 10)) + ` seconds uptime</dd><dt>Goroutines</dt><dd>` + html.EscapeString(strconv.Itoa(runtime.NumGoroutine())) + `</dd><dt>Alloc bytes</dt><dd>` + html.EscapeString(strconv.FormatUint(mem.Alloc, 10)) + `</dd><dt>Action</dt><dd><a href="/web/diagnostics" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">Open Runtime Diagnostics</a></dd></dl>` +
+		`<dl class="console-panel console-stat"><dt>Revocation status</dt><dd>` + webBadge(revocationSummary) + `</dd><dt>CRL source</dt><dd>` + webOptionalString(revocationStatus.Source, "not configured") + `</dd><dt>Action</dt><dd><a href="/web/revocation" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true">Open Revocation Status</a></dd></dl>` +
+		`<dl class="console-panel console-stat"><dt>Release readiness evidence</dt><dd>` + webReadinessBadge(s.deploymentMode, s.databaseHATarget, s.auditShipmentSink) + `</dd><dt>Deployment mode</dt><dd>` + webOptionalString(s.deploymentMode, "not configured") + `</dd><dt>Database HA target</dt><dd>` + webOptionalString(s.databaseHATarget, "not configured") + `</dd><dt>Audit shipment sink</dt><dd>` + webOptionalString(s.auditShipmentSink, "not configured") + `</dd></dl>` +
+		`</section>` +
+		`<section class="console-grid" aria-label="Dashboard shortcuts">` +
+		`<a class="console-link-card" href="/web/audit/export?limit=100"><strong>Audit Export</strong><span>Download bounded JSONL audit evidence with SHA-256 and event-count headers.</span></a>` +
+		`<a class="console-link-card" href="/web/audit" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Audit Events</strong><span>Review recent metadata and filters before exporting.</span></a>` +
+		`<a class="console-link-card" href="/web/client-enrollments" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Client Enrollments</strong><span>Create one-shot onboarding tokens without shell access.</span></a>` +
+		`<a class="console-link-card" href="/web/clients" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Clients</strong><span>mTLS identities, public-key publication status and revocation actions.</span></a>` +
 		`<a class="console-link-card" href="/web/secret-metadata" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Secret Metadata</strong><span>Versions and access grants without cryptographic payloads.</span></a>` +
 		`<a class="console-link-card" href="/web/access-requests" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Access Requests</strong><span>Pending grant metadata without envelopes.</span></a>` +
-		`<a class="console-link-card" href="/web/audit" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Audit Events</strong><span>Recent admin-visible audit metadata.</span></a>` +
-		`<a class="console-link-card" href="/web/audit/verify" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Verify Audit</strong><span>Hash-chain integrity summary.</span></a>` +
-		`<a class="console-link-card" href="/web/diagnostics" hx-boost="true" hx-target="#console-main" hx-select="#console-main" hx-push-url="true"><strong>Runtime Diagnostics</strong><span>Runtime counters and uptime only.</span></a>` +
 		`</section>` +
-		`<section class="console-panel console-security-boundary"><p class="console-panel-label">Security boundary</p><p>The web surface remains metadata-only: it displays operational status, client records, access workflow metadata and audit summaries, but never renders plaintext, ciphertext, recipient envelopes, DEKs, private keys or key discovery endpoints.</p></section>`
-	writeWebPage(w, "Custodia Console", body)
+		`<section class="console-panel console-security-boundary"><p class="console-panel-label">Actionable errors</p><p>If Server status is degraded, open Operational Status first and check the Store and Rate limiter rows. If Revocation status is invalid, open Revocation Status and use the CRL serial check. Kubernetes operators should use these Web Console workflows instead of kubectl exec for routine online evidence.</p></section>` +
+		`<section class="console-panel console-security-boundary"><p class="console-panel-label">Security boundary</p><p>The dashboard remains metadata-only: it displays operational status, diagnostics counters, revocation state, audit shortcuts and readiness evidence, but never renders plaintext, ciphertext, recipient envelopes, DEKs, private keys or key discovery endpoints.</p></section>`
+	s.audit(r, "web.dashboard", "system", "", overallStatus, nil)
+	writeWebPage(w, "Operational Dashboard", body)
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {

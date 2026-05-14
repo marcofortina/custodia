@@ -116,6 +116,74 @@ func TestWebDiagnosticsPageIsAdminOnlyMetadata(t *testing.T) {
 	}
 }
 
+func TestWebOperationalDashboardShowsMetadataOnlyReadinessSignals(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	if _, err := memoryStore.CreateSecret(ctx, "admin", model.CreateSecretRequest{Key: "dashboard secret", Ciphertext: "b3BhcXVlLWNpcGhlcnRleHQ=", Envelopes: []model.RecipientEnvelope{{ClientID: "admin", Envelope: "b3BhcXVlLWVudmVsb3Bl"}}, Permissions: int(model.PermissionAll)}); err != nil {
+		t.Fatalf("create secret: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 5000, StoreBackend: "memory", RateLimitBackend: "memory", DeploymentMode: "kubernetes", DatabaseHATarget: "cockroachdb", AuditShipmentSink: "s3://audit/custodia"})
+
+	req := mtlsRequest(http.MethodGet, "/web/", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	body := res.Body.String()
+	for _, expected := range []string{
+		"Operational Dashboard",
+		"Server status",
+		"Diagnostics summary",
+		"Revocation status",
+		"Audit Export",
+		"Client Enrollments",
+		"Release readiness evidence",
+		"kubernetes",
+		"cockroachdb",
+		"s3://audit/custodia",
+		"Kubernetes operators should use these Web Console workflows instead of kubectl exec",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected dashboard token %q, got: %s", expected, body)
+		}
+	}
+	for _, forbidden := range []string{"b3BhcXVlLWNpcGhlcnRleHQ=", "b3BhcXVlLWVudmVsb3Bl"} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("dashboard leaked secret material %q: %s", forbidden, body)
+		}
+	}
+	assertLastAudit(t, memoryStore, "web.dashboard", "success", "")
+}
+
+func TestWebOperationalDashboardShowsActionableDegradedStatus(t *testing.T) {
+	ctx := context.Background()
+	memoryStore := store.NewMemoryStore()
+	if err := memoryStore.CreateClient(ctx, model.Client{ClientID: "admin", MTLSSubject: "admin"}); err != nil {
+		t.Fatalf("create admin: %v", err)
+	}
+	handler := New(Options{Store: memoryStore, Limiter: failingHealthLimiter{}, AdminClientIDs: map[string]bool{"admin": true}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})
+
+	req := mtlsRequest(http.MethodGet, "/web/", "", "admin")
+	res := httptest.NewRecorder()
+	handler.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	body := res.Body.String()
+	for _, expected := range []string{"degraded", "Rate limiter", "unavailable", "Open Operational Status", "Actionable errors"} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected degraded dashboard token %q, got: %s", expected, body)
+		}
+	}
+	assertLastAudit(t, memoryStore, "web.dashboard", "degraded", "")
+}
+
 func TestAPISetsSecurityHeaders(t *testing.T) {
 	memoryStore := store.NewMemoryStore()
 	handler := New(Options{Store: memoryStore, Limiter: ratelimit.NewMemoryLimiter(), AdminClientIDs: map[string]bool{}, MaxEnvelopesPerSecret: 100, ClientRateLimit: 100, GlobalRateLimit: 100})

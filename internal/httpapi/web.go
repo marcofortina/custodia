@@ -327,6 +327,24 @@ func webBadge(value string) string {
 	return `<span class="console-badge console-badge--` + html.EscapeString(normalized) + `">` + html.EscapeString(value) + `</span>`
 }
 
+func webOptionalString(value string, fallback string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		value = fallback
+	}
+	return html.EscapeString(value)
+}
+
+func webReadinessBadge(deploymentMode, databaseHATarget, auditShipmentSink string) string {
+	if strings.TrimSpace(deploymentMode) == "" && strings.TrimSpace(databaseHATarget) == "" && strings.TrimSpace(auditShipmentSink) == "" {
+		return webBadge("not configured")
+	}
+	if strings.TrimSpace(databaseHATarget) == "" || strings.TrimSpace(auditShipmentSink) == "" {
+		return webBadge("incomplete")
+	}
+	return webBadge("configured")
+}
+
 func webKeyspace(namespace, key string) string {
 	namespace = strings.TrimSpace(namespace)
 	if namespace == "" {
