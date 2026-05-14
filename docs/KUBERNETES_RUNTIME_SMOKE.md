@@ -171,7 +171,56 @@ kubectl -n custodia exec "$SERVER_POD" -- \
   wget -T 10 -S -O - http://127.0.0.1:8080/ready
 ```
 
-## 6. Lite persistence smoke
+## 6. MinIO/Object Lock audit shipment lab smoke
+
+When a production WORM/Object Lock sink is not available, the repository includes a lab-only MinIO profile under `deploy/k3s/minio/`. It is useful for proving that the audit shipment smoke can reach an S3-compatible endpoint with Object Lock retention enabled. It is not production WORM evidence by itself.
+
+Apply the disposable lab profile:
+
+```bash
+kubectl apply -f deploy/k3s/minio/custodia-minio-secret.example.yaml
+kubectl apply -f deploy/k3s/minio/custodia-minio-pvc.yaml
+kubectl apply -f deploy/k3s/minio/custodia-minio-deployment.yaml
+kubectl apply -f deploy/k3s/minio/custodia-minio-service.yaml
+kubectl -n custodia rollout status deploy/custodia-lab-minio --timeout=180s
+kubectl apply -f deploy/k3s/minio/custodia-minio-init-job.yaml
+kubectl -n custodia wait --for=condition=complete job/custodia-lab-minio-init --timeout=180s
+kubectl -n custodia logs job/custodia-lab-minio-init
+```
+
+Expose MinIO only for the smoke window:
+
+```bash
+kubectl -n custodia port-forward svc/custodia-lab-minio 9000:9000
+```
+
+In another shell, run the Object Lock smoke helper. This path requires the MinIO `mc` client on the operator workstation:
+
+```bash
+export CUSTODIA_AUDIT_S3_ENDPOINT=http://127.0.0.1:9000
+export CUSTODIA_AUDIT_S3_ACCESS_KEY_ID=custodia-minio-lab
+export CUSTODIA_AUDIT_S3_SECRET_ACCESS_KEY=custodia-minio-lab-CHANGE-ME
+export CUSTODIA_AUDIT_S3_BUCKET=custodia-audit
+make minio-object-lock-smoke
+```
+
+If the workstation does not have `mc`, use the in-cluster one-shot smoke Job documented in `deploy/k3s/minio/README.md`. The in-cluster path reads credentials through `secretKeyRef` and should log:
+
+```text
+Object locking 'COMPLIANCE' is configured for 30DAYS.
+custodia MinIO Object Lock smoke OK
+```
+
+Expected evidence:
+
+- MinIO pod is `1/1 Running`;
+- `custodia-lab-minio-init` Job is `Complete`;
+- init Job logs end with `custodia MinIO Object Lock lab bucket ready`;
+- either `make minio-object-lock-smoke` passes from a workstation with `mc`, or the in-cluster smoke Job logs `custodia MinIO Object Lock smoke OK`.
+
+Production must replace this single-pod MinIO lab with a governed WORM/Object Lock/SIEM sink and external retention evidence.
+
+## 7. Lite persistence smoke
 
 For `profile=lite`, prove persistence explicitly:
 
@@ -183,7 +232,7 @@ For `profile=lite`, prove persistence explicitly:
 
 A PVC is required, but a PVC is not a backup. Do not treat a successful pod restart as backup coverage.
 
-## 7. Failure handling
+## 8. Failure handling
 
 Stop at the first mismatch. Typical causes:
 

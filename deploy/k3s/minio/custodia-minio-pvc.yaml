@@ -1,0 +1,21 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: custodia-minio-data
+  namespace: custodia
+  labels:
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/component: object-lock-lab
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
