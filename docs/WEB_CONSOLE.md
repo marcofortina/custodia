@@ -20,7 +20,7 @@ This guard complements, rather than replaces, the existing `SameSite=Strict`, `H
 
 ## Pages
 
-- `/web/` — metadata console landing page.
+- `/web/` — operational dashboard with metadata-only status, diagnostics, revocation, audit export, enrollment and readiness/evidence shortcuts.
 - `/web/status` — operational status.
 - `/web/diagnostics` — runtime counters and uptime metadata only.
 - `/web/clients` — client metadata, active/revoked state and public-key publication status.
@@ -41,6 +41,8 @@ This guard complements, rather than replaces, the existing `SameSite=Strict`, `H
 Unknown HTML console routes and handled web-console `4xx`/`5xx` responses render the shared styled error page instead of Go's plain fallback bodies. JSON-only passkey endpoints remain JSON/error surfaces and must not render the HTML console shell.
 
 The API remains the source of truth for automation. The web console is a responsive, metadata-only operator surface even when TOTP/passkey web authentication is enabled. Authenticated pages include a logout button that clears only the web MFA session cookie; mTLS identity remains controlled by the browser certificate.
+
+The operational dashboard at `/web/` aggregates release-readiness signals without requiring `kubectl exec`: server status, diagnostics summary, revocation status, audit export shortcut, client enrollment shortcut and configured production evidence hints such as deployment mode, database HA target and audit shipment sink. Dashboard errors are intentionally actionable: degraded store or rate-limiter state links to Operational Status, invalid CRL state links to Revocation Status, and audit/enrollment shortcuts point to existing Web Console workflows. The dashboard is metadata-only and never renders plaintext, ciphertext, recipient envelopes, DEKs, private keys or key discovery endpoints.
 
 Client enrollment token creation mirrors `custodia-admin client enrollment create`: it returns the configured server URL, a one-shot enrollment token and the expiry time. The token is shown once, the server URL and token have browser copy controls, and the values must be transferred through a trusted channel. The workflow does not expose client private keys because clients still generate their mTLS key and CSR locally. Token creation is audited as a Web Console action. In disposable lab flows using an untrusted bootstrap CA, the client may add `--insecure`; real remote clients should trust the Custodia CA and avoid `--insecure`.
 
