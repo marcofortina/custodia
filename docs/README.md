@@ -74,6 +74,7 @@ Use that block before commands so an operator can stop before making unsafe assu
 - [`CLIENT_CERTIFICATE_LIFECYCLE.md`](CLIENT_CERTIFICATE_LIFECYCLE.md)
 - [`CRL_OCSP_RUNBOOK.md`](CRL_OCSP_RUNBOOK.md)
 - [`PKCS11_SOFTHSM.md`](PKCS11_SOFTHSM.md)
+- Kubernetes SoftHSM lab example: [`deploy/k3s/softhsm/`](../deploy/k3s/softhsm/)
 - [`WEB_CONSOLE.md`](WEB_CONSOLE.md)
 - [`WEB_MFA.md`](WEB_MFA.md)
 - [`WEB_PASSKEY.md`](WEB_PASSKEY.md)

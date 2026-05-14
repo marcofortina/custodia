@@ -1,0 +1,54 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# Lab-only SoftHSM token initialization Job. It creates a filesystem-backed
+# token and signer key on the lab PVC. Do not use as production HSM evidence.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: custodia-softhsm-init
+  namespace: custodia
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+      containers:
+        - name: softhsm-init
+          image: registry.example.internal/custodia/custodia-softhsm-lab:0.4.0-lab
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              mkdir -p /var/lib/softhsm/tokens /run/custodia-softhsm
+              printf 'directories.tokendir = /var/lib/softhsm/tokens\nobjectstore.backend = file\n' > /run/custodia-softhsm/softhsm2.conf
+              export SOFTHSM2_CONF=/run/custodia-softhsm/softhsm2.conf
+              if ! softhsm2-util --show-slots | grep -F 'custodia-lab' >/dev/null; then
+                slot="$(softhsm2-util --show-slots | awk -F: '/Slot [0-9]+/{print $2; exit}' | tr -d ' ')"
+                softhsm2-util --init-token --slot "${slot:-0}" --label custodia-lab --so-pin "$(cat /run/custodia-softhsm/so-pin)" --pin "$(cat /run/custodia-softhsm/pin)"
+                pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --token-label custodia-lab --login --pin "$(cat /run/custodia-softhsm/pin)" --keypairgen --key-type EC:prime256v1 --id 01 --label custodia-signer-ca
+              fi
+          volumeMounts:
+            - name: softhsm-tokens
+              mountPath: /var/lib/softhsm
+            - name: softhsm-pin
+              mountPath: /run/custodia-softhsm/pin
+              subPath: pin
+              readOnly: true
+            - name: softhsm-pin
+              mountPath: /run/custodia-softhsm/so-pin
+              subPath: so-pin
+              readOnly: true
+      volumes:
+        - name: softhsm-tokens
+          persistentVolumeClaim:
+            claimName: custodia-softhsm-tokens
+        - name: softhsm-pin
+          secret:
+            secretName: custodia-softhsm-pin

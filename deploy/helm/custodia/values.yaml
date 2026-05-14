@@ -109,6 +109,7 @@ signer:
   # deliver it at runtime.
   pkcs11SignCommandDelivery: ""
   auditLogFile: ""
+  extraEnv: []
   extraVolumeMounts: []
   extraVolumes: []
   secretName: custodia-signer-ca

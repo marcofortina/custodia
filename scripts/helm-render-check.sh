@@ -14,13 +14,14 @@ cd "$root_dir"
 chart_dir="deploy/helm/custodia"
 full_values="$chart_dir/values-full.example.yaml"
 lite_values="$chart_dir/values-lite.example.yaml"
+softhsm_values="deploy/k3s/softhsm/custodia-values.example.yaml"
 
 if ! command -v helm >/dev/null 2>&1; then
   printf 'helm-render-check: helm not found; skipping chart render checks\n' >&2
   exit 0
 fi
 
-for required in "$full_values" "$lite_values"; do
+for required in "$full_values" "$lite_values" "$softhsm_values"; do
   if [ ! -f "$required" ]; then
     printf 'helm-render-check: missing required example values file: %s\n' "$required" >&2
     exit 1
@@ -39,6 +40,24 @@ printf 'helm-render-check: rendering lite example\n'
 lite_render="$(helm template custodia-lite "$chart_dir" \
   --values "$lite_values")"
 printf '%s\n' "$lite_render" >/dev/null
+
+printf 'helm-render-check: rendering SoftHSM lab example\n'
+softhsm_render="$(helm template custodia-softhsm "$chart_dir" \
+  --values "$softhsm_values")"
+printf '%s\n' "$softhsm_render" >/dev/null
+
+for required_softhsm_field in \
+  'CUSTODIA_SIGNER_KEY_PROVIDER' \
+  'CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND' \
+  'CUSTODIA_PKCS11_MODULE' \
+  'CUSTODIA_PKCS11_TOKEN_LABEL' \
+  'custodia-softhsm-tokens' \
+  'custodia-softhsm-pin'; do
+  if ! printf '%s\n' "$softhsm_render" | grep -F "$required_softhsm_field" >/dev/null; then
+    printf 'helm-render-check: SoftHSM lab chart is missing field: %s\n' "$required_softhsm_field" >&2
+    exit 1
+  fi
+done
 
 for required_server_resource in \
   'name: custodia-lite-custodia-server' \

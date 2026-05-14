@@ -1,0 +1,16 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# Lab-only SoftHSM token store. SoftHSM key material is filesystem-backed.
+# Do not treat this PVC as production HSM custody.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: custodia-softhsm-tokens
+  namespace: custodia
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

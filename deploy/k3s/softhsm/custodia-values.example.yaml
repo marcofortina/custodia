@@ -1,0 +1,82 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# Lab-only Kubernetes Full values for exercising PKCS#11 signing through
+# SoftHSM. Do not use this as production HSM evidence.
+profile: full
+replicaCount: 1
+
+image:
+  repository: registry.example.internal/custodia/custodia-softhsm-lab
+  tag: "0.4.0-lab"
+  pullPolicy: IfNotPresent
+
+config:
+  serverURL: "https://custodia.example.internal:8443"
+  storeBackend: postgres
+  databaseURL: ""
+  databaseURLSecretName: custodia-database
+  databaseURLSecretKey: database-url
+  rateLimitBackend: valkey
+  valkeyURLSecretName: custodia-valkey
+  valkeyURLSecretKey: valkey-url
+  deploymentMode: kubernetes-full-softhsm-lab
+  databaseHATarget: lab-postgresql-or-cockroachdb
+  auditShipmentSink: "lab-object-lock-or-siem"
+  signerURL: ""
+
+mtls:
+  clientCRLKey: client.crl.pem
+
+web:
+  mfaSecretName: custodia-web-mfa
+  totpSecretKey: totp-secret
+  sessionSecretKey: session-secret
+
+persistence:
+  enabled: false
+
+signer:
+  enabled: true
+  replicaCount: 1
+  keyProvider: pkcs11
+  pkcs11SignCommand: /usr/local/bin/custodia-pkcs11-sign
+  pkcs11SignCommandDelivery: custom-image
+  adminSubjects: admin
+  secretName: custodia-signer-ca
+  clientSecretName: custodia-signer-client
+  extraEnv:
+    - name: SOFTHSM2_CONF
+      value: /run/custodia-softhsm/softhsm2.conf
+    - name: CUSTODIA_PKCS11_MODULE
+      value: /usr/lib/softhsm/libsofthsm2.so
+    - name: CUSTODIA_PKCS11_TOKEN_LABEL
+      value: custodia-lab
+    - name: CUSTODIA_PKCS11_KEY_LABEL
+      value: custodia-signer-ca
+    - name: CUSTODIA_PKCS11_PIN_FILE
+      value: /run/custodia-softhsm/pin
+  extraVolumeMounts:
+    - name: softhsm-tokens
+      mountPath: /var/lib/softhsm
+    - name: softhsm-conf
+      mountPath: /run/custodia-softhsm/softhsm2.conf
+      subPath: softhsm2.conf
+      readOnly: true
+    - name: softhsm-pin
+      mountPath: /run/custodia-softhsm/pin
+      subPath: pin
+      readOnly: true
+  extraVolumes:
+    - name: softhsm-tokens
+      persistentVolumeClaim:
+        claimName: custodia-softhsm-tokens
+    - name: softhsm-conf
+      configMap:
+        name: custodia-softhsm-conf
+    - name: softhsm-pin
+      secret:
+        secretName: custodia-softhsm-pin
+
+podDisruptionBudget:
+  enabled: false

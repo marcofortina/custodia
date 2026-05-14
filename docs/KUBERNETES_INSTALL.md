@@ -170,6 +170,10 @@ The check renders the Full and Lite example values and verifies that unsafe comb
 
 SoftHSM may be used when a real HSM is unavailable in development, CI or lab clusters. It is not proof of production HSM coverage.
 
+A lab-only Kubernetes SoftHSM example is available under `deploy/k3s/softhsm/`. It extends the normal Custodia image with SoftHSM/OpenSC tooling, initializes a filesystem-backed SoftHSM token on a lab PVC, and renders the Full Helm profile with `signer.keyProvider=pkcs11` plus explicit `signer.pkcs11SignCommandDelivery`. Use it only for disposable lab, development or CI rehearsal.
+
+For production, replace SoftHSM with a real HSM, TPM-backed signer or vendor PKCS#11 provider, governed PIN delivery, signer node/device controls and external attestation evidence. The stock image and the SoftHSM lab image are not production HSM proof.
+
 MinIO with Object Lock may be used to exercise S3/WORM audit shipment flows when a production object-lock service is unavailable. Treat it as dev/smoke unless the deployment has production-grade retention governance, durability, credentials, backup and operational controls.
 
 ## 8. Normal administration
