@@ -28,6 +28,8 @@ Optional environment:
   CUSTODIA_CONFIGMAP           Override release ConfigMap name.
   CUSTODIA_BOOTSTRAP_JOB_REQUIRED
                                Set to YES to require a completed chart bootstrap Job.
+  CUSTODIA_NETWORK_POLICY_REQUIRED
+                               Set to YES to require server and signer NetworkPolicies.
 
 This helper is read-only. It does not create namespaces, install charts, exec into
 pods, read Secrets or modify cluster state. The executable runbook is
@@ -214,8 +216,25 @@ cluster_check() {
     [ -n "$deployment" ] && rollout_status "$deployment"
   done
 
-  require_labeled_resource service "$server_selector" "server Service" >/dev/null
-  require_labeled_resource service "$signer_selector" "signer Service" >/dev/null
+  server_services="$(require_labeled_resource service "$server_selector" "server Service")"
+  signer_services="$(require_labeled_resource service "$signer_selector" "signer Service")"
+
+  printf '%s
+' "$server_services" | while IFS= read -r service; do
+    [ -n "$service" ] || continue
+    require_service_port "$service" https
+  done
+  printf '%s
+' "$signer_services" | while IFS= read -r service; do
+    [ -n "$service" ] || continue
+    require_service_type "$service" ClusterIP
+    require_service_port "$service" signer
+  done
+
+  if [ "${CUSTODIA_NETWORK_POLICY_REQUIRED:-}" = "YES" ]; then
+    require_labeled_resource networkpolicy "$server_selector" "server NetworkPolicy" >/dev/null
+    require_labeled_resource networkpolicy "$signer_selector" "signer NetworkPolicy" >/dev/null
+  fi
 
   kubectl -n "$CUSTODIA_K8S_NAMESPACE" get pods -l "$server_selector" -o wide
   kubectl -n "$CUSTODIA_K8S_NAMESPACE" get pods -l "$signer_selector" -o wide

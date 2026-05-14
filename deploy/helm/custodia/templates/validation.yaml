@@ -61,3 +61,27 @@ See the accompanying LICENSE file for details.
 {{- end -}}
 {{- end -}}
 {{- end -}}
+
+{{- if .Values.ingress.enabled -}}
+{{- if ne .Values.service.type "ClusterIP" -}}
+{{- fail "ingress.enabled requires service.type=ClusterIP; expose the ClusterIP Service through ingress/gateway policy instead of combining chart ingress with NodePort/LoadBalancer" -}}
+{{- end -}}
+{{- if not .Values.ingress.backendProtocolAcknowledged -}}
+{{- fail "ingress.enabled requires ingress.backendProtocolAcknowledged=true after configuring controller-specific HTTPS upstream and mTLS/pass-through behavior" -}}
+{{- end -}}
+{{- if and (not .Values.ingress.api.enabled) (not .Values.ingress.web.enabled) -}}
+{{- fail "ingress.enabled requires at least one of ingress.api.enabled or ingress.web.enabled" -}}
+{{- end -}}
+{{- if and .Values.ingress.api.enabled (not .Values.ingress.api.host) -}}
+{{- fail "ingress.api.enabled requires ingress.api.host" -}}
+{{- end -}}
+{{- if and .Values.ingress.web.enabled (not .Values.web.enabled) -}}
+{{- fail "ingress.web.enabled requires web.enabled=true" -}}
+{{- end -}}
+{{- if and .Values.ingress.web.enabled (not .Values.ingress.web.host) -}}
+{{- fail "ingress.web.enabled requires ingress.web.host" -}}
+{{- end -}}
+{{- if and .Values.ingress.api.enabled .Values.ingress.web.enabled (eq .Values.ingress.api.host .Values.ingress.web.host) (eq .Values.ingress.api.path .Values.ingress.web.path) -}}
+{{- fail "ingress api and web routes must not use the same host and path because they target different mTLS listeners" -}}
+{{- end -}}
+{{- end -}}

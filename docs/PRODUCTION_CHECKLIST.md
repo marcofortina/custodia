@@ -79,6 +79,15 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 - S3/Object Lock audit shipment is configured and verified with `custodia-admin audit ship-archive-s3` or an equivalent WORM sink adapter.
 - `make minio-object-lock-smoke` passes in development if MinIO is used as the WORM-like test profile; the Kubernetes lab manifests live under `deploy/k3s/minio/`.
 
+## Kubernetes ingress and NetworkPolicy gate
+
+- API/Web exposure uses the intended ingress, gateway or load balancer with controller-specific HTTPS upstream and mTLS/pass-through controls documented.
+- Helm `service.type` remains `ClusterIP` for chart-managed Services unless a reviewed platform exception exists.
+- `custodia-signer` remains internal `ClusterIP` only and has no NodePort, LoadBalancer or Ingress exposure.
+- NetworkPolicy evidence shows API/Web ingress is limited to the intended ingress/gateway namespaces and signer ingress is limited to same-release server pods.
+- Server certificate SANs cover the external API/Web hostnames and the internal signer Service DNS names used by the deployment.
+- Resource requests/limits and non-root/read-only-root security contexts are reviewed against the target cluster policy.
+
 ## Kubernetes Full dependency lab boundary
 
 The Kubernetes lab examples under `deploy/k3s/cockroachdb/` and `deploy/k3s/valkey/` can exercise Full-profile wiring and runtime smoke, but they are not production database or coordination evidence by themselves. Production operators must provide governed PostgreSQL/CockroachDB and Valkey services with HA, backups, restore drills, monitoring, network policy, credential rotation and incident-response evidence.

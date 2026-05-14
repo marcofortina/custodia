@@ -58,6 +58,8 @@ export CUSTODIA_K8S_PROFILE=full
 export CUSTODIA_K8S_CONFIRM=YES
 # Optional: require the chart bootstrap Job to exist and be complete.
 # export CUSTODIA_BOOTSTRAP_JOB_REQUIRED=YES
+# Optional: require chart-managed server/signer NetworkPolicies to exist.
+# export CUSTODIA_NETWORK_POLICY_REQUIRED=YES
 ```
 
 Run the read-only smoke:
@@ -79,6 +81,7 @@ The helper verifies:
 - server Service exposes the API port;
 - signer Service remains ClusterIP-only and exposes only the signer port;
 - optional chart bootstrap Job completed when present;
+- optional server/signer NetworkPolicy resources exist when `CUSTODIA_NETWORK_POLICY_REQUIRED=YES`;
 - Lite profile has a PVC selected by the server labels.
 
 If the chart uses `fullnameOverride` or custom Deployment names, provide overrides instead of guessing:
@@ -245,6 +248,7 @@ Stop at the first mismatch. Typical causes:
 - Lite runtime ConfigMap not using SQLite/memory;
 - Full runtime ConfigMap not using PostgreSQL/Valkey;
 - signer Service accidentally exposed as NodePort/LoadBalancer;
+- server or signer NetworkPolicy missing when `CUSTODIA_NETWORK_POLICY_REQUIRED=YES`;
 - optional bootstrap Job missing or incomplete when `CUSTODIA_BOOTSTRAP_JOB_REQUIRED=YES`;
 - Full values accidentally pointing at SQLite or memory-only rate limiting.
 
