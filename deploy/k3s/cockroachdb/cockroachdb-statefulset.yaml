@@ -39,8 +39,8 @@ spec:
           args:
             - start
             - --insecure
-            - --advertise-host=$(HOSTNAME).cockroachdb.custodia-db.svc.cluster.local
-            - --join=cockroachdb-0.cockroachdb.custodia-db.svc.cluster.local,cockroachdb-1.cockroachdb.custodia-db.svc.cluster.local,cockroachdb-2.cockroachdb.custodia-db.svc.cluster.local
+            - --advertise-host=$(HOSTNAME).cockroachdb.custodia-db.svc
+            - --join=cockroachdb-0.cockroachdb.custodia-db.svc,cockroachdb-1.cockroachdb.custodia-db.svc,cockroachdb-2.cockroachdb.custodia-db.svc
             - --cache=256MiB
             - --max-sql-memory=256MiB
           ports:

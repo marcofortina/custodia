@@ -38,7 +38,7 @@ kubectl wait --for=condition=complete job/cockroachdb-init -n custodia-db --time
 kubectl rollout status statefulset/cockroachdb -n custodia-db --timeout=300s
 kubectl -n custodia-db exec cockroachdb-0 -- \
   ./cockroach sql --insecure \
-  --host=cockroachdb-public.custodia-db.svc.cluster.local \
+  --host=cockroachdb-public.custodia-db.svc \
   --database=custodia \
   -e 'SHOW TABLES;'
 kubectl apply -f deploy/k3s/cockroachdb/custodia-database-secret.example.yaml
@@ -46,11 +46,15 @@ kubectl apply -f deploy/k3s/cockroachdb/custodia-database-secret.example.yaml
 
 The `SHOW TABLES` check must list Custodia tables such as `clients`, `secrets` and `audit_events`. If it is empty, the server Full profile will fail during startup with `relation "clients" does not exist`.
 
+The init job also grants the runtime `custodia` database user access to the lab schema tables. Without those grants, the server can reach the database but fails during startup with `user custodia does not have INSERT privilege on relation clients`.
+
 The development SQL endpoint is:
 
 ```text
-postgresql://root@cockroachdb-public.custodia-db.svc.cluster.local:26257/custodia?sslmode=disable
+postgresql://root@cockroachdb-public.custodia-db.svc:26257/custodia?sslmode=disable
 ```
+
+The lab uses Kubernetes service names without hard-coding the cluster DNS suffix. This keeps the examples portable across clusters that do not use `cluster.local` as their DNS domain.
 
 Pair this lab database with the Valkey lab profile in `deploy/k3s/valkey/` when
 you need to render or smoke-test the Full Helm values end to end.

@@ -1,0 +1,30 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# Lab-only NodePort exposure for disposable Kubernetes smoke tests. Do not use
+# this manifest as production ingress, load balancer or network-policy evidence.
+apiVersion: v1
+kind: Service
+metadata:
+  name: custodia-custodia-server-lab-nodeport
+  namespace: custodia
+  labels:
+    app.kubernetes.io/name: custodia
+    app.kubernetes.io/instance: custodia
+    app.kubernetes.io/component: server
+    custodia.io/lab-only: "true"
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: custodia
+    app.kubernetes.io/instance: custodia
+    app.kubernetes.io/component: server
+  ports:
+    - name: https
+      port: 8443
+      targetPort: https
+      nodePort: 30443
+    - name: web
+      port: 9443
+      targetPort: web
+      nodePort: 30444

@@ -8,7 +8,7 @@ ARG CUSTODIA_IMAGE
 FROM ${CUSTODIA_IMAGE}
 
 USER root
-RUN apk add --no-cache bash opensc python3 softhsm
+RUN apk add --no-cache bash opensc openssl python3 softhsm
 COPY scripts/pkcs11-sign-command.sh /usr/local/bin/custodia-pkcs11-sign
 RUN chmod 0755 /usr/local/bin/custodia-pkcs11-sign \
  && mkdir -p /var/lib/softhsm/tokens /run/custodia-softhsm \

@@ -29,11 +29,13 @@ spec:
             - /bin/sh
             - -ec
             - |
-              cockroach init --insecure --host=cockroachdb-0.cockroachdb.custodia-db.svc.cluster.local || true
-              cockroach sql --insecure --host=cockroachdb-public.custodia-db.svc.cluster.local --execute="CREATE DATABASE IF NOT EXISTS custodia;"
-              cockroach sql --insecure --host=cockroachdb-public.custodia-db.svc.cluster.local --execute="CREATE USER IF NOT EXISTS custodia;"
-              cockroach sql --insecure --host=cockroachdb-public.custodia-db.svc.cluster.local --execute="GRANT ALL ON DATABASE custodia TO custodia;"
-              cockroach sql --insecure --host=cockroachdb-public.custodia-db.svc.cluster.local --database=custodia < /schema/001_init.sql
+              cockroach init --insecure --host=cockroachdb-0.cockroachdb.custodia-db.svc || true
+              cockroach sql --insecure --host=cockroachdb-public.custodia-db.svc --execute="CREATE DATABASE IF NOT EXISTS custodia;"
+              cockroach sql --insecure --host=cockroachdb-public.custodia-db.svc --execute="CREATE USER IF NOT EXISTS custodia;"
+              cockroach sql --insecure --host=cockroachdb-public.custodia-db.svc --execute="GRANT ALL ON DATABASE custodia TO custodia;"
+              cockroach sql --insecure --host=cockroachdb-public.custodia-db.svc --database=custodia < /schema/001_init.sql
+              cockroach sql --insecure --host=cockroachdb-public.custodia-db.svc --database=custodia --execute="GRANT USAGE ON SCHEMA public TO custodia;"
+              cockroach sql --insecure --host=cockroachdb-public.custodia-db.svc --database=custodia --execute="GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO custodia;"
           volumeMounts:
             - name: postgres-schema
               mountPath: /schema
