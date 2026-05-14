@@ -29,7 +29,7 @@ This checklist turns the Fort Knox analysis into deployable operator gates. It d
 - Lite backup/restore release-candidate smoke passes with `./scripts/lite-backup-restore-smoke.sh smoke`; live restore remains a stopped-service procedure with off-host backup retention evidence.
 - Operational readiness smoke passes against the release-candidate endpoint using admin mTLS. For local bare-metal `/etc/custodia/...` paths run it with `sudo -E`; for remote operator workstations use operator-readable copies of `admin.crt`, `admin.key` and `ca.crt`.
 - The final security hardening review in [`SECURITY_HARDENING_FINAL_REVIEW.md`](SECURITY_HARDENING_FINAL_REVIEW.md) is complete and has no open critical findings.
-- Kubernetes Full uses external PostgreSQL/CockroachDB, Valkey, HSM/PKCS#11 or equivalent signer controls and WORM/SIEM/object-lock evidence; SoftHSM and MinIO remain development/smoke substitutes unless independently production-governed. The signer image or mounted volume must actually deliver the configured PKCS#11 signing command; the stock image alone is not a Full PKCS#11 production image.
+- Kubernetes Full uses external PostgreSQL/CockroachDB, Valkey, HSM/PKCS#11 or equivalent signer controls and WORM/SIEM/object-lock evidence; the committed CockroachDB, Valkey, SoftHSM and MinIO examples remain development/smoke substitutes unless independently production-governed. The signer image or mounted volume must actually deliver the configured PKCS#11 signing command; the stock image alone is not a Full PKCS#11 production image.
 - The end-to-end operator smoke in [`END_TO_END_OPERATOR_SMOKE.md`](END_TO_END_OPERATOR_SMOKE.md) is rehearsed on disposable release-candidate hosts before promotion, including source install, Web Console checkpoints, Alice/Bob enrollment/share/revoke/delete and Lite backup.
 - `make systemd-hardening-check` passes and packaged units retain the same hardening directives as `deploy/examples/*.service`.
 
@@ -78,6 +78,10 @@ The environment file must reference evidence for HSM/PKCS#11, WORM retention, da
 
 - S3/Object Lock audit shipment is configured and verified with `custodia-admin audit ship-archive-s3` or an equivalent WORM sink adapter.
 - `make minio-object-lock-smoke` passes in development if MinIO is used as the WORM-like test profile.
+
+## Kubernetes Full dependency lab boundary
+
+The Kubernetes lab examples under `deploy/k3s/cockroachdb/` and `deploy/k3s/valkey/` can exercise Full-profile wiring and runtime smoke, but they are not production database or coordination evidence by themselves. Production operators must provide governed PostgreSQL/CockroachDB and Valkey services with HA, backups, restore drills, monitoring, network policy, credential rotation and incident-response evidence.
 
 ## k3s CockroachDB rehearsal gate
 

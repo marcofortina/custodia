@@ -15,13 +15,14 @@ chart_dir="deploy/helm/custodia"
 full_values="$chart_dir/values-full.example.yaml"
 lite_values="$chart_dir/values-lite.example.yaml"
 softhsm_values="deploy/k3s/softhsm/custodia-values.example.yaml"
+full_dependency_values="deploy/k3s/cockroachdb/custodia-values.example.yaml"
 
 if ! command -v helm >/dev/null 2>&1; then
   printf 'helm-render-check: helm not found; skipping chart render checks\n' >&2
   exit 0
 fi
 
-for required in "$full_values" "$lite_values" "$softhsm_values"; do
+for required in "$full_values" "$lite_values" "$full_dependency_values" "$softhsm_values"; do
   if [ ! -f "$required" ]; then
     printf 'helm-render-check: missing required example values file: %s\n' "$required" >&2
     exit 1
@@ -41,6 +42,21 @@ lite_render="$(helm template custodia-lite "$chart_dir" \
   --values "$lite_values")"
 printf '%s\n' "$lite_render" >/dev/null
 
+printf 'helm-render-check: rendering Full dependency lab example\n'
+full_dependency_render="$(helm template custodia-full-deps "$chart_dir" \
+  --values "$full_dependency_values")"
+printf '%s\n' "$full_dependency_render" >/dev/null
+
+for required_full_dependency_field in \
+  'CUSTODIA_STORE_BACKEND: "postgres"' \
+  'CUSTODIA_RATE_LIMIT_BACKEND: "valkey"' \
+  'custodia-database' \
+  'custodia-valkey'; do
+  if ! printf '%s\n' "$full_dependency_render" | grep -F "$required_full_dependency_field" >/dev/null; then
+    printf 'helm-render-check: Full dependency lab chart is missing field: %s\n' "$required_full_dependency_field" >&2
+    exit 1
+  fi
+done
 printf 'helm-render-check: rendering SoftHSM lab example\n'
 softhsm_render="$(helm template custodia-softhsm "$chart_dir" \
   --values "$softhsm_values")"

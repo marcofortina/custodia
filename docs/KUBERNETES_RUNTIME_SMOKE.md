@@ -102,7 +102,51 @@ Open the Web Console URL configured by your ingress/gateway/port-forward policy 
 
 For Alice/Bob client behavior, follow [`END_TO_END_OPERATOR_SMOKE.md`](END_TO_END_OPERATOR_SMOKE.md) using the Kubernetes Web Console to create enrollment tokens instead of running `custodia-admin` inside a pod.
 
-## 5. Lite persistence smoke
+## 5. Full dependency wiring smoke
+
+For `profile=full`, prove that the Helm values are wired to the database and
+Valkey dependencies before testing signer or Web Console workflows. In a lab
+cluster, the disposable examples are:
+
+```bash
+kubectl apply -f deploy/k3s/cockroachdb/namespace.yaml
+kubectl apply -f deploy/k3s/cockroachdb/cockroachdb-services.yaml
+kubectl apply -f deploy/k3s/cockroachdb/cockroachdb-statefulset.yaml
+
+for pod in cockroachdb-0 cockroachdb-1 cockroachdb-2; do
+  kubectl -n custodia-db wait --for=jsonpath='{.status.phase}'=Running "pod/${pod}" --timeout=180s
+done
+
+kubectl apply -f deploy/k3s/cockroachdb/cockroachdb-init-job.yaml
+kubectl wait --for=condition=complete job/cockroachdb-init -n custodia-db --timeout=180s
+kubectl rollout status statefulset/cockroachdb -n custodia-db --timeout=300s
+kubectl apply -f deploy/k3s/cockroachdb/custodia-database-secret.example.yaml
+
+kubectl apply -f deploy/k3s/valkey/custodia-valkey-deployment.yaml
+kubectl apply -f deploy/k3s/valkey/custodia-valkey-service.yaml
+kubectl -n custodia rollout status deploy/custodia-lab-valkey
+kubectl apply -f deploy/k3s/valkey/custodia-valkey-secret.example.yaml
+```
+
+Then verify the Secret wiring expected by the chart:
+
+```bash
+kubectl -n custodia get secret custodia-database custodia-valkey
+helm template custodia deploy/helm/custodia \
+  --values deploy/k3s/cockroachdb/custodia-values.example.yaml \
+  >/tmp/custodia-full-lab-render.yaml
+grep -E 'CUSTODIA_STORE_BACKEND|CUSTODIA_RATE_LIMIT_BACKEND|custodia-database|custodia-valkey' /tmp/custodia-full-lab-render.yaml
+```
+
+These examples are lab/smoke dependencies only. Production must replace them
+with governed PostgreSQL/CockroachDB and Valkey services with HA, backup,
+monitoring, credential rotation, network policy and incident-response evidence.
+
+On a fresh CockroachDB lab cluster, the pods are expected to report `Ready=false`
+until the init Job completes. A `503` readiness response before `cockroach init`
+is not a storage failure by itself.
+
+## 6. Lite persistence smoke
 
 For `profile=lite`, prove persistence explicitly:
 
@@ -114,7 +158,7 @@ For `profile=lite`, prove persistence explicitly:
 
 A PVC is required, but a PVC is not a backup. Do not treat a successful pod restart as backup coverage.
 
-## 6. Failure handling
+## 7. Failure handling
 
 Stop at the first mismatch. Typical causes:
 

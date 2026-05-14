@@ -42,7 +42,7 @@ Kubernetes can run the same Lite/Full profile vocabulary, but unsafe Lite combin
 
 - SoftHSM can replace a real HSM only for development, CI or lab rehearsal. It must not be described as production HSM coverage.
 - MinIO with Object Lock can exercise S3/WORM shipment flows when a production object-lock service is unavailable. It must be treated as dev/smoke unless the deployment has production-grade durability, retention governance and operational controls.
-- k3s CockroachDB manifests are a local HA rehearsal profile, not a managed database platform.
+- CockroachDB and Valkey lab manifests are local Kubernetes rehearsal profiles, not managed database/cache platforms.
 
 ## Admin surface expectation
 
