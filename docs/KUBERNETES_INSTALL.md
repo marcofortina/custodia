@@ -88,7 +88,7 @@ Create the target namespace first:
 kubectl create namespace custodia --dry-run=client -o yaml | kubectl apply -f -
 ```
 
-The chart expects Kubernetes Secrets for API/Web mTLS, signer material, server-to-signer mTLS and Web MFA. Follow [`KUBERNETES_BOOTSTRAP_MATERIAL.md`](KUBERNETES_BOOTSTRAP_MATERIAL.md) to generate Lite/lab bootstrap material on an operator workstation and create the required Secrets without `kubectl exec` into application pods. That runbook also adds the internal signer Service DNS names to the server certificate SANs, which is required because the API server verifies the signer TLS certificate when creating enrollment certificates.
+The chart expects Kubernetes Secrets for API/Web mTLS, signer material, server-to-signer mTLS and Web MFA. Follow [`KUBERNETES_BOOTSTRAP_MATERIAL.md`](KUBERNETES_BOOTSTRAP_MATERIAL.md) to generate Lite/lab bootstrap material on an operator workstation and create the required Secrets without `kubectl exec` into application pods. That runbook also adds the internal signer Service DNS names to the server certificate SANs, which is required because the API server verifies the signer TLS certificate when creating enrollment certificates. The optional chart bootstrap Job is limited to non-secret-safe validation and must not replace operator-managed CA/HSM/Web MFA material.
 
 At minimum, the install must provide these Secrets before `helm upgrade --install`:
 

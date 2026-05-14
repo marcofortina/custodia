@@ -69,6 +69,25 @@
         }
       }
     },
+    "bootstrapJob": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "backoffLimit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ttlSecondsAfterFinished": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "annotations": {
+          "type": "object"
+        }
+      }
+    },
     "config": {
       "type": "object",
       "properties": {

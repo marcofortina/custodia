@@ -1,0 +1,68 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
+{{- if .Values.bootstrapJob.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "custodia.fullname" . }}-bootstrap-check
+  labels:
+    app.kubernetes.io/name: {{ include "custodia.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: bootstrap
+{{- with .Values.bootstrapJob.annotations }}
+  annotations:
+{{ toYaml . | indent 4 }}
+{{- end }}
+spec:
+  backoffLimit: {{ .Values.bootstrapJob.backoffLimit }}
+{{- if .Values.bootstrapJob.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ .Values.bootstrapJob.ttlSecondsAfterFinished }}
+{{- end }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "custodia.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: bootstrap
+    spec:
+      serviceAccountName: {{ include "custodia.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      securityContext:
+{{ toYaml .Values.podSecurityContext | indent 8 }}
+      containers:
+        - name: bootstrap-check
+          securityContext:
+{{ toYaml .Values.containerSecurityContext | indent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              case "${CUSTODIA_PROFILE}" in
+                lite|full|custom) ;;
+                *) echo "invalid CUSTODIA_PROFILE=${CUSTODIA_PROFILE}" >&2; exit 1 ;;
+              esac
+              case "${CUSTODIA_PROFILE}:${CUSTODIA_STORE_BACKEND}" in
+                lite:sqlite|full:postgres|custom:*) ;;
+                *) echo "profile/store mismatch: ${CUSTODIA_PROFILE}/${CUSTODIA_STORE_BACKEND}" >&2; exit 1 ;;
+              esac
+              if [ "${CUSTODIA_PROFILE}" = "full" ] && [ "${CUSTODIA_RATE_LIMIT_BACKEND}" != "valkey" ]; then
+                echo "full profile requires valkey rate limiting in this chart pattern" >&2
+                exit 1
+              fi
+              if [ -z "${CUSTODIA_SERVER_URL}" ]; then
+                echo "CUSTODIA_SERVER_URL is empty" >&2
+                exit 1
+              fi
+              echo "custodia non-secret bootstrap check OK"
+          envFrom:
+            - configMapRef:
+                name: {{ include "custodia.fullname" . }}
+{{- end }}

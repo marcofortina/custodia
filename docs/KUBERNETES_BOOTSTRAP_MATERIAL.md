@@ -174,7 +174,29 @@ config:
   serverURL: "https://custodia.example.internal:8443"
 ```
 
-## 6. Prepare the admin browser certificate
+## 6. Optional non-secret bootstrap Job pattern
+
+The chart includes an optional bootstrap check Job for non-secret-sensitive day-0 validation only. It is disabled by default and must never generate CA material, HSM tokens, Web MFA secrets, database passwords or enrollment tokens. Those remain operator-owned steps from this runbook.
+
+Enable it only after the required Secrets and external dependencies already exist:
+
+```yaml
+bootstrapJob:
+  enabled: true
+```
+
+The Job reads only the chart ConfigMap and validates safe wiring such as profile, store backend, rate-limit backend and server URL. It is intentionally not a replacement for:
+
+- API/Web mTLS Secret creation;
+- signer CA/HSM material provisioning;
+- Web MFA Secret generation;
+- PostgreSQL/CockroachDB or Valkey credential management;
+- admin browser certificate custody;
+- client enrollment token creation.
+
+If this Job fails, fix Helm values or missing operator-owned prerequisites. Do not add private material to Helm defaults to make the Job pass.
+
+## 7. Prepare the admin browser certificate
 
 The first Web Console login requires the admin mTLS certificate. Create the browser-importable package before deleting `CUSTODIA_BOOTSTRAP_DIR`:
 
@@ -189,7 +211,7 @@ openssl pkcs12 -export \
 
 Import `custodia-admin.p12` into the operator browser certificate store, then keep or archive it according to your admin certificate custody policy.
 
-## 7. Full profile PKCS#11/HSM delivery
+## 8. Full profile PKCS#11/HSM delivery
 
 For Full Kubernetes, `signer.keyProvider: pkcs11` is not enough. The signer container must actually contain or mount the command configured in `signer.pkcs11SignCommand`.
 

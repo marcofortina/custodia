@@ -42,6 +42,48 @@ lite_render="$(helm template custodia-lite "$chart_dir" \
   --values "$lite_values")"
 printf '%s\n' "$lite_render" >/dev/null
 
+printf 'helm-render-check: rendering bootstrap job pattern\n'
+bootstrap_job_render="$(helm template custodia-bootstrap "$chart_dir" \
+  --values "$lite_values" \
+  --set bootstrapJob.enabled=true)"
+bootstrap_job_manifest="$(printf '%s\n' "$bootstrap_job_render" | awk '
+  /^---/ {
+    if (doc ~ /kind: Job/ && doc ~ /app.kubernetes.io\/component: bootstrap/) { print doc }
+    doc=""
+    next
+  }
+  { doc = doc $0 "\n" }
+  END {
+    if (doc ~ /kind: Job/ && doc ~ /app.kubernetes.io\/component: bootstrap/) { print doc }
+  }
+')"
+if [ -z "$bootstrap_job_manifest" ]; then
+  printf 'helm-render-check: bootstrap job manifest did not render\n' >&2
+  exit 1
+fi
+
+for required_bootstrap_job_field in \
+  'kind: Job' \
+  'app.kubernetes.io/component: bootstrap' \
+  'custodia non-secret bootstrap check OK' \
+  'configMapRef:'; do
+  if ! printf '%s\n' "$bootstrap_job_manifest" | grep -F "$required_bootstrap_job_field" >/dev/null; then
+    printf 'helm-render-check: bootstrap job chart is missing field: %s\n' "$required_bootstrap_job_field" >&2
+    exit 1
+  fi
+done
+
+for forbidden_bootstrap_job_field in \
+  'secretKeyRef:' \
+  'CUSTODIA_WEB_TOTP_SECRET' \
+  'CUSTODIA_DATABASE_URL' \
+  'CUSTODIA_VALKEY_URL'; do
+  if printf '%s\n' "$bootstrap_job_manifest" | grep -F "$forbidden_bootstrap_job_field" >/dev/null; then
+    printf 'helm-render-check: bootstrap job must not render secret-sensitive field: %s\n' "$forbidden_bootstrap_job_field" >&2
+    exit 1
+  fi
+done
+
 printf 'helm-render-check: rendering Full dependency lab example\n'
 full_dependency_render="$(helm template custodia-full-deps "$chart_dir" \
   --values "$full_dependency_values")"
