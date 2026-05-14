@@ -16,6 +16,7 @@ metadata:
 spec:
   serviceName: cockroachdb
   replicas: 3
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       app.kubernetes.io/name: cockroachdb
@@ -30,6 +31,11 @@ spec:
         - name: cockroachdb
           image: cockroachdb/cockroach:v24.3.5
           imagePullPolicy: IfNotPresent
+          env:
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           args:
             - start
             - --insecure

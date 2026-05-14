@@ -10,6 +10,7 @@ Use this index when the top-level README is too small for the task. Documents ar
 | Bare-metal first install | [`QUICKSTART.md`](QUICKSTART.md) |
 | Full bare-metal install | [`BARE_METAL_FULL_INSTALL.md`](BARE_METAL_FULL_INSTALL.md) |
 | Kubernetes install | [`KUBERNETES_INSTALL.md`](KUBERNETES_INSTALL.md) |
+| Kubernetes Full dependency lab examples | `deploy/k3s/cockroachdb/`, `deploy/k3s/valkey/` |
 | Kubernetes Secret and Web MFA bootstrap | [`KUBERNETES_BOOTSTRAP_MATERIAL.md`](KUBERNETES_BOOTSTRAP_MATERIAL.md) |
 | Release-candidate sign-off | [`RELEASE_READINESS_MATRIX.md`](RELEASE_READINESS_MATRIX.md) |
 | Publish a GitHub release | [`RELEASE_PUBLISHING.md`](RELEASE_PUBLISHING.md) |

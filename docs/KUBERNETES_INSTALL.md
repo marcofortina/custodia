@@ -111,6 +111,18 @@ kubectl -n custodia create secret generic custodia-valkey \
   --from-literal=valkey-url='redis://valkey.example.internal:6379/0'
 ```
 
+For disposable lab or CI rehearsal, the repository includes Kubernetes examples
+for the Full-profile dependencies that production operators must replace:
+
+- `deploy/k3s/cockroachdb/` provides an insecure CockroachDB lab topology for
+  exercising the PostgreSQL-compatible store path.
+- `deploy/k3s/valkey/` provides a single-pod Valkey lab service and the
+  `custodia-valkey` Secret expected by the chart.
+
+These examples are not production infrastructure. Use them only to rehearse
+Full-profile wiring, Helm validation and runtime smoke before replacing them
+with governed PostgreSQL/CockroachDB and Valkey services.
+
 ## 4. Install Full profile with Helm
 
 Start from the committed example and edit only environment-specific values:
@@ -164,7 +176,7 @@ Run the chart render guardrail before committing values changes:
 make helm-check
 ```
 
-The check renders the Full and Lite example values and verifies that unsafe combinations fail closed, including Lite without PVC, Full with SQLite, missing Web MFA Secret wiring and Full PKCS#11 without command delivery.
+The check renders the Full, Lite, Full dependency lab and SoftHSM lab example values and verifies that unsafe combinations fail closed, including Lite without PVC, Full with SQLite, missing Web MFA Secret wiring and Full PKCS#11 without command delivery.
 
 ## 7. SoftHSM and MinIO boundaries
 
