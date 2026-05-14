@@ -12,8 +12,9 @@ concrete and testable in the repository.
 - `namespace.yaml` creates the `custodia-db` namespace.
 - `cockroachdb-services.yaml` exposes internal CockroachDB SQL and gossip ports.
 - `cockroachdb-statefulset.yaml` runs a three-node CockroachDB cluster.
-- `cockroachdb-init-job.yaml` initializes the cluster and creates the `custodia`
-  database.
+- `custodia-postgres-schema-configmap.yaml` carries the lab schema used by the init Job.
+- `cockroachdb-init-job.yaml` initializes the cluster, creates the `custodia`
+  database and applies the Custodia schema.
 
 The StatefulSet starts pods with `podManagementPolicy: Parallel` because a fresh
 CockroachDB cluster is not Ready until after `cockroach init` runs. Do not wait
@@ -26,6 +27,7 @@ readiness probe returns `503` until initialization completes.
 kubectl apply -f deploy/k3s/cockroachdb/namespace.yaml
 kubectl apply -f deploy/k3s/cockroachdb/cockroachdb-services.yaml
 kubectl apply -f deploy/k3s/cockroachdb/cockroachdb-statefulset.yaml
+kubectl apply -f deploy/k3s/cockroachdb/custodia-postgres-schema-configmap.yaml
 
 for pod in cockroachdb-0 cockroachdb-1 cockroachdb-2; do
   kubectl -n custodia-db wait --for=jsonpath='{.status.phase}'=Running "pod/${pod}" --timeout=180s
@@ -34,8 +36,15 @@ done
 kubectl apply -f deploy/k3s/cockroachdb/cockroachdb-init-job.yaml
 kubectl wait --for=condition=complete job/cockroachdb-init -n custodia-db --timeout=180s
 kubectl rollout status statefulset/cockroachdb -n custodia-db --timeout=300s
+kubectl -n custodia-db exec cockroachdb-0 -- \
+  ./cockroach sql --insecure \
+  --host=cockroachdb-public.custodia-db.svc.cluster.local \
+  --database=custodia \
+  -e 'SHOW TABLES;'
 kubectl apply -f deploy/k3s/cockroachdb/custodia-database-secret.example.yaml
 ```
+
+The `SHOW TABLES` check must list Custodia tables such as `clients`, `secrets` and `audit_events`. If it is empty, the server Full profile will fail during startup with `relation "clients" does not exist`.
 
 The development SQL endpoint is:
 

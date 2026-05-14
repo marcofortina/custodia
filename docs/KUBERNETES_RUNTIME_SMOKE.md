@@ -112,6 +112,7 @@ cluster, the disposable examples are:
 kubectl apply -f deploy/k3s/cockroachdb/namespace.yaml
 kubectl apply -f deploy/k3s/cockroachdb/cockroachdb-services.yaml
 kubectl apply -f deploy/k3s/cockroachdb/cockroachdb-statefulset.yaml
+kubectl apply -f deploy/k3s/cockroachdb/custodia-postgres-schema-configmap.yaml
 
 for pod in cockroachdb-0 cockroachdb-1 cockroachdb-2; do
   kubectl -n custodia-db wait --for=jsonpath='{.status.phase}'=Running "pod/${pod}" --timeout=180s
@@ -120,6 +121,11 @@ done
 kubectl apply -f deploy/k3s/cockroachdb/cockroachdb-init-job.yaml
 kubectl wait --for=condition=complete job/cockroachdb-init -n custodia-db --timeout=180s
 kubectl rollout status statefulset/cockroachdb -n custodia-db --timeout=300s
+kubectl -n custodia-db exec cockroachdb-0 -- \
+  ./cockroach sql --insecure \
+  --host=cockroachdb-public.custodia-db.svc.cluster.local \
+  --database=custodia \
+  -e 'SHOW TABLES;'
 kubectl apply -f deploy/k3s/cockroachdb/custodia-database-secret.example.yaml
 
 kubectl apply -f deploy/k3s/valkey/custodia-valkey-deployment.yaml

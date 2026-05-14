@@ -33,3 +33,12 @@ spec:
               cockroach sql --insecure --host=cockroachdb-public.custodia-db.svc.cluster.local --execute="CREATE DATABASE IF NOT EXISTS custodia;"
               cockroach sql --insecure --host=cockroachdb-public.custodia-db.svc.cluster.local --execute="CREATE USER IF NOT EXISTS custodia;"
               cockroach sql --insecure --host=cockroachdb-public.custodia-db.svc.cluster.local --execute="GRANT ALL ON DATABASE custodia TO custodia;"
+              cockroach sql --insecure --host=cockroachdb-public.custodia-db.svc.cluster.local --database=custodia < /schema/001_init.sql
+          volumeMounts:
+            - name: postgres-schema
+              mountPath: /schema
+              readOnly: true
+      volumes:
+        - name: postgres-schema
+          configMap:
+            name: custodia-postgres-schema
