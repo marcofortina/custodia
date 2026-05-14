@@ -84,6 +84,9 @@ spec:
             - name: CUSTODIA_SIGNER_AUDIT_LOG_FILE
               value: {{ .Values.signer.auditLogFile | quote }}
 {{- end }}
+{{- with .Values.signer.extraEnv }}
+{{ toYaml . | indent 12 }}
+{{- end }}
           readinessProbe:
             exec:
               command:

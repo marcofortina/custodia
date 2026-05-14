@@ -35,6 +35,12 @@ make softhsm-dev-token
 
 The helper prints the required environment variables, including `SOFTHSM2_CONF`, `CUSTODIA_SIGNER_KEY_PROVIDER`, `CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND` and the token label/key label settings.
 
+## Kubernetes SoftHSM lab
+
+A Kubernetes lab-only example is available in `deploy/k3s/softhsm/`. It demonstrates the Full Helm profile with `signer.keyProvider=pkcs11`, explicit PKCS#11 command delivery and a SoftHSM token store on a lab PVC.
+
+The example is intentionally not production evidence. Use it to verify that the signer can perform certificate signing through `CUSTODIA_SIGNER_PKCS11_SIGN_COMMAND` when a real HSM is not available. Runtime proof comes from a successful client enrollment through the Kubernetes signer path.
+
 ## Production requirements
 
 - Replace SoftHSM with a real HSM, TPM-backed signer or vendor PKCS#11 module.

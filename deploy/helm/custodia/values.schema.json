@@ -170,6 +170,9 @@
             "volume"
           ]
         },
+        "extraEnv": {
+          "type": "array"
+        },
         "extraVolumeMounts": {
           "type": "array"
         },
