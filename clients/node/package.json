@@ -6,12 +6,38 @@
   "type": "module",
   "main": "src/index.js",
   "types": "src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    }
+  },
+  "files": [
+    "README.md",
+    "src/"
+  ],
   "scripts": {
     "test": "node --test"
   },
   "engines": {
     "node": ">=20"
   },
+  "keywords": [
+    "custodia",
+    "secrets",
+    "mtls",
+    "client-side-encryption",
+    "vault"
+  ],
   "license": "AGPL-3.0-only",
-  "author": "Marco Fortina"
+  "author": "Marco Fortina",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marcofortina/custodia.git",
+    "directory": "clients/node"
+  },
+  "bugs": {
+    "url": "https://github.com/marcofortina/custodia/issues"
+  },
+  "homepage": "https://github.com/marcofortina/custodia#readme"
 }

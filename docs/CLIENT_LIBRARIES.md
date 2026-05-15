@@ -23,7 +23,7 @@ The public registry publication status remains separate from repository implemen
 | --- | --- | --- | --- | --- |
 | Go | `pkg/client` | Yes | Yes | Public transport, operational, crypto APIs and compiled examples. |
 | Python | `clients/python` | Yes | Yes | Typed transport, compiled examples, package metadata and HPKE-v1/AES-GCM crypto wrapper. |
-| Node.js / TypeScript | `clients/node` | Yes | Yes | Dependency-free runtime JavaScript plus TypeScript declarations. |
+| Node.js / TypeScript | `clients/node` | Yes | Yes | Dependency-free runtime JavaScript, TypeScript declarations, checked examples and npm package metadata. |
 | Java | `clients/java` | Yes | Yes | `java.net.http`, Java TLS configuration, and local crypto. |
 | C++ | `clients/cpp` | Yes | Yes | libcurl transport and OpenSSL crypto. |
 | Rust | `clients/rust` | Yes | Yes | reqwest/rustls transport and local crypto. |
@@ -177,6 +177,7 @@ Use these repository documents as the current source of truth:
 - [`CLIENT_CRYPTO_THREAT_MODEL.md`](CLIENT_CRYPTO_THREAT_MODEL.md): client-side crypto trust boundaries, attacker model and non-goals.
 - [Project History Wiki](https://github.com/marcofortina/custodia/wiki/Project-History): development-history notes and phase closure records.
 - [`SDK_RELEASE_POLICY.md`](SDK_RELEASE_POLICY.md): official SDK and public package release criteria.
+- [`SDK_PUBLISHING_READINESS.md`](SDK_PUBLISHING_READINESS.md): registry ownership, package metadata and publish gate checklist.
 
 Design notes outside the repository are non-authoritative until they are synchronized into this matrix and the SDK-specific documents.
 
