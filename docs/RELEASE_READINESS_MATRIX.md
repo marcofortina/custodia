@@ -34,7 +34,7 @@ not different products and they are not different server binaries.
 
 ## Publishing runbook
 
-After the release-candidate gates pass, use [`RELEASE_PUBLISHING.md`](RELEASE_PUBLISHING.md) to create the annotated tag, build packages, create the GitHub draft release, upload `SHA256SUMS` and `artifacts-manifest.json`, verify downloaded assets and publish the draft.
+After the release-candidate gates pass, use [`RELEASE_PUBLISHING.md`](RELEASE_PUBLISHING.md) to create the annotated tag, build packages, create the GitHub draft release, upload package artifacts plus `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json` and `custodia-sbom.spdx.json`, verify downloaded assets and publish the draft.
 
 ## Minimal release-candidate command set
 
