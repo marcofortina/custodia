@@ -74,7 +74,7 @@ A change to canonical AAD, ciphertext format, envelope format or crypto metadata
 
 ## Release checklist
 
-Before publishing SDK artifacts, complete [`SDK_PUBLISHING_READINESS.md`](SDK_PUBLISHING_READINESS.md). Registry publishing remains blocked until that checklist and the relevant language-specific follow-up issues are complete.
+Before publishing SDK artifacts, complete [`SDK_PUBLISHING_READINESS.md`](SDK_PUBLISHING_READINESS.md). Registry publishing remains blocked until every unchecked gate in that checklist is completed and explicitly approved as part of a release. The 0.5.0 follow-up issue closure records repository readiness work; it is not a publish approval.
 
 For repository release artifacts:
 

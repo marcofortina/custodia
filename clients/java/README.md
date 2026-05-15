@@ -68,7 +68,7 @@ Recipient public keys are still resolved by the application, not by Custodia.
 
 The intended Maven coordinate is `dev.custodia:custodia-client`. The repository includes `clients/java/pom.xml` with Java 17 compiler metadata, AGPL-3.0-only licensing, SCM metadata and the private placeholder version `0.0.0-private`.
 
-Do not publish this artifact to Maven Central until the SDK publishing readiness checklist is complete and namespace ownership has been verified.
+Do not publish this artifact to Maven Central until the SDK publishing readiness checklist is completed and explicitly approved as part of a release, and Maven namespace ownership has been verified.
 
 ## Examples
 

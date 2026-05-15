@@ -42,7 +42,7 @@ Applications may still choose the transport layer directly when they already cre
 - Server-side workflows remain metadata-only.
 - Public-key trust remains an application decision; Custodia server-published public keys are discovery metadata only.
 - Shared vector changes must update [`SDK_TEST_VECTORS.md`](SDK_TEST_VECTORS.md), `testdata/client-crypto/manifest.json` and the affected SDK tests.
-- Registry publishing remains blocked until [`SDK_PUBLISHING_READINESS.md`](SDK_PUBLISHING_READINESS.md) is complete.
+- Registry publishing remains blocked until the remaining gates in [`SDK_PUBLISHING_READINESS.md`](SDK_PUBLISHING_READINESS.md) are completed and explicitly approved as part of a release.
 
 ## Verification commands
 
