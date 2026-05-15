@@ -135,14 +135,15 @@ clean_artifacts() {
 
 build_artifacts() {
   log "building DEB/RPM artifacts"
-  VERSION="$VERSION" REVISION="$REVISION" make package-linux
-  VERSION="$VERSION" REVISION="$REVISION" make package-smoke
+  VERSION="$VERSION" REVISION="$REVISION" PACKAGE_NAMES="$PACKAGE_NAMES" make package-linux
+  VERSION="$VERSION" REVISION="$REVISION" PACKAGE_NAMES="$PACKAGE_NAMES" make package-smoke
   if [ "$RELEASE_RUN_PACKAGE_INSTALL_CHECK" = "YES" ]; then
-    VERSION="$VERSION" REVISION="$REVISION" make package-install-smoke
+    VERSION="$VERSION" REVISION="$REVISION" PACKAGE_NAMES="$PACKAGE_NAMES" make package-install-smoke
   fi
   VERSION="$VERSION" \
   REVISION="$REVISION" \
   PACKAGE_DIR="$PACKAGE_DIR" \
+  PACKAGE_NAMES="$PACKAGE_NAMES" \
   CUSTODIA_RELEASE_TAG="$RELEASE_TAG" \
   CUSTODIA_GITHUB_REPO="$RELEASE_REPO" \
     ./scripts/github-release-assets.sh prepare

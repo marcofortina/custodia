@@ -13,6 +13,7 @@ cd "$root_dir"
 
 : "${PACKAGE_DIR:=$root_dir/dist/packages}"
 : "${REVISION:=1}"
+: "${PACKAGE_NAMES:=server client sdk}"
 : "${COMMIT:=$(git rev-parse --short=12 HEAD 2>/dev/null || printf unknown)}"
 : "${DATE:=$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
 : "${SBOM_FILE:=$PACKAGE_DIR/custodia-sbom.spdx.json}"
@@ -42,6 +43,7 @@ Optional environment:
   CUSTODIA_GITHUB_REPO=owner/repo
   SBOM_FILE=dist/packages/custodia-sbom.spdx.json
   PROVENANCE_FILE=dist/packages/release-provenance.json
+  PACKAGE_NAMES="server client sdk"
 
 Generated release evidence:
   SHA256SUMS, artifacts-manifest.json, release-provenance.json
@@ -83,10 +85,35 @@ gh_repo_args() {
   fi
 }
 
+artifact_find_args() {
+  local names
+  # shellcheck disable=SC2206
+  names=($PACKAGE_NAMES)
+  if printf '%s\n' "${names[@]}" | grep -Fxq clients; then
+    names+=(client sdk)
+  fi
+
+  local args=()
+  local name
+  for name in "${names[@]}"; do
+    case "$name" in
+      server|client|sdk)
+        if [ "${#args[@]}" -gt 0 ]; then
+          args+=(-o)
+        fi
+        args+=(-name "custodia-${name}_${VERSION}-${REVISION}_*.deb" -o -name "custodia-${name}-${VERSION}-${REVISION}.*.rpm")
+        ;;
+    esac
+  done
+  [ "${#args[@]}" -gt 0 ] || fail "no supported PACKAGE_NAMES in: $PACKAGE_NAMES"
+  printf '%s\0' "${args[@]}"
+}
+
 collect_package_artifacts() {
   [ -d "$PACKAGE_DIR" ] || fail "package directory not found: $PACKAGE_DIR; run VERSION=$VERSION REVISION=$REVISION make package-linux first"
-  mapfile -t package_artifacts < <(find "$PACKAGE_DIR" -maxdepth 1 -type f \( -name '*.deb' -o -name '*.rpm' \) | sort)
-  [ "${#package_artifacts[@]}" -gt 0 ] || fail "no .deb or .rpm artifacts found in $PACKAGE_DIR"
+  readarray -d '' find_args < <(artifact_find_args)
+  mapfile -t package_artifacts < <(find "$PACKAGE_DIR" -maxdepth 1 -type f \( "${find_args[@]}" \) | sort)
+  [ "${#package_artifacts[@]}" -gt 0 ] || fail "no release artifacts for VERSION=$VERSION REVISION=$REVISION PACKAGE_NAMES=$PACKAGE_NAMES in $PACKAGE_DIR"
 }
 
 generate_sbom() {
@@ -173,7 +200,7 @@ prepare_assets() {
   collect_package_artifacts
 
   log "generating release evidence for VERSION=$VERSION REVISION=$REVISION"
-  VERSION="$VERSION" REVISION="$REVISION" COMMIT="$COMMIT" DATE="$DATE" PACKAGE_DIR="$PACKAGE_DIR" ./scripts/package-checksums.sh
+  VERSION="$VERSION" REVISION="$REVISION" COMMIT="$COMMIT" DATE="$DATE" PACKAGE_DIR="$PACKAGE_DIR" PACKAGE_NAMES="$PACKAGE_NAMES" ./scripts/package-checksums.sh
   generate_sbom
   generate_provenance
   append_release_metadata_checksums
