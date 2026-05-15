@@ -16,7 +16,7 @@ All SDKs must preserve the Custodia security boundary: clients may encrypt, decr
 | Rust | `clients/rust/examples/keyspace_transport.rs` | `clients/rust/examples/high_level_crypto.rs` | [`RUST_CLIENT_SDK.md`](RUST_CLIENT_SDK.md) |
 | Bash | `clients/bash/README.md` | Delegates to `custodia-client` | [`BASH_SDK.md`](BASH_SDK.md) |
 
-The repository examples intentionally use source-tree paths instead of registry install commands. Native package registry publication remains blocked by the SDK publishing readiness checklist.
+The repository examples intentionally use source-tree paths instead of registry install commands. Native package registry publication remains blocked by the SDK publishing readiness checklist until every remaining gate is explicitly approved as part of a release.
 
 ## Compatibility matrix
 

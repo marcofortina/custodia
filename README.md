@@ -386,6 +386,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 - [Rust client SDK](docs/RUST_CLIENT_SDK.md)
 - [Bash SDK helper](docs/BASH_SDK.md)
 - [SDK examples and compatibility matrix](docs/SDK_EXAMPLES_AND_COMPATIBILITY.md)
+- [SDK test vectors](docs/SDK_TEST_VECTORS.md)
 - [SDK release policy](docs/SDK_RELEASE_POLICY.md)
 - [SDK publishing readiness checklist](docs/SDK_PUBLISHING_READINESS.md)
 
