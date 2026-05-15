@@ -11,6 +11,12 @@ The Python client is importable and speaks the Custodia REST API over mTLS. It h
 
 The server still receives only ciphertext, `crypto_metadata` and recipient envelopes. It never receives plaintext, DEK material or private keys.
 
+## Publishing readiness
+
+The intended external Python package coordinate is `custodia-client` on PyPI. `clients/python/pyproject.toml` documents the package name, version, license, README, dependencies and project URLs, but publishing remains blocked until the SDK publishing readiness checklist and #41 are complete. PyPI project ownership must be controlled by the Custodia maintainer account or an approved organization before the first publish.
+
+No registry publish command is part of the repository automation for this issue.
+
 ## Install from the monorepo
 
 ```bash
@@ -96,6 +102,15 @@ Production code should plug in a resolver backed by Custodia public-key metadata
 trusted local provisioning, pinned keys, KMS or an enterprise directory according
 to application trust policy.
 
+## Repository examples
+
+The repository ships compiled Python examples under `clients/python/examples/`:
+
+- `keyspace_transport.py` exercises supported typed transport helpers with current `namespace/key` semantics.
+- `high_level_crypto.py` exercises the high-level crypto wrapper and keeps plaintext, DEKs and private keys local to the client application.
+
+The examples are covered by `clients/python/tests/test_package_readiness.py`.
+
 ## Raw dictionary example
 
 ```python
@@ -127,5 +142,5 @@ Run:
 
 ```bash
 make test-python-client
-python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py clients/python/custodia_client/crypto.py
+python3 -m py_compile clients/python/custodia_client/__init__.py clients/python/custodia_client/types.py clients/python/custodia_client/crypto.py clients/python/examples/keyspace_transport.py clients/python/examples/high_level_crypto.py
 ```

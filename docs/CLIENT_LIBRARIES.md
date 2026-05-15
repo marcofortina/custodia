@@ -22,7 +22,7 @@ The public registry publication status remains separate from repository implemen
 | Client | Repository path | Transport REST/mTLS | High-level crypto | Notes |
 | --- | --- | --- | --- | --- |
 | Go | `pkg/client` | Yes | Yes | Public transport, operational, crypto APIs and compiled examples. |
-| Python | `clients/python` | Yes | Yes | Typed transport and HPKE-v1/AES-GCM crypto wrapper. |
+| Python | `clients/python` | Yes | Yes | Typed transport, compiled examples, package metadata and HPKE-v1/AES-GCM crypto wrapper. |
 | Node.js / TypeScript | `clients/node` | Yes | Yes | Dependency-free runtime JavaScript plus TypeScript declarations. |
 | Java | `clients/java` | Yes | Yes | `java.net.http`, Java TLS configuration, and local crypto. |
 | C++ | `clients/cpp` | Yes | Yes | libcurl transport and OpenSSL crypto. |
