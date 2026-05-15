@@ -127,6 +127,7 @@ jobs:
           else
             # shellcheck disable=SC2086
             gh release create "$TAG_NAME" dist/packages/* \
+              --verify-tag \
               --title "Custodia $TAG_NAME" \
               --generate-notes \
               $PRERELEASE_FLAG

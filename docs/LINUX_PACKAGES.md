@@ -257,7 +257,7 @@ To publish a GitHub release, run the workflow with:
 - `create_release`: `true`;
 - `prerelease`: `true` only for prerelease builds.
 
-The workflow creates or updates tag release `vVERSION` and uploads the package artifacts plus checksum, manifest, SBOM and provenance files.
+The workflow creates or updates the GitHub release for an existing `vVERSION` tag and uploads the package artifacts plus checksum, manifest, SBOM and provenance files. Create the annotated release tag first with the local [`RELEASE_PUBLISHING.md`](RELEASE_PUBLISHING.md) runbook; the workflow uses `gh release create --verify-tag` so it fails rather than creating an implicit lightweight tag.
 
 
 ## Runtime file permissions
