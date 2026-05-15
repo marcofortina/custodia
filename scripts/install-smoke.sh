@@ -88,6 +88,7 @@ require_file "${PREFIX#/}/share/custodia/sdk/testdata/client-crypto/v1/wrong_rec
 require_file "${PREFIX#/}/share/doc/custodia-client/CUSTODIA_CLIENT_CLI.md"
 require_file "${PREFIX#/}/share/doc/custodia-client/CLIENT_TRUSTED_CA.md"
 require_file "${PREFIX#/}/share/doc/custodia-sdk/CLIENT_LIBRARIES.md"
+require_file "${PREFIX#/}/share/doc/custodia-sdk/SDK_EXAMPLES_AND_COMPATIBILITY.md"
 require_file "${PREFIX#/}/share/doc/custodia-sdk/SDK_PUBLISHING_READINESS.md"
 require_file "${PREFIX#/}/share/doc/custodia-sdk/SDK_TEST_VECTORS.md"
 

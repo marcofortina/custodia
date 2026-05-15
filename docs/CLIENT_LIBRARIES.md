@@ -2,7 +2,7 @@
 
 Custodia client libraries allow applications to talk to the Custodia API while preserving the end-to-end crypto boundary. The server authenticates and authorizes clients, but it never receives plaintext, DEKs, private keys, or application-level decryption material.
 
-This document is the canonical repository-level client specification for the implemented SDK and CLI surfaces. Use the implementation and verification matrix below as the source of truth for repository status.
+This document is the canonical repository-level client specification for the implemented SDK and CLI surfaces. Use the implementation and verification matrix below as the source of truth for repository status. The developer-facing examples and release compatibility matrix live in [`SDK_EXAMPLES_AND_COMPATIBILITY.md`](SDK_EXAMPLES_AND_COMPATIBILITY.md).
 
 The repository contains two client layers:
 

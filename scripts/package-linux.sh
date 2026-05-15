@@ -268,7 +268,7 @@ stage_sdk() {
   ./scripts/build-sdk-snapshot.sh "$WORK_DIR/sdk"
   cp -R "$WORK_DIR/sdk/." "$stage/usr/share/custodia/sdk/"
   install -m 0644 LICENSE README.md "$stage/usr/share/doc/custodia-sdk/"
-  install -m 0644 docs/CLIENT_LIBRARIES.md docs/CLIENT_CRYPTO_SPEC.md docs/SDK_TEST_VECTORS.md docs/SDK_RELEASE_POLICY.md docs/SDK_PUBLISHING_READINESS.md docs/GO_CLIENT_SDK.md docs/PYTHON_CLIENT_SDK.md docs/NODE_CLIENT_SDK.md docs/JAVA_CLIENT_SDK.md docs/CPP_CLIENT_SDK.md docs/RUST_CLIENT_SDK.md "$stage/usr/share/doc/custodia-sdk/"
+  install -m 0644 docs/CLIENT_LIBRARIES.md docs/SDK_EXAMPLES_AND_COMPATIBILITY.md docs/CLIENT_CRYPTO_SPEC.md docs/SDK_TEST_VECTORS.md docs/SDK_RELEASE_POLICY.md docs/SDK_PUBLISHING_READINESS.md docs/GO_CLIENT_SDK.md docs/PYTHON_CLIENT_SDK.md docs/NODE_CLIENT_SDK.md docs/JAVA_CLIENT_SDK.md docs/CPP_CLIENT_SDK.md docs/RUST_CLIENT_SDK.md "$stage/usr/share/doc/custodia-sdk/"
 }
 
 write_deb_control() {
