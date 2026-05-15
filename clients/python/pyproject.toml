@@ -5,11 +5,33 @@
 # Custodia is distributed under the GNU Affero General Public License v3.0.
 # See the accompanying LICENSE file for details.
 
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "custodia-client"
 version = "0.1.0"
 license = "AGPL-3.0-only"
 authors = [{ name = "Marco Fortina" }]
-description = "Minimal Custodia mTLS REST client"
+description = "Custodia Python transport and client-side crypto SDK for opaque REST payloads over mTLS"
+readme = "README.md"
 requires-python = ">=3.11"
 dependencies = ["requests>=2.32.0", "cryptography>=42.0.0"]
+keywords = ["custodia", "secrets", "mtls", "client-side-encryption", "sdk"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Security :: Cryptography",
+]
+
+[project.urls]
+Repository = "https://github.com/marcofortina/custodia"
+Issues = "https://github.com/marcofortina/custodia/issues"
+Documentation = "https://github.com/marcofortina/custodia/blob/master/docs/PYTHON_CLIENT_SDK.md"
+
+[tool.setuptools.packages.find]
+include = ["custodia_client*"]

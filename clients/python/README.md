@@ -1,5 +1,7 @@
 # Python client
 
+This package is the repository Python SDK source snapshot for Custodia. The intended public registry coordinate is `custodia-client` on PyPI, but registry publishing stays blocked until the SDK publishing readiness checklist and #41 are complete. No registry publishing is performed from this package metadata alone.
+
 This client provides both the raw transport helpers and the Phase 5 high-level crypto wrapper. The crypto wrapper encrypts/decrypts locally and never asks the server to decrypt anything; applications may resolve public keys from Custodia metadata, pinned files or another trust source.
 
 Implemented helpers:
@@ -24,6 +26,17 @@ Implemented helpers:
 - `delete_secret_by_key(namespace, key, cascade=False)` user-facing lookup
 
 Dynamic path segments are URL-escaped. Raw transport payloads remain caller-defined JSON with base64 ciphertext/envelope strings. The high-level crypto wrapper requires an application-provided public-key resolver and local private-key provider. Custodia public-key metadata can be a discovery source, but applications remain responsible for trust and pinning.
+
+## Package metadata and ownership
+
+Package metadata lives in `pyproject.toml` and documents the intended `custodia-client` PyPI package name, license, author, README, project URLs and dependencies. Before any publish command is run, PyPI project ownership must be controlled by the Custodia maintainer account or an approved organization and the SDK publishing readiness checklist must be complete.
+
+## Examples
+
+Compiled examples live under `examples/`:
+
+- `keyspace_transport.py` uses the public typed transport helpers with `namespace/key` semantics and opaque ciphertext/envelope strings.
+- `high_level_crypto.py` uses `CustodiaClient.with_crypto(...)` so plaintext is encrypted locally and only ciphertext, metadata and recipient envelopes are sent to the server.
 
 ## High-level crypto wrapper
 

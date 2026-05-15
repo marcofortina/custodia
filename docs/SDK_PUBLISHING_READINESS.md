@@ -45,7 +45,7 @@ All items must be complete before any registry publish command is run.
 
 ### Package metadata
 
-- [ ] Python `pyproject.toml` has final name, version, description, license, authors, readme and project URLs.
+- [x] Python `pyproject.toml` has package name, version, description, license, authors, readme, dependencies and project URLs documented; PyPI ownership verification remains required before publish.
 - [ ] Node `package.json` has final scoped name, version, license, exports/types, engines and `private` removed only at publish time.
 - [ ] Rust `Cargo.toml` has final crate metadata, readme, repository, documentation links and `publish = false` removed only at publish time.
 - [ ] Java has a reproducible build file and final Maven coordinates before publication.
@@ -54,7 +54,7 @@ All items must be complete before any registry publish command is run.
 ### Tests and CI
 
 - [ ] `make test` passes for the repository.
-- [ ] `make test-python-client` passes where Python dependencies are installed.
+- [x] `make test-python-client` passes where Python dependencies are installed.
 - [ ] `make test-node-client` passes where Node.js dependencies are installed.
 - [ ] `make test-rust-client` passes where Rust is installed.
 - [ ] `make test-java-client` passes where a supported JDK is installed.
