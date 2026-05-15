@@ -107,7 +107,7 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 - Kubernetes bootstrap material: [`docs/KUBERNETES_BOOTSTRAP_MATERIAL.md`](docs/KUBERNETES_BOOTSTRAP_MATERIAL.md)
 - Release readiness matrix: [`docs/RELEASE_READINESS_MATRIX.md`](docs/RELEASE_READINESS_MATRIX.md)
 - Release publishing runbook: [`docs/RELEASE_PUBLISHING.md`](docs/RELEASE_PUBLISHING.md)
-- Release notes for 0.1.0: [`docs/RELEASE_NOTES_0_1_0.md`](docs/RELEASE_NOTES_0_1_0.md)
+- Release notes for 1.0.0: [`docs/RELEASE_NOTES_1_0_0.md`](docs/RELEASE_NOTES_1_0_0.md)
 - SBOM artifacts: [`docs/SBOM.md`](docs/SBOM.md)
 
 ## Linux packages
@@ -115,22 +115,22 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 Build local DEB/RPM packages with:
 
 ```bash
-VERSION=0.1.0 REVISION=1 make package-deb
-VERSION=0.1.0 REVISION=1 make package-rpm
+VERSION=1.0.0 REVISION=1 make package-deb
+VERSION=1.0.0 REVISION=1 make package-rpm
 ```
 
 Generate release verification files:
 
 ```bash
-VERSION=0.1.0 REVISION=1 make package-checksums
+VERSION=1.0.0 REVISION=1 make package-checksums
 cd dist/packages && sha256sum -c SHA256SUMS
 ```
 
 Automate the full local GitHub release flow from checks through tag, package build, draft release creation, asset upload and remote asset verification. See [`docs/RELEASE_PUBLISHING.md`](docs/RELEASE_PUBLISHING.md) for the complete step-by-step publishing runbook, including annotated tag checks and post-download checksum verification:
 
 ```bash
-VERSION=0.1.0 REVISION=1 ./scripts/release-publish.sh dry-run
-VERSION=0.1.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh draft
+VERSION=1.0.0 REVISION=1 ./scripts/release-publish.sh dry-run
+VERSION=1.0.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh draft
 ```
 
 Smoke-test package contents without installing them into the host system:
@@ -152,10 +152,10 @@ sudo -E ./scripts/package-install-smoke.sh install-verify
 Generate a release SBOM:
 
 ```bash
-VERSION=0.1.0 make sbom
+VERSION=1.0.0 make sbom
 ```
 
-For a clean machine first run, start with **[`docs/QUICKSTART.md`](docs/QUICKSTART.md)**. For the release scope and final pre-release guardrails, see **[`docs/RELEASE_NOTES_0_1_0.md`](docs/RELEASE_NOTES_0_1_0.md)**.
+For a clean machine first run, start with **[`docs/QUICKSTART.md`](docs/QUICKSTART.md)**. For the release scope and final pre-release guardrails, see **[`docs/RELEASE_NOTES_1_0_0.md`](docs/RELEASE_NOTES_1_0_0.md)**.
 
 The package split is:
 
@@ -179,7 +179,7 @@ The development mode uses the in-memory store and insecure HTTP only when `CUSTO
 
 ## Build metadata
 
-Release builds can stamp version, commit and date into every binary. Use `make release-metadata-check VERSION=0.1.0` before publishing artifacts, or `make release VERSION=0.1.0` to run the metadata guardrail plus the default build/test/manpage flow. The values are exposed through `GET /v1/status`, `/web/status`, `custodia-admin version`, `custodia-client version`, `custodia-server version` and `custodia-signer version`. Development builds print `dev unknown unknown` until release `-ldflags` are supplied. See `docs/BUILD_METADATA.md`.
+Release builds can stamp version, commit and date into every binary. Use `make release-metadata-check VERSION=1.0.0` before publishing artifacts, or `make release VERSION=1.0.0` to run the metadata guardrail plus the default build/test/manpage flow. The values are exposed through `GET /v1/status`, `/web/status`, `custodia-admin version`, `custodia-client version`, `custodia-server version` and `custodia-signer version`. Development builds print `dev unknown unknown` until release `-ldflags` are supplied. See `docs/BUILD_METADATA.md`.
 
 ## Audit export integrity
 

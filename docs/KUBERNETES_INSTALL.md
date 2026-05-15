@@ -48,7 +48,7 @@ For release smoke, build from the public release tag, not from the moving defaul
 git clone https://github.com/marcofortina/custodia.git
 cd custodia
 
-CUSTODIA_VERSION=0.1.0
+CUSTODIA_VERSION=1.0.0
 # Build the universal Kubernetes image with both supported store backends.
 CUSTODIA_GO_BUILD_TAGS="sqlite postgres"
 git fetch --tags origin

@@ -14,7 +14,7 @@ Custodia binaries expose build metadata through:
 Default development values are `dev`, `unknown`, `unknown`; those are compile-time fallbacks from `internal/build` when no release `-ldflags` are supplied. The Makefile now derives `COMMIT` and `DATE` from the local Git checkout/time for normal local builds, but `VERSION` intentionally remains `dev` unless a release value is provided. Release builds should set:
 
 ```bash
-make build VERSION=v0.1.0 COMMIT=$(git rev-parse --short HEAD) DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+make build VERSION=v1.0.0 COMMIT=$(git rev-parse --short HEAD) DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 ```
 
 Docker builds accept equivalent build args. For the standard server image, keep both supported store backends enabled and let runtime configuration select the active backend:
@@ -22,7 +22,7 @@ Docker builds accept equivalent build args. For the standard server image, keep 
 ```bash
 docker build \
   --build-arg GO_BUILD_TAGS="sqlite postgres" \
-  --build-arg CUSTODIA_VERSION=v0.1.0 \
+  --build-arg CUSTODIA_VERSION=v1.0.0 \
   --build-arg CUSTODIA_COMMIT=$(git rev-parse --short HEAD) \
   --build-arg CUSTODIA_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
   -f deploy/Dockerfile .
@@ -34,8 +34,8 @@ docker build \
 Use the release metadata gate before tagging or publishing artifacts:
 
 ```bash
-make release-metadata-check VERSION=0.1.0
-make release VERSION=0.1.0
+make release-metadata-check VERSION=1.0.0
+make release VERSION=1.0.0
 ```
 
 The gate fails if `VERSION` is still `dev`/`unknown`, if `COMMIT` is missing, or if `DATE` is missing/non-RFC3339. This prevents accidentally publishing binaries or packages that report `dev unknown unknown`.

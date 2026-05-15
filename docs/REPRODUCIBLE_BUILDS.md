@@ -7,7 +7,7 @@ Custodia releases should carry explicit build metadata and should avoid ambient 
 Set these values for release builds:
 
 ```bash
-VERSION=0.1.0
+VERSION=1.0.0
 COMMIT="$(git rev-parse --short=12 HEAD)"
 DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ```
@@ -24,7 +24,7 @@ For reproducible release metadata, derive `DATE` from `SOURCE_DATE_EPOCH`:
 
 ```bash
 export SOURCE_DATE_EPOCH=1767225600
-export VERSION=0.1.0
+export VERSION=1.0.0
 export COMMIT="$(git rev-parse --short=12 HEAD)"
 export DATE="$(date -u -d "@$SOURCE_DATE_EPOCH" +%Y-%m-%dT%H:%M:%SZ)"
 

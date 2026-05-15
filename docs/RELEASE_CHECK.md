@@ -1,6 +1,6 @@
 # Custodia release check
 
-`make release-check` is the local pre-release gate for the repository baseline. For the 0.1.0 release scope, see [`RELEASE_NOTES_0_1_0.md`](RELEASE_NOTES_0_1_0.md). For final release-candidate sign-off, use [`RELEASE_READINESS_MATRIX.md`](RELEASE_READINESS_MATRIX.md).
+`make release-check` is the local pre-release gate for the repository baseline. For the 1.0.0 release scope, see [`RELEASE_NOTES_1_0_0.md`](RELEASE_NOTES_1_0_0.md). For final release-candidate sign-off, use [`RELEASE_READINESS_MATRIX.md`](RELEASE_READINESS_MATRIX.md).
 
 It runs:
 
@@ -55,14 +55,14 @@ Local release candidates can build installable packages with:
 make package-deb
 make package-rpm
 # Or build both formats explicitly:
-VERSION=0.1.0 REVISION=1 PACKAGE_NAMES="server client sdk" make package-linux
+VERSION=1.0.0 REVISION=1 PACKAGE_NAMES="server client sdk" make package-linux
 ```
 
 For a fully automated local release flow, use the release publisher:
 
 ```bash
-VERSION=0.1.0 REVISION=1 ./scripts/release-publish.sh dry-run
-VERSION=0.1.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh draft
+VERSION=1.0.0 REVISION=1 ./scripts/release-publish.sh dry-run
+VERSION=1.0.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh draft
 ```
 
 This runs repository checks, builds DEB/RPM packages, generates `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json` and `custodia-sbom.spdx.json`, creates the annotated tag, pushes the branch/tag, creates the GitHub release and uploads/verifies all assets. Use `publish` instead of `draft` only when you intentionally want the release to be public immediately.
@@ -70,7 +70,7 @@ This runs repository checks, builds DEB/RPM packages, generates `SHA256SUMS`, `a
 After a GitHub release already exists, upload or replace only the selected package artifacts plus `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json` and `custodia-sbom.spdx.json` with:
 
 ```bash
-VERSION=0.1.0 REVISION=1 CUSTODIA_RELEASE_TAG=v0.1.0 make github-release-upload-assets
+VERSION=1.0.0 REVISION=1 CUSTODIA_RELEASE_TAG=v1.0.0 make github-release-upload-assets
 ```
 
 The CI workflow builds both formats and uploads the generated artifacts. See [`LINUX_PACKAGES.md`](LINUX_PACKAGES.md).

@@ -29,12 +29,12 @@ Pick one bare-metal install path, then continue with the common runtime setup. K
 
 ## 2. Install from DEB/RPM packages
 
-Package install does not require a cloned repository. Download the release artifacts from GitHub into one directory on the target host. Replace `0.1.0` and `1` with the release values you want to install.
+Package install does not require a cloned repository. Download the release artifacts from GitHub into one directory on the target host. Replace `1.0.0` and `1` with the release values you want to install.
 
 ```bash
 OWNER=marcofortina
 REPO=custodia
-VERSION=0.1.0
+VERSION=1.0.0
 REVISION=1
 BASE_URL="https://github.com/${OWNER}/${REPO}/releases/download/v${VERSION}"
 ```
@@ -221,8 +221,8 @@ sudo make install PREFIX=/usr/local
 To build local DEB/RPM packages from the checkout instead of installing directly:
 
 ```bash
-VERSION=0.1.0 REVISION=1 PACKAGE_NAMES="server client sdk" make package-linux
-VERSION=0.1.0 REVISION=1 make package-checksums
+VERSION=1.0.0 REVISION=1 PACKAGE_NAMES="server client sdk" make package-linux
+VERSION=1.0.0 REVISION=1 make package-checksums
 cd dist/packages && sha256sum -c SHA256SUMS
 ```
 

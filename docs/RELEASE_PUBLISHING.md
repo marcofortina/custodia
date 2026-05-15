@@ -42,8 +42,8 @@ rerunning the release flow unless you have verified that it already points to th
 current release commit:
 
 ```bash
-git tag --list 'v0.1.0'
-git tag -d v0.1.0 2>/dev/null || true
+git tag --list 'v1.0.0'
+git tag -d v1.0.0 2>/dev/null || true
 ```
 
 Do not delete a published tag for a real release unless you are intentionally
@@ -52,7 +52,7 @@ replacing a failed draft/pre-release before users consume it.
 ## 3. Dry-run the release plan
 
 ```bash
-VERSION=0.1.0 \
+VERSION=1.0.0 \
 REVISION=1 \
 RELEASE_REPO=marcofortina/custodia \
 ./scripts/release-publish.sh dry-run
@@ -68,7 +68,7 @@ branch and tag, creates a GitHub draft release, uploads all assets and verifies
 the remote asset list.
 
 ```bash
-VERSION=0.1.0 \
+VERSION=1.0.0 \
 REVISION=1 \
 RELEASE_REPO=marcofortina/custodia \
 RELEASE_CONFIRM=YES \
@@ -96,7 +96,7 @@ Use `publish` only when you intentionally want to create a public release
 without a draft review:
 
 ```bash
-VERSION=0.1.0 \
+VERSION=1.0.0 \
 REVISION=1 \
 RELEASE_REPO=marcofortina/custodia \
 RELEASE_CONFIRM=YES \
@@ -106,7 +106,7 @@ RELEASE_CONFIRM=YES \
 ## 5. Verify the draft release assets
 
 ```bash
-gh release view v0.1.0 --repo marcofortina/custodia --json assets \
+gh release view v1.0.0 --repo marcofortina/custodia --json assets \
   --jq '.assets[].name' | sort
 ```
 
@@ -117,19 +117,19 @@ SHA256SUMS
 artifacts-manifest.json
 custodia-sbom.spdx.json
 release-provenance.json
-custodia-client-0.1.0-1.x86_64.rpm
-custodia-client_0.1.0-1_amd64.deb
-custodia-sdk-0.1.0-1.noarch.rpm
-custodia-sdk_0.1.0-1_all.deb
-custodia-server-0.1.0-1.x86_64.rpm
-custodia-server_0.1.0-1_amd64.deb
+custodia-client-1.0.0-1.x86_64.rpm
+custodia-client_1.0.0-1_amd64.deb
+custodia-sdk-1.0.0-1.noarch.rpm
+custodia-sdk_1.0.0-1_all.deb
+custodia-server-1.0.0-1.x86_64.rpm
+custodia-server_1.0.0-1_amd64.deb
 ```
 
 If `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json` or `custodia-sbom.spdx.json` is missing, do not publish the
 draft. Re-run the asset helper:
 
 ```bash
-VERSION=0.1.0 \
+VERSION=1.0.0 \
 REVISION=1 \
 CUSTODIA_GITHUB_REPO=marcofortina/custodia \
 CUSTODIA_RELEASE_CONFIRM=YES \
@@ -146,7 +146,7 @@ rm -rf /tmp/custodia-release-check
 mkdir -p /tmp/custodia-release-check
 cd /tmp/custodia-release-check
 
-gh release download v0.1.0 --repo marcofortina/custodia
+gh release download v1.0.0 --repo marcofortina/custodia
 sha256sum --ignore-missing -c SHA256SUMS
 python3 -m json.tool artifacts-manifest.json >/dev/null
 python3 -m json.tool release-provenance.json >/dev/null
@@ -164,13 +164,13 @@ dereferencing the tag with `^{}`:
 cd ~/custodia
 git fetch --tags origin
 git rev-parse HEAD
-git rev-parse 'v0.1.0^{}'
-git ls-remote --tags origin 'v0.1.0^{}'
+git rev-parse 'v1.0.0^{}'
+git ls-remote --tags origin 'v1.0.0^{}'
 ```
 
 All dereferenced commit hashes must match the intended release commit.
 
-Do not compare `git rev-parse v0.1.0` directly to `HEAD`; for annotated tags it
+Do not compare `git rev-parse v1.0.0` directly to `HEAD`; for annotated tags it
 prints the tag object hash, not the commit hash.
 
 ## 8. Publish the draft
@@ -178,13 +178,13 @@ prints the tag object hash, not the commit hash.
 After asset and tag verification:
 
 ```bash
-gh release edit v0.1.0 --repo marcofortina/custodia --draft=false
+gh release edit v1.0.0 --repo marcofortina/custodia --draft=false
 ```
 
 Verify the public release:
 
 ```bash
-gh release view v0.1.0 --repo marcofortina/custodia
+gh release view v1.0.0 --repo marcofortina/custodia
 ```
 
 ## 9. Post-release smoke
@@ -208,9 +208,9 @@ tag only when you intentionally want to recreate the release from the current
 commit:
 
 ```bash
-gh release delete v0.1.0 --repo marcofortina/custodia --yes 2>/dev/null || true
-git push origin :refs/tags/v0.1.0 2>/dev/null || true
-git tag -d v0.1.0 2>/dev/null || true
+gh release delete v1.0.0 --repo marcofortina/custodia --yes 2>/dev/null || true
+git push origin :refs/tags/v1.0.0 2>/dev/null || true
+git tag -d v1.0.0 2>/dev/null || true
 ```
 
 Do not rewrite a published release/tag after users may have downloaded assets.

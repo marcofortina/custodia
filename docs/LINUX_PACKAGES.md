@@ -33,9 +33,9 @@ Creating one `.deb`/`.rpm` per SDK language would add distro-package maintenance
 ## Build DEB packages
 
 ```bash
-VERSION=0.1.0 REVISION=1 make package-deb
+VERSION=1.0.0 REVISION=1 make package-deb
 # Override only for specialized diagnostics, for example to build only PostgreSQL support:
-SERVER_BUILD_TAGS=postgres VERSION=0.1.0 REVISION=1 make package-deb
+SERVER_BUILD_TAGS=postgres VERSION=1.0.0 REVISION=1 make package-deb
 ```
 
 Artifacts are written to:
@@ -57,7 +57,7 @@ custodia-sdk_<version>-<revision>_all.deb
 `rpmbuild` is required:
 
 ```bash
-VERSION=0.1.0 REVISION=1 make package-rpm
+VERSION=1.0.0 REVISION=1 make package-rpm
 ```
 
 Expected files:
@@ -71,7 +71,7 @@ custodia-sdk-<version>-<revision>.noarch.rpm
 ## Build both formats
 
 ```bash
-VERSION=0.1.0 REVISION=1 make package-linux
+VERSION=1.0.0 REVISION=1 make package-linux
 ```
 
 ## Build metadata
@@ -79,7 +79,7 @@ VERSION=0.1.0 REVISION=1 make package-linux
 The package script stamps Go binaries with the same metadata used by normal release builds:
 
 ```bash
-VERSION=0.1.0 \
+VERSION=1.0.0 \
 REVISION=1 \
 COMMIT="$(git rev-parse --short=12 HEAD)" \
 DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
@@ -167,8 +167,8 @@ The generated `.deb` and `.rpm` files are uploaded as workflow artifacts.
 After building packages, generate release verification files:
 
 ```bash
-VERSION=0.1.0 REVISION=1 make package-linux
-VERSION=0.1.0 REVISION=1 make package-checksums
+VERSION=1.0.0 REVISION=1 make package-linux
+VERSION=1.0.0 REVISION=1 make package-checksums
 ```
 
 This writes:
@@ -190,9 +190,9 @@ The manifest is intentionally metadata-only and does not include package content
 To avoid manual release-asset mistakes, use the GitHub release asset helper after the package build:
 
 ```bash
-VERSION=0.1.0 REVISION=1 ./scripts/github-release-assets.sh prepare
-VERSION=0.1.0 REVISION=1 CUSTODIA_RELEASE_CONFIRM=YES ./scripts/github-release-assets.sh upload
-VERSION=0.1.0 REVISION=1 ./scripts/github-release-assets.sh verify
+VERSION=1.0.0 REVISION=1 ./scripts/github-release-assets.sh prepare
+VERSION=1.0.0 REVISION=1 CUSTODIA_RELEASE_CONFIRM=YES ./scripts/github-release-assets.sh upload
+VERSION=1.0.0 REVISION=1 ./scripts/github-release-assets.sh verify
 ```
 
 `upload` attaches the local `.deb`/`.rpm` artifacts matching `VERSION`, `REVISION` and `PACKAGE_NAMES`, plus `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json` and `custodia-sbom.spdx.json`, to `v$VERSION` with `gh release upload --clobber`. Set `CUSTODIA_RELEASE_TAG` when the tag is not `v$VERSION`, and set `CUSTODIA_GITHUB_REPO=owner/repo` when uploading outside the checked-out repository.
@@ -202,8 +202,8 @@ VERSION=0.1.0 REVISION=1 ./scripts/github-release-assets.sh verify
 For the complete local release flow from a clean repository checkout, including annotated tag checks and post-download checksum verification, use [`RELEASE_PUBLISHING.md`](RELEASE_PUBLISHING.md). The short form is:
 
 ```bash
-VERSION=0.1.0 REVISION=1 ./scripts/release-publish.sh dry-run
-VERSION=0.1.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh draft
+VERSION=1.0.0 REVISION=1 ./scripts/release-publish.sh dry-run
+VERSION=1.0.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh draft
 ```
 
 The `draft` command runs repository checks, builds DEB/RPM packages, generates `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json` and `custodia-sbom.spdx.json`, creates the annotated Git tag, pushes the branch and tag, creates a GitHub draft release, uploads all package/checksum/manifest/SBOM/provenance assets and verifies the remote asset list.
@@ -211,7 +211,7 @@ The `draft` command runs repository checks, builds DEB/RPM packages, generates `
 Use `publish` only when you intentionally want to create a public release immediately:
 
 ```bash
-VERSION=0.1.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh publish
+VERSION=1.0.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh publish
 ```
 
 Set `RELEASE_REPO=OWNER/REPO` when `gh` cannot infer the repository from the current checkout. Use `RELEASE_ALLOW_EXISTING=YES` only when you intentionally want to reuse an existing release and replace assets.
@@ -221,7 +221,7 @@ Set `RELEASE_REPO=OWNER/REPO` when `gh` cannot infer the repository from the cur
 After building packages, run extraction-based smoke checks:
 
 ```bash
-VERSION=0.1.0 REVISION=1 make package-linux
+VERSION=1.0.0 REVISION=1 make package-linux
 make package-smoke
 ```
 
@@ -252,7 +252,7 @@ The manual GitHub Actions workflow `.github/workflows/release.yml` builds releas
 
 To publish a GitHub release, run the workflow with:
 
-- `version`: semantic version without the leading `v`, for example `0.1.0`;
+- `version`: semantic version without the leading `v`, for example `1.0.0`;
 - `revision`: package revision, usually `1`;
 - `create_release`: `true`;
 - `prerelease`: `true` only for prerelease builds.
