@@ -53,7 +53,7 @@ Release candidates and prereleases should use prerelease identifiers in source t
 
 ## Cross-language compatibility
 
-High-level crypto SDKs must pass the shared client crypto vectors documented in [`SDK_TEST_VECTORS.md`](SDK_TEST_VECTORS.md). The current version is:
+High-level crypto SDKs must pass the shared client crypto vectors documented in [`SDK_TEST_VECTORS.md`](SDK_TEST_VECTORS.md). SDK example and language capability claims are tracked in [`SDK_EXAMPLES_AND_COMPATIBILITY.md`](SDK_EXAMPLES_AND_COMPATIBILITY.md). The current version is:
 
 ```text
 testdata/client-crypto/v1/

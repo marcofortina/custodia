@@ -94,6 +94,7 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 - Shared crypto contract: [`docs/CLIENT_CRYPTO_SPEC.md`](docs/CLIENT_CRYPTO_SPEC.md)
 - Client crypto threat model: [`docs/CLIENT_CRYPTO_THREAT_MODEL.md`](docs/CLIENT_CRYPTO_THREAT_MODEL.md)
 - Namespace/key secret keyspace model: [`docs/SECRET_KEYSPACE_MODEL.md`](docs/SECRET_KEYSPACE_MODEL.md)
+- SDK examples and compatibility matrix: [`docs/SDK_EXAMPLES_AND_COMPATIBILITY.md`](docs/SDK_EXAMPLES_AND_COMPATIBILITY.md)
 - SDK release policy: [`docs/SDK_RELEASE_POLICY.md`](docs/SDK_RELEASE_POLICY.md)
 - SDK publishing readiness checklist: [`docs/SDK_PUBLISHING_READINESS.md`](docs/SDK_PUBLISHING_READINESS.md)
 - Linux DEB/RPM packaging: [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md) including the installed `/usr/sbin/custodia-operational-readiness-smoke` helper
@@ -383,6 +384,7 @@ The operational documentation is grouped by the workflow it supports, rather tha
 - [C++ client SDK](docs/CPP_CLIENT_SDK.md)
 - [Rust client SDK](docs/RUST_CLIENT_SDK.md)
 - [Bash SDK helper](docs/BASH_SDK.md)
+- [SDK examples and compatibility matrix](docs/SDK_EXAMPLES_AND_COMPATIBILITY.md)
 - [SDK release policy](docs/SDK_RELEASE_POLICY.md)
 - [SDK publishing readiness checklist](docs/SDK_PUBLISHING_READINESS.md)
 

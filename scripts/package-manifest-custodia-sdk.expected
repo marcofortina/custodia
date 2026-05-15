@@ -47,6 +47,7 @@ usr/share/custodia/sdk/testdata/client-crypto/v1/tamper_ciphertext_fails.json
 usr/share/custodia/sdk/testdata/client-crypto/v1/unsupported_crypto_version_fails.json
 usr/share/custodia/sdk/testdata/client-crypto/v1/wrong_recipient_fails.json
 usr/share/doc/custodia-sdk/CLIENT_LIBRARIES.md
+usr/share/doc/custodia-sdk/SDK_EXAMPLES_AND_COMPATIBILITY.md
 usr/share/doc/custodia-sdk/CLIENT_CRYPTO_SPEC.md
 usr/share/doc/custodia-sdk/SDK_TEST_VECTORS.md
 usr/share/doc/custodia-sdk/SDK_RELEASE_POLICY.md

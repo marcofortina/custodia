@@ -412,6 +412,7 @@ verify_sdk() {
   require_path /usr/share/custodia/sdk/testdata/client-crypto/v1/create_secret_single_recipient.json
   require_path /usr/share/custodia/sdk/testdata/client-crypto/v1/wrong_recipient_fails.json
   require_path /usr/share/doc/custodia-sdk/SDK_RELEASE_POLICY.md
+  require_path /usr/share/doc/custodia-sdk/SDK_EXAMPLES_AND_COMPATIBILITY.md
   require_path /usr/share/doc/custodia-sdk/SDK_PUBLISHING_READINESS.md
   require_path /usr/share/doc/custodia-sdk/SDK_TEST_VECTORS.md
 }

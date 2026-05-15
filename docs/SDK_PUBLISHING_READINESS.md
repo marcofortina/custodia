@@ -11,7 +11,7 @@ Do not publish any language SDK to an external registry when any of these is tru
 - the target package name or namespace is not controlled by the Custodia maintainer account or approved organization;
 - package metadata still says `private`, `publish = false`, placeholder versioning or unpublished coordinates;
 - a language-specific readiness issue for the SDK is still open;
-- shared crypto vector tests or compatibility matrix entries are missing for the shipped surface;
+- shared crypto vector tests or compatibility matrix entries are missing for the shipped surface; see [`SDK_EXAMPLES_AND_COMPATIBILITY.md`](SDK_EXAMPLES_AND_COMPATIBILITY.md);
 - CI cannot reproduce the language-specific test command;
 - CodeQL or equivalent security findings affecting the SDK are still unresolved;
 - release notes do not describe compatibility, known limitations and migration impact.
@@ -64,9 +64,9 @@ All items must be complete before any registry publish command is run.
 ### Security and compatibility
 
 - [x] Java CodeQL/static-IV triage is documented as safe for HPKE envelope AEAD nonces; content encryption still uses random AES-GCM nonces.
-- [ ] SDK docs state that the server remains metadata-only and never receives plaintext, DEKs or private keys.
+- [x] SDK docs state that the server remains metadata-only and never receives plaintext, DEKs or private keys.
 - [ ] Public-key resolution remains an application trust decision; server-published public keys are discovery metadata only.
-- [ ] Compatibility matrix documents transport, crypto, vector and package status per language.
+- [x] Compatibility matrix documents transport, crypto, vector and package status per language.
 - [ ] Release notes describe compatibility, migration notes and known limitations.
 
 ### Publishing controls
