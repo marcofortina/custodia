@@ -22,6 +22,14 @@ usr/share/custodia/sdk/clients/node/test/package-readiness.test.js
 usr/share/custodia/sdk/clients/java/src/main/java/dev/custodia/client/CustodiaClient.java
 usr/share/custodia/sdk/clients/cpp/include/custodia/client.hpp
 usr/share/custodia/sdk/clients/rust/Cargo.toml
+usr/share/custodia/sdk/clients/rust/README.md
+usr/share/custodia/sdk/clients/rust/src/lib.rs
+usr/share/custodia/sdk/clients/rust/src/crypto.rs
+usr/share/custodia/sdk/clients/rust/examples/keyspace_transport.rs
+usr/share/custodia/sdk/clients/rust/examples/high_level_crypto.rs
+usr/share/custodia/sdk/clients/rust/tests/client_test.rs
+usr/share/custodia/sdk/clients/rust/tests/package_readiness_test.rs
+usr/share/custodia/sdk/clients/rust/tests/vector_test.rs
 usr/share/custodia/sdk/testdata/client-crypto/v1/create_secret_single_recipient.json
 usr/share/doc/custodia-sdk/CLIENT_LIBRARIES.md
 usr/share/doc/custodia-sdk/CLIENT_CRYPTO_SPEC.md

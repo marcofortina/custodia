@@ -26,7 +26,7 @@ The public registry publication status remains separate from repository implemen
 | Node.js / TypeScript | `clients/node` | Yes | Yes | Dependency-free runtime JavaScript, TypeScript declarations, checked examples and npm package metadata. |
 | Java | `clients/java` | Yes | Yes | `java.net.http`, Java TLS configuration, and local crypto. |
 | C++ | `clients/cpp` | Yes | Yes | libcurl transport and OpenSSL crypto. |
-| Rust | `clients/rust` | Yes | Yes | reqwest/rustls transport and local crypto. |
+| Rust | `clients/rust` | Yes | Yes | reqwest/rustls transport, local crypto, checked examples and shared-vector tests. |
 | Go CLI | `cmd/custodia-client` | Yes | Yes | Encrypted put/get/share/version, access revoke/delete, metadata inspection and reusable JSON client profile UX. |
 | Bash | `clients/bash` | Via `custodia-client` | Via `custodia-client` | Sourceable shell helper for CI and operational scripts. |
 

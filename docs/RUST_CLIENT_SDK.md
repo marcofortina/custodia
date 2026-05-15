@@ -4,6 +4,8 @@
 
 The high-level wrapper uses the shared v1 crypto contract: canonical AAD, AES-256-GCM content encryption and HPKE-v1 recipient envelopes. Plaintext, DEKs and private keys remain local to the caller.
 
+For 0.5.0 the Rust SDK target is no longer transport-only. The supported repository surface includes opaque transport, high-level create/read/share encrypted helpers, checked examples, crate metadata and shared client-crypto vector tests.
+
 ## TLS configuration
 
 The default client uses `reqwest` blocking with rustls and local PEM files:
@@ -16,6 +18,10 @@ let client = CustodiaClient::new(CustodiaClientConfig::new(
     "ca.crt",
 ))?;
 ```
+
+## Package readiness
+
+`clients/rust/Cargo.toml` documents the intended crates.io package metadata, repository and documentation links while keeping `publish = false`. Registry publication remains blocked by the SDK publishing readiness checklist until ownership, release evidence and compatibility gates are complete.
 
 ## Opaque secret payloads
 
@@ -80,6 +86,15 @@ The application must provide recipient public keys through `PublicKeyResolver`; 
 The Rust SDK must not log plaintext, ciphertext, envelopes, DEKs, private keys, PEM key material, passphrases or bearer/session material.
 
 It does not fetch Custodia server-published recipient public keys automatically yet; applications provide a resolver and may choose Custodia metadata, pinned files or another trust source.
+
+## Examples
+
+- `clients/rust/examples/keyspace_transport.rs` covers the opaque transport surface.
+- `clients/rust/examples/high_level_crypto.rs` covers local high-level encryption, read and share helpers.
+
+## Shared vectors
+
+`clients/rust/tests/vector_test.rs` checks canonical AAD, AES-256-GCM ciphertext and HPKE-v1 envelopes against `testdata/client-crypto/v1/` where applicable.
 
 ## Verification
 

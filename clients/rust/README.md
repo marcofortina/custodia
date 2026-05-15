@@ -5,7 +5,8 @@
 It includes:
 
 - a transport REST/mTLS client for already-opaque payloads;
-- a high-level crypto wrapper using the shared v1 contract: canonical AAD, AES-256-GCM content encryption and HPKE-v1 recipient envelopes.
+- a high-level crypto wrapper using the shared v1 contract: canonical AAD, AES-256-GCM content encryption and HPKE-v1 recipient envelopes;
+- checked examples and shared-vector tests for the 0.5.0 SDK maturity target.
 
 The crypto wrapper encrypts/decrypts locally and must not log plaintext, ciphertext, envelopes, DEKs, private keys or passphrases. Recipient public keys are resolved by the application, not by Custodia.
 
@@ -16,6 +17,18 @@ The crypto wrapper encrypts/decrypts locally and must not log plaintext, ciphert
 - Crypto methods keep plaintext, DEKs and private keys local to the caller.
 - No plaintext, DEK, private key, passphrase, ciphertext or envelope is logged.
 - Retry policy is left to the caller; mutating requests are not retried automatically.
+
+## 0.5.0 scope
+
+For 0.5.0 the Rust SDK is no longer transport-only. The supported repository surface is:
+
+- opaque REST/mTLS transport by `namespace/key`;
+- high-level create/read/share encrypted helpers;
+- local AES-256-GCM and HPKE-v1 envelope handling;
+- caller-owned public-key trust and private-key handling;
+- shared client-crypto vector checks.
+
+Publishing to crates.io remains blocked by `docs/SDK_PUBLISHING_READINESS.md`; `publish = false` stays in `Cargo.toml` until the release gate is explicitly approved.
 
 ## Example
 
@@ -52,16 +65,21 @@ let decrypted = crypto.read_decrypted_secret_by_key("default", "db/password")?;
 crypto.share_encrypted_secret_by_key("default", "db/password", "client_charlie", custodia_client::PERMISSION_READ, None)?;
 ```
 
+## Examples
+
+- `examples/keyspace_transport.rs` shows opaque transport calls.
+- `examples/high_level_crypto.rs` shows local encryption/decryption/share helpers.
+
 ## Test
 
 ```bash
 make test-rust-client
 ```
 
-The repository target runs `cargo test` when Cargo is installed and skips with a clear message otherwise.
+The repository target runs `cargo test --all-targets` when Cargo is installed and skips with a clear message otherwise.
 
 ## Dependency lockfile
 
-`clients/rust/Cargo.lock` is intentionally committed after it is generated on a Rust-enabled workstation. The lockfile keeps the Rust client reproducible on the documented minimum toolchain, Cargo/Rust 1.85, and prevents dependency drift toward crates that require Edition 2024.
+`clients/rust/Cargo.lock` is intentionally committed after it is generated on a Rust-enabled workstation. The lockfile keeps the Rust client reproducible on the documented minimum toolchain, Cargo/Rust 1.86, and prevents dependency drift toward crates that require Edition 2024.
 
 `clients/rust/target/` is local build output and must not be committed.
