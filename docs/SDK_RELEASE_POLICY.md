@@ -92,6 +92,7 @@ Release artifacts should include:
 - `SHA256SUMS`;
 - `artifacts-manifest.json`;
 - `custodia-sbom.spdx.json`;
+- `release-provenance.json`;
 - release notes that call out compatibility, migration notes and known limitations.
 
 ## Deprecation policy

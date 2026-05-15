@@ -2,8 +2,8 @@
 
 Use this runbook to publish a Custodia release from a clean repository checkout.
 It documents the full local flow driven by `scripts/release-publish.sh`, from
-pre-flight checks through annotated tag creation, GitHub release asset upload and
-post-release verification.
+pre-flight checks through annotated tag creation, GitHub release asset upload,
+release integrity metadata and post-release verification.
 
 ## Runbook metadata
 
@@ -11,7 +11,7 @@ post-release verification.
 | --- | --- |
 | Audience | Maintainer publishing a Custodia release. |
 | Prerequisites | Clean Git checkout, authenticated `gh`, package build tools, `helm` for chart checks, and a finalized release commit. |
-| Outcome | Annotated Git tag, pushed branch/tag, GitHub release with DEB/RPM packages, `SHA256SUMS` and `artifacts-manifest.json`, plus verified downloadable assets. |
+| Outcome | Annotated Git tag, pushed branch/tag, GitHub release with DEB/RPM packages, `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json` and `custodia-sbom.spdx.json`, plus verified downloadable assets. |
 | Do not continue if | The working tree is dirty, tests fail, package smoke fails, `helm` is unavailable for a Kubernetes-capable release, or the tag does not point to the release commit. |
 
 ## 1. Pre-flight repository check
@@ -84,6 +84,8 @@ The script runs:
 - package smoke;
 - package install smoke check-only;
 - `SHA256SUMS` and `artifacts-manifest.json` generation;
+- `custodia-sbom.spdx.json` generation;
+- `release-provenance.json` generation;
 - annotated tag creation;
 - branch/tag push;
 - GitHub draft release creation;
@@ -113,6 +115,8 @@ Expected assets:
 ```text
 SHA256SUMS
 artifacts-manifest.json
+custodia-sbom.spdx.json
+release-provenance.json
 custodia-client-0.1.0-1.x86_64.rpm
 custodia-client_0.1.0-1_amd64.deb
 custodia-sdk-0.1.0-1.noarch.rpm
@@ -121,7 +125,7 @@ custodia-server-0.1.0-1.x86_64.rpm
 custodia-server_0.1.0-1_amd64.deb
 ```
 
-If `SHA256SUMS` or `artifacts-manifest.json` is missing, do not publish the
+If `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json` or `custodia-sbom.spdx.json` is missing, do not publish the
 draft. Re-run the asset helper:
 
 ```bash
@@ -145,6 +149,8 @@ cd /tmp/custodia-release-check
 gh release download v0.1.0 --repo marcofortina/custodia
 sha256sum --ignore-missing -c SHA256SUMS
 python3 -m json.tool artifacts-manifest.json >/dev/null
+python3 -m json.tool release-provenance.json >/dev/null
+python3 -m json.tool custodia-sbom.spdx.json >/dev/null
 ```
 
 Do not publish the draft if checksum verification fails.

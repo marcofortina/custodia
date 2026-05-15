@@ -65,9 +65,9 @@ VERSION=0.1.0 REVISION=1 ./scripts/release-publish.sh dry-run
 VERSION=0.1.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh draft
 ```
 
-This runs repository checks, builds DEB/RPM packages, generates `SHA256SUMS` and `artifacts-manifest.json`, creates the annotated tag, pushes the branch/tag, creates the GitHub release and uploads/verifies all assets. Use `publish` instead of `draft` only when you intentionally want the release to be public immediately.
+This runs repository checks, builds DEB/RPM packages, generates `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json` and `custodia-sbom.spdx.json`, creates the annotated tag, pushes the branch/tag, creates the GitHub release and uploads/verifies all assets. Use `publish` instead of `draft` only when you intentionally want the release to be public immediately.
 
-After a GitHub release already exists, upload or replace only the selected package artifacts plus `SHA256SUMS` and `artifacts-manifest.json` with:
+After a GitHub release already exists, upload or replace only the selected package artifacts plus `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json` and `custodia-sbom.spdx.json` with:
 
 ```bash
 VERSION=0.1.0 REVISION=1 CUSTODIA_RELEASE_TAG=v0.1.0 make github-release-upload-assets

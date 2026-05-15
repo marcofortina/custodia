@@ -63,7 +63,7 @@ captured for the exact commit and artifacts being shipped:
 - `make release-check` output;
 - `make helm-check` output, including expected negative Helm validation tests for Lite PVC, Web MFA Secret and PKCS#11 delivery;
 - package checksum/SBOM output when packages are published;
-- release publishing runbook output proving the annotated tag, `.deb`, `.rpm`, `SHA256SUMS`, `artifacts-manifest.json`, remote asset list and downloaded checksums were verified;
+- release publishing runbook output proving the annotated tag, `.deb`, `.rpm`, `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json`, `custodia-sbom.spdx.json`, remote asset list and downloaded checksums were verified;
 - clean-install smoke output for DEB and RPM packages when those formats are
   published;
 - Lite backup/restore smoke output when the release claims Lite support;
@@ -86,7 +86,7 @@ Stop promotion immediately when any of the following happens:
 - Lite Kubernetes renders without a PVC or with more than one server replica;
 - package payload manifests miss binaries, systemd units, manpages, docs or
   example YAMLs;
-- GitHub release assets are missing `SHA256SUMS` or `artifacts-manifest.json`, downloaded checksum verification fails, or the annotated tag does not dereference to the intended release commit;
+- GitHub release assets are missing `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json` or `custodia-sbom.spdx.json`, downloaded checksum verification fails, or the annotated tag does not dereference to the intended release commit;
 - package clean-install smoke runs on a minimized Debian image that drops
   `/usr/share/man` or `/usr/share/doc` through `dpkg` path-exclude filters;
 - operational smoke cannot reach `/live`, `/ready`, admin status, diagnostics or

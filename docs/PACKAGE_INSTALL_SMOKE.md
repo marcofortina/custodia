@@ -52,6 +52,8 @@ cd /tmp/custodia-package-smoke/assets
 gh release download "v${CUSTODIA_RELEASE}" --repo "${CUSTODIA_RELEASE_REPO}"
 sha256sum --ignore-missing -c SHA256SUMS
 python3 -m json.tool artifacts-manifest.json >/dev/null
+python3 -m json.tool release-provenance.json >/dev/null
+python3 -m json.tool custodia-sbom.spdx.json >/dev/null
 
 cd /tmp/custodia-package-smoke/src
 curl -fsSLo custodia-source.tar.gz \
