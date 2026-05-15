@@ -173,7 +173,7 @@ VERSION=0.1.0 REVISION=1 make package-checksums
 
 This writes:
 
-- `dist/packages/SHA256SUMS` with SHA-256 digests for every `.deb` and `.rpm` artifact.
+- `dist/packages/SHA256SUMS` with SHA-256 digests for every selected `.deb` and `.rpm` artifact plus release metadata assets.
 - `dist/packages/artifacts-manifest.json` with artifact names, package types, byte sizes, SHA-256 digests, version, revision, source commit and generation time.
 - `dist/packages/custodia-sbom.spdx.json` with SPDX 2.3 dependency metadata.
 - `dist/packages/release-provenance.json` with release tag, commit and SHA-256 evidence for release metadata assets.
@@ -195,7 +195,7 @@ VERSION=0.1.0 REVISION=1 CUSTODIA_RELEASE_CONFIRM=YES ./scripts/github-release-a
 VERSION=0.1.0 REVISION=1 ./scripts/github-release-assets.sh verify
 ```
 
-`upload` attaches all local `.deb`, `.rpm`, `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json` and `custodia-sbom.spdx.json` files to `v$VERSION` with `gh release upload --clobber`. Set `CUSTODIA_RELEASE_TAG` when the tag is not `v$VERSION`, and set `CUSTODIA_GITHUB_REPO=owner/repo` when uploading outside the checked-out repository.
+`upload` attaches the local `.deb`/`.rpm` artifacts matching `VERSION`, `REVISION` and `PACKAGE_NAMES`, plus `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json` and `custodia-sbom.spdx.json`, to `v$VERSION` with `gh release upload --clobber`. Set `CUSTODIA_RELEASE_TAG` when the tag is not `v$VERSION`, and set `CUSTODIA_GITHUB_REPO=owner/repo` when uploading outside the checked-out repository.
 
 ## Automated local GitHub release flow
 
