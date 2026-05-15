@@ -18,6 +18,9 @@ usr/share/doc/custodia/LITE_BACKUP_RESTORE.md
 usr/share/doc/custodia/PRODUCTION_READINESS_GATE.md
 usr/share/doc/custodia/PRODUCTION_EVIDENCE.md
 usr/share/doc/custodia/RELEASE_READINESS_MATRIX.md
+usr/share/doc/custodia/SECURITY_MODEL.md
+usr/share/doc/custodia/THREAT_MODEL.md
+usr/share/doc/custodia/API_COMPATIBILITY_POLICY.md
 usr/share/doc/custodia/SECURITY_HARDENING_FINAL_REVIEW.md
 usr/share/doc/custodia/BARE_METAL_FULL_INSTALL.md
 usr/share/doc/custodia/KUBERNETES_BOOTSTRAP_MATERIAL.md

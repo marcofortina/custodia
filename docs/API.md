@@ -1,5 +1,7 @@
 # Custodia API
 
+Compatibility promises for this API are defined in [`API_COMPATIBILITY_POLICY.md`](API_COMPATIBILITY_POLICY.md). The server security boundary is defined in [`THREAT_MODEL.md`](THREAT_MODEL.md) and [`SECURITY_MODEL.md`](SECURITY_MODEL.md).
+
 All `/v1/*` routes require mTLS. The authenticated `client_id` is extracted from the client certificate SAN/CN and mapped to an active row in `clients`. JSON request bodies must use `Content-Type: application/json`, are capped at 1 MiB and must contain a single JSON value.
 
 ## Secret addressing

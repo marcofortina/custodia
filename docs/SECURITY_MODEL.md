@@ -1,5 +1,7 @@
 # Security model
 
+This document summarizes the implemented security model. The versioned pre-1.0 threat model is [`THREAT_MODEL.md`](THREAT_MODEL.md), and compatibility promises are defined in [`API_COMPATIBILITY_POLICY.md`](API_COMPATIBILITY_POLICY.md).
+
 ## Cryptographic boundary
 
 The server never receives plaintext, DEKs, private keys or interpretable cryptographic material. It stores and returns opaque transport fields plus optional application public-key metadata:

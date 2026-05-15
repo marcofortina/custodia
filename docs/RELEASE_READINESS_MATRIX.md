@@ -29,7 +29,7 @@ not different products and they are not different server binaries.
 | Kubernetes runtime smoke | already installed release-candidate cluster | Kubernetes promotion | [`KUBERNETES_RUNTIME_SMOKE.md`](KUBERNETES_RUNTIME_SMOKE.md) |
 | Operational readiness smoke | running bare-metal or Kubernetes endpoint | endpoint promotion | [`OPERATIONAL_READINESS_SMOKE.md`](OPERATIONAL_READINESS_SMOKE.md) |
 | Production config gate | offline production evidence workstation | production promotion | [`PRODUCTION_READINESS_GATE.md`](PRODUCTION_READINESS_GATE.md) |
-| Security hardening final review | release manager / security reviewer | production-ready claim | [`SECURITY_HARDENING_FINAL_REVIEW.md`](SECURITY_HARDENING_FINAL_REVIEW.md) |
+| Security hardening final review | release manager / security reviewer | production-ready claim | [`SECURITY_HARDENING_FINAL_REVIEW.md`](SECURITY_HARDENING_FINAL_REVIEW.md), [`THREAT_MODEL.md`](THREAT_MODEL.md), [`API_COMPATIBILITY_POLICY.md`](API_COMPATIBILITY_POLICY.md) |
 | External evidence gate | offline production evidence workstation | Fort Knox production claim | [`PRODUCTION_EVIDENCE.md`](PRODUCTION_EVIDENCE.md) |
 
 ## Publishing runbook
@@ -72,6 +72,7 @@ captured for the exact commit and artifacts being shipped:
 - Kubernetes runtime smoke evidence for Kubernetes artifacts;
 - operational readiness smoke evidence for at least one bootstrapped endpoint;
 - completed security hardening final review with findings and promotion decision;
+- threat-model and API/CLI/storage compatibility review for releases that claim stable compatibility;
 - `custodia-admin production check` output for the production environment file;
 - `custodia-admin production evidence-check` output for external infrastructure
   evidence.
