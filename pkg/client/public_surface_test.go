@@ -180,6 +180,62 @@ func TestSDKCapabilityMatrixDocumentsKeyspaceParity(t *testing.T) {
 	}
 }
 
+func TestGoSDKIssue40DocsAndExamplesStayWired(t *testing.T) {
+	repoRoot := filepath.Join("..", "..")
+	checks := []struct {
+		path   string
+		tokens []string
+	}{
+		{
+			path: filepath.Join("docs", "GO_CLIENT_SDK.md"),
+			tokens: []string{
+				"## Import and transport configuration",
+				"pkg/client/examples_test.go",
+				"Compatibility expectations for publishing are captured by [`SDK_PUBLISHING_READINESS.md`](SDK_PUBLISHING_READINESS.md)",
+			},
+		},
+		{
+			path: filepath.Join("docs", "SDK_PUBLISHING_READINESS.md"),
+			tokens: []string{
+				"Go public SDK surface is stable enough for external consumers, ships package-level documentation",
+				"Go SDK examples compile against current `namespace/key` transport semantics",
+			},
+		},
+		{
+			path: filepath.Join("pkg", "client", "doc.go"),
+			tokens: []string{
+				"Package client is the Go SDK surface",
+				"Custodia servers remain metadata-only",
+			},
+		},
+		{
+			path: filepath.Join("pkg", "client", "examples_test.go"),
+			tokens: []string{
+				"func ExampleClient_CreateSecretPayload()",
+				"func ExampleClient_GetSecretPayloadByKey()",
+				"func ExampleClient_CreateSecretVersionPayloadByKey()",
+				"func ExampleClient_ShareSecretPayloadByKey()",
+				"func ExampleClient_DeleteSecretByKey()",
+				"func ExampleCryptoClient_CreateEncryptedSecret()",
+				"func ExampleCryptoClient_ReadDecryptedSecretByKey()",
+			},
+		},
+	}
+
+	for _, check := range checks {
+		payload, err := os.ReadFile(filepath.Join(repoRoot, check.path))
+		if err != nil {
+			t.Fatalf("ReadFile(%s) error = %v", check.path, err)
+		}
+		content := string(payload)
+		for _, token := range check.tokens {
+			if !strings.Contains(content, token) {
+				t.Fatalf("%s is missing %q", check.path, token)
+			}
+		}
+	}
+}
+
 func TestClientCryptoThreatModelIsDocumented(t *testing.T) {
 	repoRoot := filepath.Join("..", "..")
 	for _, path := range []string{

@@ -166,6 +166,14 @@ func (c *Client) CreateSecretVersionPayloadByKey(namespace, key string, req Crea
 	return ref, c.doJSON(http.MethodPost, path, req, &ref)
 }
 
+func (c *Client) DeleteSecretByKey(namespace, key string, cascade bool) error {
+	path, err := secretByKeyPath("/v1/secrets/by-key", namespace, key, cascade)
+	if err != nil {
+		return err
+	}
+	return c.doJSON(http.MethodDelete, path, nil, nil)
+}
+
 func secretByKeyPath(basePath, namespace, key string, cascade bool) (string, error) {
 	return secretByKeyPathWithLimit(basePath, namespace, key, cascade, 0)
 }

@@ -1,8 +1,10 @@
 # Custodia Go client SDK
 
-`pkg/client` is the repository Go transport client for Custodia. Phase 5 stabilizes the transport SDK surface by adding public transport types and methods that do not require external users to import `custodia/internal/*` packages.
+`pkg/client` is the repository Go SDK for Custodia. Phase 5 stabilizes the public transport and high-level crypto surface so external consumers can import `custodia/pkg/client` without importing `custodia/internal/*` packages.
 
 ## Current scope
+
+The Go client is currently distributed as a monorepo source snapshot and through the Linux `custodia-sdk` package. Native Go module publication remains blocked by [`SDK_PUBLISHING_READINESS.md`](SDK_PUBLISHING_READINESS.md) until the 0.5.0 SDK gates are complete.
 
 The Go client has two layers:
 
@@ -10,6 +12,32 @@ The Go client has two layers:
 - high-level crypto helpers that encrypt plaintext, create recipient envelopes, decrypt authorized payloads and share existing DEKs locally before calling the transport layer.
 
 The server still receives only opaque ciphertext, crypto metadata, recipient envelopes and optional application public-key metadata. Recipient public keys come from the caller-provided resolver; that resolver may use Custodia's published public-key metadata, pinned files or another trust source. Private keys remain behind the caller-provided private-key provider or the local X25519 helper.
+
+## Import and transport configuration
+
+Repository consumers import the Go SDK from the repository module path:
+
+```go
+import custodia "custodia/pkg/client"
+```
+
+External consumers should replace the module path with the canonical published module path once the Go SDK is published. Until then, use a repository checkout or the `custodia-sdk` source snapshot.
+
+Create a transport client with mTLS material from the per-client profile:
+
+```go
+transport, err := custodia.New(custodia.Config{
+    ServerURL: "https://custodia.example.internal:8443",
+    CertFile:  "/home/alice/.config/custodia/client_alice/client_alice.crt",
+    KeyFile:   "/home/alice/.config/custodia/client_alice/client_alice.key",
+    CAFile:    "/home/alice/.config/custodia/client_alice/ca.crt",
+})
+if err != nil {
+    return err
+}
+```
+
+`New` uses TLS client certificate authentication and a finite HTTP timeout. Errors returned by transport methods are Go errors derived from TLS setup, HTTP execution, status-code handling or JSON encoding/decoding. Callers must not log request payloads or secret material when wrapping those errors.
 
 ## Public transport methods
 
@@ -28,6 +56,8 @@ created, err := c.CreateSecretPayload(client.CreateSecretPayload{
 ```
 
 These types and methods are SDK-facing transport APIs. `pkg/client/types.go` and `pkg/client/public_transport.go` deliberately avoid importing or exposing `custodia/internal/*`. New integrations should prefer the `namespace/key` helpers for read, share, revoke, version metadata, access metadata, update and delete flows.
+
+Additional transport examples are compiled in `pkg/client/examples_test.go`, including `CreateSecretPayload`, `GetSecretPayloadByKey`, `CreateSecretVersionPayloadByKey`, `ShareSecretPayloadByKey` and `DeleteSecretByKey`.
 
 
 ## Public operational methods
@@ -78,7 +108,7 @@ err = cryptoClient.ShareEncryptedSecretByKey(ctx, "db01", "user:sys", client.Sha
 })
 ```
 
-`CreateEncryptedSecret` automatically includes the current private-key provider client id as a recipient so the creator can read the secret later. `CreateEncryptedSecretVersionByKey` encrypts a new version locally and posts only opaque payloads. `ShareEncryptedSecretByKey` opens the caller's existing envelope locally to recover the DEK, creates a new envelope for the target recipient, and sends only that envelope to the server.
+`CreateEncryptedSecret` automatically includes the current private-key provider client id as a recipient so the creator can read the secret later. `CreateEncryptedSecretVersionByKey` encrypts a new version locally and posts only opaque payloads. `ShareEncryptedSecretByKey` opens the caller's existing envelope locally to recover the DEK, creates a new envelope for the target recipient, and sends only that envelope to the server. Compiled examples in `pkg/client/examples_test.go` cover `NewCryptoClient`, `CreateEncryptedSecret` and `ReadDecryptedSecretByKey`.
 
 Crypto metadata persists the content nonce and canonical AAD binding used by the client. This avoids relying on server-side plaintext names during read paths and keeps decryption deterministic across create/read/share/version operations.
 
@@ -108,12 +138,15 @@ Internal-model methods such as `CreateSecret`, `GetSecret`, `ListSecretVersions`
 
 The repository includes a compile test that creates a temporary external Go module, imports `custodia/pkg/client`, and verifies that the public Phase 5 SDK types compile without importing `custodia/internal/*`.
 
+Compatibility expectations for publishing are captured by [`SDK_PUBLISHING_READINESS.md`](SDK_PUBLISHING_READINESS.md). For Go specifically, the checklist requires a stable public SDK surface, no `custodia/internal/*` exposure, `namespace/key` public workflow helpers, local-only crypto material handling, and documented internal-model helpers.
 
 ## Public surface guardrails
 
 The repository enforces two guardrails:
 
 - `pkg/client/types.go` and `pkg/client/public_transport.go` must not import `custodia/internal/*`;
-- an external temporary Go module must compile against the public transport types and methods.
+- package-level Go documentation in `pkg/client/doc.go` must preserve the transport/crypto boundary;
+- examples in `pkg/client/examples_test.go` must compile against the current public `namespace/key` transport and crypto helpers;
+- an external temporary Go module must compile against the public transport and crypto types and methods.
 
 These guardrails keep the transport and high-level crypto SDK usable by external consumers without requiring imports from `custodia/internal/*`.
