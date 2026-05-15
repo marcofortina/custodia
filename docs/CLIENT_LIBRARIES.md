@@ -100,7 +100,7 @@ High-level crypto clients persist enough metadata for deterministic read/decrypt
 }
 ```
 
-The exact schema is defined by the client crypto specification and verified by shared vectors.
+The exact schema is defined by the client crypto specification and verified by the versioned shared vectors documented in [`SDK_TEST_VECTORS.md`](SDK_TEST_VECTORS.md).
 
 ## Common operations
 
@@ -187,6 +187,9 @@ Useful targets:
 
 ```bash
 make test-client-crypto
+python3 -m unittest discover -s clients/python/tests
+npm test --prefix clients/node
+make test-rust-client
 make test-python-client
 make test-node-client
 make test-java-client

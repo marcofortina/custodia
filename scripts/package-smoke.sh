@@ -133,7 +133,10 @@ smoke_extracted_tree() {
       require_file "$root" usr/share/custodia/sdk/clients/cpp/include/custodia/client.hpp
       require_file "$root" usr/share/custodia/sdk/clients/rust/Cargo.toml
       require_file "$root" usr/share/custodia/sdk/clients/bash/custodia.bash
+      require_file "$root" usr/share/custodia/sdk/testdata/client-crypto/manifest.json
+      require_file "$root" usr/share/custodia/sdk/testdata/client-crypto/README.md
       require_file "$root" usr/share/custodia/sdk/testdata/client-crypto/v1/create_secret_single_recipient.json
+      require_file "$root" usr/share/custodia/sdk/testdata/client-crypto/v1/wrong_recipient_fails.json
       ;;
     *)
       fail "unknown package tree: $package_name"
