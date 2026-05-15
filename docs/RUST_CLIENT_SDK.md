@@ -21,7 +21,7 @@ let client = CustodiaClient::new(CustodiaClientConfig::new(
 
 ## Package readiness
 
-`clients/rust/Cargo.toml` documents the intended crates.io package metadata, repository and documentation links while keeping `publish = false`. Registry publication remains blocked by the SDK publishing readiness checklist until ownership, release evidence and compatibility gates are complete.
+`clients/rust/Cargo.toml` documents the intended crates.io package metadata, repository and documentation links while keeping `publish = false`. Registry publication remains blocked by the SDK publishing readiness checklist until ownership, release evidence and compatibility gates are complete and explicitly approved as part of a release.
 
 ## Opaque secret payloads
 

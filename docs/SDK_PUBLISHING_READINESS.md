@@ -60,7 +60,7 @@ All items must be complete before any registry publish command is run.
 - [x] `make test-node-client` passes where Node.js dependencies are installed.
 - [x] `make test-rust-client` passes where Rust is installed.
 - [x] `make test-java-client` passes where a supported JDK is installed.
-- [x] Shared crypto vector tests pass for the current v1 consumers and the vector versioning model is documented; the compatibility matrix is documented in [`SDK_EXAMPLES_AND_COMPATIBILITY.md`](SDK_EXAMPLES_AND_COMPATIBILITY.md).
+- [x] Shared crypto vector tests pass for the current v1 consumers; the vector versioning model is documented in [`SDK_TEST_VECTORS.md`](SDK_TEST_VECTORS.md), and the compatibility matrix is documented in [`SDK_EXAMPLES_AND_COMPATIBILITY.md`](SDK_EXAMPLES_AND_COMPATIBILITY.md).
 - [ ] CI documents skipped language checks as toolchain skips, not silent success.
 
 ### Security and compatibility
