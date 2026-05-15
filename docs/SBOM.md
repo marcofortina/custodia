@@ -5,7 +5,7 @@ Custodia release builds can emit a lightweight SPDX 2.3 JSON SBOM.
 Generate it after checking out the release source tree:
 
 ```bash
-VERSION=0.1.0 make sbom
+VERSION=1.0.0 make sbom
 ```
 
 The output is:

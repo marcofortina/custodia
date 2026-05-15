@@ -30,8 +30,8 @@ Do not mix package files from one version with smoke scripts or package manifest
 From the repository checkout used to produce the release candidate:
 
 ```bash
-VERSION=0.1.0 REVISION=1 PACKAGE_NAMES="server client sdk" make package-linux
-VERSION=0.1.0 REVISION=1 make package-checksums
+VERSION=1.0.0 REVISION=1 PACKAGE_NAMES="server client sdk" make package-linux
+VERSION=1.0.0 REVISION=1 make package-checksums
 cd dist/packages && sha256sum -c SHA256SUMS
 ```
 
@@ -42,7 +42,7 @@ Copy the relevant artifacts to the clean test machine. The smoke reads packages 
 For post-release validation, use the published assets and the matching source archive. The packages come from GitHub Releases; the source archive provides `scripts/package-install-smoke.sh` and the expected package manifests used by that script.
 
 ```bash
-export CUSTODIA_RELEASE=0.1.0
+export CUSTODIA_RELEASE=1.0.0
 export CUSTODIA_RELEASE_REPO=marcofortina/custodia
 
 rm -rf /tmp/custodia-package-smoke

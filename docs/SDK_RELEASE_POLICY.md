@@ -80,10 +80,10 @@ For repository release artifacts:
 
 ```bash
 make release-check
-VERSION=0.1.0 REVISION=1 PACKAGE_NAMES="server client sdk" make package-linux
-VERSION=0.1.0 REVISION=1 make package-checksums
+VERSION=1.0.0 REVISION=1 PACKAGE_NAMES="server client sdk" make package-linux
+VERSION=1.0.0 REVISION=1 make package-checksums
 make package-smoke
-VERSION=0.1.0 make sbom
+VERSION=1.0.0 make sbom
 ```
 
 Release artifacts should include:

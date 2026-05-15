@@ -32,7 +32,7 @@ Use that block before commands so an operator can stop before making unsafe assu
 - [`PACKAGE_INSTALL_SMOKE.md`](PACKAGE_INSTALL_SMOKE.md)
 - [`RELEASE_CHECK.md`](RELEASE_CHECK.md)
 - [`RELEASE_PUBLISHING.md`](RELEASE_PUBLISHING.md)
-- [`RELEASE_NOTES_0_1_0.md`](RELEASE_NOTES_0_1_0.md)
+- [`RELEASE_NOTES_1_0_0.md`](RELEASE_NOTES_1_0_0.md)
 - [`REPRODUCIBLE_BUILDS.md`](REPRODUCIBLE_BUILDS.md)
 - [`SBOM.md`](SBOM.md)
 

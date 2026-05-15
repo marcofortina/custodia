@@ -15,4 +15,4 @@ Wiki pages:
 - [Phase 6 Closure](https://github.com/marcofortina/custodia/wiki/Phase-6-Closure)
 - [Implementation Ledger](https://github.com/marcofortina/custodia/wiki/Implementation-Ledger)
 
-Current product documentation remains in this repository under `docs/` and is versioned with code changes. The 0.1.0 release scope is summarized in [`RELEASE_NOTES_0_1_0.md`](RELEASE_NOTES_0_1_0.md).
+Current product documentation remains in this repository under `docs/` and is versioned with code changes. The `v0.x` tags are development checkpoints and milestone history; the first public release scope is summarized in [`RELEASE_NOTES_1_0_0.md`](RELEASE_NOTES_1_0_0.md).

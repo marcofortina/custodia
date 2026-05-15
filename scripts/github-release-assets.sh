@@ -31,7 +31,7 @@ Commands:
   help      Show this help.
 
 Required for all release commands:
-  VERSION=0.1.0
+  VERSION=1.0.0
 
 Required for upload:
   CUSTODIA_RELEASE_CONFIRM=YES
@@ -50,9 +50,9 @@ Generated release evidence:
   custodia-sbom.spdx.json
 
 Examples:
-  VERSION=0.1.0 REVISION=1 ./scripts/github-release-assets.sh prepare
-  VERSION=0.1.0 REVISION=1 CUSTODIA_RELEASE_CONFIRM=YES ./scripts/github-release-assets.sh upload
-  VERSION=0.1.0 REVISION=1 ./scripts/github-release-assets.sh verify
+  VERSION=1.0.0 REVISION=1 ./scripts/github-release-assets.sh prepare
+  VERSION=1.0.0 REVISION=1 CUSTODIA_RELEASE_CONFIRM=YES ./scripts/github-release-assets.sh upload
+  VERSION=1.0.0 REVISION=1 ./scripts/github-release-assets.sh verify
 USAGE
 }
 
@@ -67,7 +67,7 @@ fail() {
 
 require_version() {
   if [ -z "${VERSION:-}" ]; then
-    fail "VERSION is required, for example: VERSION=0.1.0 REVISION=1 ./scripts/github-release-assets.sh prepare"
+    fail "VERSION is required, for example: VERSION=1.0.0 REVISION=1 ./scripts/github-release-assets.sh prepare"
   fi
 }
 

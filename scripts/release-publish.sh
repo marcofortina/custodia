@@ -11,7 +11,7 @@ set -euo pipefail
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root_dir"
 
-: "${VERSION:?VERSION is required, for example VERSION=0.1.0}"
+: "${VERSION:?VERSION is required, for example VERSION=1.0.0}"
 : "${REVISION:=1}"
 : "${RELEASE_TAG:=v$VERSION}"
 : "${RELEASE_TITLE:=Custodia $VERSION}"
@@ -47,7 +47,7 @@ Commands:
   help        Show this help.
 
 Required:
-  VERSION                       Release version, for example 0.1.0.
+  VERSION                       Release version, for example 1.0.0.
   RELEASE_CONFIRM=YES           Required for draft/publish.
 
 Common environment:
@@ -62,9 +62,9 @@ Common environment:
   RELEASE_ALLOW_EXISTING=NO     Allow uploading to an existing GitHub release. Default: NO.
 
 Examples:
-  VERSION=0.1.0 REVISION=1 ./scripts/release-publish.sh dry-run
-  VERSION=0.1.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh draft
-  VERSION=0.1.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh publish
+  VERSION=1.0.0 REVISION=1 ./scripts/release-publish.sh dry-run
+  VERSION=1.0.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh draft
+  VERSION=1.0.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh publish
 USAGE
 }
 
