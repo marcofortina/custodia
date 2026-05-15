@@ -1,6 +1,6 @@
 # Custodia SDK publishing readiness checklist
 
-This checklist is the release gate for publishing Custodia SDKs to language package registries. It coordinates the language-specific SDK work tracked for the `0.5.0 — SDK maturity` milestone and keeps registry publishing blocked until the requirements below are complete.
+This checklist is the release gate for publishing Custodia SDKs to language package registries. It records the language-specific SDK work tracked for the `0.5.0 — SDK maturity` milestone and keeps registry publishing blocked until the remaining requirements below are explicitly completed and approved as part of a release.
 
 The Linux `custodia-sdk` package is a separate artifact. It ships monorepo SDK source snapshots, shared crypto vectors and SDK documentation; it does not prove that native language registry packages are ready.
 
@@ -28,6 +28,8 @@ Registry ownership must be verified immediately before the first publish. The ta
 | Rust | `clients/rust` | `custodia-client` on crates.io | crates.io crate ownership controlled by the Custodia maintainer account or approved organization | #43 |
 | Java | `clients/java` | Maven coordinate aligned with package `dev.custodia.client`, for example `dev.custodia:custodia-client` once ownership is verified | Maven Central namespace ownership controlled by the Custodia maintainer account or approved organization | #44 |
 | Test vectors and docs | `testdata/client-crypto/`, `docs/` | Versioned shared fixtures, vector manifest and compatibility matrix shipped with every SDK release | Repository release assets and `custodia-sdk` package controlled by the Custodia maintainer account | #45, #46 |
+
+The issue column is traceability for the 0.5.0 readiness work. Closing those issues does not approve registry publication by itself; the unchecked gates below must still be completed during a release process.
 
 C++ is currently shipped as monorepo source and through the Linux `custodia-sdk` package. Do not add a public C++ package registry target without a dedicated issue that defines the registry, package coordinate, owner and CI gate.
 
@@ -58,7 +60,7 @@ All items must be complete before any registry publish command is run.
 - [x] `make test-node-client` passes where Node.js dependencies are installed.
 - [x] `make test-rust-client` passes where Rust is installed.
 - [x] `make test-java-client` passes where a supported JDK is installed.
-- [x] Shared crypto vector tests pass for the current v1 consumers and the vector versioning model is documented; #46 remains the compatibility-matrix gate.
+- [x] Shared crypto vector tests pass for the current v1 consumers and the vector versioning model is documented; the compatibility matrix is documented in [`SDK_EXAMPLES_AND_COMPATIBILITY.md`](SDK_EXAMPLES_AND_COMPATIBILITY.md).
 - [ ] CI documents skipped language checks as toolchain skips, not silent success.
 
 ### Security and compatibility
@@ -79,6 +81,6 @@ All items must be complete before any registry publish command is run.
 
 ## Completion rule
 
-#34 can close when this checklist exists, is linked from the SDK documentation index, is shipped with the `custodia-sdk` package and clearly blocks external registry publishing until the language-specific issues complete.
+#34 is the coordination checklist issue. Closing #34 and the language-specific follow-up issues records repository readiness work, but it does not approve registry publication.
 
 Do not close #40, #41, #42, #43, #44, #45 or #46 from this coordination checklist alone.

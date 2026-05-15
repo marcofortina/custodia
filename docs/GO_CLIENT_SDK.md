@@ -4,7 +4,7 @@
 
 ## Current scope
 
-The Go client is currently distributed as a monorepo source snapshot and through the Linux `custodia-sdk` package. Native Go module publication remains blocked by [`SDK_PUBLISHING_READINESS.md`](SDK_PUBLISHING_READINESS.md) until the 0.5.0 SDK gates are complete.
+The Go client is currently distributed as a monorepo source snapshot and through the Linux `custodia-sdk` package. Native Go module publication remains blocked by [`SDK_PUBLISHING_READINESS.md`](SDK_PUBLISHING_READINESS.md) until the registry publishing gate is explicitly completed and approved as part of a release.
 
 The Go client has two layers:
 

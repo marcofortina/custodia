@@ -1,6 +1,6 @@
 # Python client
 
-This package is the repository Python SDK source snapshot for Custodia. The intended public registry coordinate is `custodia-client` on PyPI, but registry publishing stays blocked until the SDK publishing readiness checklist and #41 are complete. No registry publishing is performed from this package metadata alone.
+This package is the repository Python SDK source snapshot for Custodia. The intended public registry coordinate is `custodia-client` on PyPI, but registry publishing stays blocked until the SDK publishing readiness checklist is explicitly completed and approved as part of a release. No registry publishing is performed from this package metadata alone.
 
 This client provides both the raw transport helpers and the Phase 5 high-level crypto wrapper. The crypto wrapper encrypts/decrypts locally and never asks the server to decrypt anything; applications may resolve public keys from Custodia metadata, pinned files or another trust source.
 
