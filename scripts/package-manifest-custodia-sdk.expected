@@ -11,7 +11,14 @@ usr/share/custodia/sdk/clients/python/custodia_client/__init__.py
 usr/share/custodia/sdk/clients/python/examples/keyspace_transport.py
 usr/share/custodia/sdk/clients/python/examples/high_level_crypto.py
 usr/share/custodia/sdk/clients/python/tests/test_package_readiness.py
+usr/share/custodia/sdk/clients/node/README.md
+usr/share/custodia/sdk/clients/node/package.json
 usr/share/custodia/sdk/clients/node/src/index.js
+usr/share/custodia/sdk/clients/node/src/index.d.ts
+usr/share/custodia/sdk/clients/node/src/crypto.js
+usr/share/custodia/sdk/clients/node/examples/keyspace_transport.mjs
+usr/share/custodia/sdk/clients/node/examples/high_level_crypto.mjs
+usr/share/custodia/sdk/clients/node/test/package-readiness.test.js
 usr/share/custodia/sdk/clients/java/src/main/java/dev/custodia/client/CustodiaClient.java
 usr/share/custodia/sdk/clients/cpp/include/custodia/client.hpp
 usr/share/custodia/sdk/clients/rust/Cargo.toml

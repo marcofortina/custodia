@@ -121,7 +121,11 @@ smoke_extracted_tree() {
       require_file "$root" usr/share/custodia/sdk/clients/go/pkg/client/client.go
       require_file "$root" usr/share/custodia/sdk/clients/go/internal/clientcrypto/metadata.go
       require_file "$root" usr/share/custodia/sdk/clients/python/custodia_client/__init__.py
+      require_file "$root" usr/share/custodia/sdk/clients/node/package.json
       require_file "$root" usr/share/custodia/sdk/clients/node/src/index.js
+      require_file "$root" usr/share/custodia/sdk/clients/node/src/index.d.ts
+      require_file "$root" usr/share/custodia/sdk/clients/node/examples/keyspace_transport.mjs
+      require_file "$root" usr/share/custodia/sdk/clients/node/examples/high_level_crypto.mjs
       require_file "$root" usr/share/custodia/sdk/clients/java/src/main/java/dev/custodia/client/CustodiaClient.java
       require_file "$root" usr/share/custodia/sdk/clients/cpp/include/custodia/client.hpp
       require_file "$root" usr/share/custodia/sdk/clients/rust/Cargo.toml

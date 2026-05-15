@@ -2,7 +2,7 @@
 
 `clients/node` is the repository Node.js / TypeScript-facing client for Custodia. It includes both the raw transport client and a high-level client-side crypto wrapper.
 
-The runtime code is dependency-free JavaScript using Node built-ins. The package remains `private` until a real public package name and release process are chosen.
+The runtime code is dependency-free JavaScript using Node built-ins. The intended npm package coordinate is `@custodia/client`; npm `@custodia` scope ownership must be controlled by the Custodia maintainer account or approved organization before any publish. The package remains `private` and registry publishing remains blocked by `SDK_PUBLISHING_READINESS.md` until the 0.5.0 gates are complete.
 
 ## Security boundary
 
@@ -14,6 +14,14 @@ The Node client follows the same boundary as Go and Python:
 - recipient public keys are resolved by the application through `PublicKeyResolver`; Custodia public-key metadata can be used as a discovery source but not as a trust decision;
 - private keys are supplied by a local `PrivateKeyProvider`.
 
+## Package and runtime support
+
+- Runtime target: Node.js `>=20`; CI validates the package with Node.js 24.
+- Module format: ESM (`type: module`).
+- Type declarations: `src/index.d.ts`.
+- Package export: `.` resolves to `src/index.js` and `src/index.d.ts`.
+- Publish gate: keep `private: true` until `SDK_PUBLISHING_READINESS.md` and #42 are complete.
+
 ## Install from the monorepo
 
 ```bash
@@ -22,72 +30,22 @@ npm install ./clients/node
 
 ## Raw transport example
 
+The checked example lives in `clients/node/examples/keyspace_transport.mjs` and is covered by `npm test --prefix clients/node`. It uses the public `namespace/key` transport helpers and sends only opaque ciphertext/envelope strings.
+
 ```js
-import { CustodiaClient, PermissionAll } from "@custodia/client";
+import { createOpaqueSecret } from "./examples/keyspace_transport.mjs";
 
-const client = new CustodiaClient({
-  serverUrl: "https://vault.example:8443",
-  certFile: "client.crt",
-  keyFile: "client.key",
-  caFile: "ca.crt",
-});
-
-const created = await client.createSecretPayload({
-  namespace: "db01",
-  key: "user:sys",
-  ciphertext: "base64-opaque-ciphertext",
-  envelopes: [
-    { client_id: "client_alice", envelope: "base64-opaque-envelope" },
-  ],
-  permissions: PermissionAll,
-  crypto_metadata: { version: "custodia.client-crypto.v1" },
-});
-
-const secret = await client.getSecretPayloadByKey("db01", "user:sys");
-console.log(created.version_id, secret.key);
+await createOpaqueSecret();
 ```
 
 ## High-level crypto example
 
+The checked example lives in `clients/node/examples/high_level_crypto.mjs` and is covered by `npm test --prefix clients/node`. It encrypts plaintext locally and sends only ciphertext, crypto metadata and recipient envelopes to the server.
+
 ```js
-import {
-  CryptoOptions,
-  CustodiaClient,
-  StaticPrivateKeyProvider,
-  StaticPublicKeyResolver,
-  X25519PrivateKeyHandle,
-  deriveX25519RecipientPublicKey,
-} from "@custodia/client";
+import { createEncryptedSecret } from "./examples/high_level_crypto.mjs";
 
-const client = new CustodiaClient({
-  serverUrl: "https://vault.example:8443",
-  certFile: "client.crt",
-  keyFile: "client.key",
-  caFile: "ca.crt",
-});
-
-const aliceKey = new X25519PrivateKeyHandle({
-  clientID: "client_alice",
-  privateKey: alicePrivateKeyBytes,
-});
-
-const crypto = client.withCrypto(new CryptoOptions({
-  privateKeyProvider: new StaticPrivateKeyProvider(aliceKey),
-  publicKeyResolver: new StaticPublicKeyResolver({
-    client_alice: deriveX25519RecipientPublicKey("client_alice", alicePrivateKeyBytes),
-    client_bob: bobRecipientPublicKey,
-  }),
-}));
-
-await crypto.createEncryptedSecretByKey({
-  namespace: "db01",
-  key: "user:sys",
-  plaintext: Buffer.from("secret"),
-  recipients: ["client_bob"],
-});
-
-const decrypted = await crypto.readDecryptedSecretByKey("db01", "user:sys");
-console.log(decrypted.plaintext.toString("utf8"));
+await createEncryptedSecret();
 ```
 
 ## Public transport methods
@@ -153,5 +111,7 @@ Run:
 make test-node-client
 node --check clients/node/src/index.js
 node --check clients/node/src/crypto.js
+node --check clients/node/examples/keyspace_transport.mjs
+node --check clients/node/examples/high_level_crypto.mjs
 npm test --prefix clients/node
 ```

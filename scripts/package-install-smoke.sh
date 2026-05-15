@@ -395,7 +395,11 @@ verify_sdk() {
   require_path /usr/share/custodia/sdk/clients/go/go.mod
   require_path /usr/share/custodia/sdk/clients/go/pkg/client/client.go
   require_path /usr/share/custodia/sdk/clients/python/custodia_client/__init__.py
+  require_path /usr/share/custodia/sdk/clients/node/package.json
   require_path /usr/share/custodia/sdk/clients/node/src/index.js
+  require_path /usr/share/custodia/sdk/clients/node/src/index.d.ts
+  require_path /usr/share/custodia/sdk/clients/node/examples/keyspace_transport.mjs
+  require_path /usr/share/custodia/sdk/clients/node/examples/high_level_crypto.mjs
   require_path /usr/share/custodia/sdk/clients/java/src/main/java/dev/custodia/client/CustodiaClient.java
   require_path /usr/share/custodia/sdk/clients/cpp/include/custodia/client.hpp
   require_path /usr/share/custodia/sdk/clients/rust/Cargo.toml

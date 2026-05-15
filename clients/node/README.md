@@ -9,69 +9,38 @@ It includes:
 
 Runtime code uses Node built-ins only and does not add npm dependencies.
 
+## Package readiness
+
+- Intended npm package name: `@custodia/client`.
+- Required registry owner/control before publish: npm `@custodia` scope controlled by the Custodia maintainer account or approved organization.
+- Runtime target: Node.js `>=20`; CI currently validates with Node.js 24.
+- Module format: ESM (`type: module`) with TypeScript declarations from `src/index.d.ts`.
+- Package exports: `.` resolves to `src/index.js` and `src/index.d.ts`.
+- No registry publishing is performed from this package. Keep `private: true` until the SDK publishing readiness checklist and #42 acceptance criteria are approved.
+
 ## Transport example
 
+The repository ships a checked example at `examples/keyspace_transport.mjs`.
+
 ```js
-import { CustodiaClient, PermissionAll } from "@custodia/client";
+import { createOpaqueSecret } from "./examples/keyspace_transport.mjs";
 
-const client = new CustodiaClient({
-  serverUrl: "https://vault.example:8443",
-  certFile: "client.crt",
-  keyFile: "client.key",
-  caFile: "ca.crt",
-});
-
-const ref = await client.createSecretPayload({
-  namespace: "db01",
-  key: "user:sys",
-  ciphertext: "base64-ciphertext",
-  envelopes: [{ client_id: "client_alice", envelope: "base64-envelope" }],
-  permissions: PermissionAll,
-  crypto_metadata: { version: "custodia.client-crypto.v1" },
-});
-
-const secret = await client.getSecretPayloadByKey("db01", "user:sys");
-console.log(ref.version_id, secret.key);
+await createOpaqueSecret();
 ```
+
+The transport example sends only opaque ciphertext and envelope strings. It does not perform local encryption; use the high-level crypto example when the Node SDK should create ciphertext and recipient envelopes locally.
 
 ## Crypto example
 
+The repository ships a checked example at `examples/high_level_crypto.mjs`.
+
 ```js
-import {
-  CryptoOptions,
-  CustodiaClient,
-  StaticPrivateKeyProvider,
-  StaticPublicKeyResolver,
-  X25519PrivateKeyHandle,
-  deriveX25519RecipientPublicKey,
-} from "@custodia/client";
+import { createEncryptedSecret } from "./examples/high_level_crypto.mjs";
 
-const client = new CustodiaClient({
-  serverUrl: "https://vault.example:8443",
-  certFile: "client.crt",
-  keyFile: "client.key",
-  caFile: "ca.crt",
-});
-
-const localKey = new X25519PrivateKeyHandle({ clientID: "client_alice", privateKey: alicePrivateKeyBytes });
-const crypto = client.withCrypto(new CryptoOptions({
-  privateKeyProvider: new StaticPrivateKeyProvider(localKey),
-  publicKeyResolver: new StaticPublicKeyResolver({
-    client_alice: deriveX25519RecipientPublicKey("client_alice", alicePrivateKeyBytes),
-    client_bob: bobRecipientPublicKey,
-  }),
-}));
-
-await crypto.createEncryptedSecretByKey({
-  namespace: "db01",
-  key: "user:sys",
-  plaintext: Buffer.from("secret"),
-  recipients: ["client_bob"],
-});
-
-const secret = await crypto.readDecryptedSecretByKey("db01", "user:sys");
-console.log(secret.plaintext.toString("utf8"));
+await createEncryptedSecret();
 ```
+
+The crypto example encrypts plaintext locally and sends only ciphertext, crypto metadata and recipient envelopes to the server. Private keys stay in application-controlled local storage.
 
 ## Checks
 
@@ -79,4 +48,6 @@ console.log(secret.plaintext.toString("utf8"));
 npm test --prefix clients/node
 node --check clients/node/src/index.js
 node --check clients/node/src/crypto.js
+node --check clients/node/examples/keyspace_transport.mjs
+node --check clients/node/examples/high_level_crypto.mjs
 ```
