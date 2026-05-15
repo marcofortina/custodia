@@ -19,7 +19,12 @@ usr/share/custodia/sdk/clients/node/src/crypto.js
 usr/share/custodia/sdk/clients/node/examples/keyspace_transport.mjs
 usr/share/custodia/sdk/clients/node/examples/high_level_crypto.mjs
 usr/share/custodia/sdk/clients/node/test/package-readiness.test.js
+usr/share/custodia/sdk/clients/java/pom.xml
+usr/share/custodia/sdk/clients/java/README.md
 usr/share/custodia/sdk/clients/java/src/main/java/dev/custodia/client/CustodiaClient.java
+usr/share/custodia/sdk/clients/java/examples/KeyspaceTransportExample.java
+usr/share/custodia/sdk/clients/java/examples/HighLevelCryptoExample.java
+usr/share/custodia/sdk/clients/java/src/test/java/dev/custodia/client/CustodiaPackageReadinessTest.java
 usr/share/custodia/sdk/clients/cpp/include/custodia/client.hpp
 usr/share/custodia/sdk/clients/rust/Cargo.toml
 usr/share/custodia/sdk/clients/rust/README.md
