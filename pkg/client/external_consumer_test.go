@@ -104,6 +104,7 @@ func TestPublicMethodSignaturesCompile(t *testing.T) {
     var _ func(*custodia.Client, string, string) (custodia.SecretReadResponse, error) = (*custodia.Client).GetSecretPayloadByKey
     var _ func(*custodia.Client, custodia.CreateSecretPayload) (custodia.SecretVersionRef, error) = (*custodia.Client).CreateSecretPayload
     var _ func(*custodia.Client, string, string, custodia.ShareSecretPayload) error = (*custodia.Client).ShareSecretPayloadByKey
+    var _ func(*custodia.Client, string, string, bool) error = (*custodia.Client).DeleteSecretByKey
     var _ func(*custodia.Client) (custodia.OperationalStatus, error) = (*custodia.Client).StatusInfo
     var _ func(*custodia.Client) (custodia.BuildInfo, error) = (*custodia.Client).VersionInfo
     var _ func(*custodia.Client) (custodia.RuntimeDiagnostics, error) = (*custodia.Client).DiagnosticsInfo

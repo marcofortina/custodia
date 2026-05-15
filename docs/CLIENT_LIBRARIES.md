@@ -21,7 +21,7 @@ The public registry publication status remains separate from repository implemen
 
 | Client | Repository path | Transport REST/mTLS | High-level crypto | Notes |
 | --- | --- | --- | --- | --- |
-| Go | `pkg/client` | Yes | Yes | Public transport, operational, and crypto APIs. |
+| Go | `pkg/client` | Yes | Yes | Public transport, operational, crypto APIs and compiled examples. |
 | Python | `clients/python` | Yes | Yes | Typed transport and HPKE-v1/AES-GCM crypto wrapper. |
 | Node.js / TypeScript | `clients/node` | Yes | Yes | Dependency-free runtime JavaScript plus TypeScript declarations. |
 | Java | `clients/java` | Yes | Yes | `java.net.http`, Java TLS configuration, and local crypto. |
@@ -39,7 +39,7 @@ A client is considered repository-official when it has:
 - timeout and retry policy;
 - shared crypto vector coverage when it implements high-level crypto.
 
-Publishing packages to external registries is a separate release activity and is governed by the SDK release policy.
+Publishing packages to external registries is a separate release activity and is governed by the SDK release policy and publishing readiness checklist.
 
 ## Transport client contract
 

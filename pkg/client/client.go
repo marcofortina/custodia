@@ -357,13 +357,13 @@ func (c *Client) ShareSecret(secretID string, req model.ShareSecretRequest) erro
 	return c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/share", req, nil)
 }
 
-// RequestAccessGrant is a monorepo internal-model helper that accepts internal model types. External consumers should use CreateAccessGrant.
+// RequestAccessGrant is a monorepo internal-model helper that accepts internal model types. External consumers should use CreateAccessGrantByKey.
 func (c *Client) RequestAccessGrant(secretID string, req model.AccessGrantRequest) (model.AccessGrantRef, error) {
 	var ref model.AccessGrantRef
 	return ref, c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/access-requests", req, &ref)
 }
 
-// ActivateAccessGrant is a monorepo internal-model helper that accepts internal model types. External consumers should use ActivateAccessGrantPayload.
+// ActivateAccessGrant is a monorepo internal-model helper that accepts internal model types. External consumers should use ActivateAccessGrantPayloadByKey.
 func (c *Client) ActivateAccessGrant(secretID, targetClientID string, req model.ActivateAccessRequest) error {
 	path := "/v1/secrets/" + pathEscape(secretID) + "/access/" + pathEscape(targetClientID) + "/activate"
 	return c.doJSON(http.MethodPost, path, req, nil)
@@ -374,30 +374,24 @@ func (c *Client) RevokeAccess(secretID, targetClientID string) error {
 	return c.doJSON(http.MethodDelete, path, nil, nil)
 }
 
-// CreateSecretVersion is a monorepo internal-model helper that accepts internal model types. External consumers should use CreateSecretVersionPayload.
+// CreateSecretVersion is a monorepo internal-model helper that accepts internal model types. External consumers should use CreateSecretVersionPayloadByKey.
 func (c *Client) CreateSecretVersion(secretID string, req model.CreateSecretVersionRequest) (model.SecretVersionRef, error) {
 	var ref model.SecretVersionRef
 	return ref, c.doJSON(http.MethodPost, "/v1/secrets/"+pathEscape(secretID)+"/versions", req, &ref)
 }
 
+// DeleteSecret is a monorepo internal-id helper. External consumers should use DeleteSecretByKey.
 func (c *Client) DeleteSecret(secretID string) error {
 	return c.DeleteSecretWithCascade(secretID, false)
 }
 
+// DeleteSecretWithCascade is a monorepo internal-id helper. External consumers should use DeleteSecretByKey.
 func (c *Client) DeleteSecretWithCascade(secretID string, cascade bool) error {
 	path := "/v1/secrets/" + pathEscape(secretID)
 	if cascade {
 		query := url.Values{}
 		query.Set("cascade", "true")
 		path += "?" + query.Encode()
-	}
-	return c.doJSON(http.MethodDelete, path, nil, nil)
-}
-
-func (c *Client) DeleteSecretByKey(namespace, key string, cascade bool) error {
-	path, err := secretByKeyPath("/v1/secrets/by-key", namespace, key, cascade)
-	if err != nil {
-		return err
 	}
 	return c.doJSON(http.MethodDelete, path, nil, nil)
 }

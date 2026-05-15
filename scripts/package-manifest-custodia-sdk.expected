@@ -2,6 +2,8 @@
 # Paths are relative to the extracted package root and must exist.
 usr/share/custodia/sdk/clients/go/go.mod
 usr/share/custodia/sdk/clients/go/pkg/client/client.go
+usr/share/custodia/sdk/clients/go/pkg/client/doc.go
+usr/share/custodia/sdk/clients/go/pkg/client/examples_test.go
 usr/share/custodia/sdk/clients/go/internal/clientcrypto/metadata.go
 usr/share/custodia/sdk/clients/python/custodia_client/__init__.py
 usr/share/custodia/sdk/clients/node/src/index.js

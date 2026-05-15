@@ -37,10 +37,11 @@ All items must be complete before any registry publish command is run.
 
 ### Repository and API stability
 
-- [ ] Go public SDK surface is stable enough for external consumers and does not expose `custodia/internal/*` types.
+- [ ] Go public SDK surface is stable enough for external consumers, ships package-level documentation and does not expose `custodia/internal/*` types.
 - [ ] Transport APIs use `namespace/key` workflows and do not reintroduce `secret_id` in public SDK surfaces.
 - [ ] High-level crypto APIs keep plaintext, DEKs, private keys and envelope internals local to the client.
 - [ ] Deprecated or internal-model helpers are documented as non-registry public surface.
+- [ ] Go SDK examples compile against current `namespace/key` transport semantics and high-level crypto helpers.
 
 ### Package metadata
 
