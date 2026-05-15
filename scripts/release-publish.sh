@@ -149,14 +149,36 @@ build_artifacts() {
     ./scripts/github-release-assets.sh prepare
 }
 
+release_package_find_args() {
+  local names
+  # shellcheck disable=SC2206
+  names=($PACKAGE_NAMES)
+  if printf '%s\n' "${names[@]}" | grep -Fxq clients; then
+    names+=(client sdk)
+  fi
+
+  local args=()
+  local name
+  for name in "${names[@]}"; do
+    case "$name" in
+      server|client|sdk)
+        if [ "${#args[@]}" -gt 0 ]; then
+          args+=(-o)
+        fi
+        args+=(-name "custodia-${name}_${VERSION}-${REVISION}_*.deb" -o -name "custodia-${name}-${VERSION}-${REVISION}.*.rpm")
+        ;;
+    esac
+  done
+  [ "${#args[@]}" -gt 0 ] || fail "no supported PACKAGE_NAMES in: $PACKAGE_NAMES"
+  printf '%s\0' "${args[@]}"
+}
+
 local_release_assets() {
+  local find_args
+  readarray -d '' find_args < <(release_package_find_args)
+
   find "$PACKAGE_DIR" -maxdepth 1 -type f \
-    \( -name "custodia-server_${VERSION}-${REVISION}_*.deb" \
-    -o -name "custodia-client_${VERSION}-${REVISION}_*.deb" \
-    -o -name "custodia-sdk_${VERSION}-${REVISION}_*.deb" \
-    -o -name "custodia-server-${VERSION}-${REVISION}.*.rpm" \
-    -o -name "custodia-client-${VERSION}-${REVISION}.*.rpm" \
-    -o -name "custodia-sdk-${VERSION}-${REVISION}.*.rpm" \
+    \( "${find_args[@]}" \
     -o -name SHA256SUMS \
     -o -name artifacts-manifest.json \
     -o -name release-provenance.json \

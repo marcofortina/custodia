@@ -98,30 +98,21 @@ jobs:
           COMMIT="${COMMIT::12}" \
           make package-linux
 
-      - name: Generate checksums and manifest
+      - name: Smoke-test package artifacts
+        run: make package-smoke
+
+      - name: Generate release evidence
         run: |
           DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
           VERSION="$VERSION" \
           REVISION="$REVISION" \
           COMMIT="${COMMIT::12}" \
-          make package-checksums
-
-      - name: Smoke-test package artifacts
-        run: make package-smoke
-
-      - name: Generate SBOM
-        run: |
-          DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-          VERSION="$VERSION" \
-          COMMIT="${COMMIT::12}" \
-          make sbom
+          ./scripts/github-release-assets.sh prepare
 
       - uses: actions/upload-artifact@v7
         with:
           name: custodia-release-artifacts-${{ inputs.version }}-${{ inputs.revision }}
-          path: |
-            dist/packages/*
-            dist/sbom/*
+          path: dist/packages/*
           if-no-files-found: error
 
       - name: Create or update GitHub release
@@ -132,10 +123,10 @@ jobs:
           PRERELEASE_FLAG: ${{ inputs.prerelease && '--prerelease' || '' }}
         run: |
           if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            gh release upload "$TAG_NAME" dist/packages/* dist/sbom/* --clobber
+            gh release upload "$TAG_NAME" dist/packages/* --clobber
           else
             # shellcheck disable=SC2086
-            gh release create "$TAG_NAME" dist/packages/* dist/sbom/* \
+            gh release create "$TAG_NAME" dist/packages/* \
               --title "Custodia $TAG_NAME" \
               --generate-notes \
               $PRERELEASE_FLAG
