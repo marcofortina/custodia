@@ -106,7 +106,7 @@ test-rust-client:
 	@if ! command -v cargo >/dev/null 2>&1; then \
 		echo "cargo not found; skipping Rust client tests. Run make test-rust-client where Rust is installed." >&2; \
 	else \
-		cargo test --manifest-path clients/rust/Cargo.toml; \
+		cargo test --manifest-path clients/rust/Cargo.toml --all-targets; \
 	fi
 
 .PHONY: test-bash-client

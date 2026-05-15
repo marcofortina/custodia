@@ -47,7 +47,7 @@ All items must be complete before any registry publish command is run.
 
 - [x] Python `pyproject.toml` has package name, version, description, license, authors, readme, dependencies and project URLs documented; PyPI ownership verification remains required before publish.
 - [x] Node `package.json` has scoped name, version, license, exports/types, engines and `private` retained until publish time.
-- [ ] Rust `Cargo.toml` has final crate metadata, readme, repository, documentation links and `publish = false` removed only at publish time.
+- [x] Rust `Cargo.toml` has crate metadata, readme, repository and documentation links documented; `publish = false` remains until publish time.
 - [ ] Java has a reproducible build file and final Maven coordinates before publication.
 - [ ] Package metadata names match the registry ownership table above.
 
@@ -56,7 +56,7 @@ All items must be complete before any registry publish command is run.
 - [ ] `make test` passes for the repository.
 - [x] `make test-python-client` passes where Python dependencies are installed.
 - [x] `make test-node-client` passes where Node.js dependencies are installed.
-- [ ] `make test-rust-client` passes where Rust is installed.
+- [x] `make test-rust-client` passes where Rust is installed.
 - [ ] `make test-java-client` passes where a supported JDK is installed.
 - [ ] Shared crypto vector tests pass for every SDK that ships high-level crypto.
 - [ ] CI documents skipped language checks as toolchain skips, not silent success.

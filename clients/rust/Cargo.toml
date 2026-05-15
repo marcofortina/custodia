@@ -14,6 +14,10 @@ publish = false
 license = "AGPL-3.0-only"
 authors = ["Marco Fortina"]
 description = "Custodia Rust client for opaque REST/mTLS payloads and local client-side crypto"
+readme = "README.md"
+repository = "https://github.com/marcofortina/custodia"
+documentation = "https://github.com/marcofortina/custodia/blob/master/docs/RUST_CLIENT_SDK.md"
+keywords = ["custodia", "secrets", "mtls", "crypto"]
 
 [lib]
 name = "custodia_client"
