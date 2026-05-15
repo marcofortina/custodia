@@ -136,6 +136,7 @@ smoke_extracted_tree() {
       require_file "$root" usr/share/custodia/sdk/testdata/client-crypto/manifest.json
       require_file "$root" usr/share/custodia/sdk/testdata/client-crypto/README.md
       require_file "$root" usr/share/doc/custodia-sdk/SDK_EXAMPLES_AND_COMPATIBILITY.md
+      require_file "$root" usr/share/doc/custodia-sdk/SDK_TEST_VECTORS.md
       require_file "$root" usr/share/custodia/sdk/testdata/client-crypto/v1/create_secret_single_recipient.json
       require_file "$root" usr/share/custodia/sdk/testdata/client-crypto/v1/wrong_recipient_fails.json
       ;;

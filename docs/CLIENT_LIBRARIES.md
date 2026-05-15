@@ -175,6 +175,8 @@ Use these repository documents as the current source of truth:
 - [`CUSTODIA_CLIENT_CLI.md`](CUSTODIA_CLIENT_CLI.md): encrypted secrets CLI usage.
 - [`CLIENT_CRYPTO_SPEC.md`](CLIENT_CRYPTO_SPEC.md): shared crypto metadata, AAD, AEAD and envelope contract.
 - [`CLIENT_CRYPTO_THREAT_MODEL.md`](CLIENT_CRYPTO_THREAT_MODEL.md): client-side crypto trust boundaries, attacker model and non-goals.
+- [`SDK_EXAMPLES_AND_COMPATIBILITY.md`](SDK_EXAMPLES_AND_COMPATIBILITY.md): SDK examples index and language feature matrix.
+- [`SDK_TEST_VECTORS.md`](SDK_TEST_VECTORS.md): shared vector versioning and compatibility model.
 - [Project History Wiki](https://github.com/marcofortina/custodia/wiki/Project-History): development-history notes and phase closure records.
 - [`SDK_RELEASE_POLICY.md`](SDK_RELEASE_POLICY.md): official SDK and public package release criteria.
 - [`SDK_PUBLISHING_READINESS.md`](SDK_PUBLISHING_READINESS.md): registry ownership, package metadata and publish gate checklist.
@@ -194,7 +196,6 @@ make test-python-client
 make test-node-client
 make test-java-client
 make test-cpp-client
-make test-rust-client
 make test-bash-client
 ```
 

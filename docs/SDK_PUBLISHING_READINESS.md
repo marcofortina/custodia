@@ -11,7 +11,7 @@ Do not publish any language SDK to an external registry when any of these is tru
 - the target package name or namespace is not controlled by the Custodia maintainer account or approved organization;
 - package metadata still says `private`, `publish = false`, placeholder versioning or unpublished coordinates;
 - a language-specific readiness issue for the SDK is still open;
-- shared crypto vector tests or compatibility matrix entries are missing for the shipped surface; see [`SDK_EXAMPLES_AND_COMPATIBILITY.md`](SDK_EXAMPLES_AND_COMPATIBILITY.md);
+- shared crypto vector tests or compatibility matrix entries are missing for the shipped surface; see [`SDK_EXAMPLES_AND_COMPATIBILITY.md`](SDK_EXAMPLES_AND_COMPATIBILITY.md) and [`SDK_TEST_VECTORS.md`](SDK_TEST_VECTORS.md);
 - CI cannot reproduce the language-specific test command;
 - CodeQL or equivalent security findings affecting the SDK are still unresolved;
 - release notes do not describe compatibility, known limitations and migration impact.
