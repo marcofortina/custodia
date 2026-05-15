@@ -140,7 +140,12 @@ build_artifacts() {
   if [ "$RELEASE_RUN_PACKAGE_INSTALL_CHECK" = "YES" ]; then
     VERSION="$VERSION" REVISION="$REVISION" make package-install-smoke
   fi
-  VERSION="$VERSION" REVISION="$REVISION" PACKAGE_NAMES="$PACKAGE_NAMES" make package-checksums
+  VERSION="$VERSION" \
+  REVISION="$REVISION" \
+  PACKAGE_DIR="$PACKAGE_DIR" \
+  CUSTODIA_RELEASE_TAG="$RELEASE_TAG" \
+  CUSTODIA_GITHUB_REPO="$RELEASE_REPO" \
+    ./scripts/github-release-assets.sh prepare
 }
 
 local_release_assets() {
@@ -152,7 +157,9 @@ local_release_assets() {
     -o -name "custodia-client-${VERSION}-${REVISION}.*.rpm" \
     -o -name "custodia-sdk-${VERSION}-${REVISION}.*.rpm" \
     -o -name SHA256SUMS \
-    -o -name artifacts-manifest.json \) | sort
+    -o -name artifacts-manifest.json \
+    -o -name release-provenance.json \
+    -o -name custodia-sbom.spdx.json \) | sort
 }
 
 verify_local_assets() {
@@ -160,11 +167,13 @@ verify_local_assets() {
   [ -d "$PACKAGE_DIR" ] || fail "missing package directory: $PACKAGE_DIR"
   local count
   count="$(local_release_assets | wc -l | tr -d ' ')"
-  [ "$count" -ge 8 ] || fail "expected at least 8 release assets in $PACKAGE_DIR, found $count"
+  [ "$count" -ge 10 ] || fail "expected at least 10 release assets in $PACKAGE_DIR, found $count"
   (
     cd "$PACKAGE_DIR"
     sha256sum --ignore-missing -c SHA256SUMS
     python3 -m json.tool artifacts-manifest.json >/dev/null
+    python3 -m json.tool release-provenance.json >/dev/null
+    python3 -m json.tool custodia-sbom.spdx.json >/dev/null
   )
 }
 

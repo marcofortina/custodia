@@ -23,4 +23,4 @@ The SBOM includes:
 - Rust dependencies from `clients/rust/Cargo.toml` and, when present, `clients/rust/Cargo.lock`;
 - explicit system-level dependencies used by the C++ and Java SDK builds.
 
-The generated SBOM is dependency metadata only. It does not claim binary provenance or artifact signing. Release integrity is covered by `SHA256SUMS` and `artifacts-manifest.json`; artifact signing can be added later with a dedicated signing policy.
+The generated SBOM is dependency metadata only. It does not claim binary artifact signing. The release helper publishes it as `custodia-sbom.spdx.json` alongside `SHA256SUMS`, `artifacts-manifest.json` and `release-provenance.json` so operators can verify package checksums and inspect the release evidence bundle. Detached artifact signing can still be added later with a dedicated signing policy.

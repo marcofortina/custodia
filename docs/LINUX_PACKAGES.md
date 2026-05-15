@@ -175,6 +175,8 @@ This writes:
 
 - `dist/packages/SHA256SUMS` with SHA-256 digests for every `.deb` and `.rpm` artifact.
 - `dist/packages/artifacts-manifest.json` with artifact names, package types, byte sizes, SHA-256 digests, version, revision, source commit and generation time.
+- `dist/packages/custodia-sbom.spdx.json` with SPDX 2.3 dependency metadata.
+- `dist/packages/release-provenance.json` with release tag, commit and SHA-256 evidence for release metadata assets.
 
 Operators should verify downloaded artifacts before installation:
 
@@ -193,7 +195,7 @@ VERSION=0.1.0 REVISION=1 CUSTODIA_RELEASE_CONFIRM=YES ./scripts/github-release-a
 VERSION=0.1.0 REVISION=1 ./scripts/github-release-assets.sh verify
 ```
 
-`upload` attaches all local `.deb`, `.rpm`, `SHA256SUMS` and `artifacts-manifest.json` files to `v$VERSION` with `gh release upload --clobber`. Set `CUSTODIA_RELEASE_TAG` when the tag is not `v$VERSION`, and set `CUSTODIA_GITHUB_REPO=owner/repo` when uploading outside the checked-out repository.
+`upload` attaches all local `.deb`, `.rpm`, `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json` and `custodia-sbom.spdx.json` files to `v$VERSION` with `gh release upload --clobber`. Set `CUSTODIA_RELEASE_TAG` when the tag is not `v$VERSION`, and set `CUSTODIA_GITHUB_REPO=owner/repo` when uploading outside the checked-out repository.
 
 ## Automated local GitHub release flow
 
@@ -204,7 +206,7 @@ VERSION=0.1.0 REVISION=1 ./scripts/release-publish.sh dry-run
 VERSION=0.1.0 REVISION=1 RELEASE_CONFIRM=YES ./scripts/release-publish.sh draft
 ```
 
-The `draft` command runs repository checks, builds DEB/RPM packages, generates `SHA256SUMS` and `artifacts-manifest.json`, creates the annotated Git tag, pushes the branch and tag, creates a GitHub draft release, uploads all package/checksum/manifest assets and verifies the remote asset list.
+The `draft` command runs repository checks, builds DEB/RPM packages, generates `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json` and `custodia-sbom.spdx.json`, creates the annotated Git tag, pushes the branch and tag, creates a GitHub draft release, uploads all package/checksum/manifest/SBOM/provenance assets and verifies the remote asset list.
 
 Use `publish` only when you intentionally want to create a public release immediately:
 
@@ -246,7 +248,7 @@ The clean-install smoke first extracts the selected artifacts and validates thei
 
 ## GitHub release workflow
 
-The manual GitHub Actions workflow `.github/workflows/release.yml` builds release artifacts from a selected commit. It runs the repository release check, builds `.deb` and `.rpm` packages, generates `SHA256SUMS` and `artifacts-manifest.json`, smoke-tests the package contents and uploads all release files as workflow artifacts.
+The manual GitHub Actions workflow `.github/workflows/release.yml` builds release artifacts from a selected commit. It runs the repository release check, builds `.deb` and `.rpm` packages, generates `SHA256SUMS`, `artifacts-manifest.json`, `release-provenance.json` and `custodia-sbom.spdx.json`, smoke-tests the package contents and uploads all release files as workflow artifacts.
 
 To publish a GitHub release, run the workflow with:
 
@@ -255,7 +257,7 @@ To publish a GitHub release, run the workflow with:
 - `create_release`: `true`;
 - `prerelease`: `true` only for prerelease builds.
 
-The workflow creates or updates tag release `vVERSION` and uploads the package artifacts plus checksum files.
+The workflow creates or updates tag release `vVERSION` and uploads the package artifacts plus checksum, manifest, SBOM and provenance files.
 
 
 ## Runtime file permissions
