@@ -16,7 +16,7 @@ Runtime code uses Node built-ins only and does not add npm dependencies.
 - Runtime target: Node.js `>=20`; CI currently validates with Node.js 24.
 - Module format: ESM (`type: module`) with TypeScript declarations from `src/index.d.ts`.
 - Package exports: `.` resolves to `src/index.js` and `src/index.d.ts`.
-- No registry publishing is performed from this package. Keep `private: true` until the SDK publishing readiness checklist and #42 acceptance criteria are approved.
+- No registry publishing is performed from this package. Keep `private: true` until the SDK publishing readiness checklist is explicitly completed and approved as part of a release.
 
 ## Transport example
 

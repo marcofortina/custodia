@@ -13,7 +13,7 @@ The server still receives only ciphertext, `crypto_metadata` and recipient envel
 
 ## Publishing readiness
 
-The intended external Python package coordinate is `custodia-client` on PyPI. `clients/python/pyproject.toml` documents the package name, version, license, README, dependencies and project URLs, but publishing remains blocked until the SDK publishing readiness checklist and #41 are complete. PyPI project ownership must be controlled by the Custodia maintainer account or an approved organization before the first publish.
+The intended external Python package coordinate is `custodia-client` on PyPI. `clients/python/pyproject.toml` documents the package name, version, license, README, dependencies and project URLs, but publishing remains blocked until the SDK publishing readiness checklist is explicitly completed and approved as part of a release. PyPI project ownership must be controlled by the Custodia maintainer account or an approved organization before the first publish.
 
 No registry publish command is part of the repository automation for this issue.
 

@@ -2,7 +2,7 @@
 
 `clients/node` is the repository Node.js / TypeScript-facing client for Custodia. It includes both the raw transport client and a high-level client-side crypto wrapper.
 
-The runtime code is dependency-free JavaScript using Node built-ins. The intended npm package coordinate is `@custodia/client`; npm `@custodia` scope ownership must be controlled by the Custodia maintainer account or approved organization before any publish. The package remains `private` and registry publishing remains blocked by `SDK_PUBLISHING_READINESS.md` until the 0.5.0 gates are complete.
+The runtime code is dependency-free JavaScript using Node built-ins. The intended npm package coordinate is `@custodia/client`; npm `@custodia` scope ownership must be controlled by the Custodia maintainer account or approved organization before any publish. The package remains `private` and registry publishing remains blocked by `SDK_PUBLISHING_READINESS.md` until the registry publishing gate is explicitly completed and approved as part of a release.
 
 ## Security boundary
 
@@ -20,7 +20,7 @@ The Node client follows the same boundary as Go and Python:
 - Module format: ESM (`type: module`).
 - Type declarations: `src/index.d.ts`.
 - Package export: `.` resolves to `src/index.js` and `src/index.d.ts`.
-- Publish gate: keep `private: true` until `SDK_PUBLISHING_READINESS.md` and #42 are complete.
+- Publish gate: keep `private: true` until `SDK_PUBLISHING_READINESS.md` is explicitly completed and approved as part of a release.
 
 ## Install from the monorepo
 
