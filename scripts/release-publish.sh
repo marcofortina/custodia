@@ -165,9 +165,16 @@ local_release_assets() {
 verify_local_assets() {
   log "verifying local release assets"
   [ -d "$PACKAGE_DIR" ] || fail "missing package directory: $PACKAGE_DIR"
-  local count
-  count="$(local_release_assets | wc -l | tr -d ' ')"
-  [ "$count" -ge 10 ] || fail "expected at least 10 release assets in $PACKAGE_DIR, found $count"
+
+  local package_count
+  package_count="$(local_release_assets | grep -E '\.(deb|rpm)$' | wc -l | tr -d ' ')"
+  [ "$package_count" -gt 0 ] || fail "expected at least one package artifact in $PACKAGE_DIR"
+
+  local metadata_asset
+  for metadata_asset in SHA256SUMS artifacts-manifest.json release-provenance.json custodia-sbom.spdx.json; do
+    [ -f "$PACKAGE_DIR/$metadata_asset" ] || fail "missing release metadata asset: $metadata_asset"
+  done
+
   (
     cd "$PACKAGE_DIR"
     sha256sum --ignore-missing -c SHA256SUMS
