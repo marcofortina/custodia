@@ -20,6 +20,7 @@ New to Custodia? Start with the document that matches your task:
 | Install on Kubernetes | [`docs/KUBERNETES_INSTALL.md`](docs/KUBERNETES_INSTALL.md) | You are deploying a Git-built image with the Helm chart. |
 | Prepare Kubernetes Secrets | [`docs/KUBERNETES_BOOTSTRAP_MATERIAL.md`](docs/KUBERNETES_BOOTSTRAP_MATERIAL.md) | You need mTLS, signer and Web MFA material before Helm install. |
 | Sign off a release candidate | [`docs/RELEASE_READINESS_MATRIX.md`](docs/RELEASE_READINESS_MATRIX.md) | You are validating release artifacts and production-readiness gates. |
+| Review stable security/compatibility boundaries | [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) and [`docs/API_COMPATIBILITY_POLICY.md`](docs/API_COMPATIBILITY_POLICY.md) | You need the 1.0 threat model or compatibility promise. |
 | Publish a release | [`docs/RELEASE_PUBLISHING.md`](docs/RELEASE_PUBLISHING.md) | You need the end-to-end local release flow, tag checks and asset verification. |
 | Smoke-test Kubernetes | [`docs/KUBERNETES_RUNTIME_SMOKE.md`](docs/KUBERNETES_RUNTIME_SMOKE.md) | You need a read-only runtime check against an installed cluster. |
 | Smoke-test Lite backup/restore | [`docs/LITE_BACKUP_RESTORE_SMOKE.md`](docs/LITE_BACKUP_RESTORE_SMOKE.md) | You need disposable SQLite backup/restore validation. |
@@ -98,6 +99,8 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 - SDK test vectors: [`docs/SDK_TEST_VECTORS.md`](docs/SDK_TEST_VECTORS.md)
 - SDK release policy: [`docs/SDK_RELEASE_POLICY.md`](docs/SDK_RELEASE_POLICY.md)
 - SDK publishing readiness checklist: [`docs/SDK_PUBLISHING_READINESS.md`](docs/SDK_PUBLISHING_READINESS.md)
+- Threat model: [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md)
+- API and compatibility policy: [`docs/API_COMPATIBILITY_POLICY.md`](docs/API_COMPATIBILITY_POLICY.md)
 - Linux DEB/RPM packaging: [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md) including the installed `/usr/sbin/custodia-operational-readiness-smoke` helper
 - Start here / install quickstart: [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
 - Full bare-metal install: [`docs/BARE_METAL_FULL_INSTALL.md`](docs/BARE_METAL_FULL_INSTALL.md)

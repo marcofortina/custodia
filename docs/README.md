@@ -82,6 +82,8 @@ Use that block before commands so an operator can stop before making unsafe assu
 - [`WEB_MFA.md`](WEB_MFA.md)
 - [`WEB_PASSKEY.md`](WEB_PASSKEY.md)
 - [`SECURITY_MODEL.md`](SECURITY_MODEL.md)
+- [`THREAT_MODEL.md`](THREAT_MODEL.md)
+- [`API_COMPATIBILITY_POLICY.md`](API_COMPATIBILITY_POLICY.md)
 - [`SECURITY_HARDENING_FINAL_REVIEW.md`](SECURITY_HARDENING_FINAL_REVIEW.md)
 
 ## Client SDKs and cryptography
@@ -118,6 +120,8 @@ Use that block before commands so an operator can stop before making unsafe assu
 
 - [`PROJECT_HISTORY.md`](PROJECT_HISTORY.md)
 - [`FORMAL_VERIFICATION.md`](FORMAL_VERIFICATION.md)
+- [`THREAT_MODEL.md`](THREAT_MODEL.md)
+- [`API_COMPATIBILITY_POLICY.md`](API_COMPATIBILITY_POLICY.md)
 - [`API.md`](API.md)
 - [`CONFIG_REFERENCE.md`](CONFIG_REFERENCE.md)
 - [`DOCTOR.md`](DOCTOR.md)
