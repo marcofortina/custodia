@@ -95,6 +95,7 @@ The canonical repository-level SDK matrix is [`docs/CLIENT_LIBRARIES.md`](docs/C
 - Client crypto threat model: [`docs/CLIENT_CRYPTO_THREAT_MODEL.md`](docs/CLIENT_CRYPTO_THREAT_MODEL.md)
 - Namespace/key secret keyspace model: [`docs/SECRET_KEYSPACE_MODEL.md`](docs/SECRET_KEYSPACE_MODEL.md)
 - SDK examples and compatibility matrix: [`docs/SDK_EXAMPLES_AND_COMPATIBILITY.md`](docs/SDK_EXAMPLES_AND_COMPATIBILITY.md)
+- SDK test vectors: [`docs/SDK_TEST_VECTORS.md`](docs/SDK_TEST_VECTORS.md)
 - SDK release policy: [`docs/SDK_RELEASE_POLICY.md`](docs/SDK_RELEASE_POLICY.md)
 - SDK publishing readiness checklist: [`docs/SDK_PUBLISHING_READINESS.md`](docs/SDK_PUBLISHING_READINESS.md)
 - Linux DEB/RPM packaging: [`docs/LINUX_PACKAGES.md`](docs/LINUX_PACKAGES.md) including the installed `/usr/sbin/custodia-operational-readiness-smoke` helper
