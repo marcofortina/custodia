@@ -75,4 +75,4 @@ The first v1 consumers are Go/internal, Python, Node and Rust. Java validates th
 
 ## Publishing gate
 
-Registry publishing remains blocked unless the SDK publishing readiness checklist confirms that shared vector tests pass for SDKs that ship high-level crypto.
+Registry publishing remains blocked unless the SDK publishing readiness checklist confirms that shared vector tests pass for SDKs that ship high-level crypto and all remaining publish gates are explicitly approved as part of a release.
