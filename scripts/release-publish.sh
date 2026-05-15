@@ -242,7 +242,7 @@ create_release() {
     return
   fi
 
-  args=(release create "$RELEASE_TAG" --title "$RELEASE_TITLE" --notes-file "$RELEASE_NOTES_FILE")
+  args=(release create "$RELEASE_TAG" --verify-tag --title "$RELEASE_TITLE" --notes-file "$RELEASE_NOTES_FILE")
   if [ "$mode" = "draft" ]; then
     args+=(--draft)
   fi
