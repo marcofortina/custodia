@@ -88,9 +88,10 @@ test-node-client:
 test-java-client:
 	rm -rf /tmp/custodia-java-client-classes
 	mkdir -p /tmp/custodia-java-client-classes
-	javac -d /tmp/custodia-java-client-classes $$(find clients/java/src/main/java clients/java/src/test/java -name '*.java' | sort)
+	javac -d /tmp/custodia-java-client-classes $$(find clients/java/src/main/java clients/java/src/test/java clients/java/examples -name '*.java' | sort)
 	java -cp /tmp/custodia-java-client-classes dev.custodia.client.CustodiaClientTest
 	java -cp /tmp/custodia-java-client-classes dev.custodia.client.CustodiaCryptoClientTest
+	java -cp /tmp/custodia-java-client-classes dev.custodia.client.CustodiaPackageReadinessTest
 
 .PHONY: test-cpp-client
 test-cpp-client:

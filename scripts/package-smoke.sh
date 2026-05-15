@@ -126,7 +126,10 @@ smoke_extracted_tree() {
       require_file "$root" usr/share/custodia/sdk/clients/node/src/index.d.ts
       require_file "$root" usr/share/custodia/sdk/clients/node/examples/keyspace_transport.mjs
       require_file "$root" usr/share/custodia/sdk/clients/node/examples/high_level_crypto.mjs
+      require_file "$root" usr/share/custodia/sdk/clients/java/pom.xml
       require_file "$root" usr/share/custodia/sdk/clients/java/src/main/java/dev/custodia/client/CustodiaClient.java
+      require_file "$root" usr/share/custodia/sdk/clients/java/examples/KeyspaceTransportExample.java
+      require_file "$root" usr/share/custodia/sdk/clients/java/examples/HighLevelCryptoExample.java
       require_file "$root" usr/share/custodia/sdk/clients/cpp/include/custodia/client.hpp
       require_file "$root" usr/share/custodia/sdk/clients/rust/Cargo.toml
       require_file "$root" usr/share/custodia/sdk/clients/bash/custodia.bash

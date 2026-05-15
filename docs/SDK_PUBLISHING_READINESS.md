@@ -48,7 +48,7 @@ All items must be complete before any registry publish command is run.
 - [x] Python `pyproject.toml` has package name, version, description, license, authors, readme, dependencies and project URLs documented; PyPI ownership verification remains required before publish.
 - [x] Node `package.json` has scoped name, version, license, exports/types, engines and `private` retained until publish time.
 - [x] Rust `Cargo.toml` has crate metadata, readme, repository and documentation links documented; `publish = false` remains until publish time.
-- [ ] Java has a reproducible build file and final Maven coordinates before publication.
+- [x] Java `pom.xml` has Maven coordinates, Java 17 compiler metadata, license, SCM and package identity documented; Maven Central ownership verification remains required before publish.
 - [ ] Package metadata names match the registry ownership table above.
 
 ### Tests and CI
@@ -57,13 +57,13 @@ All items must be complete before any registry publish command is run.
 - [x] `make test-python-client` passes where Python dependencies are installed.
 - [x] `make test-node-client` passes where Node.js dependencies are installed.
 - [x] `make test-rust-client` passes where Rust is installed.
-- [ ] `make test-java-client` passes where a supported JDK is installed.
-- [ ] Shared crypto vector tests pass for every SDK that ships high-level crypto.
+- [x] `make test-java-client` passes where a supported JDK is installed.
+- [ ] Shared crypto vector tests pass for every SDK that ships high-level crypto. Java/Rust already cover the current v1 vectors; #45 remains the cross-language vector versioning gate.
 - [ ] CI documents skipped language checks as toolchain skips, not silent success.
 
 ### Security and compatibility
 
-- [ ] Java CodeQL/security findings are resolved or documented as safe with evidence.
+- [x] Java CodeQL/static-IV triage is documented as safe for HPKE envelope AEAD nonces; content encryption still uses random AES-GCM nonces.
 - [ ] SDK docs state that the server remains metadata-only and never receives plaintext, DEKs or private keys.
 - [ ] Public-key resolution remains an application trust decision; server-published public keys are discovery metadata only.
 - [ ] Compatibility matrix documents transport, crypto, vector and package status per language.
