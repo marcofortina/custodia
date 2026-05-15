@@ -1,0 +1,63 @@
+{
+  "schema": "custodia.client-crypto.manifest.v1",
+  "current_version": "custodia.client-crypto.v1",
+  "versions": [
+    {
+      "version": "custodia.client-crypto.v1",
+      "directory": "testdata/client-crypto/v1",
+      "schema_file": "testdata/client-crypto/v1/schema.json",
+      "cases": [
+        "create_secret_single_recipient.json",
+        "create_secret_multi_recipient.json",
+        "read_secret_authorized_recipient.json",
+        "share_secret_add_recipient.json",
+        "tamper_ciphertext_fails.json",
+        "aad_mismatch_fails.json",
+        "wrong_recipient_fails.json",
+        "unsupported_crypto_version_fails.json"
+      ],
+      "semantics": [
+        "canonical AAD",
+        "namespace/key binding",
+        "AES-256-GCM content ciphertext",
+        "HPKE-v1 recipient envelopes",
+        "negative decrypt behavior"
+      ],
+      "metadata_only_boundary": {
+        "server_visible": [
+          "namespace",
+          "key",
+          "secret_version",
+          "crypto_metadata",
+          "content_nonce_b64",
+          "ciphertext",
+          "recipient envelopes"
+        ],
+        "client_only": [
+          "plaintext",
+          "content DEK",
+          "recipient private keys",
+          "sender ephemeral private keys"
+        ]
+      },
+      "consumers": [
+        {
+          "sdk": "go-internal",
+          "command": "go test -p=1 -timeout 60s ./internal/clientcrypto"
+        },
+        {
+          "sdk": "python",
+          "command": "python3 -m unittest discover -s clients/python/tests"
+        },
+        {
+          "sdk": "node",
+          "command": "npm test --prefix clients/node"
+        },
+        {
+          "sdk": "rust",
+          "command": "make test-rust-client"
+        }
+      ]
+    }
+  ]
+}

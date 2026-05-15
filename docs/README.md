@@ -88,6 +88,7 @@ Use that block before commands so an operator can stop before making unsafe assu
 
 - [`CLIENT_LIBRARIES.md`](CLIENT_LIBRARIES.md)
 - [`CLIENT_CRYPTO_SPEC.md`](CLIENT_CRYPTO_SPEC.md)
+- [`SDK_TEST_VECTORS.md`](SDK_TEST_VECTORS.md)
 - [`CLIENT_CRYPTO_THREAT_MODEL.md`](CLIENT_CRYPTO_THREAT_MODEL.md)
 - [`CLIENT_TRUSTED_CA.md`](CLIENT_TRUSTED_CA.md)
 - [`SECRET_KEYSPACE_MODEL.md`](SECRET_KEYSPACE_MODEL.md)

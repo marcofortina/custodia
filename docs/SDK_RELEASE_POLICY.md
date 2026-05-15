@@ -53,16 +53,22 @@ Release candidates and prereleases should use prerelease identifiers in source t
 
 ## Cross-language compatibility
 
-High-level crypto SDKs must pass the shared client crypto vectors under:
+High-level crypto SDKs must pass the shared client crypto vectors documented in [`SDK_TEST_VECTORS.md`](SDK_TEST_VECTORS.md). The current version is:
 
 ```text
 testdata/client-crypto/v1/
 ```
 
+The vector manifest lives at:
+
+```text
+testdata/client-crypto/manifest.json
+```
+
 A change to canonical AAD, ciphertext format, envelope format or crypto metadata must update:
 
 - `docs/CLIENT_CRYPTO_SPEC.md`;
-- vector fixtures;
+- vector fixtures and `testdata/client-crypto/manifest.json`;
 - Go/Python/Node/Java/C++/Rust vector tests;
 - the GitHub Wiki project-history pages when the change only affects development-history notes.
 
